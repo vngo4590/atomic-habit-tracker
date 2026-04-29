@@ -1,8 +1,8 @@
 ## 1. Test Infrastructure & Dev Dependencies
 
-- [ ] 1.1 Install Vitest, @vitejs/plugin-react, jsdom, @testing-library/react, vite-tsconfig-paths as dev dependencies
-- [ ] 1.2 Create `vitest.config.mts` with jsdom environment and tsconfigPaths plugin
-- [ ] 1.3 Add `"test": "vitest"` script to `package.json`
+- [x] 1.1 Install Vitest, @vitejs/plugin-react, jsdom, @testing-library/react, vite-tsconfig-paths as dev dependencies
+- [x] 1.2 Create `vitest.config.mts` with jsdom environment and tsconfigPaths plugin
+- [x] 1.3 Add `"test": "vitest"` script to `package.json`
 
 ## 2. TypeScript Types
 
