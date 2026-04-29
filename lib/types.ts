@@ -31,6 +31,13 @@ export interface Habit {
   createdAt: string;
 }
 
+export type HabitDraft = Partial<
+  Omit<Habit, 'id' | 'history' | 'notes' | 'createdAt'>
+> & {
+  name: string;
+  identity: string;
+};
+
 export interface JournalEntry {
   id: number;
   date: string;
@@ -56,7 +63,7 @@ export interface StoreState {
   setHabits: (habits: Habit[]) => void;
   toggleHabit: (id: number, dateKey?: string, payload?: Partial<CheckIn> | null) => void;
   logCheckIn: (id: number, payload: Partial<CheckIn>, dateKey?: string) => void;
-  addHabit: (draft: Omit<Habit, 'id' | 'history' | 'notes' | 'createdAt'>) => void;
+  addHabit: (draft: HabitDraft) => void;
   updateHabit: (id: number, patch: Partial<Habit>) => void;
   deleteHabit: (id: number) => void;
   journal: JournalEntry[];

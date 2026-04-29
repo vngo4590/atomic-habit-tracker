@@ -22,40 +22,40 @@
 
 ## 5. Store (React Context + localStorage)
 
-- [ ] 5.1 Create `lib/store.ts` with `useStore()` implementing all mutations: `toggleHabit`, `logCheckIn`, `addHabit`, `updateHabit`, `deleteHabit`, `addJournal`, `setIdentity`, `showToast`
-- [ ] 5.2 Implement `streak()`, `longestStreak()`, and `completionRate()` as store methods in `lib/store.ts`
-- [ ] 5.3 Add localStorage hydration in `useStore()`: load from `atomicly:store` on mount, persist on every state change
-- [ ] 5.4 Create `components/StoreProvider.tsx` as a React Context provider wrapping the store
-- [ ] 5.5 Write `lib/__tests__/store.test.ts` — tests for `toggleHabit` (on/off), `streak`, `longestStreak`, `completionRate`
-- [ ] 5.6 Run `npm test` and confirm all store tests pass
+- [x] 5.1 Create `lib/store.ts` with `useStore()` implementing all mutations: `toggleHabit`, `logCheckIn`, `addHabit`, `updateHabit`, `deleteHabit`, `addJournal`, `setIdentity`, `showToast`
+- [x] 5.2 Implement `streak()`, `longestStreak()`, and `completionRate()` as store methods in `lib/store.ts`
+- [x] 5.3 Add localStorage hydration in `useStore()`: load from `atomicly:store` on mount, persist on every state change
+- [x] 5.4 Create `components/StoreProvider.tsx` as a React Context provider wrapping the store
+- [x] 5.5 Write `lib/__tests__/store.test.ts` — tests for `toggleHabit` (on/off), `streak`, `longestStreak`, `completionRate`
+- [x] 5.6 Run `npm test` and confirm all store tests pass
 
 ## 6. Design Tokens & Global CSS
 
-- [ ] 6.1 Replace `app/globals.css` with ported design tokens (CSS custom properties for colors, typography, radius, shadow) from `reference_ui/styles.css`
-- [ ] 6.2 Port all base classes into `globals.css`: `.card`, `.btn`, `.habit-row`, `.check`, `.chip`, `.loop`, `.tabs`, `.tab`, `.dot`, `.input`, `.field-label`, `.eyebrow`, `.h1`, `.h2`, `.h3`, `.lede`, `.muted`, `.mono`, `.fade-up`, `.page-header`, `.vote-bar`, `.streak-pill`, `.overlay`, `.overlay-card`, `.toast`
-- [ ] 6.3 Add `@theme inline` block to expose `--font-serif`, `--font-sans`, `--font-mono` as Tailwind tokens
+- [x] 6.1 Replace `app/globals.css` with ported design tokens (CSS custom properties for colors, typography, radius, shadow) from `reference_ui/styles.css`
+- [x] 6.2 Port all base classes into `globals.css`: `.card`, `.btn`, `.habit-row`, `.check`, `.chip`, `.loop`, `.tabs`, `.tab`, `.dot`, `.input`, `.field-label`, `.eyebrow`, `.h1`, `.h2`, `.h3`, `.lede`, `.muted`, `.mono`, `.fade-up`, `.page-header`, `.vote-bar`, `.streak-pill`, `.overlay`, `.overlay-card`, `.toast`
+- [x] 6.3 Add `@theme inline` block to expose `--font-serif`, `--font-sans`, `--font-mono` as Tailwind tokens
 
 ## 7. Root Layout & Fonts
 
-- [ ] 7.1 Update `app/layout.tsx` to load `Instrument_Serif`, `Inter_Tight`, and `JetBrains_Mono` via `next/font/google`, exposing them as CSS variables
-- [ ] 7.2 Update metadata title to "Atomic Habits" and remove default Geist fonts
+- [x] 7.1 Update `app/layout.tsx` to load `Instrument_Serif`, `Inter_Tight`, and `JetBrains_Mono` via `next/font/google`, exposing them as CSS variables
+- [x] 7.2 Update metadata title to "Atomic Habits" and remove default Geist fonts
 
 ## 8. Icons Component
 
-- [ ] 8.1 Create `components/Icons.tsx` exporting all named icon components (`IconToday`, `IconList`, `IconPlus`, `IconChart`, `IconJournal`, `IconReview`, `IconIdentity`, `IconSettings`, `IconCheck`, `IconFlame`, `IconArrow`, `IconBack`, `IconEdit`, `IconTrash`, `IconLink`, `IconStar`, `IconSun`, `IconMoon`, `IconSearch`, `IconClose`, `IconBook`) as typed React SVG components
+- [x] 8.1 Create `components/Icons.tsx` exporting all named icon components (`IconToday`, `IconList`, `IconPlus`, `IconChart`, `IconJournal`, `IconReview`, `IconIdentity`, `IconSettings`, `IconCheck`, `IconFlame`, `IconArrow`, `IconBack`, `IconEdit`, `IconTrash`, `IconLink`, `IconStar`, `IconSun`, `IconMoon`, `IconSearch`, `IconClose`, `IconBook`) as typed React SVG components
 
 ## 9. App Shell Layout & Navigation
 
-- [ ] 9.1 Create `app/(root)/layout.tsx` wrapping all routes with `StoreProvider`, sidebar, and main content area
-- [ ] 9.2 Create `components/Nav.tsx` rendering the sidebar with brand mark, grouped nav items (Practice / Reflect / Learn / Become), keyboard shortcuts, and user footer
-- [ ] 9.3 Wire `usePathname()` in Nav to apply the active style to the current route's nav item
-- [ ] 9.4 Create `components/Toast.tsx` that reads `toast` from the store context and auto-dismisses after 2.4s
+- [x] 9.1 Create `app/(root)/layout.tsx` wrapping all routes with `StoreProvider`, sidebar, and main content area
+- [x] 9.2 Create `components/Nav.tsx` rendering the sidebar with brand mark, grouped nav items (Practice / Reflect / Learn / Become), keyboard shortcuts, and user footer
+- [x] 9.3 Wire `usePathname()` in Nav to apply the active style to the current route's nav item
+- [x] 9.4 Create `components/Toast.tsx` that reads `toast` from the store context and auto-dismisses after 2.4s
 
 ## 10. Today Screen
 
-- [ ] 10.1 Create `components/CompletionRing.tsx` — SVG donut ring accepting `pct` prop
-- [ ] 10.2 Create `components/HabitRow.tsx` — single habit row with check button, habit name/meta, identity chip, streak pill, and arrow
-- [ ] 10.3 Create `app/(root)/page.tsx` as the Today screen: greeting, stats row (ring + streak + sparkline), identity vote panel, and habit groups by time of day
+- [x] 10.1 Create `components/CompletionRing.tsx` — SVG donut ring accepting `pct` prop
+- [x] 10.2 Create `components/HabitRow.tsx` — single habit row with check button, habit name/meta, identity chip, streak pill, and arrow
+- [x] 10.3 Create `app/(root)/page.tsx` as the Today screen: greeting, stats row (ring + streak + sparkline), identity vote panel, and habit groups by time of day
 
 ## 11. Mood Components
 
