@@ -17,8 +17,8 @@
 
 ## 4. Sample Data
 
-- [ ] 4.1 Create `lib/sample-data.ts` with `seedHistory()` and the six `SAMPLE_HABITS` array
-- [ ] 4.2 Add `SAMPLE_JOURNAL` and default `SAMPLE_IDENTITY` to `lib/sample-data.ts`
+- [x] 4.1 Create `lib/sample-data.ts` with `seedHistory()` and the six `SAMPLE_HABITS` array
+- [x] 4.2 Add `SAMPLE_JOURNAL` and default `SAMPLE_IDENTITY` to `lib/sample-data.ts`
 
 ## 5. Store (React Context + localStorage)
 
