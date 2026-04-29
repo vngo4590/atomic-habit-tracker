@@ -59,30 +59,30 @@
 
 ## 11. Mood Components
 
-- [ ] 11.1 Create `components/MoodCheckSheet.tsx` — modal overlay with 5-point mood selector and journal textarea
-- [ ] 11.2 Create `components/MoodChart.tsx` — SVG line chart of mood over the last N days for a habit
-- [ ] 11.3 Create `components/HabitJournalStream.tsx` — renders check-in entries that have mood or journal text, with delete per entry
+- [x] 11.1 Create `components/MoodCheckSheet.tsx` — modal overlay with 5-point mood selector and journal textarea
+- [x] 11.2 Create `components/MoodChart.tsx` — SVG line chart of mood over the last N days for a habit
+- [x] 11.3 Create `components/HabitJournalStream.tsx` — renders check-in entries that have mood or journal text, with delete per entry
 
 ## 12. Habits List Screen
 
-- [ ] 12.1 Create `app/(root)/habits/page.tsx` with filter tabs, sort dropdown, and table of all habits (streak, best, 30-day bar)
+- [x] 12.1 Create `app/(root)/habits/page.tsx` with filter tabs, sort dropdown, and table of all habits (streak, best, 30-day bar)
 
 ## 13. Editable Field Components
 
-- [ ] 13.1 Create `components/EditableLaw.tsx` — click-to-edit inline field used for the four habit laws in the Overview tab
-- [ ] 13.2 Create `components/EditableLine.tsx` — single-line click-to-edit field used for Environment
+- [x] 13.1 Create `components/EditableLaw.tsx` — click-to-edit inline field used for the four habit laws in the Overview tab
+- [x] 13.2 Create `components/EditableLine.tsx` — single-line click-to-edit field used for Environment
 
 ## 14. Habit Detail Sub-components
 
-- [ ] 14.1 Create `components/LoopDiagram.tsx` — four-cell cue→craving→response→reward grid with sentence summary
-- [ ] 14.2 Create `components/HistoryWall.tsx` — 26×7 dot grid with click-to-toggle past days
-- [ ] 14.3 Create `components/NotesManager.tsx` — notes composer, list, single-delete, and bulk-delete with select mode
-- [ ] 14.4 Create `components/ContractSheet.tsx` — accountability contract modal with terms textarea and invite inputs
+- [x] 14.1 Create `components/LoopDiagram.tsx` — four-cell cue→craving→response→reward grid with sentence summary
+- [x] 14.2 Create `components/HistoryWall.tsx` — 26×7 dot grid with click-to-toggle past days
+- [x] 14.3 Create `components/NotesManager.tsx` — notes composer, list, single-delete, and bulk-delete with select mode
+- [x] 14.4 Create `components/ContractSheet.tsx` — accountability contract modal with terms textarea and invite inputs
 
 ## 15. Habit Detail Screen
 
-- [ ] 15.1 Create `app/(root)/habits/[id]/page.tsx` assembling the five-tab layout using all sub-components (Overview, Loop, Journal, History, Notes)
-- [ ] 15.2 Wire the "Mark done / Done today · edit" button to `toggleHabit` + `MoodCheckSheet`
+- [x] 15.1 Create `app/(root)/habits/[id]/page.tsx` assembling the five-tab layout using all sub-components (Overview, Loop, Journal, History, Notes)
+- [x] 15.2 Wire the "Mark done / Done today · edit" button to `toggleHabit` + `MoodCheckSheet`
 
 ## 16. Create Habit Screen
 
