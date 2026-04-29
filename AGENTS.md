@@ -16,7 +16,8 @@ This project uses Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, and the Ap
 - `lib/`: shared types, helpers, data, store logic, and tests.
 - `reference_ui/`: source reference implementation being ported.
 - `openspec/changes/port-reference-ui/`: active OpenSpec proposal, design, specs, and task checklist.
-- `.claude/skills/`: project-local skills and skill-maintenance workflows.
+- `.agents/skills/`: canonical project-local skills shared by Claude and Codex.
+- `.claude/skills/`: generated compatibility link/copy for Claude; do not edit directly.
 
 ## Implementation Workflow
 
@@ -52,7 +53,9 @@ This project uses Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, and the Ap
   `npm run build`
 - `npm test -- --run` may not pass flags through correctly in this project; prefer `npm exec vitest run`.
 
-## Skill Maintenance
+## Shared Skills
 
-- Use `.claude/skills/skill-improvement-loop/` to log and apply skill improvement opportunities.
-- Project skill opportunities should be recorded in `.claude/skill-improvement/opportunities.jsonl` via the skill's scripts, not by manual JSON edits.
+- Edit project skills only under `.agents/skills/`.
+- Run `.\scripts\sync-agent-skills.ps1` after changing shared skills so Claude and Codex see the same canonical skills.
+- Use `.agents/skills/skill-improvement-loop/` to log and apply skill improvement opportunities.
+- Project skill opportunities should be recorded in `.agents/skill-improvement/opportunities.jsonl` via the skill's scripts, not by manual JSON edits.

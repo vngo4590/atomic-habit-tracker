@@ -16,7 +16,7 @@ def utc_now() -> str:
 
 
 def backlog_path(project_root: Path) -> Path:
-    return project_root / ".claude" / "skill-improvement" / "opportunities.jsonl"
+    return project_root / ".agents" / "skill-improvement" / "opportunities.jsonl"
 
 
 def parse_args() -> argparse.Namespace:

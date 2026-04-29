@@ -19,7 +19,7 @@ def utc_now() -> str:
 
 
 def backlog_path(project_root: Path) -> Path:
-    return project_root / ".claude" / "skill-improvement" / "opportunities.jsonl"
+    return project_root / ".agents" / "skill-improvement" / "opportunities.jsonl"
 
 
 def make_id(record: dict[str, object]) -> str:

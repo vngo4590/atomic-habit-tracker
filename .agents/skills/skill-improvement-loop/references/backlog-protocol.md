@@ -2,7 +2,7 @@
 
 ## Location
 
-Default path: `.claude/skill-improvement/opportunities.jsonl`
+Default path: `.agents/skill-improvement/opportunities.jsonl`
 
 Use JSON Lines so entries append cleanly and survive partial edits.
 

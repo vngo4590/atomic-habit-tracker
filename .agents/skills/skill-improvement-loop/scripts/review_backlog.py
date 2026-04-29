@@ -12,7 +12,7 @@ IMPACT_RANK = {"high": 0, "medium": 1, "low": 2}
 
 
 def backlog_path(project_root: Path) -> Path:
-    return project_root / ".claude" / "skill-improvement" / "opportunities.jsonl"
+    return project_root / ".agents" / "skill-improvement" / "opportunities.jsonl"
 
 
 def load_records(path: Path) -> list[dict[str, object]]:

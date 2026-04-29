@@ -24,7 +24,8 @@ Use this at the end of a meaningful work session, or when the user asks to captu
    - A reusable script, reference, asset, or template that would reduce future effort.
    - A recurring task pattern with no existing skill.
 2. Inspect available project skills before assigning a target:
-   - Project-local skills: `.claude/skills/*/SKILL.md`.
+   - Canonical project-local skills: `.agents/skills/*/SKILL.md`.
+   - Generated compatibility copies/links: `.claude/skills/*/SKILL.md` and `~/.codex/skills/*/SKILL.md`.
    - Codex skills, only if relevant and readable: `~/.codex/skills/*/SKILL.md`.
 3. Log one opportunity per actionable improvement using `scripts/log_opportunity.py`.
 4. Keep entries evidence-based. Include the observed trigger, affected skill or `NEW_SKILL`, and the smallest useful recommendation.
@@ -32,7 +33,7 @@ Use this at the end of a meaningful work session, or when the user asks to captu
 Example:
 
 ```bash
-python .claude/skills/skill-improvement-loop/scripts/log_opportunity.py --skill openspec-apply-change --kind skill-update --summary "Require reading local AGENTS.md before editing Next.js routes" --evidence "Phase work required repo-specific Next.js docs before code changes" --recommendation "Add a pre-edit checklist item for repo instruction files and framework docs" --impact medium --confidence 0.8
+python .agents/skills/skill-improvement-loop/scripts/log_opportunity.py --skill openspec-apply-change --kind skill-update --summary "Require reading local AGENTS.md before editing Next.js routes" --evidence "Phase work required repo-specific Next.js docs before code changes" --recommendation "Add a pre-edit checklist item for repo instruction files and framework docs" --impact medium --confidence 0.8
 ```
 
 ### Recommend A New Skill
@@ -55,7 +56,7 @@ Use this when the user asks to apply queued improvements, run scheduled skill ma
 1. Review the backlog:
 
 ```bash
-python .claude/skills/skill-improvement-loop/scripts/review_backlog.py --status queued
+python .agents/skills/skill-improvement-loop/scripts/review_backlog.py --status queued
 ```
 
 2. Pick a small batch:
@@ -70,13 +71,13 @@ python .claude/skills/skill-improvement-loop/scripts/review_backlog.py --status 
 4. Validate edited skills:
 
 ```bash
-python C:\Users\Aaron Ngo\.codex\skills\.system\skill-creator\scripts\quick_validate.py .claude\skills\<skill-name>
+python C:\Users\Aaron Ngo\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents\skills\<skill-name>
 ```
 
 5. Mark applied entries:
 
 ```bash
-python .claude/skills/skill-improvement-loop/scripts/update_opportunity.py --id <id> --status applied --notes "Implemented in <path>"
+python .agents/skills/skill-improvement-loop/scripts/update_opportunity.py --id <id> --status applied --notes "Implemented in <path>"
 ```
 
 6. Report:
@@ -87,7 +88,7 @@ python .claude/skills/skill-improvement-loop/scripts/update_opportunity.py --id 
 
 ## Backlog Files
 
-The default backlog lives at `.claude/skill-improvement/opportunities.jsonl`. Each line is one JSON record. See `references/backlog-protocol.md` for fields, status meanings, and batch rules.
+The default backlog lives at `.agents/skill-improvement/opportunities.jsonl`. Each line is one JSON record. See `references/backlog-protocol.md` for fields, status meanings, and batch rules.
 
 Use the scripts instead of manual JSON editing unless a script is missing a needed option.
 
@@ -96,6 +97,7 @@ Use the scripts instead of manual JSON editing unless a script is missing a need
 - Do not invent session evidence. If the reason is speculative, lower `confidence` and mark it as a recommendation.
 - Do not make broad rewrites to skills during observe-only passes.
 - Do not change system skills under `~/.codex/skills/.system` unless the user explicitly asks and approves any required filesystem escalation.
+- Do not edit generated `.claude/skills` or `~/.codex/skills` compatibility links/copies directly. Edit `.agents/skills` and run `scripts/sync-agent-skills.ps1`.
 - Preserve a skill's existing scope. If an improvement would overload it, log a new-skill recommendation.
 - Prefer adding a concise checklist item or reference pointer over long narrative.
 - When adding scripts to skills, run at least one representative script test.
