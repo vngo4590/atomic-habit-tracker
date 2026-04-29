@@ -11,9 +11,9 @@
 
 ## 3. Helper Functions & Tests
 
-- [ ] 3.1 Create `lib/helpers.ts` with `todayKey()`, `dateAdd()`, and `fmt` (long, short, weekday, time formatters)
-- [ ] 3.2 Write `lib/__tests__/helpers.test.ts` — tests for `todayKey`, `dateAdd`, and `fmt`
-- [ ] 3.3 Run `npm test` and confirm all helper tests pass
+- [x] 3.1 Create `lib/helpers.ts` with `todayKey()`, `dateAdd()`, and `fmt` (long, short, weekday, time formatters)
+- [x] 3.2 Write `lib/__tests__/helpers.test.ts` — tests for `todayKey`, `dateAdd`, and `fmt`
+- [x] 3.3 Run `npm test` and confirm all helper tests pass
 
 ## 4. Sample Data
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Skill Improvement Loop"
+  short_description: "Log and apply skill improvement opportunities"
+  default_prompt: "Use $skill-improvement-loop to review this work session and update relevant project skills."
