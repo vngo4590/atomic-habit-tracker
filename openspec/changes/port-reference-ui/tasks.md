@@ -86,55 +86,55 @@
 
 ## 16. Create Habit Screen
 
-- [ ] 16.1 Create `app/(root)/habits/new/page.tsx` with the Mad-Libs sentence builder (`MLInput`, `MLChip` inline components), schedule picker, time picker, and habit stack section
-- [ ] 16.2 Implement `finalize()` logic that constructs `cue`, `response`, `twoMin`, and `schedule` from the form fields before calling `addHabit`
+- [x] 16.1 Create `app/(root)/habits/new/page.tsx` with the Mad-Libs sentence builder (`MLInput`, `MLChip` inline components), schedule picker, time picker, and habit stack section
+- [x] 16.2 Implement `finalize()` logic that constructs `cue`, `response`, `twoMin`, and `schedule` from the form fields before calling `addHabit`
 
 ## 17. Analytics Screen
 
-- [ ] 17.1 Create `components/LineChart.tsx` — SVG line + area chart accepting a `data` array of `{ pct }` points
-- [ ] 17.2 Create `app/(root)/analytics/page.tsx` with four summary stats, line chart (14/30/90-day tabs), day-of-week bar chart, and habit leaderboard
+- [x] 17.1 Create `components/LineChart.tsx` — SVG line + area chart accepting a `data` array of `{ pct }` points
+- [x] 17.2 Create `app/(root)/analytics/page.tsx` with four summary stats, line chart (14/30/90-day tabs), day-of-week bar chart, and habit leaderboard
 
 ## 18. Journal Screen
 
-- [ ] 18.1 Create `app/(root)/journal/page.tsx` with compose toggle, mood buttons, three reflection prompts, and entry list
+- [x] 18.1 Create `app/(root)/journal/page.tsx` with compose toggle, mood buttons, three reflection prompts, and entry list
 
 ## 19. Weekly Review Screen
 
-- [ ] 19.1 Create `app/(root)/review/page.tsx` with 7-day strip, Wins/Slips columns, and three reflection textareas
+- [x] 19.1 Create `app/(root)/review/page.tsx` with 7-day strip, Wins/Slips columns, and three reflection textareas
 
 ## 20. Lessons Screen
 
-- [ ] 20.1 Create `app/(root)/lessons/page.tsx` implementing the three views (Home, Reader, Library) as local state within the page component
-- [ ] 20.2 Implement `pickToday()` day-stable lesson selection with sequential and random modes
-- [ ] 20.3 Persist lesson completion to `atomicly:lessons` in localStorage
+- [x] 20.1 Create `app/(root)/lessons/page.tsx` implementing the three views (Home, Reader, Library) as local state within the page component
+- [x] 20.2 Implement `pickToday()` day-stable lesson selection with sequential and random modes
+- [x] 20.3 Persist lesson completion to `atomicly:lessons` in localStorage
 
 ## 21. Hall of Fame Screen
 
-- [ ] 21.1 Create `components/FormationQuestionnaire.tsx` — 5-question 1–5 scale modal with reflection textarea and verdict buttons
-- [ ] 21.2 Create `app/(root)/hall-of-fame/page.tsx` with "Ready for review", inducted gallery, and in-progress progress bars
-- [ ] 21.3 Persist formation verdicts to `atomicly:formed` in localStorage
+- [x] 21.1 Create `components/FormationQuestionnaire.tsx` — 5-question 1–5 scale modal with reflection textarea and verdict buttons
+- [x] 21.2 Create `app/(root)/hall-of-fame/page.tsx` with "Ready for review", inducted gallery, and in-progress progress bars
+- [x] 21.3 Persist formation verdicts to `atomicly:formed` in localStorage
 
 ## 22. Identity Screen
 
-- [ ] 22.1 Create `app/(root)/identity/page.tsx` with editable identity statement, core values chips (+ Add value), and vote ledger with progress bars
+- [x] 22.1 Create `app/(root)/identity/page.tsx` with editable identity statement, core values chips (+ Add value), and vote ledger with progress bars
 
 ## 23. Settings Screen
 
-- [ ] 23.1 Create `app/(root)/settings/page.tsx` with Account, Appearance (theme + accent), Notifications (toggle rows), and Data (export JSON + reset) groups
-- [ ] 23.2 Implement theme toggle: set/read `data-theme` on `document.documentElement`
-- [ ] 23.3 Implement accent picker: update `--accent` CSS variable on `document.documentElement`
-- [ ] 23.4 Implement JSON export: serialize store state to a downloadable `.json` file
+- [x] 23.1 Create `app/(root)/settings/page.tsx` with Account, Appearance (theme + accent), Notifications (toggle rows), and Data (export JSON + reset) groups
+- [x] 23.2 Implement theme toggle: set/read `data-theme` on `document.documentElement`
+- [x] 23.3 Implement accent picker: update `--accent` CSS variable on `document.documentElement`
+- [x] 23.4 Implement JSON export: serialize store state to a downloadable `.json` file
 
 ## 24. Onboarding Overlay
 
-- [ ] 24.1 Create `components/OnboardingOverlay.tsx` — 4-step overlay with progress dots, name input, and identity explanation
-- [ ] 24.2 Wire onboarding into `app/(root)/layout.tsx`: show when `atomicly:store` is absent from localStorage, set a seen flag on completion
+- [x] 24.1 Create `components/OnboardingOverlay.tsx` — 4-step overlay with progress dots, name input, and identity explanation
+- [x] 24.2 Wire onboarding into `app/(root)/layout.tsx`: show when `atomicly:store` is absent from localStorage, set a seen flag on completion
 
 ## 25. Final Verification
 
-- [ ] 25.1 Run `npm run build` and confirm no TypeScript or Next.js build errors
-- [ ] 25.2 Run `npm test` and confirm all Vitest tests pass
-- [ ] 25.3 Start the dev server (`npm run dev`) and verify all 10 screens render correctly by navigating to each route
-- [ ] 25.4 Verify dark mode toggle in Settings applies the dark theme correctly
-- [ ] 25.5 Verify habit check-in, mood sheet, and toast notification work end-to-end on the Today screen
-- [ ] 25.6 Verify localStorage persistence by checking in a habit, refreshing the page, and confirming it remains done
+- [x] 25.1 Run `npm run build` and confirm no TypeScript or Next.js build errors
+- [x] 25.2 Run `npm test` and confirm all Vitest tests pass
+- [x] 25.3 Start the dev server (`npm run dev`) and verify all 10 screens render correctly by navigating to each route
+- [x] 25.4 Verify dark mode toggle in Settings applies the dark theme correctly
+- [x] 25.5 Verify habit check-in, mood sheet, and toast notification work end-to-end on the Today screen
+- [x] 25.6 Verify localStorage persistence by checking in a habit, refreshing the page, and confirming it remains done
