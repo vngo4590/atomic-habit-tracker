@@ -6,8 +6,8 @@
 
 ## 2. TypeScript Types
 
-- [ ] 2.1 Create `lib/types.ts` with `Habit`, `CheckIn`, `Note`, `JournalEntry`, `Identity`, `ToastState`, and `StoreState` interfaces
-- [ ] 2.2 Create `lib/lessons-data.ts` with the `Lesson` interface and all 24 lesson objects from the reference
+- [x] 2.1 Create `lib/types.ts` with `Habit`, `CheckIn`, `Note`, `JournalEntry`, `Identity`, `ToastState`, and `StoreState` interfaces
+- [x] 2.2 Create `lib/lessons-data.ts` with the `Lesson` interface and all 24 lesson objects from the reference
 
 ## 3. Helper Functions & Tests
 
