@@ -60,12 +60,12 @@
 
 ## 8. Responsive App Shell and Screens
 
-- [ ] 8.1 Refactor `app/(root)/layout.tsx` and navigation into responsive desktop sidebar plus mobile navigation/drawer behavior
-- [ ] 8.2 Update Today and habit row interactions for mobile touch targets and single-column layout
-- [ ] 8.3 Update Habits list and Habit detail screens so tables, tabs, history wall, notes, and modals fit mobile widths
-- [ ] 8.4 Update Analytics charts, Journal, Weekly Review, Lessons, Hall of Fame, Identity, and Settings for mobile layouts
-- [ ] 8.5 Add responsive CSS utilities or component primitives that avoid one-off mobile fixes per page
-- [ ] 8.6 Verify all routes at 390px, 768px, and desktop widths with no unintended horizontal overflow
+- [x] 8.1 Refactor `app/(root)/layout.tsx` and navigation into responsive desktop sidebar plus mobile navigation/drawer behavior
+- [x] 8.2 Update Today and habit row interactions for mobile touch targets and single-column layout
+- [x] 8.3 Update Habits list and Habit detail screens so tables, tabs, history wall, notes, and modals fit mobile widths
+- [x] 8.4 Update Analytics charts, Journal, Weekly Review, Lessons, Hall of Fame, Identity, and Settings for mobile layouts
+- [x] 8.5 Add responsive CSS utilities or component primitives that avoid one-off mobile fixes per page
+- [x] 8.6 Verify all routes at 390px, 768px, and desktop widths with no unintended horizontal overflow
 
 ## 9. Local Store Removal and Data Boundaries
 
