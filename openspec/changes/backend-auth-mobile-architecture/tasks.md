@@ -24,30 +24,30 @@
 
 ## 4. Validation Contracts and Repositories
 
-- [ ] 4.1 Add shared validation schemas for habits, check-ins, notes, contracts, journal entries, weekly reviews, identity, preferences, lessons, and formation verdicts
-- [ ] 4.2 Implement repository helpers that require `userId` for every user-owned query and mutation
-- [ ] 4.3 Add repository tests proving cross-user reads and writes are rejected or return not found
-- [ ] 4.4 Add date-key utilities that preserve user-local `YYYY-MM-DD` habit days with UTC timestamps
+- [x] 4.1 Add shared validation schemas for habits, check-ins, notes, contracts, journal entries, weekly reviews, identity, preferences, lessons, and formation verdicts
+- [x] 4.2 Implement repository helpers that require `userId` for every user-owned query and mutation
+- [x] 4.3 Add repository tests proving cross-user reads and writes are rejected or return not found
+- [x] 4.4 Add date-key utilities that preserve user-local `YYYY-MM-DD` habit days with UTC timestamps
 
 ## 5. Habit Backend Flow
 
-- [ ] 5.1 Replace habit list data loading with authenticated database queries
-- [ ] 5.2 Replace create-habit flow with a server action and validation feedback
-- [ ] 5.3 Replace habit detail loading and update flows with authenticated database queries/mutations
-- [ ] 5.4 Replace habit check-in toggle and mood/journal save with server-backed mutations
-- [ ] 5.5 Replace notes, history wall, and contract persistence with database-backed mutations
-- [ ] 5.6 Add empty states for new users with no habits
-- [ ] 5.7 Add tests for create, update, delete, check-in, mood save, notes, and ownership behavior
+- [x] 5.1 Replace habit list data loading with authenticated database queries
+- [x] 5.2 Replace create-habit flow with a server action and validation feedback
+- [x] 5.3 Replace habit detail loading and update flows with authenticated database queries/mutations
+- [x] 5.4 Replace habit check-in toggle and mood/journal save with server-backed mutations
+- [x] 5.5 Replace notes, history wall, and contract persistence with database-backed mutations
+- [x] 5.6 Add empty states for new users with no habits
+- [x] 5.7 Add tests for create, update, delete, check-in, mood save, notes, and ownership behavior
 
 ## 6. Reflection and Learning Backend Flow
 
-- [ ] 6.1 Replace Journal page reads/writes with authenticated database-backed actions
-- [ ] 6.2 Replace Weekly Review save/load with database-backed actions keyed by user and week
-- [ ] 6.3 Replace Lessons completion and mode persistence with database-backed user progress
-- [ ] 6.4 Replace Identity statement/core values persistence with database-backed profile data
-- [ ] 6.5 Replace Hall of Fame formation verdict persistence with database-backed records
-- [ ] 6.6 Replace Settings preference persistence with database-backed preferences and local theme/accent mirroring
-- [ ] 6.7 Add tests for journal, review, lesson progress, identity, formation verdicts, and preferences
+- [x] 6.1 Replace Journal page reads/writes with authenticated database-backed actions
+- [x] 6.2 Replace Weekly Review save/load with database-backed actions keyed by user and week
+- [x] 6.3 Replace Lessons completion and mode persistence with database-backed user progress
+- [x] 6.4 Replace Identity statement/core values persistence with database-backed profile data
+- [x] 6.5 Replace Hall of Fame formation verdict persistence with database-backed records
+- [x] 6.6 Replace Settings preference persistence with database-backed preferences and local theme/accent mirroring
+- [x] 6.7 Add tests for journal, review, lesson progress, identity, formation verdicts, and preferences
 
 ## 7. Versioned API for Mobile Bridge
 

@@ -12,10 +12,12 @@ const QUESTIONS = [
 ];
 
 export default function ReviewPage() {
-  const { habits, completionRate, showToast } = useStoreContext();
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const { habits, completionRate, showToast, weeklyReview, setWeeklyReview } = useStoreContext();
+  const [answers, setAnswers] = useState(weeklyReview);
   const today = todayKey();
   const days = useMemo(() => Array.from({ length: 7 }, (_, index) => dateAdd(today, index - 6)), [today]);
+  const weekStartKey = days[0];
+  const questionFields = ["wentWell", "smallestFix", "identityVote"] as const;
 
   const totals = useMemo(() => {
     const possible = days.length * habits.length;
@@ -95,15 +97,18 @@ export default function ReviewPage() {
       <section className="card card-pad">
         <div className="eyebrow">Reflection</div>
         <div style={{ display: "grid", gap: 14, marginTop: 14 }}>
-          {QUESTIONS.map((question) => (
+          {QUESTIONS.map((question, index) => {
+            const field = questionFields[index];
+            return (
             <label key={question}>
               <span className="field-label">{question}</span>
-              <textarea className="input" rows={4} value={answers[question] ?? ""} onChange={(event) => setAnswers((current) => ({ ...current, [question]: event.target.value }))} />
+              <textarea className="input" rows={4} value={answers[field]} onChange={(event) => setAnswers((current) => ({ ...current, [field]: event.target.value }))} />
             </label>
-          ))}
+            );
+          })}
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
-          <button className="btn btn-primary" onClick={() => showToast("Weekly review saved", "Reflection captured locally")}>Save review</button>
+          <button className="btn btn-primary" onClick={() => { setWeeklyReview(weekStartKey, answers); showToast("Weekly review saved", "Reflection captured to your account"); }}>Save review</button>
         </div>
       </section>
     </div>

@@ -6,6 +6,8 @@ import { Nav } from "@/components/Nav";
 import { OnboardingGate } from "@/components/OnboardingGate";
 import { StoreProvider } from "@/components/StoreProvider";
 import { Toast } from "@/components/Toast";
+import { todayKey } from "@/lib/helpers";
+import { getStoreSnapshot } from "@/lib/repositories/reflection";
 
 export default async function RootGroupLayout({ children }: { children: ReactNode }) {
   const session = await auth();
@@ -14,8 +16,11 @@ export default async function RootGroupLayout({ children }: { children: ReactNod
     redirect("/login");
   }
 
+  const userId = session.user.id;
+  const initialSnapshot = await getStoreSnapshot(userId, todayKey());
+
   return (
-    <StoreProvider>
+    <StoreProvider initialSnapshot={initialSnapshot}>
       <div className="app">
         <Nav user={{ name: session.user.name ?? null, email: session.user.email ?? null }} />
         <main className="main">

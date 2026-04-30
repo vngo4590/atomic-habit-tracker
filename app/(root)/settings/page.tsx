@@ -30,33 +30,33 @@ function applyAccent(hue: number) {
 
 export default function SettingsPage() {
   const store = useStoreContext();
-  const [theme, setTheme] = useState<Theme>("light");
-  const [accent, setAccent] = useState(60);
+  const [theme, setTheme] = useState<Theme>(store.preferences.theme);
+  const [accent, setAccent] = useState(store.preferences.accentHue);
   const [notifications, setNotifications] = useState({
-    reminders: true,
-    review: true,
-    accountability: false,
+    reminders: store.preferences.remindersEnabled,
+    review: store.preferences.weeklyReviewNudge,
+    accountability: store.preferences.accountabilityNudge,
   });
 
   useEffect(() => {
     window.queueMicrotask(() => {
-      const savedTheme = window.localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light";
-      const savedAccent = Number(window.localStorage.getItem(ACCENT_KEY) ?? 60);
-      setTheme(savedTheme);
-      setAccent(savedAccent);
-      applyTheme(savedTheme);
-      applyAccent(savedAccent);
+      setTheme(store.preferences.theme);
+      setAccent(store.preferences.accentHue);
+      applyTheme(store.preferences.theme);
+      applyAccent(store.preferences.accentHue);
     });
-  }, []);
+  }, [store.preferences.accentHue, store.preferences.theme]);
 
   const setNextTheme = (nextTheme: Theme) => {
     setTheme(nextTheme);
     applyTheme(nextTheme);
+    store.setPreferences({ theme: nextTheme });
   };
 
   const setNextAccent = (hue: number) => {
     setAccent(hue);
     applyAccent(hue);
+    store.setPreferences({ accentHue: hue });
   };
 
   const exportJson = () => {
@@ -80,10 +80,7 @@ export default function SettingsPage() {
   };
 
   const resetData = () => {
-    window.localStorage.removeItem("atomicly:store");
-    window.localStorage.removeItem("atomicly:lessons");
-    window.localStorage.removeItem("atomicly:formed");
-    window.location.reload();
+    store.showToast("Reset is disabled", "Authenticated data lives in your account database");
   };
 
   return (
@@ -129,7 +126,15 @@ export default function SettingsPage() {
             <SettingRow key={key} label={label} value={notifications[key as keyof typeof notifications] ? "On" : "Off"}>
               <button
                 className={`chip ${notifications[key as keyof typeof notifications] ? "active" : ""}`}
-                onClick={() => setNotifications((current) => ({ ...current, [key]: !current[key as keyof typeof notifications] }))}
+                onClick={() => setNotifications((current) => {
+                  const next = { ...current, [key]: !current[key as keyof typeof notifications] };
+                  store.setPreferences({
+                    remindersEnabled: next.reminders,
+                    weeklyReviewNudge: next.review,
+                    accountabilityNudge: next.accountability,
+                  });
+                  return next;
+                })}
               >
                 {notifications[key as keyof typeof notifications] ? "On" : "Off"}
               </button>

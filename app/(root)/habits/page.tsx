@@ -98,6 +98,23 @@ export default function HabitsPage() {
             </div>
           );
         })}
+        {habits.length === 0 && (
+          <div style={{ padding: "42px 22px", textAlign: "center" }}>
+            <div className="eyebrow">Empty library</div>
+            <h2 className="h2" style={{ marginTop: 8 }}>No habits in your account yet.</h2>
+            <p className="muted" style={{ margin: "10px auto 18px", maxWidth: 420, lineHeight: 1.5 }}>
+              Create one habit to begin casting identity votes.
+            </p>
+            <button className="btn btn-primary" onClick={() => router.push("/habits/new")}>
+              <IconPlus style={{ width: 13, height: 13 }} /> New habit
+            </button>
+          </div>
+        )}
+        {habits.length > 0 && filtered.length === 0 && (
+          <div className="muted" style={{ padding: "28px 22px", textAlign: "center" }}>
+            No habits match this filter.
+          </div>
+        )}
       </div>
     </div>
   );

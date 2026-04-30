@@ -2,28 +2,11 @@
 
 import { useMemo, useState } from "react";
 
+import { useStoreContext } from "@/components/StoreProvider";
 import { CHAPTERS, LESSONS, type Lesson } from "@/lib/lessons-data";
 
-const STORAGE_KEY = "atomicly:lessons";
 type View = "home" | "reader" | "library";
 type Mode = "sequential" | "random";
-
-function readCompleted() {
-  if (typeof window === "undefined") {
-    return new Set<number>();
-  }
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    const ids = raw ? (JSON.parse(raw) as number[]) : [];
-    return new Set(ids);
-  } catch {
-    return new Set<number>();
-  }
-}
-
-function persistCompleted(completed: Set<number>) {
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(completed).sort((a, b) => a - b)));
-}
 
 export function pickToday(completed: Set<number>, mode: Mode, date = new Date()) {
   if (mode === "sequential") {
@@ -35,11 +18,10 @@ export function pickToday(completed: Set<number>, mode: Mode, date = new Date())
 }
 
 export default function LessonsPage() {
-  const [completed, setCompleted] = useState<Set<number>>(() => readCompleted());
-  const [mode, setMode] = useState<Mode>("sequential");
+  const { completedLessons: completed, lessonMode: mode, setLessonMode, markLessonRead } = useStoreContext();
   const [view, setView] = useState<View>("home");
   const [filter, setFilter] = useState("All");
-  const [selected, setSelected] = useState<Lesson>(() => pickToday(readCompleted(), "sequential"));
+  const [selected, setSelected] = useState<Lesson>(() => pickToday(completed, mode));
   const todayLesson = useMemo(() => pickToday(completed, mode), [completed, mode]);
 
   const openLesson = (lesson: Lesson) => {
@@ -48,12 +30,7 @@ export default function LessonsPage() {
   };
 
   const markRead = (lesson: Lesson) => {
-    setCompleted((current) => {
-      const next = new Set(current);
-      next.add(lesson.id);
-      persistCompleted(next);
-      return next;
-    });
+    markLessonRead(lesson.id);
   };
 
   const filteredLessons = LESSONS.filter((lesson) => {
@@ -95,7 +72,7 @@ export default function LessonsPage() {
               </div>
               <div style={{ display: "grid", gap: 8, alignContent: "start" }}>
                 {(["sequential", "random"] as const).map((item) => (
-                  <button key={item} className={`chip ${mode === item ? "active" : ""}`} onClick={() => setMode(item)}>{item}</button>
+                  <button key={item} className={`chip ${mode === item ? "active" : ""}`} onClick={() => setLessonMode(item)}>{item}</button>
                 ))}
               </div>
             </div>

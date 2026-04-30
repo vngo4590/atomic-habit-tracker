@@ -5,13 +5,13 @@ export interface CheckIn {
 }
 
 export interface Note {
-  id: number;
+  id: string;
   body: string;
   createdAt: string;
 }
 
 export interface Habit {
-  id: number;
+  id: string;
   name: string;
   emoji: string;
   cue: string;
@@ -39,7 +39,7 @@ export type HabitDraft = Partial<
 };
 
 export interface JournalEntry {
-  id: number;
+  id: string;
   date: string;
   title: string;
   body: string;
@@ -61,18 +61,66 @@ export interface ToastState {
 export interface StoreState {
   habits: Habit[];
   setHabits: (habits: Habit[]) => void;
-  toggleHabit: (id: number, dateKey?: string, payload?: Partial<CheckIn> | null) => void;
-  logCheckIn: (id: number, payload: Partial<CheckIn>, dateKey?: string) => void;
+  toggleHabit: (id: string, dateKey?: string, payload?: Partial<CheckIn> | null) => void;
+  logCheckIn: (id: string, payload: Partial<CheckIn>, dateKey?: string) => void;
   addHabit: (draft: HabitDraft) => void;
-  updateHabit: (id: number, patch: Partial<Habit>) => void;
-  deleteHabit: (id: number) => void;
+  updateHabit: (id: string, patch: Partial<Habit>) => void;
+  deleteHabit: (id: string) => void;
   journal: JournalEntry[];
   addJournal: (entry: Partial<JournalEntry>) => void;
   identity: Identity;
   setIdentity: (identity: Identity) => void;
+  weeklyReview: WeeklyReviewAnswers;
+  setWeeklyReview: (weekStartKey: string, answers: WeeklyReviewAnswers) => void;
+  completedLessons: Set<number>;
+  lessonMode: LessonMode;
+  setLessonMode: (mode: LessonMode) => void;
+  markLessonRead: (lessonId: number) => void;
+  formationVerdicts: FormationVerdict[];
+  saveFormationVerdict: (verdict: FormationVerdict) => void;
+  preferences: UserPreferences;
+  setPreferences: (preferences: Partial<UserPreferences>) => void;
   toast: ToastState | null;
   showToast: (msg: string, sub?: string) => void;
   streak: (habit: Habit) => number;
   longestStreak: (habit: Habit) => number;
   completionRate: (habit: Habit, days?: number) => number;
+}
+
+export type LessonMode = "sequential" | "random";
+export type Theme = "light" | "dark";
+
+export interface WeeklyReviewAnswers {
+  wentWell: string;
+  smallestFix: string;
+  identityVote: string;
+}
+
+export interface FormationVerdict {
+  habitId: string;
+  score: number;
+  reflection: string;
+  formed: boolean;
+  reviewedAt: string;
+}
+
+export interface UserPreferences {
+  theme: Theme;
+  accentHue: number;
+  remindersEnabled: boolean;
+  weeklyReviewNudge: boolean;
+  accountabilityNudge: boolean;
+  onboardingSeen: boolean;
+  lessonMode: LessonMode;
+  timezone: string;
+}
+
+export interface StoreSnapshot {
+  habits: Habit[];
+  journal: JournalEntry[];
+  identity: Identity;
+  weeklyReview: WeeklyReviewAnswers;
+  completedLessons: number[];
+  formationVerdicts: FormationVerdict[];
+  preferences: UserPreferences;
 }

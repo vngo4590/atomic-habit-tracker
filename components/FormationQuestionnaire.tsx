@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import type { Habit } from "@/lib/types";
+import type { FormationVerdict, Habit } from "@/lib/types";
 
 const QUESTIONS = [
   "I do this without negotiating with myself.",
@@ -11,14 +11,6 @@ const QUESTIONS = [
   "The habit supports the identity I want.",
   "I can maintain it on a difficult day.",
 ];
-
-export interface FormationVerdict {
-  habitId: number;
-  score: number;
-  reflection: string;
-  formed: boolean;
-  reviewedAt: string;
-}
 
 export function FormationQuestionnaire({
   habit,

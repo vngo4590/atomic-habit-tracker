@@ -7,12 +7,18 @@ import {
 } from "react";
 
 import { useStore } from "@/lib/store";
-import type { StoreState } from "@/lib/types";
+import type { StoreSnapshot, StoreState } from "@/lib/types";
 
 const StoreContext = createContext<StoreState | null>(null);
 
-export function StoreProvider({ children }: { children: ReactNode }) {
-  const store = useStore();
+export function StoreProvider({
+  children,
+  initialSnapshot,
+}: {
+  children: ReactNode;
+  initialSnapshot: StoreSnapshot;
+}) {
+  const store = useStore(initialSnapshot);
 
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
 }

@@ -27,7 +27,7 @@ export function seedHistory(
 
 export const SAMPLE_HABITS: Habit[] = [
   {
-    id: 1,
+    id: "1",
     name: "Read 10 pages",
     emoji: "📖",
     cue: "After morning coffee, when I sit at the desk",
@@ -47,7 +47,7 @@ export const SAMPLE_HABITS: Habit[] = [
     createdAt: dateAdd(todayKey(), -127),
   },
   {
-    id: 2,
+    id: "2",
     name: "Walk 8,000 steps",
     emoji: "🚶",
     cue: "After lunch the calendar reminder fires at 1:15pm",
@@ -67,7 +67,7 @@ export const SAMPLE_HABITS: Habit[] = [
     createdAt: dateAdd(todayKey(), -97),
   },
   {
-    id: 3,
+    id: "3",
     name: "Meditate 5 min",
     emoji: "◯",
     cue: "Right after I brush my teeth at night",
@@ -87,7 +87,7 @@ export const SAMPLE_HABITS: Habit[] = [
     createdAt: dateAdd(todayKey(), -64),
   },
   {
-    id: 4,
+    id: "4",
     name: "Write morning pages",
     emoji: "✎",
     cue: "Coffee + the notebook open on the kitchen table",
@@ -107,7 +107,7 @@ export const SAMPLE_HABITS: Habit[] = [
     createdAt: dateAdd(todayKey(), -45),
   },
   {
-    id: 5,
+    id: "5",
     name: "Cold shower 60s",
     emoji: "❄",
     cue: "End of normal shower, hand on the dial",
@@ -127,7 +127,7 @@ export const SAMPLE_HABITS: Habit[] = [
     createdAt: dateAdd(todayKey(), -30),
   },
   {
-    id: 6,
+    id: "6",
     name: "No phone first hour",
     emoji: "⊘",
     cue: "Waking up - the impulse to grab the phone",
@@ -150,7 +150,7 @@ export const SAMPLE_HABITS: Habit[] = [
 
 export const SAMPLE_JOURNAL: JournalEntry[] = [
   {
-    id: 1,
+    id: "1",
     date: dateAdd(todayKey(), -1),
     title: "Reading is starting to stack",
     body: "Three weeks in, the coffee -> book -> bookmark sequence is finally automatic. I noticed today I picked up the book before I even thought about it. The friction is gone. Tomorrow I want to try moving the phone further away - it's the one thing still pulling at the edge of attention.",
@@ -158,7 +158,7 @@ export const SAMPLE_JOURNAL: JournalEntry[] = [
     tags: ["reading", "wins"],
   },
   {
-    id: 2,
+    id: "2",
     date: dateAdd(todayKey(), -3),
     title: "Missed meditation again",
     body: "Second day in a row. Pattern: I'm brushing teeth on the couch instead of in the bathroom, so the cue (cushion at foot of bed) doesn't fire. Fix: move the cushion next to where I actually brush.",
@@ -166,7 +166,7 @@ export const SAMPLE_JOURNAL: JournalEntry[] = [
     tags: ["meditation", "environment"],
   },
   {
-    id: 3,
+    id: "3",
     date: dateAdd(todayKey(), -7),
     title: "Week 1 review",
     body: 'Casting more votes for "reader" than "scroller" this week. The loop diagram for reading actually clarified something - the reward isn\'t finishing the book, it\'s the highlighted line. That\'s the thing I look forward to.',

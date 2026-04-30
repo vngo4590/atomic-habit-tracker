@@ -40,7 +40,7 @@ export default function HabitDetailPage() {
   const [showContract, setShowContract] = useState(false);
   const [showMood, setShowMood] = useState(false);
   const today = todayKey();
-  const habitId = Number(params.id);
+  const habitId = params.id;
   const habit = store.habits.find((item) => item.id === habitId);
 
   const stats = useMemo(() => {

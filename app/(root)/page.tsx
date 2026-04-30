@@ -204,6 +204,20 @@ export default function TodayPage() {
         );
       })}
 
+      {habits.length === 0 && (
+        <div className="card card-pad" style={{ textAlign: "center", padding: "42px 20px" }}>
+          <div className="eyebrow">No habits yet</div>
+          <h2 className="h2" style={{ marginTop: 8 }}>Design your first daily vote.</h2>
+          <p className="muted" style={{ margin: "10px auto 18px", maxWidth: 460, lineHeight: 1.5 }}>
+            Start with one small behavior tied to a clear identity.
+          </p>
+          <button className="btn btn-primary" onClick={() => router.push("/habits/new")}>
+            <IconPlus style={{ width: 13, height: 13 }} />
+            Create habit
+          </button>
+        </div>
+      )}
+
       {moodHabit && (
         <MoodCheckSheet
           habit={moodHabit}

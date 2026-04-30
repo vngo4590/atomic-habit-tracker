@@ -23,7 +23,10 @@ export default function JournalPage() {
   const [body, setBody] = useState("");
   const [mood, setMood] = useState<(typeof MOODS)[number][0]>("good");
 
-  const entries = useMemo(() => [...journal].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id), [journal]);
+  const entries = useMemo(
+    () => [...journal].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)),
+    [journal],
+  );
 
   const startPrompt = (prompt: string) => {
     setTitle(prompt);

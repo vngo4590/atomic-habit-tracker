@@ -15,22 +15,22 @@ export function NotesManager({
 }) {
   const [draft, setDraft] = useState("");
   const [bulkMode, setBulkMode] = useState(false);
-  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const addNote = () => {
     if (!draft.trim()) {
       return;
     }
-    onUpdateNotes([{ id: Date.now(), createdAt: todayKey(), body: draft.trim() }, ...habit.notes]);
+    onUpdateNotes([{ id: `pending-${Date.now()}`, createdAt: todayKey(), body: draft.trim() }, ...habit.notes]);
     setDraft("");
   };
-  const deleteOne = (id: number) => onUpdateNotes(habit.notes.filter((note) => note.id !== id));
+  const deleteOne = (id: string) => onUpdateNotes(habit.notes.filter((note) => note.id !== id));
   const deleteSelected = () => {
     onUpdateNotes(habit.notes.filter((note) => !selected.has(note.id)));
     setSelected(new Set());
     setBulkMode(false);
   };
-  const toggleSelected = (id: number) => {
+  const toggleSelected = (id: string) => {
     const next = new Set(selected);
     if (next.has(id)) {
       next.delete(id);

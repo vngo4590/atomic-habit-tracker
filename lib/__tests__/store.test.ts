@@ -10,9 +10,23 @@ import {
 } from "@/lib/store";
 import type { Habit } from "@/lib/types";
 
+vi.mock("@/lib/actions/domain", () => ({
+  createHabitAction: vi.fn(),
+  createJournalEntryAction: vi.fn(),
+  deleteHabitAction: vi.fn(),
+  logCheckInAction: vi.fn(async () => null),
+  markLessonReadAction: vi.fn(),
+  saveFormationVerdictAction: vi.fn(),
+  saveIdentityAction: vi.fn(),
+  savePreferencesAction: vi.fn(),
+  saveWeeklyReviewAction: vi.fn(),
+  toggleHabitAction: vi.fn(async () => null),
+  updateHabitAction: vi.fn(),
+}));
+
 function makeHabit(history: Habit["history"]): Habit {
   return {
-    id: 1,
+    id: "1",
     name: "Test habit",
     emoji: "•",
     cue: "",
@@ -58,7 +72,26 @@ describe("store mutations", () => {
   });
 
   it("toggles a habit on and off", () => {
-    const { result } = renderHook(() => useStore());
+    const { result } = renderHook(() =>
+      useStore({
+        habits: [makeHabit({})],
+        journal: [],
+        identity: { statement: "", values: [] },
+        weeklyReview: { wentWell: "", smallestFix: "", identityVote: "" },
+        completedLessons: [],
+        formationVerdicts: [],
+        preferences: {
+          theme: "light",
+          accentHue: 60,
+          remindersEnabled: true,
+          weeklyReviewNudge: true,
+          accountabilityNudge: false,
+          onboardingSeen: false,
+          lessonMode: "sequential",
+          timezone: "UTC",
+        },
+      }),
+    );
     const id = result.current.habits[0].id;
     const key = "2030-01-01";
 

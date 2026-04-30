@@ -2,12 +2,11 @@
 
 import { useMemo, useState } from "react";
 
-import { FormationQuestionnaire, type FormationVerdict } from "@/components/FormationQuestionnaire";
+import { FormationQuestionnaire } from "@/components/FormationQuestionnaire";
 import { useStoreContext } from "@/components/StoreProvider";
 import { todayKey } from "@/lib/helpers";
-import type { Habit } from "@/lib/types";
+import type { FormationVerdict, Habit } from "@/lib/types";
 
-const STORAGE_KEY = "atomicly:formed";
 const FORMATION_DAYS = 66;
 
 function daysSince(dateKey: string) {
@@ -16,21 +15,8 @@ function daysSince(dateKey: string) {
   return Math.max(0, Math.floor((end.getTime() - start.getTime()) / 86400000));
 }
 
-function readVerdicts() {
-  if (typeof window === "undefined") {
-    return [] as FormationVerdict[];
-  }
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as FormationVerdict[]) : [];
-  } catch {
-    return [];
-  }
-}
-
 export default function HallOfFamePage() {
-  const { habits, longestStreak, completionRate } = useStoreContext();
-  const [verdicts, setVerdicts] = useState<FormationVerdict[]>(() => readVerdicts());
+  const { habits, longestStreak, completionRate, formationVerdicts: verdicts, saveFormationVerdict } = useStoreContext();
   const [reviewing, setReviewing] = useState<Habit | null>(null);
   const reviewedIds = new Set(verdicts.map((verdict) => verdict.habitId));
 
@@ -42,9 +28,7 @@ export default function HallOfFamePage() {
   );
 
   const saveVerdict = (verdict: FormationVerdict) => {
-    const next = [...verdicts.filter((item) => item.habitId !== verdict.habitId), verdict];
-    setVerdicts(next);
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    saveFormationVerdict(verdict);
     setReviewing(null);
   };
 
