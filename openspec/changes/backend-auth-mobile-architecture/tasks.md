@@ -51,12 +51,12 @@
 
 ## 7. Versioned API for Mobile Bridge
 
-- [ ] 7.1 Create `/api/v1/session` route handler for authenticated client session status
-- [ ] 7.2 Create `/api/v1/habits` route handlers for list, create, update, delete, check-in, notes, history, and contracts
-- [ ] 7.3 Create `/api/v1/reflection` route handlers for journal entries, weekly reviews, identity, lessons, preferences, and formation verdicts
-- [ ] 7.4 Share validation schemas and repository functions between server actions and API route handlers
-- [ ] 7.5 Add API contract tests for success, validation failure, unauthenticated, and cross-user access cases
-- [ ] 7.6 Document API response shapes and authentication assumptions for a future mobile client
+- [x] 7.1 Create `/api/v1/session` route handler for authenticated client session status
+- [x] 7.2 Create `/api/v1/habits` route handlers for list, create, update, delete, check-in, notes, history, and contracts
+- [x] 7.3 Create `/api/v1/reflection` route handlers for journal entries, weekly reviews, identity, lessons, preferences, and formation verdicts
+- [x] 7.4 Share validation schemas and repository functions between server actions and API route handlers
+- [x] 7.5 Add API contract tests for success, validation failure, unauthenticated, and cross-user access cases
+- [x] 7.6 Document API response shapes and authentication assumptions for a future mobile client
 
 ## 8. Responsive App Shell and Screens
 
