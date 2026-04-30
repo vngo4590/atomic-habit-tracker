@@ -94,3 +94,8 @@ The broad `npm run lint` command may include generated or reference files. Prefe
 - Date keys use local `YYYY-MM-DD` strings via `lib/helpers.ts`.
 - Design tokens and reference classes live in `app/globals.css`.
 - The current OpenSpec change `port-reference-ui` is implemented through phase 25 and ready to archive.
+
+## Backend Architecture Plan
+
+The active backend plan lives at `openspec/changes/backend-auth-mobile-architecture/`.
+Provider choices and deployment notes are documented in `docs/architecture/backend-auth-mobile.md`.

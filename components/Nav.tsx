@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+import { logoutAction } from "@/lib/actions/auth";
 import {
   IconBook,
   IconChart,
@@ -41,7 +42,19 @@ function isEditableTarget(target: EventTarget | null) {
   return ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable;
 }
 
-export function Nav() {
+interface NavProps {
+  user: {
+    name: string | null;
+    email: string | null;
+  };
+}
+
+function initials(name: string | null, email: string | null) {
+  const source = name || email || "A";
+  return source.slice(0, 1).toUpperCase();
+}
+
+export function Nav({ user }: NavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { habits } = useStoreContext();
@@ -99,11 +112,16 @@ export function Nav() {
       ))}
 
       <div className="sidebar-foot">
-        <div className="avatar">A</div>
+        <div className="avatar">{initials(user.name, user.email)}</div>
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div className="who-name">Alex Rivera</div>
+          <div className="who-name">{user.name ?? user.email ?? "Atomicly user"}</div>
           <div className="who-id">{totalVotes} votes cast</div>
         </div>
+        <form action={logoutAction}>
+          <button className="btn btn-sm" type="submit" title="Sign out">
+            Out
+          </button>
+        </form>
       </div>
     </aside>
   );

@@ -1,26 +1,26 @@
 ## 1. Architecture Baseline
 
-- [ ] 1.1 Read local Next.js 16 docs for App Router route handlers, server actions, forms, middleware/proxy, cookies, and deployment-relevant runtime behavior
-- [ ] 1.2 Decide and document final provider choices for auth and PostgreSQL in `README.md` or a new deployment architecture doc
-- [ ] 1.3 Add required dependencies for Prisma, database client/adapter, Auth.js/NextAuth, password hashing, and validation
-- [ ] 1.4 Add `.env.example` with auth, database, app URL, and deployment variables
-- [ ] 1.5 Add backend folders: `lib/auth`, `lib/db`, `lib/repositories`, `lib/actions`, `lib/contracts`, and `app/api/v1`
+- [x] 1.1 Read local Next.js 16 docs for App Router route handlers, server actions, forms, middleware/proxy, cookies, and deployment-relevant runtime behavior
+- [x] 1.2 Decide and document final provider choices for auth and PostgreSQL in `README.md` or a new deployment architecture doc
+- [x] 1.3 Add required dependencies for Prisma, database client/adapter, Auth.js/NextAuth, password hashing, and validation
+- [x] 1.4 Add `.env.example` with auth, database, app URL, and deployment variables
+- [x] 1.5 Add backend folders: `lib/auth`, `lib/db`, `lib/repositories`, `lib/actions`, `lib/contracts`, and `app/api/v1`
 
 ## 2. Database Schema
 
-- [ ] 2.1 Initialize Prisma configuration and database client
-- [ ] 2.2 Create Prisma models for User, Account/Session if required by auth, UserPreference, IdentityProfile, Habit, HabitCheckIn, HabitNote, HabitContract, JournalEntry, WeeklyReview, LessonProgress, and FormationVerdict
-- [ ] 2.3 Add unique constraints for user-scoped habit IDs/slugs where needed and one check-in per habit/date key
+- [x] 2.1 Initialize Prisma configuration and database client
+- [x] 2.2 Create Prisma models for User, Account/Session if required by auth, UserPreference, IdentityProfile, Habit, HabitCheckIn, HabitNote, HabitContract, JournalEntry, WeeklyReview, LessonProgress, and FormationVerdict
+- [x] 2.3 Add unique constraints for user-scoped habit IDs/slugs where needed and one check-in per habit/date key
 - [ ] 2.4 Add initial migration and verify it applies locally
-- [ ] 2.5 Add seed/dev fixture script that is explicit development-only and does not run in production authenticated flows
+- [x] 2.5 Add seed/dev fixture script that is explicit development-only and does not run in production authenticated flows
 
 ## 3. Authentication
 
-- [ ] 3.1 Create auth configuration, session helper, sign-in, sign-out, and registration server actions
-- [ ] 3.2 Create login/register/logout UI routes with pending and error states
-- [ ] 3.3 Protect authenticated app routes and redirect unauthenticated users to login
-- [ ] 3.4 Add authenticated user menu state to the app shell
-- [ ] 3.5 Add tests for successful login, failed login, logout, and protected-route redirect behavior
+- [x] 3.1 Create auth configuration, session helper, sign-in, sign-out, and registration server actions
+- [x] 3.2 Create login/register/logout UI routes with pending and error states
+- [x] 3.3 Protect authenticated app routes and redirect unauthenticated users to login
+- [x] 3.4 Add authenticated user menu state to the app shell
+- [x] 3.5 Add tests for successful login, failed login, logout, and protected-route redirect behavior
 
 ## 4. Validation Contracts and Repositories
 

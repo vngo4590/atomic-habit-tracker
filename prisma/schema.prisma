@@ -1,0 +1,248 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Theme {
+  light
+  dark
+}
+
+enum LessonMode {
+  sequential
+  random
+}
+
+enum FormationDecision {
+  formed
+  keep_practicing
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts          Account[]
+  sessions          Session[]
+  preferences       UserPreference?
+  identityProfile   IdentityProfile?
+  habits            Habit[]
+  habitCheckIns     HabitCheckIn[]
+  habitNotes        HabitNote[]
+  habitContracts    HabitContract[]
+  journalEntries    JournalEntry[]
+  weeklyReviews     WeeklyReview[]
+  lessonProgress    LessonProgress[]
+  formationVerdicts FormationVerdict[]
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+model UserPreference {
+  id                  String     @id @default(cuid())
+  userId              String     @unique
+  theme               Theme      @default(light)
+  accentHue           Int        @default(60)
+  remindersEnabled    Boolean    @default(true)
+  weeklyReviewNudge   Boolean    @default(true)
+  accountabilityNudge Boolean    @default(false)
+  onboardingSeen      Boolean    @default(false)
+  lessonMode          LessonMode @default(sequential)
+  timezone            String     @default("UTC")
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model IdentityProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  statement String   @default("")
+  values    String[] @default([])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Habit {
+  id          String    @id @default(cuid())
+  userId      String
+  name        String
+  emoji       String    @default("•")
+  cue         String    @default("")
+  craving     String    @default("")
+  response    String    @default("")
+  reward      String    @default("")
+  twoMin      String    @default("")
+  stack       String    @default("")
+  identity    String
+  environment String    @default("")
+  schedule    String    @default("Daily")
+  time        String    @default("Morning")
+  sortOrder   Int       @default(0)
+  archivedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  checkIns HabitCheckIn[]
+  notes    HabitNote[]
+  contract HabitContract?
+  verdicts FormationVerdict[]
+
+  @@index([userId, createdAt])
+  @@index([userId, archivedAt])
+}
+
+model HabitCheckIn {
+  id        String   @id @default(cuid())
+  userId    String
+  habitId   String
+  dateKey   String
+  done      Boolean  @default(true)
+  mood      Int?
+  journal   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId, dateKey])
+  @@index([userId, dateKey])
+}
+
+model HabitNote {
+  id        String   @id @default(cuid())
+  userId    String
+  habitId   String
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@index([userId, habitId])
+}
+
+model HabitContract {
+  id        String   @id @default(cuid())
+  userId    String
+  habitId   String   @unique
+  terms     String   @default("")
+  partners  String[] @default([])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+}
+
+model JournalEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  dateKey   String
+  title     String
+  body      String   @default("")
+  mood      String   @default("good")
+  tags      String[] @default([])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, dateKey])
+}
+
+model WeeklyReview {
+  id           String   @id @default(cuid())
+  userId       String
+  weekStartKey String
+  wentWell     String   @default("")
+  smallestFix  String   @default("")
+  identityVote String   @default("")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weekStartKey])
+}
+
+model LessonProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  lessonId    Int
+  completedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+}
+
+model FormationVerdict {
+  id         String            @id @default(cuid())
+  userId     String
+  habitId    String
+  score      Float
+  reflection String            @default("")
+  decision   FormationDecision
+  reviewedAt DateTime          @default(now())
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId])
+  @@index([userId, decision])
+}
