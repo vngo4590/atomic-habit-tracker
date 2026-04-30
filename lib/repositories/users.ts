@@ -1,4 +1,5 @@
 import { db } from "@/lib/db/client";
+import { validateDatabaseUrl } from "@/lib/db/config";
 
 export interface AuthUserRecord {
   id: string;
@@ -23,6 +24,8 @@ const authUserSelect = {
 } as const;
 
 export async function findAuthUserByEmail(email: string): Promise<AuthUserRecord | null> {
+  validateDatabaseUrl();
+
   return db.user.findUnique({
     where: { email },
     select: authUserSelect,
@@ -30,6 +33,8 @@ export async function findAuthUserByEmail(email: string): Promise<AuthUserRecord
 }
 
 export async function createUserWithDefaults(input: CreateUserInput): Promise<AuthUserRecord> {
+  validateDatabaseUrl();
+
   return db.user.create({
     data: {
       email: input.email,

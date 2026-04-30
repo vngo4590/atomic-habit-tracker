@@ -1,6 +1,7 @@
 import type { RegisterInput } from "@/lib/contracts/auth";
 import { registerSchema } from "@/lib/contracts/auth";
 import { hashPassword } from "@/lib/auth/password";
+import { databaseSetupMessage } from "@/lib/db/config";
 import type { AuthUserRecord, CreateUserInput } from "@/lib/repositories/users";
 import { createUserWithDefaults, findAuthUserByEmail } from "@/lib/repositories/users";
 
@@ -31,7 +32,16 @@ export async function registerUser(input: unknown, deps: RegisterDeps = defaultD
     };
   }
 
-  const existing = await deps.findUserByEmail(parsed.data.email);
+  let existing: AuthUserRecord | null;
+  try {
+    existing = await deps.findUserByEmail(parsed.data.email);
+  } catch (error) {
+    const message = databaseSetupMessage(error);
+    if (message) {
+      return { ok: false, message };
+    }
+    throw error;
+  }
   if (existing) {
     return {
       ok: false,
@@ -41,11 +51,20 @@ export async function registerUser(input: unknown, deps: RegisterDeps = defaultD
   }
 
   const passwordHash = await deps.hash(parsed.data.password);
-  const user = await deps.createUser({
-    name: parsed.data.name,
-    email: parsed.data.email,
-    passwordHash,
-  });
+  let user: AuthUserRecord;
+  try {
+    user = await deps.createUser({
+      name: parsed.data.name,
+      email: parsed.data.email,
+      passwordHash,
+    });
+  } catch (error) {
+    const message = databaseSetupMessage(error);
+    if (message) {
+      return { ok: false, message };
+    }
+    throw error;
+  }
 
   return { ok: true, user };
 }
