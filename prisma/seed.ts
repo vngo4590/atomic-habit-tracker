@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 import { hashPassword } from "../lib/auth/password";
 import { db } from "../lib/db/client";
 

@@ -26,11 +26,48 @@
 
 ## Local Development
 
-1. Copy `.env.example` to `.env`.
-2. Set `DATABASE_URL` to a local or hosted PostgreSQL database.
-3. Run `npm run prisma:generate`.
-4. Run `npm run prisma:migrate:dev`.
-5. Run `npm run dev`.
+1. Copy `.env.example` to `.env`. The default local Docker database URL is:
+
+```env
+DATABASE_URL="postgresql://postgres:postgres@localhost:55432/atomicly?schema=public"
+```
+2. Start the local Docker database:
+
+```bash
+npm run db:up
+```
+
+3. Apply migrations and seed the development account:
+
+```bash
+npm run prisma:migrate:deploy
+npm run db:seed
+```
+
+Or run the combined setup:
+
+```bash
+npm run db:setup
+```
+
+4. Run the app:
+
+```bash
+npm run dev
+```
+
+Development login after seeding:
+
+- Email: `dev@atomicly.local`
+- Password: `Atomicly1!`
+
+Useful database commands:
+
+```bash
+npm run db:logs
+npm run db:down
+npm run db:reset
+```
 
 ## Vercel Notes
 

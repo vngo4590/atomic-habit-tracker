@@ -11,7 +11,7 @@
 - [x] 2.1 Initialize Prisma configuration and database client
 - [x] 2.2 Create Prisma models for User, Account/Session if required by auth, UserPreference, IdentityProfile, Habit, HabitCheckIn, HabitNote, HabitContract, JournalEntry, WeeklyReview, LessonProgress, and FormationVerdict
 - [x] 2.3 Add unique constraints for user-scoped habit IDs/slugs where needed and one check-in per habit/date key
-- [ ] 2.4 Add initial migration and verify it applies locally
+- [x] 2.4 Add initial migration and verify it applies locally
 - [x] 2.5 Add seed/dev fixture script that is explicit development-only and does not run in production authenticated flows
 
 ## 3. Authentication

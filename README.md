@@ -40,10 +40,18 @@ npm install
 Run the development server:
 
 ```bash
+npm run db:setup
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+The local Docker database seeds a development account:
+
+- Email: `dev@atomicly.local`
+- Password: `Atomicly1!`
+
+The local PostgreSQL container binds to host port `55432` to avoid conflicts with any PostgreSQL service already using `5432`.
 
 ## Validation
 

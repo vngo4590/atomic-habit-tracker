@@ -13,6 +13,11 @@
     "prisma:validate": "prisma validate",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f postgres",
+    "db:reset": "docker compose down -v && docker compose up -d postgres && prisma migrate deploy && tsx prisma/seed.ts",
+    "db:setup": "docker compose up -d postgres && prisma migrate deploy && tsx prisma/seed.ts",
     "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
