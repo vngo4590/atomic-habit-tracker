@@ -137,19 +137,19 @@ export const defaultSnapshot: StoreSnapshot = {
   },
 };
 
-export function useStore(initialSnapshot: StoreSnapshot = defaultSnapshot): StoreState {
-  const [habits, setHabits] = useState<Habit[]>(initialSnapshot.habits);
-  const [journal, setJournal] = useState<JournalEntry[]>(initialSnapshot.journal);
-  const [identity, setIdentityState] = useState<Identity>(initialSnapshot.identity);
-  const [weeklyReview, setWeeklyReviewState] = useState<WeeklyReviewAnswers>(initialSnapshot.weeklyReview);
+export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): StoreState {
+  const [habits, setHabits] = useState<Habit[]>(backendSnapshot.habits);
+  const [journal, setJournal] = useState<JournalEntry[]>(backendSnapshot.journal);
+  const [identity, setIdentityState] = useState<Identity>(backendSnapshot.identity);
+  const [weeklyReview, setWeeklyReviewState] = useState<WeeklyReviewAnswers>(backendSnapshot.weeklyReview);
   const [completedLessons, setCompletedLessons] = useState<Set<number>>(
-    () => new Set(initialSnapshot.completedLessons),
+    () => new Set(backendSnapshot.completedLessons),
   );
-  const [lessonModeState, setLessonModeState] = useState(initialSnapshot.preferences.lessonMode);
+  const [lessonModeState, setLessonModeState] = useState(backendSnapshot.preferences.lessonMode);
   const [formationVerdicts, setFormationVerdicts] = useState<FormationVerdict[]>(
-    initialSnapshot.formationVerdicts,
+    backendSnapshot.formationVerdicts,
   );
-  const [preferences, setPreferencesState] = useState<UserPreferences>(initialSnapshot.preferences);
+  const [preferences, setPreferencesState] = useState<UserPreferences>(backendSnapshot.preferences);
   const [toast, setToast] = useState<ToastState | null>(null);
   const updateHabitVersion = useRef(0);
   const updateJournalVersion = useRef(0);

@@ -1,8 +1,8 @@
 # Atomicly Habit Tracker
 
-Atomicly is a local-first habit tracking app inspired by Atomic Habits. It helps users design small habits, check them in daily, reflect on patterns, learn through a 24-lesson curriculum, and track identity votes over time.
+Atomicly is a habit tracking app inspired by Atomic Habits. It helps users design small habits, check them in daily, reflect on patterns, learn through a 24-lesson curriculum, and track identity votes over time.
 
-The app is implemented with Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, and the App Router. It does not use a backend; all user data is stored in browser `localStorage`.
+The app is implemented with Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, Prisma, Auth.js, PostgreSQL, and the App Router. Authenticated habit, reflection, lesson, identity, and preference data is loaded from the backend and written through server actions or `/api/v1` route handlers.
 
 ## Features
 
@@ -11,7 +11,7 @@ The app is implemented with Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, 
 - New habit builder using an inline Mad-Libs implementation intention sentence.
 - Analytics with adherence stats, completion trend chart, weekday bars, and leaderboard.
 - Journal, weekly review, identity ledger, settings, onboarding, lessons, and Hall of Fame flows.
-- Persistent local state for habits, journal entries, identity, completed lessons, formation verdicts, theme, and accent preference.
+- Backend persistence for habits, journal entries, identity, completed lessons, formation verdicts, and user preferences, with local mirroring only for immediate appearance/onboarding UI.
 
 ## Routes
 
@@ -80,25 +80,26 @@ The broad `npm run lint` command may include generated or reference files. Prefe
 - `app/`: Next.js App Router routes and layouts.
 - `app/(root)/`: shared sidebar shell and all app screens.
 - `components/`: reusable client UI components.
-- `lib/`: types, helpers, sample data, lessons data, store logic, and unit tests.
+- `lib/`: types, helpers, lessons data, auth/db helpers, repositories, server actions, store cache logic, and unit tests.
 - `reference_ui/`: original reference implementation used during the port.
 - `openspec/changes/port-reference-ui/`: OpenSpec proposal, design, specs, and completed task checklist.
 - `.agents/skills/`: canonical project-local skills shared by Claude and Codex.
 - `.claude/skills/`: generated compatibility copy/link for Claude; do not edit directly.
 
-## Local Storage Keys
+## Data Flow
 
-- `atomicly:store`: habits, journal entries, and identity state.
-- `atomicly:lessons`: completed lesson IDs.
-- `atomicly:formed`: Hall of Fame formation verdicts.
-- `atomicly:onboarding-seen`: first-run onboarding completion flag.
-- `atomicly:theme`: light or dark theme preference.
-- `atomicly:accent`: selected accent hue.
+- Authenticated app routes require `auth()` and redirect unauthenticated users to `/login`.
+- `app/(root)/layout.tsx` loads the user-owned backend snapshot with `getStoreSnapshot(userId, todayKey())`.
+- `components/StoreProvider.tsx` and `lib/store.ts` keep an in-memory optimistic cache around server actions. They are not a browser persistence layer.
+- Domain writes go through `lib/actions/domain.ts` and user-scoped repositories under `lib/repositories/`.
+- Mobile-ready clients use the authenticated `/api/v1` route handlers, documented in `app/api/v1/README.md`.
+- `localStorage` is limited to local UI mirrors such as `atomicly:theme`, `atomicly:accent`, and `atomicly:onboarding-seen`; it is not the source of truth for authenticated domain data.
+- `lib/sample-data.ts` is retained as a development/reference fixture module only. Normal authenticated flows do not import it.
 
 ## Implementation Notes
 
-- The app is client-state first. Screens that read or write store data are Client Components.
-- Shared state is exposed through `components/StoreProvider.tsx` and `lib/store.ts`.
+- Screens read the authenticated backend snapshot from the root layout and issue mutations through server actions.
+- Shared client state is exposed through `components/StoreProvider.tsx` and `lib/store.ts` as optimistic cache coordination.
 - Date keys use local `YYYY-MM-DD` strings via `lib/helpers.ts`.
 - Design tokens and reference classes live in `app/globals.css`.
 - The current OpenSpec change `port-reference-ui` is implemented through phase 25 and ready to archive.

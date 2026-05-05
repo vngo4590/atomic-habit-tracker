@@ -17,6 +17,8 @@ import {
 } from "@/lib/store";
 import type { Habit } from "@/lib/types";
 
+let localStorageMock: Pick<Storage, "getItem" | "setItem" | "removeItem" | "clear">;
+
 vi.mock("@/lib/actions/domain", () => ({
   createHabitAction: vi.fn(),
   createJournalEntryAction: vi.fn(),
@@ -62,7 +64,7 @@ function makeHabit(history: Habit["history"]): Habit {
 describe("store mutations", () => {
   beforeEach(() => {
     const store = new Map<string, string>();
-    const localStorageMock = {
+    localStorageMock = {
       getItem: vi.fn((key: string) => store.get(key) ?? null),
       setItem: vi.fn((key: string, value: string) => {
         store.set(key, value);
@@ -123,6 +125,35 @@ describe("store mutations", () => {
 
     act(() => result.current.toggleHabit(id, key));
     expect(result.current.habits[0].history[key]).toBeUndefined();
+  });
+
+  it("initializes from the backend snapshot without touching localStorage", () => {
+    const { result } = renderHook(() =>
+      useStore({
+        habits: [makeHabit({})],
+        journal: [],
+        identity: { statement: "Backend identity", values: ["Curious"] },
+        weeklyReview: { wentWell: "", smallestFix: "", identityVote: "" },
+        completedLessons: [1, 2],
+        formationVerdicts: [],
+        preferences: {
+          theme: "dark",
+          accentHue: 120,
+          remindersEnabled: true,
+          weeklyReviewNudge: true,
+          accountabilityNudge: false,
+          onboardingSeen: true,
+          lessonMode: "random",
+          timezone: "UTC",
+        },
+      }),
+    );
+
+    expect(result.current.habits).toHaveLength(1);
+    expect(result.current.identity.statement).toBe("Backend identity");
+    expect(result.current.completedLessons.has(2)).toBe(true);
+    expect(localStorageMock.getItem).not.toHaveBeenCalled();
+    expect(localStorageMock.setItem).not.toHaveBeenCalled();
   });
 
   it("does not let stale habit saves reset newer 4 laws edits", async () => {

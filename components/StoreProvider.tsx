@@ -13,12 +13,12 @@ const StoreContext = createContext<StoreState | null>(null);
 
 export function StoreProvider({
   children,
-  initialSnapshot,
+  backendSnapshot,
 }: {
   children: ReactNode;
-  initialSnapshot: StoreSnapshot;
+  backendSnapshot: StoreSnapshot;
 }) {
-  const store = useStore(initialSnapshot);
+  const store = useStore(backendSnapshot);
 
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
 }

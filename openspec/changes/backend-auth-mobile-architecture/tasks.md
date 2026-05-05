@@ -69,10 +69,10 @@
 
 ## 9. Local Store Removal and Data Boundaries
 
-- [ ] 9.1 Remove `localStorage` as the source of truth for authenticated domain data
-- [ ] 9.2 Narrow or replace `StoreProvider` so it only manages transient UI state, optimistic state, or cache coordination
-- [ ] 9.3 Keep sample data limited to tests, dev seeds, or explicitly unauthenticated demo fixtures
-- [ ] 9.4 Update README and AGENTS context to describe the new backend data flow
+- [x] 9.1 Remove `localStorage` as the source of truth for authenticated domain data
+- [x] 9.2 Narrow or replace `StoreProvider` so it only manages transient UI state, optimistic state, or cache coordination
+- [x] 9.3 Keep sample data limited to tests, dev seeds, or explicitly unauthenticated demo fixtures
+- [x] 9.4 Update README and AGENTS context to describe the new backend data flow
 
 ## 10. Vercel Deployment Readiness
 

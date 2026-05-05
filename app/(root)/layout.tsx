@@ -17,10 +17,10 @@ export default async function RootGroupLayout({ children }: { children: ReactNod
   }
 
   const userId = session.user.id;
-  const initialSnapshot = await getStoreSnapshot(userId, todayKey());
+  const backendSnapshot = await getStoreSnapshot(userId, todayKey());
 
   return (
-    <StoreProvider initialSnapshot={initialSnapshot}>
+    <StoreProvider backendSnapshot={backendSnapshot}>
       <div className="app">
         <Nav user={{ name: session.user.name ?? null, email: session.user.email ?? null }} />
         <main className="main">

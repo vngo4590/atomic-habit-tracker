@@ -13,7 +13,7 @@ This project uses Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, and the Ap
 ## Project Shape
 
 - `app/`: Next.js App Router files.
-- `lib/`: shared types, helpers, data, store logic, and tests.
+- `lib/`: shared types, helpers, lessons data, auth/db helpers, repositories, server actions, store cache logic, and tests.
 - `reference_ui/`: source reference implementation used for the completed UI port.
 - `openspec/changes/port-reference-ui/`: completed OpenSpec proposal, design, specs, and task checklist for the reference UI port.
 - `.agents/skills/`: canonical project-local skills shared by Claude and Codex.
@@ -22,18 +22,18 @@ This project uses Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, and the Ap
 
 ## App Context
 
-- Product: Atomicly, a local-first Atomic Habits practice app for designing habits, casting daily identity votes, reflecting on progress, and learning from a 24-lesson curriculum.
-- Data model: browser `localStorage` only. Main state is under `atomicly:store`; related feature state uses `atomicly:lessons`, `atomicly:formed`, `atomicly:onboarding-seen`, `atomicly:theme`, and `atomicly:accent`.
+- Product: Atomicly, an Atomic Habits practice app for designing habits, casting daily identity votes, reflecting on progress, and learning from a 24-lesson curriculum.
+- Data model: authenticated user data lives in PostgreSQL through Prisma repositories and is loaded from `app/(root)/layout.tsx` with `getStoreSnapshot(userId, todayKey())`. `components/StoreProvider.tsx` and `lib/store.ts` manage in-memory optimistic cache state around server actions; they are not a browser persistence layer. Browser `localStorage` is limited to local UI mirrors such as `atomicly:onboarding-seen`, `atomicly:theme`, and `atomicly:accent`.
 - Screens/routes: `/`, `/habits`, `/habits/new`, `/habits/[id]`, `/analytics`, `/journal`, `/review`, `/lessons`, `/hall-of-fame`, `/identity`, and `/settings`.
 - UI shell: all app screens live under `app/(root)/` and share the sidebar layout in `app/(root)/layout.tsx`.
 - Current OpenSpec status: `port-reference-ui` tasks are complete through phase 25 and the change is ready to archive.
 
 ## Implementation Workflow
 
-1. Read the relevant OpenSpec artifacts before implementing planned OpenSpec work:
-   - `openspec/changes/port-reference-ui/tasks.md`
-   - `openspec/changes/port-reference-ui/design.md`
-   - Any matching spec under `openspec/changes/port-reference-ui/specs/`
+1. Read the relevant OpenSpec artifacts before implementing planned OpenSpec work. For the backend/auth/mobile work, start with:
+   - `openspec/changes/backend-auth-mobile-architecture/tasks.md`
+   - `openspec/changes/backend-auth-mobile-architecture/design.md`
+   - Any matching spec under `openspec/changes/backend-auth-mobile-architecture/specs/`
 2. Check `reference_ui/` for source behavior and visual patterns before changing ported UI or logic.
 3. Keep task completion scoped. Mark OpenSpec task checkboxes only after the code and validation for that task are complete.
 4. Preserve user work in the git tree. Do not revert unrelated changes.
