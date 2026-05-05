@@ -93,15 +93,20 @@ button { font-family: inherit; color: inherit; }
 .card { background: var(--bg-elev); border: 1px solid var(--rule); border-radius: var(--r-lg); }
 .card-pad { padding: 22px; }
 .card-pad-lg { padding: 28px; }
-.btn { appearance: none; border: 1px solid var(--rule-strong); background: var(--bg-elev); color: var(--ink); height: 34px; padding: 0 14px; border-radius: var(--r-md); font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: background 0.12s, border-color 0.12s; }
+.btn { appearance: none; border: 1px solid var(--rule-strong); background: var(--bg-elev); color: var(--ink); height: 34px; padding: 0 14px; border-radius: var(--r-md); font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: background 0.12s, border-color 0.12s; white-space: nowrap; }
 .btn:hover { background: var(--bg-sunk); }
 .btn-primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .btn-primary:hover { background: var(--ink-2); }
 .btn-accent { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.btn-danger { background: var(--warn); color: var(--bg); border-color: var(--warn); }
+.btn-danger:hover { background: oklch(from var(--warn) calc(l - 0.07) c h); }
 .btn-ghost { border-color: transparent; background: transparent; }
 .btn-ghost:hover { background: var(--bg-sunk); border-color: var(--rule); }
+.btn-danger-ghost { color: var(--warn); }
+.btn-danger-ghost:hover { border-color: var(--warn); background: oklch(from var(--warn) 94% 0.025 h); }
 .btn-sm { height: 28px; padding: 0 10px; font-size: 12px; }
 .btn-lg { height: 40px; padding: 0 18px; font-size: 14px; }
+.btn-back { min-width: 118px; justify-content: center; flex-shrink: 0; padding-inline: 14px; }
 .habit-row { display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 16px; padding: 18px 22px; border-bottom: 1px solid var(--rule); cursor: pointer; transition: background 0.1s; }
 .habit-row:last-child { border-bottom: none; }
 .habit-row:hover { background: var(--bg-sunk); }
@@ -152,6 +157,8 @@ textarea.input { resize: vertical; min-height: 80px; line-height: 1.55; }
 .main::-webkit-scrollbar-thumb, .sidebar::-webkit-scrollbar-thumb { background: var(--rule-strong); border-radius: 5px; border: 2px solid var(--bg); background-clip: content-box; }
 .click-row { cursor: pointer; transition: background 0.1s; }
 .click-row:hover { background: var(--bg-sunk); }
+.habit-list-label { display: none; }
+.habit-list-progress { display: flex; align-items: center; gap: 8px; min-width: 0; width: 100%; }
 .overlay { position: fixed; inset: 0; background: oklch(from var(--bg) l c h / 0.92); backdrop-filter: blur(8px); z-index: 100; display: grid; place-items: center; padding: 40px; }
 .overlay-card { background: var(--bg-elev); border: 1px solid var(--rule); border-radius: var(--r-lg); width: 540px; max-width: 100%; padding: 44px 48px; box-shadow: var(--shadow); }
 .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-size: 13px; z-index: 200; display: flex; align-items: center; gap: 10px; box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.3); }
@@ -318,6 +325,55 @@ textarea.input { resize: vertical; min-height: 80px; line-height: 1.55; }
     flex-wrap: wrap;
     gap: 6px;
     line-height: 1.35;
+  }
+
+  .habit-list-header {
+    display: none !important;
+  }
+
+  .habit-list-row {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 14px;
+    padding: 16px !important;
+  }
+
+  .habit-list-field {
+    display: grid !important;
+    grid-template-columns: minmax(88px, 0.34fr) minmax(0, 1fr);
+    gap: 12px;
+    align-items: start !important;
+    min-width: 0;
+  }
+
+  .habit-list-field > :not(.habit-list-label) {
+    grid-column: 2;
+    min-width: 0;
+  }
+
+  .habit-list-progress {
+    align-self: center;
+  }
+
+  .habit-list-label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    min-height: 20px;
+  }
+
+  .habit-list-label::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex: 0 0 auto;
   }
 
   .loop {

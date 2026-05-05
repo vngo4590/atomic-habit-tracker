@@ -1,12 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { IconClose } from "@/components/Icons";
 import { useStoreContext } from "@/components/StoreProvider";
 
 export default function IdentityPage() {
   const { habits, identity, setIdentity } = useStoreContext();
+  const [statement, setStatement] = useState(identity.statement);
   const [newValue, setNewValue] = useState("");
+
+  useEffect(() => {
+    setStatement(identity.statement);
+  }, [identity.statement]);
 
   const ledger = useMemo(() => {
     const tally = new Map<string, number>();
@@ -29,6 +35,16 @@ export default function IdentityPage() {
     setNewValue("");
   };
 
+  const removeValue = (value: string) => {
+    setIdentity({ ...identity, values: identity.values.filter((item) => item !== value) });
+  };
+
+  const saveStatement = () => {
+    if (statement !== identity.statement) {
+      setIdentity({ ...identity, statement });
+    }
+  };
+
   return (
     <div className="fade-up">
       <div className="page-header">
@@ -44,13 +60,24 @@ export default function IdentityPage() {
           <textarea
             className="input"
             rows={6}
-            value={identity.statement}
-            onChange={(event) => setIdentity({ ...identity, statement: event.target.value })}
+            value={statement}
+            onChange={(event) => setStatement(event.target.value)}
+            onBlur={saveStatement}
             style={{ marginTop: 12, fontFamily: "var(--serif)", fontSize: 22, lineHeight: 1.45 }}
           />
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
+            <button className="btn btn-sm btn-primary" disabled={statement === identity.statement} onMouseDown={(event) => event.preventDefault()} onClick={saveStatement}>
+              Save statement
+            </button>
+          </div>
           <div className="eyebrow" style={{ marginTop: 22 }}>Core values</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
-            {identity.values.map((value) => <span key={value} className="chip active">{value}</span>)}
+            {identity.values.map((value) => (
+              <button key={value} className="chip active" aria-label={`Remove core value ${value}`} onClick={() => removeValue(value)}>
+                <span>{value}</span>
+                <IconClose style={{ width: 11, height: 11 }} />
+              </button>
+            ))}
             <input className="input" value={newValue} onChange={(event) => setNewValue(event.target.value)} placeholder="+ Add value" style={{ width: 140, height: 32, borderStyle: "dashed" }} onKeyDown={(event) => {
               if (event.key === "Enter") {
                 event.preventDefault();

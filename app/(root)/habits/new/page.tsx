@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useStoreContext } from "@/components/StoreProvider";
+import { formatScheduleLabel } from "@/lib/schedule";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 const PRESETS = {
@@ -74,8 +75,8 @@ export default function NewHabitPage() {
 
   const activeDays: readonly string[] = preset === "custom" ? customDays : PRESETS[preset].days;
   const schedule = preset === "custom"
-    ? customDays.join(", ") || "Custom"
-    : PRESETS[preset].label;
+    ? formatScheduleLabel(customDays.join(", ") || "Custom")
+    : formatScheduleLabel(PRESETS[preset].label);
 
   const toggleDay = (day: string) => {
     setPreset("custom");

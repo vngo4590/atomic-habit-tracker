@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { IconCheck, IconTrash } from "@/components/Icons";
+import { IconCheck, IconEdit, IconTrash } from "@/components/Icons";
 import { fmt, todayKey } from "@/lib/helpers";
 import type { Habit } from "@/lib/types";
 
@@ -16,6 +16,8 @@ export function NotesManager({
   const [draft, setDraft] = useState("");
   const [bulkMode, setBulkMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
 
   const addNote = () => {
     if (!draft.trim()) {
@@ -25,6 +27,22 @@ export function NotesManager({
     setDraft("");
   };
   const deleteOne = (id: string) => onUpdateNotes(habit.notes.filter((note) => note.id !== id));
+  const beginEdit = (note: Habit["notes"][number]) => {
+    setEditingId(note.id);
+    setEditDraft(note.body);
+  };
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditDraft("");
+  };
+  const saveEdit = (id: string) => {
+    const body = editDraft.trim();
+    if (!body) {
+      return;
+    }
+    onUpdateNotes(habit.notes.map((note) => (note.id === id ? { ...note, body } : note)));
+    cancelEdit();
+  };
   const deleteSelected = () => {
     onUpdateNotes(habit.notes.filter((note) => !selected.has(note.id)));
     setSelected(new Set());
@@ -111,12 +129,47 @@ export function NotesManager({
                   <div className="muted mono" style={{ fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>
                     {fmt.short(note.createdAt)}
                   </div>
-                  <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>{note.body}</p>
+                  {editingId === note.id ? (
+                    <div>
+                      <textarea
+                        className="input"
+                        aria-label="Edit note body"
+                        rows={3}
+                        autoFocus
+                        value={editDraft}
+                        onClick={(event) => event.stopPropagation()}
+                        onChange={(event) => setEditDraft(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Escape") {
+                            cancelEdit();
+                          }
+                          if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+                            saveEdit(note.id);
+                          }
+                        }}
+                      />
+                      <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", marginTop: 8 }}>
+                        <button className="btn btn-sm" onClick={(event) => { event.stopPropagation(); cancelEdit(); }}>Cancel</button>
+                        <button className="btn btn-sm btn-primary" disabled={!editDraft.trim()} onClick={(event) => { event.stopPropagation(); saveEdit(note.id); }}>
+                          Save note
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>{note.body}</p>
+                  )}
                 </div>
                 {!bulkMode && (
-                  <button className="btn btn-sm btn-ghost" onClick={(event) => { event.stopPropagation(); deleteOne(note.id); }}>
-                    <IconTrash style={{ width: 12, height: 12 }} />
-                  </button>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    {editingId !== note.id && (
+                      <button className="btn btn-sm btn-ghost" aria-label="Edit note" onClick={(event) => { event.stopPropagation(); beginEdit(note); }}>
+                        <IconEdit style={{ width: 12, height: 12 }} />
+                      </button>
+                    )}
+                    <button className="btn btn-sm btn-ghost" aria-label="Delete note" onClick={(event) => { event.stopPropagation(); deleteOne(note.id); }}>
+                      <IconTrash style={{ width: 12, height: 12 }} />
+                    </button>
+                  </div>
                 )}
               </div>
             );

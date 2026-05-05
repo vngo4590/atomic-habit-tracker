@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export function EditableLaw({
   label,
@@ -20,6 +20,12 @@ export function EditableLaw({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const empty = !value.trim();
+
+  useEffect(() => {
+    if (!editing) {
+      setDraft(value);
+    }
+  }, [editing, value]);
 
   return (
     <div style={{ padding: "14px 0", borderBottom: last ? "none" : "1px solid var(--rule)" }}>
@@ -56,7 +62,14 @@ export function EditableLaw({
             fontStyle: empty ? "italic" : "normal",
           }}
         >
-          {value || placeholder}
+          {empty ? (
+            <>
+              <span className="mono" style={{ display: "block", fontSize: 9.5, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 2 }}>
+                Not set yet
+              </span>
+              {placeholder}
+            </>
+          ) : value}
         </button>
       )}
     </div>

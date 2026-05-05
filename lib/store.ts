@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 import {
   createHabitAction,
@@ -14,6 +14,7 @@ import {
   saveWeeklyReviewAction,
   toggleHabitAction,
   updateHabitAction,
+  updateJournalEntryAction,
 } from "@/lib/actions/domain";
 import { dateAdd, todayKey } from "@/lib/helpers";
 import type {
@@ -46,6 +47,10 @@ function normalizeDraft(draft: HabitDraft): Omit<Habit, "id" | "history" | "note
     craving: draft.craving ?? "",
     response: draft.response ?? "",
     reward: draft.reward ?? "",
+    loopCue: draft.loopCue ?? draft.cue ?? "",
+    loopCraving: draft.loopCraving ?? draft.craving ?? "",
+    loopResponse: draft.loopResponse ?? draft.response ?? "",
+    loopReward: draft.loopReward ?? draft.reward ?? "",
     twoMin: draft.twoMin ?? "",
     stack: draft.stack ?? "",
     identity: draft.identity,
@@ -146,6 +151,10 @@ export function useStore(initialSnapshot: StoreSnapshot = defaultSnapshot): Stor
   );
   const [preferences, setPreferencesState] = useState<UserPreferences>(initialSnapshot.preferences);
   const [toast, setToast] = useState<ToastState | null>(null);
+  const updateHabitVersion = useRef(0);
+  const updateJournalVersion = useRef(0);
+  const pendingJournalPatches = useRef(new Map<string, Partial<JournalEntry>>());
+  const identityVersion = useRef(0);
 
   const showToast = useCallback((msg: string, sub?: string) => {
     const id = Date.now();
@@ -254,14 +263,17 @@ export function useStore(initialSnapshot: StoreSnapshot = defaultSnapshot): Stor
   }, []);
 
   const updateHabit = useCallback((id: string, patch: Partial<Habit>) => {
+    const version = ++updateHabitVersion.current;
     setHabits((currentHabits) =>
       currentHabits.map((habit) => (habit.id === id ? { ...habit, ...patch } : habit)),
     );
     void updateHabitAction(id, patch).then((saved) => {
-      if (!saved) {
+      if (!saved || version !== updateHabitVersion.current) {
         return;
       }
-      setHabits((currentHabits) => currentHabits.map((habit) => (habit.id === id ? saved : habit)));
+      setHabits((currentHabits) =>
+        currentHabits.map((habit) => (habit.id === id ? { ...habit, ...saved, ...patch } : habit)),
+      );
     });
   }, []);
 
@@ -287,14 +299,66 @@ export function useStore(initialSnapshot: StoreSnapshot = defaultSnapshot): Stor
 
     void createJournalEntryAction(entry).then((saved) => {
       setJournal((currentJournal) =>
-        currentJournal.map((journalEntry) => (journalEntry.id === tempId ? saved : journalEntry)),
+        currentJournal.map((journalEntry) => {
+          if (journalEntry.id !== tempId) {
+            return journalEntry;
+          }
+
+          const pendingPatch = pendingJournalPatches.current.get(tempId) ?? {};
+          pendingJournalPatches.current.delete(tempId);
+          const merged = { ...saved, ...journalEntry, ...pendingPatch, id: saved.id };
+          if (
+            merged.title !== saved.title ||
+            merged.body !== saved.body ||
+            merged.mood !== saved.mood ||
+            merged.date !== saved.date ||
+            merged.tags.join("\u0000") !== saved.tags.join("\u0000")
+          ) {
+            void updateJournalEntryAction(saved.id, {
+              date: merged.date,
+              title: merged.title,
+              body: merged.body,
+              mood: merged.mood,
+              tags: merged.tags,
+            });
+          }
+          return merged;
+        }),
+      );
+    });
+  }, []);
+
+  const updateJournal = useCallback((id: string, patch: Partial<JournalEntry>) => {
+    const version = ++updateJournalVersion.current;
+    if (id.startsWith("pending-")) {
+      pendingJournalPatches.current.set(id, {
+        ...(pendingJournalPatches.current.get(id) ?? {}),
+        ...patch,
+      });
+    }
+    setJournal((currentJournal) =>
+      currentJournal.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry)),
+    );
+
+    void updateJournalEntryAction(id, patch).then((saved) => {
+      if (!saved || version !== updateJournalVersion.current) {
+        return;
+      }
+      setJournal((currentJournal) =>
+        currentJournal.map((entry) => (entry.id === id ? { ...entry, ...saved, ...patch } : entry)),
       );
     });
   }, []);
 
   const setIdentity = useCallback((nextIdentity: Identity) => {
+    const version = ++identityVersion.current;
     setIdentityState(nextIdentity);
-    void saveIdentityAction(nextIdentity).then(setIdentityState);
+    void saveIdentityAction(nextIdentity).then((saved) => {
+      if (version !== identityVersion.current) {
+        return;
+      }
+      setIdentityState((current) => ({ ...current, ...saved, statement: nextIdentity.statement }));
+    });
   }, []);
 
   const setWeeklyReview = useCallback((weekStartKey: string, answers: WeeklyReviewAnswers) => {
@@ -354,6 +418,7 @@ export function useStore(initialSnapshot: StoreSnapshot = defaultSnapshot): Stor
       deleteHabit,
       journal,
       addJournal,
+      updateJournal,
       identity,
       setIdentity,
       weeklyReview,
@@ -380,6 +445,7 @@ export function useStore(initialSnapshot: StoreSnapshot = defaultSnapshot): Stor
       identity,
       journal,
       weeklyReview,
+      updateJournal,
       completedLessons,
       lessonModeState,
       formationVerdicts,

@@ -113,24 +113,28 @@ model IdentityProfile {
 }
 
 model Habit {
-  id          String    @id @default(cuid())
-  userId      String
-  name        String
-  emoji       String    @default("•")
-  cue         String    @default("")
-  craving     String    @default("")
-  response    String    @default("")
-  reward      String    @default("")
-  twoMin      String    @default("")
-  stack       String    @default("")
-  identity    String
-  environment String    @default("")
-  schedule    String    @default("Daily")
-  time        String    @default("Morning")
-  sortOrder   Int       @default(0)
-  archivedAt  DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id           String    @id @default(cuid())
+  userId       String
+  name         String
+  emoji        String    @default("•")
+  cue          String    @default("")
+  craving      String    @default("")
+  response     String    @default("")
+  reward       String    @default("")
+  loopCue      String    @default("")
+  loopCraving  String    @default("")
+  loopResponse String    @default("")
+  loopReward   String    @default("")
+  twoMin       String    @default("")
+  stack        String    @default("")
+  identity     String
+  environment  String    @default("")
+  schedule     String    @default("Daily")
+  time         String    @default("Morning")
+  sortOrder    Int       @default(0)
+  archivedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   checkIns HabitCheckIn[]

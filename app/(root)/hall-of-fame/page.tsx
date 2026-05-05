@@ -16,8 +16,9 @@ function daysSince(dateKey: string) {
 }
 
 export default function HallOfFamePage() {
-  const { habits, longestStreak, completionRate, formationVerdicts: verdicts, saveFormationVerdict } = useStoreContext();
+  const { habits, streak, longestStreak, completionRate, formationVerdicts: verdicts, saveFormationVerdict } = useStoreContext();
   const [reviewing, setReviewing] = useState<Habit | null>(null);
+  const today = todayKey();
   const reviewedIds = new Set(verdicts.map((verdict) => verdict.habitId));
 
   const ready = habits.filter((habit) => daysSince(habit.createdAt) >= FORMATION_DAYS && !reviewedIds.has(habit.id));
@@ -76,6 +77,9 @@ export default function HallOfFamePage() {
             {inProgress.map((habit) => {
               const age = daysSince(habit.createdAt);
               const pct = Math.round((age / FORMATION_DAYS) * 100);
+              const activeStreak = streak(habit);
+              const adherence = Math.round(completionRate(habit, 30) * 100);
+              const doneToday = Boolean(habit.history[today]);
               return (
                 <div key={habit.id}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
@@ -84,6 +88,11 @@ export default function HallOfFamePage() {
                   </div>
                   <div style={{ height: 6, background: "var(--bg-sunk)", borderRadius: 99, overflow: "hidden", marginTop: 7 }}>
                     <div style={{ width: `${pct}%`, height: "100%", background: "var(--accent)" }} />
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+                    <span className={`chip ${doneToday ? "done" : ""}`}>{doneToday ? "Done today" : "Open today"}</span>
+                    <span className="chip">{activeStreak}d active</span>
+                    <span className="chip">{adherence}% 30-day</span>
                   </div>
                 </div>
               );

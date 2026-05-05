@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export function EditableLine({
   value,
@@ -14,6 +14,12 @@ export function EditableLine({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const empty = !value.trim();
+
+  useEffect(() => {
+    if (!editing) {
+      setDraft(value);
+    }
+  }, [editing, value]);
 
   if (editing) {
     return (
@@ -43,13 +49,20 @@ export function EditableLine({
         padding: "4px 0",
         margin: 0,
         fontFamily: "var(--serif)",
-        fontStyle: "italic",
+        fontStyle: empty ? "italic" : "normal",
         fontSize: empty ? 14 : 16,
         color: empty ? "var(--ink-3)" : "var(--ink-2)",
         lineHeight: 1.45,
       }}
     >
-      {value || placeholder}
+      {empty ? (
+        <>
+          <span className="mono" style={{ display: "block", fontSize: 9.5, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 2 }}>
+            Not set yet
+          </span>
+          {placeholder}
+        </>
+      ) : value}
     </button>
   );
 }

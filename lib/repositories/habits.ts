@@ -21,6 +21,10 @@ type HabitRecord = {
   craving: string;
   response: string;
   reward: string;
+  loopCue: string;
+  loopCraving: string;
+  loopResponse: string;
+  loopReward: string;
   twoMin: string;
   stack: string;
   identity: string;
@@ -70,6 +74,10 @@ function toHabit(record: HabitRecord): Habit {
     craving: record.craving,
     response: record.response,
     reward: record.reward,
+    loopCue: record.loopCue,
+    loopCraving: record.loopCraving,
+    loopResponse: record.loopResponse,
+    loopReward: record.loopReward,
     twoMin: record.twoMin,
     stack: record.stack,
     identity: record.identity,
@@ -124,6 +132,10 @@ export async function createHabit(userId: string, input: HabitCreateInput, db: D
       craving: data.craving,
       response: data.response,
       reward: data.reward,
+      loopCue: data.loopCue,
+      loopCraving: data.loopCraving,
+      loopResponse: data.loopResponse,
+      loopReward: data.loopReward,
       twoMin: data.twoMin,
       stack: data.stack,
       identity: data.identity,

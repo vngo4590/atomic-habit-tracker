@@ -2,25 +2,55 @@ import { z } from "zod";
 
 const dateKeySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use a YYYY-MM-DD date key.");
 const stringListSchema = z.array(z.string().trim().min(1)).default([]);
+const optionalStringListSchema = z.array(z.string().trim().min(1));
+const habitTextSchema = z.string().trim().max(500);
+const habitNameSchema = z.string().trim().min(1, "Habit name is required.").max(120);
+const habitEmojiSchema = z.string().trim().max(12);
+const habitIdentitySchema = z.string().trim().min(1, "Identity is required.").max(120);
+const habitScheduleSchema = z.string().trim().max(120);
+const habitTimeSchema = z.string().trim().max(80);
+const habitContractSchema = z.string().trim().max(1000);
 
 export const habitCreateSchema = z.object({
-  name: z.string().trim().min(1, "Habit name is required.").max(120),
-  emoji: z.string().trim().max(12).default("•"),
-  cue: z.string().trim().max(500).default(""),
-  craving: z.string().trim().max(500).default(""),
-  response: z.string().trim().max(500).default(""),
-  reward: z.string().trim().max(500).default(""),
-  twoMin: z.string().trim().max(500).default(""),
-  stack: z.string().trim().max(500).default(""),
-  identity: z.string().trim().min(1, "Identity is required.").max(120),
-  environment: z.string().trim().max(500).default(""),
-  schedule: z.string().trim().max(120).default("Daily"),
-  time: z.string().trim().max(80).default("Morning"),
-  contract: z.string().trim().max(1000).default(""),
+  name: habitNameSchema,
+  emoji: habitEmojiSchema.default("•"),
+  cue: habitTextSchema.default(""),
+  craving: habitTextSchema.default(""),
+  response: habitTextSchema.default(""),
+  reward: habitTextSchema.default(""),
+  loopCue: habitTextSchema.default(""),
+  loopCraving: habitTextSchema.default(""),
+  loopResponse: habitTextSchema.default(""),
+  loopReward: habitTextSchema.default(""),
+  twoMin: habitTextSchema.default(""),
+  stack: habitTextSchema.default(""),
+  identity: habitIdentitySchema,
+  environment: habitTextSchema.default(""),
+  schedule: habitScheduleSchema.default("Daily"),
+  time: habitTimeSchema.default("Morning"),
+  contract: habitContractSchema.default(""),
   contractPartners: stringListSchema,
 });
 
-export const habitUpdateSchema = habitCreateSchema.partial().extend({
+export const habitUpdateSchema = z.object({
+  name: habitNameSchema.optional(),
+  emoji: habitEmojiSchema.optional(),
+  cue: habitTextSchema.optional(),
+  craving: habitTextSchema.optional(),
+  response: habitTextSchema.optional(),
+  reward: habitTextSchema.optional(),
+  loopCue: habitTextSchema.optional(),
+  loopCraving: habitTextSchema.optional(),
+  loopResponse: habitTextSchema.optional(),
+  loopReward: habitTextSchema.optional(),
+  twoMin: habitTextSchema.optional(),
+  stack: habitTextSchema.optional(),
+  identity: habitIdentitySchema.optional(),
+  environment: habitTextSchema.optional(),
+  schedule: habitScheduleSchema.optional(),
+  time: habitTimeSchema.optional(),
+  contract: habitContractSchema.optional(),
+  contractPartners: optionalStringListSchema.optional(),
   notes: z
     .array(
       z.object({

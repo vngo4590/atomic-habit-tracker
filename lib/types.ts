@@ -18,6 +18,10 @@ export interface Habit {
   craving: string;
   response: string;
   reward: string;
+  loopCue: string;
+  loopCraving: string;
+  loopResponse: string;
+  loopReward: string;
   twoMin: string;
   stack: string;
   identity: string;
@@ -68,6 +72,7 @@ export interface StoreState {
   deleteHabit: (id: string) => void;
   journal: JournalEntry[];
   addJournal: (entry: Partial<JournalEntry>) => void;
+  updateJournal: (id: string, patch: Partial<JournalEntry>) => void;
   identity: Identity;
   setIdentity: (identity: Identity) => void;
   weeklyReview: WeeklyReviewAnswers;

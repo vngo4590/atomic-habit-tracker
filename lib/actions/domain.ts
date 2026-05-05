@@ -16,6 +16,7 @@ import {
   saveIdentity,
   savePreferences,
   saveWeeklyReview,
+  updateJournalEntry,
 } from "@/lib/repositories/reflection";
 import type {
   CheckIn,
@@ -32,6 +33,7 @@ import type {
 function revalidateApp() {
   revalidatePath("/");
   revalidatePath("/habits");
+  revalidatePath("/analytics");
   revalidatePath("/journal");
   revalidatePath("/review");
   revalidatePath("/lessons");
@@ -48,6 +50,10 @@ export async function createHabitAction(draft: HabitDraft) {
     craving: "",
     response: draft.name,
     reward: "",
+    loopCue: draft.cue ?? "",
+    loopCraving: draft.craving ?? "",
+    loopResponse: draft.response ?? draft.name,
+    loopReward: draft.reward ?? "",
     twoMin: "",
     stack: "",
     environment: "",
@@ -109,6 +115,20 @@ export async function createJournalEntryAction(entry: Partial<JournalEntry>) {
     body: entry.body ?? "",
     mood: entry.mood ?? "good",
     tags: entry.tags ?? [],
+  });
+
+  revalidatePath("/journal");
+  return journalEntry;
+}
+
+export async function updateJournalEntryAction(entryId: string, patch: Partial<JournalEntry>) {
+  const userId = await requireUserId();
+  const journalEntry = await updateJournalEntry(userId, entryId, {
+    ...(patch.date ? { dateKey: patch.date } : {}),
+    ...(patch.title !== undefined ? { title: patch.title } : {}),
+    ...(patch.body !== undefined ? { body: patch.body } : {}),
+    ...(patch.mood !== undefined ? { mood: patch.mood } : {}),
+    ...(patch.tags !== undefined ? { tags: patch.tags } : {}),
   });
 
   revalidatePath("/journal");

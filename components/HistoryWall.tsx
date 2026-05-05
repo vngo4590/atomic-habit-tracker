@@ -5,10 +5,8 @@ import type { Habit } from "@/lib/types";
 
 export function HistoryWall({
   habit,
-  onToggle,
 }: {
   habit: Habit;
-  onToggle: (dateKey: string) => void;
 }) {
   const today = todayKey();
   const cols = [];
@@ -29,7 +27,7 @@ export function HistoryWall({
         <div>
           <h3 className="h3">26-week wall</h3>
           <div className="muted" style={{ fontSize: 12.5, marginTop: 4 }}>
-            Each square is a day. Click to toggle. Don&apos;t break the chain.
+            Each square is a day logged from your habit check-ins.
           </div>
         </div>
         <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
@@ -48,13 +46,12 @@ export function HistoryWall({
           {cols.map((col, index) => (
             <div key={index} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
               {col.map((day) => (
-                <button
+                <span
                   key={day.key}
                   title={`${fmt.short(day.key)} · ${day.done ? "done" : "missed"}`}
-                  onClick={() => onToggle(day.key)}
                   className={`dot ${day.done ? "l3" : ""} ${day.today ? "today" : ""}`}
-                  style={{ border: 0, padding: 0, cursor: "pointer" }}
-                  aria-label={`Toggle ${fmt.short(day.key)}`}
+                  style={{ display: "block" }}
+                  aria-label={`${fmt.short(day.key)} ${day.done ? "done" : "missed"}`}
                 />
               ))}
             </div>

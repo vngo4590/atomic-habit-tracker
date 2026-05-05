@@ -4,6 +4,7 @@ import {
   checkInSchema,
   formationVerdictSchema,
   habitCreateSchema,
+  habitUpdateSchema,
   identitySchema,
   journalEntrySchema,
   lessonProgressSchema,
@@ -15,6 +16,9 @@ describe("domain validation contracts", () => {
   it("validates habit and check-in inputs", () => {
     expect(habitCreateSchema.safeParse({ name: "", identity: "reader" }).success).toBe(false);
     expect(habitCreateSchema.parse({ name: "Read", identity: "reader" }).schedule).toBe("Daily");
+    expect(habitUpdateSchema.parse({ cue: "After coffee" })).toEqual({ cue: "After coffee" });
+    expect(habitUpdateSchema.parse({ loopResponse: "Read two pages" })).toEqual({ loopResponse: "Read two pages" });
+    expect(habitUpdateSchema.parse({ contract: "Pay $5" })).toEqual({ contract: "Pay $5" });
     expect(checkInSchema.safeParse({ dateKey: "2026-04-30", mood: 6 }).success).toBe(false);
     expect(checkInSchema.parse({ dateKey: "2026-04-30", mood: 4 }).done).toBe(true);
   });

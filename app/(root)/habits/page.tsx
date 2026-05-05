@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { IconPlus } from "@/components/Icons";
 import { useStoreContext } from "@/components/StoreProvider";
+import { formatScheduleLabel } from "@/lib/schedule";
 
 type Filter = "all" | "morning" | "afternoon" | "evening";
 type Sort = "streak" | "rate" | "newest" | "name";
@@ -61,8 +62,8 @@ export default function HabitsPage() {
         </select>
       </div>
 
-      <div className="card">
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1.4fr 90px 90px 100px", padding: "12px 22px", borderBottom: "1px solid var(--rule)", background: "var(--bg-sunk)" }}>
+      <div className="card habit-list">
+        <div className="habit-list-header" style={{ display: "grid", gridTemplateColumns: "2fr 1.4fr 90px 90px 100px", padding: "12px 22px", borderBottom: "1px solid var(--rule)", background: "var(--bg-sunk)" }}>
           {["Habit", "Cue -> response", "Streak", "Best", "30-day"].map((heading) => (
             <div key={heading} className="mono" style={{ fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-3)" }}>{heading}</div>
           ))}
@@ -74,26 +75,41 @@ export default function HabitsPage() {
           return (
             <div
               key={habit.id}
-              className="click-row"
+              className="click-row habit-list-row"
               style={{ display: "grid", gridTemplateColumns: "2fr 1.4fr 90px 90px 100px", padding: "18px 22px", borderBottom: "1px solid var(--rule)", alignItems: "center" }}
               onClick={() => router.push(`/habits/${habit.id}`)}
             >
-              <div>
-                <div className="habit-name">{habit.name}</div>
-                <div className="muted mono" style={{ fontSize: 10.5, marginTop: 3, letterSpacing: "0.04em", textTransform: "uppercase" }}>
-                  {habit.identity} · {habit.schedule}
+              <div className="habit-list-field">
+                <div className="habit-list-label">Habit</div>
+                <div style={{ minWidth: 0 }}>
+                  <div className="habit-name">{habit.name}</div>
+                  <div className="muted mono" style={{ fontSize: 10.5, marginTop: 3, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                    {habit.identity} · {formatScheduleLabel(habit.schedule)}
+                  </div>
                 </div>
               </div>
-              <div className="muted" style={{ fontSize: 12, fontStyle: "italic", fontFamily: "var(--serif)", lineHeight: 1.35 }}>
-                &quot;{habit.cue.slice(0, 38)}{habit.cue.length > 38 ? "..." : ""}&quot;
-              </div>
-              <div className="mono" style={{ fontSize: 13, fontWeight: 500 }}>{activeStreak}d</div>
-              <div className="mono muted" style={{ fontSize: 13 }}>{best}d</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ flex: 1, height: 4, background: "var(--bg-sunk)", borderRadius: 99, overflow: "hidden" }}>
-                  <div style={{ width: `${rate}%`, height: "100%", background: "var(--accent)" }} />
+              <div className="habit-list-field">
+                <div className="habit-list-label">Cue</div>
+                <div className="muted" style={{ fontSize: 12, fontStyle: "italic", fontFamily: "var(--serif)", lineHeight: 1.35 }}>
+                  &quot;{habit.cue.slice(0, 38)}{habit.cue.length > 38 ? "..." : ""}&quot;
                 </div>
-                <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)", minWidth: 24, textAlign: "right" }}>{rate}%</span>
+              </div>
+              <div className="mono habit-list-field" style={{ fontSize: 13, fontWeight: 500 }}>
+                <div className="habit-list-label">Streak</div>
+                {activeStreak}d
+              </div>
+              <div className="mono muted habit-list-field" style={{ fontSize: 13 }}>
+                <div className="habit-list-label">Best</div>
+                {best}d
+              </div>
+              <div className="habit-list-field" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div className="habit-list-label">30-day</div>
+                <div className="habit-list-progress">
+                  <div style={{ flex: 1, height: 4, background: "var(--bg-sunk)", borderRadius: 99, overflow: "hidden" }}>
+                    <div style={{ width: `${rate}%`, height: "100%", background: "var(--accent)" }} />
+                  </div>
+                  <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)", minWidth: 24, textAlign: "right" }}>{rate}%</span>
+                </div>
               </div>
             </div>
           );

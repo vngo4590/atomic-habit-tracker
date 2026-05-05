@@ -11,6 +11,7 @@ import { HistoryWall } from "@/components/HistoryWall";
 import {
   IconBack,
   IconCheck,
+  IconTrash,
 } from "@/components/Icons";
 import { LoopDiagram } from "@/components/LoopDiagram";
 import { MoodChart } from "@/components/MoodChart";
@@ -18,6 +19,7 @@ import { MoodCheckSheet } from "@/components/MoodCheckSheet";
 import { NotesManager } from "@/components/NotesManager";
 import { useStoreContext } from "@/components/StoreProvider";
 import { todayKey } from "@/lib/helpers";
+import { formatScheduleLabel } from "@/lib/schedule";
 
 type Tab = "overview" | "loop" | "journal" | "history" | "notes";
 
@@ -39,6 +41,7 @@ export default function HabitDetailPage() {
   const [tab, setTab] = useState<Tab>("overview");
   const [showContract, setShowContract] = useState(false);
   const [showMood, setShowMood] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const today = todayKey();
   const habitId = params.id;
   const habit = store.habits.find((item) => item.id === habitId);
@@ -58,7 +61,7 @@ export default function HabitDetailPage() {
   if (!habit || !stats) {
     return (
       <div className="fade-up">
-        <button className="btn btn-ghost btn-sm" onClick={() => router.push("/habits")}>
+        <button className="btn btn-ghost btn-sm btn-back" onClick={() => router.push("/habits")}>
           <IconBack /> All habits
         </button>
         <div className="card card-pad" style={{ marginTop: 24 }}>Habit not found.</div>
@@ -67,33 +70,51 @@ export default function HabitDetailPage() {
   }
 
   const doneToday = Boolean(habit.history[today]);
+  const deleteHabit = () => {
+    store.deleteHabit(habit.id);
+    router.push("/habits");
+  };
 
   return (
     <div className="fade-up">
-      <button className="btn btn-ghost btn-sm" onClick={() => router.push("/habits")} style={{ marginBottom: 18 }}>
+      <button className="btn btn-ghost btn-sm btn-back" onClick={() => router.push("/habits")} style={{ marginBottom: 18 }}>
         <IconBack /> All habits
       </button>
 
       <div className="page-header" style={{ alignItems: "flex-start", flexDirection: "column", gap: 18 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%" }}>
           <div>
-            <div className="eyebrow">{habit.schedule} · {habit.time}</div>
+            <div className="eyebrow">{formatScheduleLabel(habit.schedule)} · {habit.time}</div>
             <h1 className="h1" style={{ fontSize: 52 }}>{habit.name}</h1>
             <p className="lede" style={{ marginTop: 14, fontStyle: "italic" }}>
               I am <em style={{ color: "var(--accent)", fontStyle: "normal" }}>{habit.identity}</em>. Each check-in is a vote for that.
             </p>
           </div>
-          <button
-            className={`btn btn-lg ${doneToday ? "btn-accent" : "btn-primary"}`}
-            onClick={() => {
-              if (!doneToday) {
-                store.toggleHabit(habit.id);
-              }
-              setShowMood(true);
-            }}
-          >
-            {doneToday ? <><IconCheck style={{ width: 14, height: 14 }} /> Done today · edit</> : "Mark done"}
-          </button>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+            <button
+              className={`btn btn-lg ${doneToday ? "btn-accent" : "btn-primary"}`}
+              onClick={() => {
+                if (!doneToday) {
+                  store.toggleHabit(habit.id);
+                }
+                setShowMood(true);
+              }}
+            >
+              {doneToday ? <><IconCheck style={{ width: 14, height: 14 }} /> Done today · edit</> : "Mark done"}
+            </button>
+            {confirmDelete ? (
+              <>
+                <button className="btn btn-lg btn-danger" onClick={deleteHabit}>
+                  <IconTrash style={{ width: 14, height: 14 }} /> Confirm delete
+                </button>
+                <button className="btn btn-lg btn-ghost" onClick={() => setConfirmDelete(false)}>Cancel</button>
+              </>
+            ) : (
+              <button className="btn btn-lg btn-ghost btn-danger-ghost" onClick={() => setConfirmDelete(true)}>
+                <IconTrash style={{ width: 14, height: 14 }} /> Delete habit
+              </button>
+            )}
+          </div>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 0, width: "100%", borderTop: "1px solid var(--rule)", paddingTop: 18 }}>
@@ -136,7 +157,24 @@ export default function HabitDetailPage() {
               </div>
               {habit.contract ? (
                 <>
-                  <p style={{ margin: "0 0 10px", fontSize: 13.5, color: "var(--ink-2)", lineHeight: 1.5 }}>{habit.contract}</p>
+                  <button
+                    onClick={() => setShowContract(true)}
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      margin: "0 0 10px",
+                      padding: 0,
+                      border: 0,
+                      background: "transparent",
+                      textAlign: "left",
+                      fontSize: 13.5,
+                      color: "var(--ink-2)",
+                      lineHeight: 1.5,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {habit.contract}
+                  </button>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     {habit.contractPartners.map((partner) => <span key={partner} className="chip">{partner}</span>)}
                   </div>
@@ -152,9 +190,15 @@ export default function HabitDetailPage() {
         </div>
       )}
 
-      {tab === "loop" && <LoopDiagram habit={habit} />}
-      {tab === "journal" && <HabitJournalStream habit={habit} onClearEntry={(dateKey) => store.logCheckIn(habit.id, { mood: undefined, journal: undefined }, dateKey)} />}
-      {tab === "history" && <HistoryWall habit={habit} onToggle={(dateKey) => store.toggleHabit(habit.id, dateKey)} />}
+      {tab === "loop" && <LoopDiagram habit={habit} onUpdate={(patch) => store.updateHabit(habit.id, patch)} />}
+      {tab === "journal" && (
+        <HabitJournalStream
+          habit={habit}
+          onSaveEntry={(dateKey, payload) => store.logCheckIn(habit.id, payload, dateKey)}
+          onClearEntry={(dateKey) => store.logCheckIn(habit.id, { mood: undefined, journal: undefined }, dateKey)}
+        />
+      )}
+      {tab === "history" && <HistoryWall habit={habit} />}
       {tab === "notes" && <NotesManager habit={habit} onUpdateNotes={(notes) => store.updateHabit(habit.id, { notes })} />}
 
       {showContract && (

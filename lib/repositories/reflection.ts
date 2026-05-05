@@ -139,6 +139,34 @@ export async function createJournalEntry(userId: string, input: JournalEntryInpu
   return toJournalEntry(record);
 }
 
+export async function updateJournalEntry(
+  userId: string,
+  entryId: string,
+  input: Partial<JournalEntryInput>,
+  db: DbClient = defaultDb,
+) {
+  validateDatabaseUrl();
+  const current = await db.journalEntry.findFirst({ where: { id: entryId, userId } });
+
+  if (!current) {
+    return null;
+  }
+
+  const data = journalEntrySchema.partial().parse(input);
+  const record = await db.journalEntry.update({
+    where: { id: entryId },
+    data: {
+      ...(data.dateKey !== undefined ? { dateKey: data.dateKey } : {}),
+      ...(data.title !== undefined ? { title: data.title } : {}),
+      ...(data.body !== undefined ? { body: data.body } : {}),
+      ...(data.mood !== undefined ? { mood: data.mood } : {}),
+      ...(data.tags !== undefined ? { tags: data.tags } : {}),
+    },
+  });
+
+  return toJournalEntry(record);
+}
+
 export async function getWeeklyReview(userId: string, weekStartKey: string, db: DbClient = defaultDb) {
   validateDatabaseUrl();
 
