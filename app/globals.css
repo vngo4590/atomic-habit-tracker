@@ -16,6 +16,15 @@
   --done: oklch(58% 0.08 145);
   --done-soft: oklch(92% 0.035 145);
   --warn: oklch(60% 0.13 35);
+  --bubble-warm-bg: color-mix(in oklch, var(--bg-elev) 72%, var(--accent) 28%);
+  --bubble-warm-border: color-mix(in oklch, var(--rule-strong) 55%, var(--accent) 45%);
+  --bubble-green-bg: color-mix(in oklch, var(--bg-elev) 74%, var(--done) 26%);
+  --bubble-green-border: color-mix(in oklch, var(--rule-strong) 55%, var(--done) 45%);
+  --bubble-blue-bg: color-mix(in oklch, var(--bg-elev) 72%, var(--accent-2) 28%);
+  --bubble-blue-border: color-mix(in oklch, var(--rule-strong) 55%, var(--accent-2) 45%);
+  --bubble-text: oklch(18% 0.018 60);
+  --bubble-inverse-bg: oklch(22% 0.018 60);
+  --bubble-inverse-text: oklch(98% 0.004 80);
   --r-sm: 4px;
   --r-md: 8px;
   --r-lg: 14px;
@@ -37,6 +46,15 @@
   --rule-strong: oklch(35% 0.012 60);
   --accent-soft: oklch(28% 0.05 60);
   --done-soft: oklch(28% 0.04 145);
+  --bubble-warm-bg: color-mix(in oklch, var(--bg-sunk) 58%, var(--accent) 42%);
+  --bubble-warm-border: color-mix(in oklch, var(--rule-strong) 45%, var(--accent) 55%);
+  --bubble-green-bg: color-mix(in oklch, var(--bg-sunk) 58%, var(--done) 42%);
+  --bubble-green-border: color-mix(in oklch, var(--rule-strong) 45%, var(--done) 55%);
+  --bubble-blue-bg: color-mix(in oklch, var(--bg-sunk) 55%, var(--accent-2) 45%);
+  --bubble-blue-border: color-mix(in oklch, var(--rule-strong) 45%, var(--accent-2) 55%);
+  --bubble-text: oklch(98% 0.004 80);
+  --bubble-inverse-bg: oklch(94% 0.008 80);
+  --bubble-inverse-text: oklch(18% 0.018 60);
   --shadow: 0 1px 0 rgba(255, 255, 255, 0.02), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
 }
 
@@ -149,15 +167,15 @@ textarea.input { resize: vertical; min-height: 80px; line-height: 1.55; }
 .principle-copy { padding: 28px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 12px; position: relative; z-index: 1; }
 .principle-copy p { margin: 0; color: var(--ink-2); font-family: var(--serif); font-size: 18px; font-style: italic; line-height: 1.45; }
 .principle-bubbles { min-height: 260px; position: relative; background: linear-gradient(135deg, var(--bg-sunk), var(--bg-elev)); border-left: 1px solid var(--rule); overflow: hidden; }
-.principle-bubble { --bubble-index: 0; position: absolute; display: inline-flex; align-items: center; justify-content: center; width: 112px; aspect-ratio: 1; border-radius: 50%; border: 1px solid var(--rule-strong); background: var(--bg); color: var(--ink); font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: 0.08em; line-height: 1.25; padding: 10px; text-align: center; text-transform: uppercase; box-shadow: 0 18px 44px color-mix(in oklch, var(--ink) 10%, transparent); animation: principle-float 7s ease-in-out infinite; animation-delay: calc(var(--bubble-index) * -1.2s); }
+.principle-bubble { --bubble-index: 0; position: absolute; display: inline-flex; align-items: center; justify-content: center; width: 112px; aspect-ratio: 1; border-radius: 50%; border: 1px solid var(--rule-strong); background: var(--bg); color: var(--bubble-text); font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; line-height: 1.25; padding: 10px; text-align: center; text-transform: uppercase; text-shadow: 0 1px 0 color-mix(in oklch, var(--bg-elev) 55%, transparent); box-shadow: 0 18px 44px color-mix(in oklch, var(--ink) 10%, transparent); animation: principle-float 7s ease-in-out infinite; animation-delay: calc(var(--bubble-index) * -1.2s); }
 .principle-bubble:nth-child(1) { left: 10%; top: 17%; }
 .principle-bubble:nth-child(2) { left: 43%; top: 10%; }
 .principle-bubble:nth-child(3) { left: 20%; top: 55%; }
 .principle-bubble:nth-child(4) { left: 58%; top: 48%; }
-.principle-bubble.warm { background: oklch(94% 0.035 74); border-color: oklch(81% 0.07 74); }
-.principle-bubble.green { background: oklch(93% 0.035 145); border-color: oklch(78% 0.07 145); }
-.principle-bubble.blue { background: oklch(93% 0.032 220); border-color: oklch(77% 0.062 220); }
-.principle-bubble.ink { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.principle-bubble.warm { background: var(--bubble-warm-bg); border-color: var(--bubble-warm-border); color: var(--bubble-text); }
+.principle-bubble.green { background: var(--bubble-green-bg); border-color: var(--bubble-green-border); color: var(--bubble-text); }
+.principle-bubble.blue { background: var(--bubble-blue-bg); border-color: var(--bubble-blue-border); color: var(--bubble-text); }
+.principle-bubble.ink { background: var(--bubble-inverse-bg); border-color: var(--bubble-inverse-bg); color: var(--bubble-inverse-text); text-shadow: none; }
 .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--rule); margin-bottom: 24px; }
 .tab { padding: 10px 14px; background: transparent; border: none; color: var(--ink-3); font-size: 13px; font-weight: 500; cursor: pointer; position: relative; margin-bottom: -1px; }
 .tab:hover { color: var(--ink); }
