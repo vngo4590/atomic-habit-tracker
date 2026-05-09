@@ -1,18 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { IconClose } from "@/components/Icons";
 import { useStoreContext } from "@/components/StoreProvider";
 
 export default function IdentityPage() {
   const { habits, identity, setIdentity } = useStoreContext();
-  const [statement, setStatement] = useState(identity.statement);
+  const [editingStatement, setEditingStatement] = useState(false);
+  const [statementDraft, setStatementDraft] = useState(identity.statement);
   const [newValue, setNewValue] = useState("");
-
-  useEffect(() => {
-    setStatement(identity.statement);
-  }, [identity.statement]);
 
   const ledger = useMemo(() => {
     const tally = new Map<string, number>();
@@ -40,9 +37,10 @@ export default function IdentityPage() {
   };
 
   const saveStatement = () => {
-    if (statement !== identity.statement) {
-      setIdentity({ ...identity, statement });
+    if (statementDraft !== identity.statement) {
+      setIdentity({ ...identity, statement: statementDraft });
     }
+    setEditingStatement(false);
   };
 
   return (
@@ -57,19 +55,58 @@ export default function IdentityPage() {
       <div style={{ display: "grid", gridTemplateColumns: "0.95fr 1.05fr", gap: 18 }}>
         <section className="card card-pad">
           <div className="eyebrow">Statement</div>
-          <textarea
-            className="input"
-            rows={6}
-            value={statement}
-            onChange={(event) => setStatement(event.target.value)}
-            onBlur={saveStatement}
-            style={{ marginTop: 12, fontFamily: "var(--serif)", fontSize: 22, lineHeight: 1.45 }}
-          />
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
-            <button className="btn btn-sm btn-primary" disabled={statement === identity.statement} onMouseDown={(event) => event.preventDefault()} onClick={saveStatement}>
-              Save statement
+          {editingStatement ? (
+            <>
+              <textarea
+                className="input"
+                rows={6}
+                value={statementDraft}
+                onChange={(event) => setStatementDraft(event.target.value)}
+                style={{ marginTop: 12, fontFamily: "var(--serif)", fontSize: 22, lineHeight: 1.45 }}
+                autoFocus
+              />
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 10 }}>
+                <button className="btn btn-sm" onClick={() => { setStatementDraft(identity.statement); setEditingStatement(false); }}>
+                  Cancel
+                </button>
+                <button className="btn btn-sm btn-primary" onClick={saveStatement}>
+                  Save statement
+                </button>
+              </div>
+            </>
+          ) : (
+            <button
+              onClick={() => {
+                setStatementDraft(identity.statement);
+                setEditingStatement(true);
+              }}
+              style={{
+                display: "block",
+                width: "100%",
+                marginTop: 12,
+                padding: 0,
+                border: 0,
+                background: "transparent",
+                textAlign: "left",
+                cursor: "pointer",
+              }}
+            >
+              {identity.statement.trim() ? (
+                <>
+                  <div style={{ marginBottom: 8, fontFamily: "var(--serif)", fontSize: 13, fontStyle: "italic", color: "var(--ink-3)" }}>
+                    Click the statement to edit it.
+                  </div>
+                  <p style={{ margin: 0, fontFamily: "var(--serif)", fontSize: 28, fontStyle: "italic", lineHeight: 1.35, color: "var(--ink)" }}>
+                    {identity.statement}
+                  </p>
+                </>
+              ) : (
+                <p style={{ margin: 0, fontFamily: "var(--serif)", fontSize: 22, fontStyle: "italic", lineHeight: 1.45, color: "var(--ink-3)" }}>
+                  No identity statement yet. Click this section to write one.
+                </p>
+              )}
             </button>
-          </div>
+          )}
           <div className="eyebrow" style={{ marginTop: 22 }}>Core values</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
             {identity.values.map((value) => (

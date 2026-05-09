@@ -17,6 +17,7 @@ import type {
   JournalEntry,
   StoreSnapshot,
   UserPreferences,
+  WeeklyReview,
   WeeklyReviewAnswers,
 } from "@/lib/types";
 import { listHabits } from "@/lib/repositories/habits";
@@ -39,6 +40,22 @@ export const emptyWeeklyReview: WeeklyReviewAnswers = {
   smallestFix: "",
   identityVote: "",
 };
+
+function toWeeklyReview(record: {
+  weekStartKey: string;
+  wentWell: string;
+  smallestFix: string;
+  identityVote: string;
+  updatedAt: Date;
+}): WeeklyReview {
+  return {
+    weekStartKey: record.weekStartKey,
+    wentWell: record.wentWell,
+    smallestFix: record.smallestFix,
+    identityVote: record.identityVote,
+    updatedAt: record.updatedAt.toISOString(),
+  };
+}
 
 function toDateKey(date: Date) {
   return date.toISOString().slice(0, 10);
@@ -175,12 +192,19 @@ export async function getWeeklyReview(userId: string, weekStartKey: string, db: 
   });
 
   return record
-    ? {
-        wentWell: record.wentWell,
-        smallestFix: record.smallestFix,
-        identityVote: record.identityVote,
-      }
+    ? toWeeklyReview(record)
     : emptyWeeklyReview;
+}
+
+export async function listWeeklyReviews(userId: string, db: DbClient = defaultDb) {
+  validateDatabaseUrl();
+
+  const records = await db.weeklyReview.findMany({
+    where: { userId },
+    orderBy: { weekStartKey: "desc" },
+  });
+
+  return records.map(toWeeklyReview);
 }
 
 export async function saveWeeklyReview(userId: string, input: WeeklyReviewInput, db: DbClient = defaultDb) {
@@ -203,11 +227,7 @@ export async function saveWeeklyReview(userId: string, input: WeeklyReviewInput,
     },
   });
 
-  return {
-    wentWell: record.wentWell,
-    smallestFix: record.smallestFix,
-    identityVote: record.identityVote,
-  };
+  return toWeeklyReview(record);
 }
 
 export async function listCompletedLessons(userId: string, db: DbClient = defaultDb) {
@@ -321,11 +341,12 @@ export async function saveFormationVerdict(userId: string, input: FormationVerdi
 export async function getStoreSnapshot(userId: string, weekStartKey: string, db: DbClient = defaultDb): Promise<StoreSnapshot> {
   validateDatabaseUrl();
 
-  const [habits, journal, identity, weeklyReview, completedLessons, formationVerdicts, preferences] = await Promise.all([
+  const [habits, journal, identity, weeklyReview, weeklyReviews, completedLessons, formationVerdicts, preferences] = await Promise.all([
     listHabits(userId, db),
     listJournalEntries(userId, db),
     getIdentity(userId, db),
     getWeeklyReview(userId, weekStartKey, db),
+    listWeeklyReviews(userId, db),
     listCompletedLessons(userId, db),
     listFormationVerdicts(userId, db),
     getPreferences(userId, db),
@@ -336,6 +357,7 @@ export async function getStoreSnapshot(userId: string, weekStartKey: string, db:
     journal,
     identity,
     weeklyReview,
+    weeklyReviews,
     completedLessons,
     formationVerdicts,
     preferences,

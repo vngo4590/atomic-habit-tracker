@@ -4,9 +4,8 @@ import { useEffect, useState } from "react";
 
 import { IconMoon, IconSun } from "@/components/Icons";
 import { useStoreContext } from "@/components/StoreProvider";
+import { applyAppearance } from "@/lib/appearance";
 
-const THEME_KEY = "atomicly:theme";
-const ACCENT_KEY = "atomicly:accent";
 const ACCENTS = [
   { name: "Ochre", hue: 60 },
   { name: "Sage", hue: 145 },
@@ -15,18 +14,6 @@ const ACCENTS = [
 ];
 
 type Theme = "light" | "dark";
-
-function applyTheme(theme: Theme) {
-  document.documentElement.dataset.theme = theme;
-  window.localStorage.setItem(THEME_KEY, theme);
-}
-
-function applyAccent(hue: number) {
-  document.documentElement.style.setProperty("--accent", `oklch(62% 0.13 ${hue})`);
-  document.documentElement.style.setProperty("--accent-2", `oklch(72% 0.10 ${hue})`);
-  document.documentElement.style.setProperty("--accent-soft", `oklch(92% 0.04 ${hue})`);
-  window.localStorage.setItem(ACCENT_KEY, String(hue));
-}
 
 export default function SettingsPage() {
   const store = useStoreContext();
@@ -42,20 +29,18 @@ export default function SettingsPage() {
     window.queueMicrotask(() => {
       setTheme(store.preferences.theme);
       setAccent(store.preferences.accentHue);
-      applyTheme(store.preferences.theme);
-      applyAccent(store.preferences.accentHue);
     });
   }, [store.preferences.accentHue, store.preferences.theme]);
 
   const setNextTheme = (nextTheme: Theme) => {
     setTheme(nextTheme);
-    applyTheme(nextTheme);
+    applyAppearance(nextTheme, accent);
     store.setPreferences({ theme: nextTheme });
   };
 
   const setNextAccent = (hue: number) => {
     setAccent(hue);
-    applyAccent(hue);
+    applyAppearance(theme, hue);
     store.setPreferences({ accentHue: hue });
   };
 

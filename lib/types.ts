@@ -76,6 +76,7 @@ export interface StoreState {
   identity: Identity;
   setIdentity: (identity: Identity) => void;
   weeklyReview: WeeklyReviewAnswers;
+  weeklyReviews: WeeklyReview[];
   setWeeklyReview: (weekStartKey: string, answers: WeeklyReviewAnswers) => void;
   completedLessons: Set<number>;
   lessonMode: LessonMode;
@@ -99,6 +100,11 @@ export interface WeeklyReviewAnswers {
   wentWell: string;
   smallestFix: string;
   identityVote: string;
+}
+
+export interface WeeklyReview extends WeeklyReviewAnswers {
+  weekStartKey: string;
+  updatedAt: string;
 }
 
 export interface FormationVerdict {
@@ -125,6 +131,7 @@ export interface StoreSnapshot {
   journal: JournalEntry[];
   identity: Identity;
   weeklyReview: WeeklyReviewAnswers;
+  weeklyReviews?: WeeklyReview[];
   completedLessons: number[];
   formationVerdicts: FormationVerdict[];
   preferences: UserPreferences;

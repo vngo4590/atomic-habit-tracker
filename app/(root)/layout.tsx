@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
+import { AppearanceSync } from "@/components/AppearanceSync";
 import { Nav } from "@/components/Nav";
 import { OnboardingGate } from "@/components/OnboardingGate";
 import { StoreProvider } from "@/components/StoreProvider";
@@ -21,6 +22,7 @@ export default async function RootGroupLayout({ children }: { children: ReactNod
 
   return (
     <StoreProvider backendSnapshot={backendSnapshot}>
+      <AppearanceSync />
       <div className="app">
         <Nav user={{ name: session.user.name ?? null, email: session.user.email ?? null }} />
         <main className="main">

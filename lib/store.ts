@@ -28,6 +28,7 @@ import type {
   StoreState,
   ToastState,
   UserPreferences,
+  WeeklyReview,
   WeeklyReviewAnswers,
 } from "@/lib/types";
 
@@ -123,6 +124,7 @@ export const defaultSnapshot: StoreSnapshot = {
     smallestFix: "",
     identityVote: "",
   },
+  weeklyReviews: [],
   completedLessons: [],
   formationVerdicts: [],
   preferences: {
@@ -142,6 +144,7 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
   const [journal, setJournal] = useState<JournalEntry[]>(backendSnapshot.journal);
   const [identity, setIdentityState] = useState<Identity>(backendSnapshot.identity);
   const [weeklyReview, setWeeklyReviewState] = useState<WeeklyReviewAnswers>(backendSnapshot.weeklyReview);
+  const [weeklyReviews, setWeeklyReviews] = useState<WeeklyReview[]>(backendSnapshot.weeklyReviews ?? []);
   const [completedLessons, setCompletedLessons] = useState<Set<number>>(
     () => new Set(backendSnapshot.completedLessons),
   );
@@ -363,7 +366,22 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
 
   const setWeeklyReview = useCallback((weekStartKey: string, answers: WeeklyReviewAnswers) => {
     setWeeklyReviewState(answers);
-    void saveWeeklyReviewAction(weekStartKey, answers).then(setWeeklyReviewState);
+    const optimisticReview: WeeklyReview = {
+      weekStartKey,
+      ...answers,
+      updatedAt: new Date().toISOString(),
+    };
+    setWeeklyReviews((current) => [
+      optimisticReview,
+      ...current.filter((review) => review.weekStartKey !== weekStartKey),
+    ].sort((a, b) => b.weekStartKey.localeCompare(a.weekStartKey)));
+    void saveWeeklyReviewAction(weekStartKey, answers).then((saved) => {
+      setWeeklyReviewState(saved);
+      setWeeklyReviews((current) => [
+        saved,
+        ...current.filter((review) => review.weekStartKey !== saved.weekStartKey),
+      ].sort((a, b) => b.weekStartKey.localeCompare(a.weekStartKey)));
+    });
   }, []);
 
   const setLessonMode = useCallback((lessonMode: UserPreferences["lessonMode"]) => {
@@ -422,6 +440,7 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
       identity,
       setIdentity,
       weeklyReview,
+      weeklyReviews,
       setWeeklyReview,
       completedLessons,
       lessonMode: lessonModeState,
@@ -445,6 +464,7 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
       identity,
       journal,
       weeklyReview,
+      weeklyReviews,
       updateJournal,
       completedLessons,
       lessonModeState,

@@ -1,15 +1,36 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { EditableLaw } from "@/components/EditableLaw";
 import { HabitJournalStream } from "@/components/HabitJournalStream";
 import { HistoryWall } from "@/components/HistoryWall";
 import { LoopDiagram } from "@/components/LoopDiagram";
 import { NotesManager } from "@/components/NotesManager";
+import { applyAppearance } from "@/lib/appearance";
 import type { Habit } from "@/lib/types";
+
+let storage: Map<string, string>;
+
+beforeEach(() => {
+  storage = new Map();
+  Object.defineProperty(window, "localStorage", {
+    configurable: true,
+    value: {
+      getItem: vi.fn((key: string) => storage.get(key) ?? null),
+      setItem: vi.fn((key: string, value: string) => storage.set(key, value)),
+      removeItem: vi.fn((key: string) => storage.delete(key)),
+      clear: vi.fn(() => storage.clear()),
+    },
+  });
+});
 
 afterEach(() => {
   cleanup();
+  document.documentElement.removeAttribute("data-theme");
+  document.documentElement.style.removeProperty("--accent");
+  document.documentElement.style.removeProperty("--accent-2");
+  document.documentElement.style.removeProperty("--accent-soft");
+  window.localStorage.clear();
 });
 
 function makeHabit(patch: Partial<Habit> = {}): Habit {
@@ -41,6 +62,16 @@ function makeHabit(patch: Partial<Habit> = {}): Habit {
 }
 
 describe("UI regressions", () => {
+  it("applies saved appearance preferences to the document", () => {
+    applyAppearance("dark", 145);
+
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(document.documentElement.style.getPropertyValue("--accent")).toBe("oklch(62% 0.13 145)");
+    expect(document.documentElement.style.getPropertyValue("--accent-soft")).toBe("oklch(28% 0.05 145)");
+    expect(window.localStorage.getItem("atomicly:theme")).toBe("dark");
+    expect(window.localStorage.getItem("atomicly:accent")).toBe("145");
+  });
+
   it("distinguishes an empty law placeholder from saved user text", () => {
     const onSave = vi.fn();
     const { rerender } = render(
