@@ -144,6 +144,20 @@ textarea.input { resize: vertical; min-height: 80px; line-height: 1.55; }
 .loop-value { font-size: 14px; color: var(--ink); line-height: 1.4; }
 .loop-arrow { position: absolute; right: -7px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; background: var(--bg-elev); border: 1px solid var(--rule); border-left: none; border-bottom: none; rotate: 45deg; z-index: 1; }
 .loop-cell:last-child .loop-arrow { display: none; }
+.habit-overview-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(280px, 1fr); gap: 20px; }
+.principle-intro { min-height: 260px; border: 1px solid var(--rule); border-radius: var(--r-lg); background: var(--bg-elev); display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(220px, 1.05fr); gap: 20px; overflow: hidden; position: relative; }
+.principle-copy { padding: 28px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 12px; position: relative; z-index: 1; }
+.principle-copy p { margin: 0; color: var(--ink-2); font-family: var(--serif); font-size: 18px; font-style: italic; line-height: 1.45; }
+.principle-bubbles { min-height: 260px; position: relative; background: linear-gradient(135deg, var(--bg-sunk), var(--bg-elev)); border-left: 1px solid var(--rule); overflow: hidden; }
+.principle-bubble { --bubble-index: 0; position: absolute; display: inline-flex; align-items: center; justify-content: center; width: 112px; aspect-ratio: 1; border-radius: 50%; border: 1px solid var(--rule-strong); background: var(--bg); color: var(--ink); font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; box-shadow: 0 18px 44px color-mix(in oklch, var(--ink) 10%, transparent); animation: principle-float 7s ease-in-out infinite; animation-delay: calc(var(--bubble-index) * -1.2s); }
+.principle-bubble:nth-child(1) { left: 10%; top: 17%; }
+.principle-bubble:nth-child(2) { left: 43%; top: 10%; }
+.principle-bubble:nth-child(3) { left: 20%; top: 55%; }
+.principle-bubble:nth-child(4) { left: 58%; top: 48%; }
+.principle-bubble.warm { background: oklch(94% 0.035 74); border-color: oklch(81% 0.07 74); }
+.principle-bubble.green { background: oklch(93% 0.035 145); border-color: oklch(78% 0.07 145); }
+.principle-bubble.blue { background: oklch(93% 0.032 220); border-color: oklch(77% 0.062 220); }
+.principle-bubble.ink { background: var(--ink); border-color: var(--ink); color: var(--bg); }
 .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--rule); margin-bottom: 24px; }
 .tab { padding: 10px 14px; background: transparent; border: none; color: var(--ink-3); font-size: 13px; font-weight: 500; cursor: pointer; position: relative; margin-bottom: -1px; }
 .tab:hover { color: var(--ink); }
@@ -158,6 +172,18 @@ textarea.input { resize: vertical; min-height: 80px; line-height: 1.55; }
 .click-row { cursor: pointer; transition: background 0.1s; }
 .click-row:hover { background: var(--bg-sunk); }
 .habit-list-label { display: none; }
+
+@keyframes principle-float {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  33% {
+    transform: translate3d(10px, -18px, 0) scale(1.04);
+  }
+  66% {
+    transform: translate3d(-12px, 14px, 0) scale(0.97);
+  }
+}
 .habit-list-progress { display: flex; align-items: center; gap: 8px; min-width: 0; width: 100%; }
 .overlay { position: fixed; inset: 0; background: oklch(from var(--bg) l c h / 0.92); backdrop-filter: blur(8px); z-index: 100; display: grid; place-items: center; padding: 40px; }
 .overlay-card { background: var(--bg-elev); border: 1px solid var(--rule); border-radius: var(--r-lg); width: 540px; max-width: 100%; padding: 44px 48px; box-shadow: var(--shadow); }
@@ -393,6 +419,33 @@ textarea.input { resize: vertical; min-height: 80px; line-height: 1.55; }
   .loop-arrow {
     display: none;
   }
+
+  .habit-overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .principle-intro {
+    grid-template-columns: 1fr;
+  }
+
+  .principle-copy {
+    padding: 22px;
+  }
+
+  .principle-bubbles {
+    min-height: 210px;
+    border-left: 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .principle-bubble {
+    width: 88px;
+  }
+
+  .principle-bubble:nth-child(1) { left: 8%; top: 16%; }
+  .principle-bubble:nth-child(2) { left: 52%; top: 10%; }
+  .principle-bubble:nth-child(3) { left: 18%; top: 55%; }
+  .principle-bubble:nth-child(4) { left: 60%; top: 52%; }
 
   .overlay {
     align-items: end;

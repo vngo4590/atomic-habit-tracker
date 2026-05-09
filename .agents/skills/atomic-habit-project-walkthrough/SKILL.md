@@ -82,7 +82,7 @@ prisma/
 | `/` | Today dashboard |
 | `/habits` | Habit library |
 | `/habits/new` | New habit builder |
-| `/habits/[id]` | Habit detail / history wall |
+| `/habits/[id]` | Habit detail with Overview reveal panels for the 4 laws and habit loop, plus journal/history/notes tabs |
 | `/analytics` | Adherence stats and charts |
 | `/journal` | Journal entries |
 | `/review` | Weekly review |

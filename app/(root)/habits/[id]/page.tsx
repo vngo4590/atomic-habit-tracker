@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
@@ -21,9 +22,16 @@ import { useStoreContext } from "@/components/StoreProvider";
 import { todayKey } from "@/lib/helpers";
 import { formatScheduleLabel } from "@/lib/schedule";
 
-type Tab = "overview" | "loop" | "journal" | "history" | "notes";
+type Tab = "overview" | "journal" | "history" | "notes";
 
-const TABS: Tab[] = ["overview", "loop", "journal", "history", "notes"];
+const TABS: Tab[] = ["overview", "journal", "history", "notes"];
+
+type BubbleItem = {
+  label: string;
+  tone: "warm" | "green" | "blue" | "ink";
+};
+
+type RevealState = Record<string, { laws?: boolean; loop?: boolean }>;
 
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
@@ -34,11 +42,46 @@ function Stat({ label, value }: { label: string; value: string | number }) {
   );
 }
 
+function PrincipleIntro({
+  title,
+  eyebrow,
+  body,
+  action,
+  bubbles,
+  onStart,
+}: {
+  title: string;
+  eyebrow: string;
+  body: string;
+  action: string;
+  bubbles: BubbleItem[];
+  onStart: () => void;
+}) {
+  return (
+    <section className="principle-intro">
+      <div className="principle-copy">
+        <div className="eyebrow">{eyebrow}</div>
+        <h3 className="h3">{title}</h3>
+        <p>{body}</p>
+        <button className="btn btn-primary btn-sm" onClick={onStart}>{action}</button>
+      </div>
+      <div className="principle-bubbles" aria-hidden="true">
+        {bubbles.map((bubble, index) => (
+          <span key={bubble.label} className={`principle-bubble ${bubble.tone}`} style={{ "--bubble-index": index } as CSSProperties}>
+            {bubble.label}
+          </span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default function HabitDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const store = useStoreContext();
   const [tab, setTab] = useState<Tab>("overview");
+  const [revealed, setRevealed] = useState<RevealState>({});
   const [showContract, setShowContract] = useState(false);
   const [showMood, setShowMood] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -70,6 +113,28 @@ export default function HabitDetailPage() {
   }
 
   const doneToday = Boolean(habit.history[today]);
+  const lawsHaveValues = [habit.cue, habit.craving, habit.twoMin, habit.reward].some((value) => value.trim());
+  const loopHasValues = [habit.loopCue, habit.loopCraving, habit.loopResponse, habit.loopReward].some((value) => value.trim());
+  const showLaws = lawsHaveValues || Boolean(revealed[habit.id]?.laws);
+  const showLoop = loopHasValues || Boolean(revealed[habit.id]?.loop);
+  const revealPanel = (panel: "laws" | "loop") => {
+    setRevealed((current) => ({
+      ...current,
+      [habit.id]: {
+        ...current[habit.id],
+        [panel]: true,
+      },
+    }));
+  };
+  const hidePanel = (panel: "laws" | "loop") => {
+    setRevealed((current) => ({
+      ...current,
+      [habit.id]: {
+        ...current[habit.id],
+        [panel]: false,
+      },
+    }));
+  };
   const deleteHabit = () => {
     store.deleteHabit(habit.id);
     router.push("/habits");
@@ -134,16 +199,76 @@ export default function HabitDetailPage() {
       </div>
 
       {tab === "overview" && (
-        <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 20 }}>
-          <div className="card card-pad">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14 }}>
-              <h3 className="h3">The 4 laws</h3>
-              <span className="muted mono" style={{ fontSize: 10, letterSpacing: "0.08em" }}>EDIT INLINE</span>
-            </div>
-            <EditableLaw label="1. Make it obvious" hint="Cue" value={habit.cue} placeholder="When 7am, after I pour coffee..." onSave={(value) => store.updateHabit(habit.id, { cue: value })} />
-            <EditableLaw label="2. Make it attractive" hint="Craving" value={habit.craving} placeholder="To feel curious, calm, strong..." onSave={(value) => store.updateHabit(habit.id, { craving: value })} />
-            <EditableLaw label="3. Make it easy" hint="2-minute version" value={habit.twoMin} placeholder="Just open the book. Just put on the shoes." onSave={(value) => store.updateHabit(habit.id, { twoMin: value })} />
-            <EditableLaw label="4. Make it satisfying" hint="Reward" value={habit.reward} placeholder="One visible win." onSave={(value) => store.updateHabit(habit.id, { reward: value })} last />
+        <div className="habit-overview-grid">
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {showLaws ? (
+              <div className="card card-pad">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14 }}>
+                  <h3 className="h3">The 4 laws</h3>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span className="muted mono" style={{ fontSize: 10, letterSpacing: "0.08em" }}>EDIT INLINE</span>
+                    <button
+                      className="btn btn-sm btn-ghost"
+                      onClick={() => {
+                        store.updateHabit(habit.id, { cue: "", craving: "", twoMin: "", reward: "" });
+                        hidePanel("laws");
+                      }}
+                    >
+                      Clear laws
+                    </button>
+                  </div>
+                </div>
+                <EditableLaw label="1. Make it obvious" hint="Cue" value={habit.cue} placeholder="When 7am, after I pour coffee..." onSave={(value) => store.updateHabit(habit.id, { cue: value })} />
+                <EditableLaw label="2. Make it attractive" hint="Craving" value={habit.craving} placeholder="To feel curious, calm, strong..." onSave={(value) => store.updateHabit(habit.id, { craving: value })} />
+                <EditableLaw label="3. Make it easy" hint="2-minute version" value={habit.twoMin} placeholder="Just open the book. Just put on the shoes." onSave={(value) => store.updateHabit(habit.id, { twoMin: value })} />
+                <EditableLaw label="4. Make it satisfying" hint="Reward" value={habit.reward} placeholder="One visible win." onSave={(value) => store.updateHabit(habit.id, { reward: value })} last />
+              </div>
+            ) : (
+              <PrincipleIntro
+                title="Shape the habit before willpower is needed"
+                eyebrow="The 4 laws"
+                body="The laws turn a vague intention into a designed behavior: make the cue visible, make the craving attractive, make the response small, and make the reward immediate."
+                action="Define the 4 laws"
+                bubbles={[
+                  { label: "Obvious", tone: "warm" },
+                  { label: "Attractive", tone: "green" },
+                  { label: "Easy", tone: "blue" },
+                  { label: "Satisfying", tone: "ink" },
+                ]}
+                onStart={() => revealPanel("laws")}
+              />
+            )}
+
+            {showLoop ? (
+              <div>
+                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+                  <button
+                    className="btn btn-sm btn-ghost"
+                    onClick={() => {
+                      store.updateHabit(habit.id, { loopCue: "", loopCraving: "", loopResponse: "", loopReward: "" });
+                      hidePanel("loop");
+                    }}
+                  >
+                    Clear loop
+                  </button>
+                </div>
+                <LoopDiagram habit={habit} onUpdate={(patch) => store.updateHabit(habit.id, patch)} />
+              </div>
+            ) : (
+              <PrincipleIntro
+                title="See the behavior as a complete loop"
+                eyebrow="Habit loop"
+                body="The loop connects what starts the habit, why it feels worth doing, the action itself, and the reward that teaches your brain to repeat it."
+                action="Define the loop"
+                bubbles={[
+                  { label: "Cue", tone: "warm" },
+                  { label: "Craving", tone: "green" },
+                  { label: "Response", tone: "blue" },
+                  { label: "Reward", tone: "ink" },
+                ]}
+                onStart={() => revealPanel("loop")}
+              />
+            )}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             <div className="card card-pad">
@@ -190,7 +315,6 @@ export default function HabitDetailPage() {
         </div>
       )}
 
-      {tab === "loop" && <LoopDiagram habit={habit} onUpdate={(patch) => store.updateHabit(habit.id, patch)} />}
       {tab === "journal" && (
         <HabitJournalStream
           habit={habit}
