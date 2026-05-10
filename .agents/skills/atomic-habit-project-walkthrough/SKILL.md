@@ -41,9 +41,12 @@ The helper is guarded for the local Docker database URL on `localhost:55432`. Us
 Validation commands:
 
 ```bash
-npm exec vitest run          # unit tests
+npm run test:run             # unit/integration tests
+npm run typecheck            # TypeScript
+npm run lint:app             # scoped lint for app/components/lib/scripts
 npm run build                # production build
-npm exec eslint -- app components lib  # scoped lint (prefer over npm run lint)
+npm run prisma:migrate:status # local migration status check
+npm run backend:validate     # Prisma, TypeScript, lint, tests, and build
 ```
 
 ---

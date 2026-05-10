@@ -76,18 +76,18 @@
 
 ## 10. Vercel Deployment Readiness
 
-- [ ] 10.1 Add deployment documentation for Vercel project setup, env vars, database provisioning, migrations, and auth callback URLs
-- [ ] 10.2 Add package scripts for Prisma generate, migration status/deploy, and backend validation
-- [ ] 10.3 Verify `npm run build` works with backend configuration
-- [ ] 10.4 Verify tests pass with an isolated test database or mocked repository layer
-- [ ] 10.5 Add production smoke checklist for login, create habit, check-in, journal, settings, and mobile viewport
-- [ ] 10.6 Document rollback and migration safety notes
+- [x] 10.1 Add deployment documentation for Vercel project setup, env vars, database provisioning, migrations, and auth callback URLs
+- [x] 10.2 Add package scripts for Prisma generate, migration status/deploy, and backend validation
+- [x] 10.3 Verify `npm run build` works with backend configuration
+- [x] 10.4 Verify tests pass with an isolated test database or mocked repository layer
+- [x] 10.5 Add production smoke checklist for login, create habit, check-in, journal, settings, and mobile viewport
+- [x] 10.6 Document rollback and migration safety notes
 
 ## 11. Final Validation
 
-- [ ] 11.1 Run TypeScript, scoped ESLint, unit/integration tests, and production build
-- [ ] 11.2 Run migration apply/status checks against local development database
-- [ ] 11.3 Start the dev server and verify full authenticated flow without mock data
-- [ ] 11.4 Verify unauthenticated route protection for all app routes and API routes
-- [ ] 11.5 Verify responsive behavior across mobile, tablet, and desktop viewports
-- [ ] 11.6 Confirm OpenSpec requirements are satisfied and update the task checklist
+- [x] 11.1 Run TypeScript, scoped ESLint, unit/integration tests, and production build
+- [x] 11.2 Run migration apply/status checks against local development database
+- [x] 11.3 Start the dev server and verify full authenticated flow without mock data
+- [x] 11.4 Verify unauthenticated route protection for all app routes and API routes
+- [x] 11.5 Verify responsive behavior across mobile, tablet, and desktop viewports
+- [x] 11.6 Confirm OpenSpec requirements are satisfied and update the task checklist

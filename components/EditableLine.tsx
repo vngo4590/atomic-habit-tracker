@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export function EditableLine({
   value,
@@ -14,12 +14,6 @@ export function EditableLine({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const empty = !value.trim();
-
-  useEffect(() => {
-    if (!editing) {
-      setDraft(value);
-    }
-  }, [editing, value]);
 
   if (editing) {
     return (

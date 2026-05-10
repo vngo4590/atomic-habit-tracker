@@ -19,10 +19,16 @@
 
 ## Environment Variables
 
-- `DATABASE_URL`: pooled PostgreSQL connection string.
-- `AUTH_SECRET`: Auth.js session secret. Generate with `openssl rand -base64 32`.
-- `AUTH_URL`: canonical deployment URL for Auth.js callbacks.
-- `NEXT_PUBLIC_APP_URL`: public app URL used by client-visible links.
+Required for local, preview, and production:
+
+| Variable | Purpose | Notes |
+| --- | --- | --- |
+| `DATABASE_URL` | PostgreSQL connection string used by Prisma and Auth.js adapter-backed data access. | Use the local Docker URL for development. Use a pooled managed PostgreSQL URL for Vercel preview and production. |
+| `AUTH_SECRET` | Auth.js session signing secret. | Generate with `openssl rand -base64 32` and keep different values per environment. |
+| `AUTH_URL` | Canonical app URL used by Auth.js callbacks. | Local: `http://localhost:3000`. Preview/production: the deployed HTTPS origin. |
+| `NEXT_PUBLIC_APP_URL` | Public app URL used by client-visible links. | Match the current deployment origin. |
+
+Optional future OAuth providers can add provider-specific variables such as `AUTH_GITHUB_ID` and `AUTH_GITHUB_SECRET` without changing the domain model.
 
 ## Local Development
 
@@ -71,7 +77,47 @@ npm run db:reset
 
 ## Vercel Notes
 
-- Configure all environment variables in Vercel for Preview and Production.
-- Run migrations before or during production release with `npm run prisma:migrate:deploy`.
-- Keep database URLs pooled for serverless usage.
-- Verify login, registration, protected routes, create habit, check-in, journal, settings, and mobile viewport after deployment.
+### Project Setup
+
+1. Create or import the Vercel project from this repository.
+2. Set the framework preset to Next.js and leave the build command as `npm run build`.
+3. Configure the environment variables above for Preview and Production.
+4. Provision PostgreSQL with a Vercel-compatible provider. Neon or Vercel Postgres are preferred first choices because both support serverless connection pooling.
+5. Store the pooled PostgreSQL connection string in `DATABASE_URL`.
+6. Set `AUTH_URL` and `NEXT_PUBLIC_APP_URL` to the exact HTTPS origin for the deployment. Auth.js callback URLs must use the same origin.
+
+### Migration and Validation Commands
+
+Run these commands before promoting a release:
+
+```bash
+npm run prisma:generate
+npm run prisma:validate
+npm run prisma:migrate:status
+npm run prisma:migrate:deploy
+npm run backend:validate
+```
+
+`prisma:migrate:status` reports whether committed migrations match the target database. `prisma:migrate:deploy` applies committed migrations without creating new migration files and is the production-safe migration command.
+
+### Production Smoke Checklist
+
+After deployment, verify:
+
+- Register a new account and confirm the app redirects into the authenticated shell.
+- Log out and log back in with the same account.
+- Visit `/habits` while logged out and confirm it redirects to `/login`.
+- Create a habit, refresh the page, and confirm it still loads from the database.
+- Check in the habit for the current day and confirm the completion persists after refresh.
+- Save a journal entry and confirm it appears in the journal list after refresh.
+- Change settings for theme or accent and confirm the preference persists after refresh.
+- Open `/api/v1/session` while logged out and confirm it returns an unauthenticated response.
+- Check mobile viewport behavior at 390px, tablet behavior around 768px, and desktop behavior with no unintended horizontal overflow.
+
+### Rollback and Migration Safety
+
+- Prefer additive schema changes. Avoid destructive migrations until the replacement data path has already been deployed and verified.
+- Back up or snapshot the managed PostgreSQL database before applying production migrations.
+- If a release fails before migrations are applied, roll back by redeploying the previous Vercel deployment.
+- If a release fails after additive migrations are applied, roll back application code first and leave the additive database schema in place until a follow-up cleanup migration is prepared.
+- Never run development reset, seed, random-data, or clean commands against production. Those helpers are local-only and guarded for the Docker database on `localhost:55432`.

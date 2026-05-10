@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import type { Habit } from "@/lib/types";
 
@@ -33,12 +33,6 @@ function LoopEditableValue({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const empty = !value.trim();
-
-  useEffect(() => {
-    if (!editing) {
-      setDraft(value);
-    }
-  }, [editing, value]);
 
   if (editing) {
     return (

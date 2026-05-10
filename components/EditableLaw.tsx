@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export function EditableLaw({
   label,
@@ -20,12 +20,6 @@ export function EditableLaw({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const empty = !value.trim();
-
-  useEffect(() => {
-    if (!editing) {
-      setDraft(value);
-    }
-  }, [editing, value]);
 
   return (
     <div style={{ padding: "14px 0", borderBottom: last ? "none" : "1px solid var(--rule)" }}>
