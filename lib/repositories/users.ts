@@ -1,6 +1,8 @@
 import { db } from "@/lib/db/client";
 import { validateDatabaseUrl } from "@/lib/db/config";
 
+type DbClient = typeof db;
+
 export interface AuthUserRecord {
   id: string;
   name: string | null;
@@ -23,19 +25,28 @@ const authUserSelect = {
   passwordHash: true,
 } as const;
 
-export async function findAuthUserByEmail(email: string): Promise<AuthUserRecord | null> {
+export async function findAuthUserByEmail(email: string, client: DbClient = db): Promise<AuthUserRecord | null> {
   validateDatabaseUrl();
 
-  return db.user.findUnique({
+  return client.user.findUnique({
     where: { email },
     select: authUserSelect,
   });
 }
 
-export async function createUserWithDefaults(input: CreateUserInput): Promise<AuthUserRecord> {
+export async function findAuthUserById(id: string, client: DbClient = db): Promise<AuthUserRecord | null> {
   validateDatabaseUrl();
 
-  return db.user.create({
+  return client.user.findUnique({
+    where: { id },
+    select: authUserSelect,
+  });
+}
+
+export async function createUserWithDefaults(input: CreateUserInput, client: DbClient = db): Promise<AuthUserRecord> {
+  validateDatabaseUrl();
+
+  return client.user.create({
     data: {
       email: input.email,
       name: input.name,

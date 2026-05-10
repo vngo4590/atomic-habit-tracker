@@ -113,7 +113,7 @@ scripts/
 
 ## Data Flow
 
-1. **Auth gate:** All `app/(root)/` screens call `requireUserId()` (from `lib/auth/session.ts`), which redirects unauthenticated users to `/login`.
+1. **Auth gate:** All `app/(root)/` screens call `requireCurrentUser()` / `requireUserId()` (from `lib/auth/session.ts`), which verifies the Auth.js JWT maps to an existing database user and redirects missing, expired, deleted, or otherwise invalid users to `/login`. JWT sessions expire after 1 day of inactivity via `SESSION_MAX_AGE_SECONDS`. `proxy.ts` stays an optimistic cookie-level guard only; do not redirect `/login` or `/register` away just because a session cookie exists, because stale cookies from local DB resets must be able to reach the login page.
 2. **Backend snapshot:** `app/(root)/layout.tsx` fetches the full user-scoped snapshot via `getStoreSnapshot(userId, todayKey())` and passes it to `StoreProvider`.
 3. **Optimistic cache:** `components/StoreProvider.tsx` + `lib/store.ts` maintain an in-memory optimistic store. Mutations hit server actions immediately and the store updates before the server round-trip.
 4. **Domain writes:** All habit/journal/identity mutations go through `lib/actions/domain.ts` which calls user-scoped repository functions in `lib/repositories/`.

@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 
 import { authorizeCredentials } from "@/lib/auth/credentials";
+import { SESSION_MAX_AGE_SECONDS } from "@/lib/auth/session-policy";
 import { db } from "@/lib/db/client";
 
 export const {
@@ -12,7 +13,14 @@ export const {
   signOut,
 } = NextAuth({
   adapter: PrismaAdapter(db),
-  session: { strategy: "jwt" },
+  session: {
+    strategy: "jwt",
+    maxAge: SESSION_MAX_AGE_SECONDS,
+    updateAge: SESSION_MAX_AGE_SECONDS,
+  },
+  jwt: {
+    maxAge: SESSION_MAX_AGE_SECONDS,
+  },
   pages: {
     signIn: "/login",
   },

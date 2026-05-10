@@ -1,6 +1,6 @@
 import { ZodError } from "zod";
 
-import { auth } from "@/auth";
+import { getCurrentUserId } from "@/lib/auth/session";
 
 export interface ApiErrorBody {
   ok: false;
@@ -35,8 +35,7 @@ export function jsonError(code: string, message: string, status: number, fields?
 }
 
 export async function requireApiUserId() {
-  const session = await auth();
-  return session?.user?.id ?? null;
+  return getCurrentUserId();
 }
 
 export function validationError(error: ZodError) {

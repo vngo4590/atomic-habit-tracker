@@ -1,19 +1,19 @@
-import { auth } from "@/auth";
 import { jsonOk } from "@/lib/api/http";
+import { getCurrentUser } from "@/lib/auth/session";
 
 export const runtime = "nodejs";
 
 export async function GET() {
-  const session = await auth();
+  const user = await getCurrentUser();
 
   return jsonOk({
-    authenticated: Boolean(session?.user?.id),
-    user: session?.user?.id
+    authenticated: Boolean(user),
+    user: user
       ? {
-          id: session.user.id,
-          name: session.user.name ?? null,
-          email: session.user.email ?? null,
-          image: session.user.image ?? null,
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          image: user.image,
         }
       : null,
   });

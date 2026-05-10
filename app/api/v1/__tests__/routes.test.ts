@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   session: null as null | { user: { id: string; name?: string | null; email?: string | null; image?: string | null } },
   auth: vi.fn(),
+  findAuthUserById: vi.fn(),
   createHabit: vi.fn(),
   getHabit: vi.fn(),
   listHabits: vi.fn(),
@@ -11,6 +12,10 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/auth", () => ({
   auth: mocks.auth,
+}));
+
+vi.mock("@/lib/repositories/users", () => ({
+  findAuthUserById: mocks.findAuthUserById,
 }));
 
 vi.mock("@/lib/repositories/habits", () => ({
@@ -31,6 +36,14 @@ describe("API v1 route contracts", () => {
   beforeEach(() => {
     mocks.session = null;
     mocks.auth.mockImplementation(async () => mocks.session);
+    mocks.findAuthUserById.mockReset();
+    mocks.findAuthUserById.mockImplementation(async (id: string) => ({
+      id,
+      name: "Ada",
+      email: "ada@example.com",
+      image: null,
+      passwordHash: "hash",
+    }));
     mocks.createHabit.mockReset();
     mocks.getHabit.mockReset();
     mocks.listHabits.mockReset();
@@ -52,6 +65,20 @@ describe("API v1 route contracts", () => {
         user: { id: "user_1", name: "Ada", email: "ada@example.com", image: null },
       },
     });
+  });
+
+  it("treats a JWT for a deleted database user as unauthenticated", async () => {
+    mocks.session = { user: { id: "deleted_user" } };
+    mocks.findAuthUserById.mockResolvedValue(null);
+    const { GET } = await import("@/app/api/v1/habits/route");
+
+    const response = await GET();
+    const json = await body(response);
+
+    expect(response.status).toBe(401);
+    expect(json).toMatchObject({ ok: false, error: { code: "unauthenticated" } });
+    expect(mocks.findAuthUserById).toHaveBeenCalledWith("deleted_user");
+    expect(mocks.listHabits).not.toHaveBeenCalled();
   });
 
   it("rejects unauthenticated habit requests", async () => {

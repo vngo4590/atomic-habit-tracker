@@ -151,7 +151,8 @@ The broad `npm run lint` command may include generated or reference files. Prefe
 
 ## Data Flow
 
-- Authenticated app routes require `auth()` and redirect unauthenticated users to `/login`.
+- Authenticated app routes require a valid Auth.js session and an existing database user; missing, expired, deleted, or otherwise invalid users are redirected to `/login`.
+- JWT sessions expire after 1 day of inactivity.
 - `app/(root)/layout.tsx` loads the user-owned backend snapshot with `getStoreSnapshot(userId, todayKey())`.
 - `components/StoreProvider.tsx` and `lib/store.ts` keep an in-memory optimistic cache around server actions. They are not a browser persistence layer.
 - Domain writes go through `lib/actions/domain.ts` and user-scoped repositories under `lib/repositories/`.

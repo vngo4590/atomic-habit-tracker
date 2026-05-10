@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
-import { hasSessionUser, isAuthRoute, isProtectedPath, loginRedirectUrl } from "@/lib/auth/routes";
+import { hasSessionUser, isProtectedPath, loginRedirectUrl } from "@/lib/auth/routes";
 
 export default auth((request: NextRequest & { auth?: unknown }) => {
   const pathname = request.nextUrl.pathname;
@@ -10,10 +10,6 @@ export default auth((request: NextRequest & { auth?: unknown }) => {
 
   if (!hasSession && isProtectedPath(pathname)) {
     return NextResponse.redirect(loginRedirectUrl(request.url));
-  }
-
-  if (hasSession && isAuthRoute(pathname)) {
-    return NextResponse.redirect(new URL("/", request.url));
   }
 
   return NextResponse.next();

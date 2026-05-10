@@ -1,30 +1,23 @@
 import type { ReactNode } from "react";
-import { redirect } from "next/navigation";
 
-import { auth } from "@/auth";
 import { AppearanceSync } from "@/components/AppearanceSync";
 import { Nav } from "@/components/Nav";
 import { OnboardingGate } from "@/components/OnboardingGate";
 import { StoreProvider } from "@/components/StoreProvider";
 import { Toast } from "@/components/Toast";
+import { requireCurrentUser } from "@/lib/auth/session";
 import { todayKey } from "@/lib/helpers";
 import { getStoreSnapshot } from "@/lib/repositories/reflection";
 
 export default async function RootGroupLayout({ children }: { children: ReactNode }) {
-  const session = await auth();
-
-  if (!session?.user) {
-    redirect("/login");
-  }
-
-  const userId = session.user.id;
-  const backendSnapshot = await getStoreSnapshot(userId, todayKey());
+  const user = await requireCurrentUser();
+  const backendSnapshot = await getStoreSnapshot(user.id, todayKey());
 
   return (
     <StoreProvider backendSnapshot={backendSnapshot}>
       <AppearanceSync />
       <div className="app">
-        <Nav user={{ name: session.user.name ?? null, email: session.user.email ?? null }} />
+        <Nav user={{ name: user.name, email: user.email }} />
         <main className="main">
           <div className="main-inner">{children}</div>
         </main>
