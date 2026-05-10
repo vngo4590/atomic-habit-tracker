@@ -47,3 +47,6 @@ next-env.d.ts
 /.agents/skill-improvement/
 
 /lib/generated/prisma
+
+# local database helper temp file
+/scripts/.local-db-random-data.tmp.ts

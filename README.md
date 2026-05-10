@@ -29,7 +29,13 @@ The app is implemented with Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, 
 | `/identity` | Identity statement and vote ledger |
 | `/settings` | Account, appearance, notification, and data controls |
 
-## Getting Started
+## Quick Start With Docker
+
+Prerequisites:
+
+- Node.js 20 or newer.
+- Docker Desktop or a compatible Docker engine.
+- PowerShell 7 or Windows PowerShell.
 
 Install dependencies:
 
@@ -37,10 +43,21 @@ Install dependencies:
 npm install
 ```
 
+Create a local environment file if you do not already have one:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Start local PostgreSQL in Docker, apply migrations, and seed the development account:
+
+```powershell
+npm run db:setup
+```
+
 Run the development server:
 
-```bash
-npm run db:setup
+```powershell
 npm run dev
 ```
 
@@ -52,6 +69,51 @@ The local Docker database seeds a development account:
 - Password: `Atomicly1!`
 
 The local PostgreSQL container binds to host port `55432` to avoid conflicts with any PostgreSQL service already using `5432`.
+
+## Local Database Scripts
+
+The project includes a PowerShell database helper at `scripts/local-db.ps1`. It only runs destructive data operations against the local Docker database URL on `localhost:55432`.
+
+Common commands:
+
+```powershell
+.\scripts\local-db.ps1 setup
+.\scripts\local-db.ps1 migrate-deploy
+.\scripts\local-db.ps1 migrate-dev -MigrationName add-example-field
+.\scripts\local-db.ps1 seed
+.\scripts\local-db.ps1 clean
+.\scripts\local-db.ps1 reset
+.\scripts\local-db.ps1 random-data -Users 5 -HabitsPerUser 8 -Days 45
+.\scripts\local-db.ps1 randomize -CleanFirst -Force -Users 5 -HabitsPerUser 8 -Days 45
+.\scripts\local-db.ps1 fake-history -CleanFirst -Force -Users 3 -HabitsPerUser 8 -Days 120
+```
+
+Equivalent npm shortcuts:
+
+```powershell
+npm run db:local
+npm run db:clean
+npm run db:random -- -Users 5 -HabitsPerUser 8 -Days 45
+npm run db:fake-history -- -Users 3 -HabitsPerUser 8 -Days 120
+```
+
+Use the direct PowerShell command, not `npm run`, when passing switch flags such as `-CleanFirst` or `-Force`.
+
+Script actions:
+
+| Action | Purpose |
+| --- | --- |
+| `up` | Start the local PostgreSQL container. |
+| `down` | Stop the Docker Compose stack. |
+| `logs` | Tail local PostgreSQL logs. |
+| `setup` | Start PostgreSQL, apply committed migrations, and seed the dev user. |
+| `clean` | Delete all local app data after confirmation. Use `-Force` to skip the prompt. |
+| `reset` | Recreate the Docker volume, apply migrations, and seed the dev user. |
+| `migrate-dev` | Create/apply a new local Prisma migration. Pass `-MigrationName <name>`. |
+| `migrate-deploy` | Apply committed migrations to the local database. |
+| `seed` | Run `prisma/seed.ts`. |
+| `random-data`, `randomize`, `randomize-data` | Generate demo users, habits, check-ins, journal entries, reviews, lessons, and formation verdicts. Use `-CleanFirst -Force` for a fresh randomized local dataset. |
+| `fake-history`, `history-data` | Generate richer historical users with past habits, notes, check-ins, journals, weekly reviews, lesson progress, and formation verdicts for analytics/history testing. |
 
 ## Validation
 
@@ -81,6 +143,7 @@ The broad `npm run lint` command may include generated or reference files. Prefe
 - `app/(root)/`: shared sidebar shell and all app screens.
 - `components/`: reusable client UI components.
 - `lib/`: types, helpers, lessons data, auth/db helpers, repositories, server actions, store cache logic, and unit tests.
+- `scripts/`: local automation helpers, including Docker/PostgreSQL database management.
 - `reference_ui/`: original reference implementation used during the port.
 - `openspec/changes/port-reference-ui/`: OpenSpec proposal, design, specs, and completed task checklist.
 - `.agents/skills/`: canonical project-local skills shared by Claude and Codex.
