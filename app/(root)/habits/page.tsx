@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { IconArrow, IconBack, IconPlus } from "@/components/Icons";
+import { IconPlus } from "@/components/Icons";
 import { useStoreContext } from "@/components/StoreProvider";
 import { formatScheduleLabel } from "@/lib/schedule";
 
@@ -17,11 +17,6 @@ export default function HabitsPage() {
   const { habits, streak, longestStreak, completionRate } = useStoreContext();
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<Sort>("streak");
-  const filterListRef = useRef<HTMLDivElement>(null);
-
-  const scrollFilters = (direction: -1 | 1) => {
-    filterListRef.current?.scrollBy({ left: direction * 140, behavior: "smooth" });
-  };
 
   const filtered = useMemo(() => {
     const list = habits.filter((habit) => filter === "all" || habit.time.toLowerCase() === filter);
@@ -52,20 +47,12 @@ export default function HabitsPage() {
       </div>
 
       <div className="habit-library-toolbar">
-        <div className="habit-filter-shell">
-          <button className="habit-filter-arrow" type="button" aria-label="Scroll filters left" onClick={() => scrollFilters(-1)}>
-            <IconBack />
-          </button>
-          <div className="tabs habit-library-tabs" ref={filterListRef}>
-            {FILTERS.map((item) => (
-              <button key={item} className={`tab ${filter === item ? "active" : ""}`} onClick={() => setFilter(item)}>
-                {item[0].toUpperCase() + item.slice(1)}
-              </button>
-            ))}
-          </div>
-          <button className="habit-filter-arrow" type="button" aria-label="Scroll filters right" onClick={() => scrollFilters(1)}>
-            <IconArrow />
-          </button>
+        <div className="tabs habit-library-tabs">
+          {FILTERS.map((item) => (
+            <button key={item} className={`tab ${filter === item ? "active" : ""}`} onClick={() => setFilter(item)}>
+              {item[0].toUpperCase() + item.slice(1)}
+            </button>
+          ))}
         </div>
         <div className="habit-sort-row">
           <span className="field-label">Sort</span>

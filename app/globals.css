@@ -190,10 +190,6 @@ textarea.input { resize: vertical; min-height: 80px; line-height: 1.55; }
 .click-row { cursor: pointer; transition: background 0.1s; }
 .click-row:hover { background: var(--bg-sunk); }
 .habit-library-toolbar { display: grid; gap: 14px; margin-bottom: 28px; }
-.habit-filter-shell { display: grid; grid-template-columns: 34px minmax(0, 1fr) 34px; gap: 10px; align-items: center; }
-.habit-filter-arrow { appearance: none; width: 34px; height: 34px; border: 1px solid var(--rule); border-radius: 50%; background: var(--bg-elev); color: var(--ink-3); display: grid; place-items: center; cursor: pointer; transition: background 0.12s, border-color 0.12s, color 0.12s; box-shadow: var(--shadow); }
-.habit-filter-arrow:hover { background: var(--bg-sunk); border-color: var(--rule-strong); color: var(--ink); }
-.habit-filter-arrow svg { width: 14px; height: 14px; }
 .habit-library-tabs { border-bottom: none; margin: 0; gap: 8px; overflow-x: auto; padding: 2px; scrollbar-width: none; scroll-behavior: smooth; }
 .habit-library-tabs::-webkit-scrollbar { display: none; }
 .habit-library-tabs .tab { min-height: 38px; padding: 9px 15px; border: 1px solid transparent; border-radius: 999px; background: transparent; }
@@ -360,6 +356,21 @@ textarea.input { resize: vertical; min-height: 80px; line-height: 1.55; }
     overflow-x: auto;
     padding-bottom: 1px;
     gap: 0;
+  }
+
+  .habit-library-toolbar {
+    gap: 12px;
+  }
+
+  .habit-sort-row {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .habit-sort-select {
+    flex: 1 1 auto;
+    width: 100% !important;
+    min-width: 0;
   }
 
   .tab {
