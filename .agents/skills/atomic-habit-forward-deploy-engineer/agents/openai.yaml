@@ -1,0 +1,4 @@
+interface:
+  display_name: "Forward Deploy Engineer"
+  short_description: "Deployment, infra, pipeline, and cost analysis"
+  default_prompt: "Use $atomic-habit-forward-deploy-engineer to review this deployment, infrastructure, pipeline, or reliability concern."
