@@ -46,9 +46,10 @@ export default function AnalyticsPage() {
           done += habits.filter((habit) => habit.history[key]).length;
         }
       }
-      return { label, pct: total ? Math.round((done / total) * 100) : 0 };
+      return { label, pct: total ? Math.round((done / total) * 100) : 0, done, total };
     });
   }, [habits, today]);
+  const hasWeekdayData = weekdayRates.some((day) => day.total > 0);
 
   const leaderboard = useMemo(() => {
     return [...habits]
@@ -97,14 +98,27 @@ export default function AnalyticsPage() {
       <div style={{ display: "grid", gridTemplateColumns: "0.9fr 1.1fr", gap: 18 }}>
         <section className="card card-pad">
           <div className="eyebrow">By weekday</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8, height: 180, alignItems: "end", marginTop: 18 }}>
-            {weekdayRates.map((day) => (
-              <div key={day.label} style={{ display: "grid", gap: 8, alignContent: "end", height: "100%" }}>
-                <div style={{ height: `${Math.max(5, day.pct)}%`, background: "var(--accent)", borderRadius: 4 }} />
-                <div className="mono muted" style={{ textAlign: "center", fontSize: 10 }}>{day.label}</div>
-              </div>
-            ))}
-          </div>
+          {hasWeekdayData ? (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 8, height: 208, alignItems: "end", marginTop: 18 }}>
+              {weekdayRates.map((day) => (
+                <div key={day.label} style={{ display: "grid", gridTemplateRows: "24px 1fr auto auto", gap: 6, alignItems: "end", height: "100%", minWidth: 0 }}>
+                  <div className="mono" style={{ textAlign: "center", fontSize: 11 }}>{day.pct}%</div>
+                  <div style={{ display: "flex", alignItems: "end", minHeight: 112, background: "var(--bg-sunk)", borderRadius: 5, overflow: "hidden" }}>
+                    <div aria-label={`${day.label} completion ${day.pct}%`} style={{ width: "100%", height: `${Math.max(4, day.pct)}%`, background: "var(--accent)", borderRadius: 5 }} />
+                  </div>
+                  <div className="mono muted" style={{ textAlign: "center", fontSize: 10 }}>{day.label}</div>
+                  <div className="mono muted" style={{ textAlign: "center", fontSize: 9 }}>{day.done}/{day.total}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state" style={{ marginTop: 18 }}>
+              <div className="empty-title">No weekday data yet</div>
+              <p className="muted" style={{ margin: "6px 0 0" }}>
+                Check in a habit to see completion patterns by day.
+              </p>
+            </div>
+          )}
         </section>
 
         <section className="card card-pad">

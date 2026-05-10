@@ -14,6 +14,8 @@ const PRESETS = {
   three: { label: "3x a week", days: ["Mon", "Wed", "Fri"] },
   custom: { label: "Custom", days: [] },
 } as const;
+const TIME_BLOCKS = ["Morning", "Afternoon", "Evening"] as const;
+const CUSTOM_TIME_BLOCK = "Custom";
 
 type Preset = keyof typeof PRESETS;
 
@@ -77,6 +79,7 @@ export default function NewHabitPage() {
   const schedule = preset === "custom"
     ? formatScheduleLabel(customDays.join(", ") || "Custom")
     : formatScheduleLabel(PRESETS[preset].label);
+  const selectedTimeBlock = TIME_BLOCKS.some((item) => item === time) ? time : CUSTOM_TIME_BLOCK;
 
   const toggleDay = (day: string) => {
     setPreset("custom");
@@ -167,11 +170,28 @@ export default function NewHabitPage() {
           <label className="field-label" style={{ marginTop: 18 }}>
             Time block
           </label>
-          <select className="input" value={time} onChange={(event) => setTime(event.target.value)}>
-            <option>Morning</option>
-            <option>Afternoon</option>
-            <option>Evening</option>
+          <select
+            className="input"
+            value={selectedTimeBlock}
+            onChange={(event) => {
+              const next = event.target.value;
+              setTime(next === CUSTOM_TIME_BLOCK ? "" : next);
+            }}
+          >
+            {TIME_BLOCKS.map((block) => (
+              <option key={block}>{block}</option>
+            ))}
+            <option>{CUSTOM_TIME_BLOCK}</option>
           </select>
+          {selectedTimeBlock === CUSTOM_TIME_BLOCK && (
+            <input
+              className="input"
+              value={time}
+              onChange={(event) => setTime(event.target.value)}
+              placeholder="After school, lunch break, commute..."
+              style={{ marginTop: 10 }}
+            />
+          )}
         </section>
 
         <section className="card card-pad">
