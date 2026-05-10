@@ -46,7 +46,7 @@ export default function AnalyticsPage() {
           done += habits.filter((habit) => habit.history[key]).length;
         }
       }
-      return { label, pct: total ? Math.round((done / total) * 100) : 0, done, total };
+      return { label, pct: total ? Math.round((done / total) * 100) : 0, total };
     });
   }, [habits, today]);
   const hasWeekdayData = weekdayRates.some((day) => day.total > 0);
@@ -99,15 +99,17 @@ export default function AnalyticsPage() {
         <section className="card card-pad">
           <div className="eyebrow">By weekday</div>
           {hasWeekdayData ? (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 8, height: 208, alignItems: "end", marginTop: 18 }}>
+            <div style={{ display: "grid", gap: 12, marginTop: 18 }}>
               {weekdayRates.map((day) => (
-                <div key={day.label} style={{ display: "grid", gridTemplateRows: "24px 1fr auto auto", gap: 6, alignItems: "end", height: "100%", minWidth: 0 }}>
-                  <div className="mono" style={{ textAlign: "center", fontSize: 11 }}>{day.pct}%</div>
-                  <div style={{ display: "flex", alignItems: "end", minHeight: 112, background: "var(--bg-sunk)", borderRadius: 5, overflow: "hidden" }}>
-                    <div aria-label={`${day.label} completion ${day.pct}%`} style={{ width: "100%", height: `${Math.max(4, day.pct)}%`, background: "var(--accent)", borderRadius: 5 }} />
+                <div key={day.label} style={{ display: "grid", gridTemplateColumns: "42px 1fr 44px", gap: 10, alignItems: "center" }}>
+                  <div className="mono muted" style={{ fontSize: 11 }}>{day.label}</div>
+                  <div style={{ height: 10, background: "var(--bg-sunk)", borderRadius: 99, overflow: "hidden" }}>
+                    <div
+                      aria-label={`${day.label} completion ${day.pct}%`}
+                      style={{ width: `${day.pct}%`, minWidth: day.pct > 0 ? 6 : 0, height: "100%", background: "var(--accent)", borderRadius: 99 }}
+                    />
                   </div>
-                  <div className="mono muted" style={{ textAlign: "center", fontSize: 10 }}>{day.label}</div>
-                  <div className="mono muted" style={{ textAlign: "center", fontSize: 9 }}>{day.done}/{day.total}</div>
+                  <div className="mono" style={{ textAlign: "right", fontSize: 11 }}>{day.pct}%</div>
                 </div>
               ))}
             </div>

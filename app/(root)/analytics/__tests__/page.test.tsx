@@ -58,13 +58,13 @@ describe("AnalyticsPage", () => {
     expect(screen.getByText("No weekday data yet")).toBeTruthy();
   });
 
-  it("renders weekday bars with visible percentage and count labels", () => {
+  it("renders weekday progress bars with visible percentage labels", () => {
     storeMock.habits = [makeHabit({ history: { [todayKey()]: true } })];
 
     render(<AnalyticsPage />);
 
     expect(screen.queryByText("No weekday data yet")).toBeNull();
     expect(screen.getAllByLabelText(/completion \d+%/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/1\/\d+/)).toBeTruthy();
+    expect(screen.queryByText(/\d+\/\d+/)).toBeNull();
   });
 });
