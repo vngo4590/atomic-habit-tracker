@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { IconPlus } from "@/components/Icons";
+import { IconArrow, IconBack, IconPlus } from "@/components/Icons";
 import { useStoreContext } from "@/components/StoreProvider";
 import { formatScheduleLabel } from "@/lib/schedule";
 
@@ -17,6 +17,11 @@ export default function HabitsPage() {
   const { habits, streak, longestStreak, completionRate } = useStoreContext();
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<Sort>("streak");
+  const filterListRef = useRef<HTMLDivElement>(null);
+
+  const scrollFilters = (direction: -1 | 1) => {
+    filterListRef.current?.scrollBy({ left: direction * 140, behavior: "smooth" });
+  };
 
   const filtered = useMemo(() => {
     const list = habits.filter((habit) => filter === "all" || habit.time.toLowerCase() === filter);
@@ -46,24 +51,35 @@ export default function HabitsPage() {
         </button>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-        <div className="tabs" style={{ borderBottom: "none", margin: 0 }}>
-          {FILTERS.map((item) => (
-            <button key={item} className={`tab ${filter === item ? "active" : ""}`} onClick={() => setFilter(item)}>
-              {item[0].toUpperCase() + item.slice(1)}
-            </button>
-          ))}
+      <div className="habit-library-toolbar">
+        <div className="habit-filter-shell">
+          <button className="habit-filter-arrow" type="button" aria-label="Scroll filters left" onClick={() => scrollFilters(-1)}>
+            <IconBack />
+          </button>
+          <div className="tabs habit-library-tabs" ref={filterListRef}>
+            {FILTERS.map((item) => (
+              <button key={item} className={`tab ${filter === item ? "active" : ""}`} onClick={() => setFilter(item)}>
+                {item[0].toUpperCase() + item.slice(1)}
+              </button>
+            ))}
+          </div>
+          <button className="habit-filter-arrow" type="button" aria-label="Scroll filters right" onClick={() => scrollFilters(1)}>
+            <IconArrow />
+          </button>
         </div>
-        <select className="input" style={{ width: "auto", height: 32, padding: "0 28px 0 12px", fontSize: 12.5 }} value={sort} onChange={(event) => setSort(event.target.value as Sort)}>
-          <option value="streak">Sort: Active streak</option>
-          <option value="rate">Sort: 30-day rate</option>
-          <option value="newest">Sort: Newest</option>
-          <option value="name">Sort: Name</option>
-        </select>
+        <div className="habit-sort-row">
+          <span className="field-label">Sort</span>
+          <select className="input habit-sort-select" value={sort} onChange={(event) => setSort(event.target.value as Sort)}>
+            <option value="streak">Active streak</option>
+            <option value="rate">30-day rate</option>
+            <option value="newest">Newest</option>
+            <option value="name">Name</option>
+          </select>
+        </div>
       </div>
 
-      <div className="card habit-list">
-        <div className="habit-list-header" style={{ display: "grid", gridTemplateColumns: "2fr 1.4fr 90px 90px 100px", padding: "12px 22px", borderBottom: "1px solid var(--rule)", background: "var(--bg-sunk)" }}>
+      <div className="habit-list">
+        <div className="habit-list-header">
           {["Habit", "Cue -> response", "Streak", "Best", "30-day"].map((heading) => (
             <div key={heading} className="mono" style={{ fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-3)" }}>{heading}</div>
           ))}
@@ -76,7 +92,6 @@ export default function HabitsPage() {
             <div
               key={habit.id}
               className="click-row habit-list-row"
-              style={{ display: "grid", gridTemplateColumns: "2fr 1.4fr 90px 90px 100px", padding: "18px 22px", borderBottom: "1px solid var(--rule)", alignItems: "center" }}
               onClick={() => router.push(`/habits/${habit.id}`)}
             >
               <div className="habit-list-field">

@@ -189,6 +189,23 @@ textarea.input { resize: vertical; min-height: 80px; line-height: 1.55; }
 .main::-webkit-scrollbar-thumb, .sidebar::-webkit-scrollbar-thumb { background: var(--rule-strong); border-radius: 5px; border: 2px solid var(--bg); background-clip: content-box; }
 .click-row { cursor: pointer; transition: background 0.1s; }
 .click-row:hover { background: var(--bg-sunk); }
+.habit-library-toolbar { display: grid; gap: 14px; margin-bottom: 28px; }
+.habit-filter-shell { display: grid; grid-template-columns: 34px minmax(0, 1fr) 34px; gap: 10px; align-items: center; }
+.habit-filter-arrow { appearance: none; width: 34px; height: 34px; border: 1px solid var(--rule); border-radius: 50%; background: var(--bg-elev); color: var(--ink-3); display: grid; place-items: center; cursor: pointer; transition: background 0.12s, border-color 0.12s, color 0.12s; box-shadow: var(--shadow); }
+.habit-filter-arrow:hover { background: var(--bg-sunk); border-color: var(--rule-strong); color: var(--ink); }
+.habit-filter-arrow svg { width: 14px; height: 14px; }
+.habit-library-tabs { border-bottom: none; margin: 0; gap: 8px; overflow-x: auto; padding: 2px; scrollbar-width: none; scroll-behavior: smooth; }
+.habit-library-tabs::-webkit-scrollbar { display: none; }
+.habit-library-tabs .tab { min-height: 38px; padding: 9px 15px; border: 1px solid transparent; border-radius: 999px; background: transparent; }
+.habit-library-tabs .tab:hover { background: var(--bg-elev); border-color: var(--rule); }
+.habit-library-tabs .tab.active { border-bottom: 1px solid var(--rule-strong); border-color: var(--rule-strong); background: var(--bg-elev); box-shadow: var(--shadow); }
+.habit-sort-row { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.habit-sort-row .field-label { margin: 0; }
+.habit-sort-select { width: auto; min-width: 190px; height: 40px; padding: 0 36px 0 15px; border-radius: 999px; font-size: 12.5px; background-color: var(--bg-elev); box-shadow: var(--shadow); }
+.habit-list { display: grid; gap: 12px; }
+.habit-list-header { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr) 90px 90px 100px; padding: 0 22px 2px; }
+.habit-list-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr) 90px 90px 100px; padding: 20px 22px; align-items: center; gap: 18px; background: var(--bg-elev); border: 1px solid var(--rule); border-radius: var(--r-lg); box-shadow: var(--shadow); }
+.habit-list-row:hover { background: color-mix(in oklch, var(--bg-elev) 68%, var(--bg-sunk)); border-color: var(--rule-strong); }
 .habit-list-label { display: none; }
 
 @keyframes principle-float {
