@@ -1,6 +1,6 @@
 # Atomicly Habit Tracker
 
-Atomicly is a habit tracking app inspired by Atomic Habits. It helps users design small habits, check them in daily, reflect on patterns, learn through a 24-lesson curriculum, and track identity votes over time.
+Atomicly is a habit tracking app inspired by Atomic Habits. It helps users design small habits, check them in daily, reflect on patterns, learn through a 36-lesson curriculum, and track identity votes over time.
 
 The app is implemented with Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, Prisma, Auth.js, PostgreSQL, and the App Router. Authenticated habit, reflection, lesson, identity, and preference data is loaded from the backend and written through server actions or `/api/v1` route handlers.
 
@@ -139,12 +139,17 @@ The broad `npm run lint` command may include generated or reference files. Prefe
 
 ## Local Kubernetes Deployment
 
-The repo includes a Docker Desktop-friendly Kubernetes overlay in `k8s/local/`. It runs:
+The repo includes a Docker Desktop-friendly Kubernetes overlay in `k8s/local/`. The current overlay defines:
 
-- A one-shot Prisma migration `Job`.
-- The Atomicly Next.js app as a standalone production container exposed on `localhost:30080`.
+| File | Resource |
+| --- | --- |
+| `namespace.yaml` | `atomicly-local` namespace |
+| `secrets.yaml` | `atomicly-secrets` with `DATABASE_URL` and `AUTH_SECRET` |
+| `migrate-job.yaml` | one-shot Prisma migration `Job` using `atomicly-migrator:local` |
+| `app.yaml` | `atomicly-web` `Deployment` and NodePort `Service` |
+| `kustomization.yaml` | local overlay resource list |
 
-It uses the existing local Docker Compose PostgreSQL database on the host at `host.docker.internal:55432`.
+Kubernetes does not run PostgreSQL. The app and migration job use the local Docker Compose PostgreSQL container on the host at `host.docker.internal:55432`.
 
 Prerequisites:
 
@@ -186,7 +191,7 @@ Apply the local Kubernetes resources:
 kubectl apply -k k8s/local
 ```
 
-Wait for migrations and the app:
+Wait for the migration job and app deployment:
 
 ```powershell
 kubectl -n atomicly-local wait --for=condition=complete job/atomicly-migrate --timeout=120s
@@ -238,17 +243,13 @@ Clean up the local deployment:
 kubectl delete -k k8s/local
 ```
 
-If you previously applied the older overlay that ran PostgreSQL inside Kubernetes, remove the old database resources once you have confirmed you no longer need that PVC data:
-
-```powershell
-kubectl -n atomicly-local delete statefulset,svc,pvc -l app.kubernetes.io/name=atomicly-postgres
-```
-
 Notes:
 
 - `k8s/local/secrets.yaml` contains local-only sample secrets. Replace them before adapting these manifests for a shared or production cluster.
-- Local Kubernetes uses the Docker Compose PostgreSQL database on the host at `host.docker.internal:55432`; run `npm run db:up` before applying or rerunning the migration job.
+- Run `npm run db:up` before applying the overlay or rerunning the migration job.
 - The app manifest uses `imagePullPolicy: Never`, so the cluster uses the images built locally as `atomicly:local` and `atomicly-migrator:local`.
+- The app is exposed at `http://localhost:30080` through NodePort `30080`.
+- Readiness and liveness probes call `/api/healthz`.
 - The default app replica count is `1`. Before scaling horizontally, configure a stable `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` at build time and add shared cache coordination for Next.js revalidation/cache behavior.
 - `NEXT_PUBLIC_APP_URL` is inlined at build time by Next.js, so build the image with the public URL users will open.
 
@@ -259,8 +260,12 @@ Notes:
 - `components/`: reusable client UI components.
 - `lib/`: types, helpers, lessons data, auth/db helpers, repositories, server actions, store cache logic, and unit tests.
 - `scripts/`: local automation helpers, including Docker/PostgreSQL database management.
+- `k8s/local/`: local Docker Desktop Kubernetes overlay for the app deployment and migration job.
 - `reference_ui/`: original reference implementation used during the port.
-- `openspec/changes/port-reference-ui/`: OpenSpec proposal, design, specs, and completed task checklist.
+- `Dockerfile`: multi-stage container build with `runner` and `migrator` targets.
+- `docs/architecture/backend-auth-mobile.md`: backend, auth, database, and deployment architecture notes.
+- `openspec/changes/settings-account-email-notifications/`: active OpenSpec change.
+- `openspec/changes/archive/`: archived OpenSpec changes, including the completed reference UI port and backend/auth/mobile architecture work.
 - `.agents/skills/`: canonical project-local skills shared by Claude and Codex.
 - `.claude/skills/`: generated compatibility copy/link for Claude; do not edit directly.
 
@@ -281,9 +286,5 @@ Notes:
 - Shared client state is exposed through `components/StoreProvider.tsx` and `lib/store.ts` as optimistic cache coordination.
 - Date keys use local `YYYY-MM-DD` strings via `lib/helpers.ts`.
 - Design tokens and reference classes live in `app/globals.css`.
-- The current OpenSpec change `port-reference-ui` is implemented through phase 25 and ready to archive.
-
-## Backend Architecture Plan
-
-The active backend plan lives at `openspec/changes/backend-auth-mobile-architecture/`.
-Provider choices and deployment notes are documented in `docs/architecture/backend-auth-mobile.md`.
+- The active OpenSpec change is `settings-account-email-notifications`.
+- Deployment architecture specs live under `openspec/specs/deployment-architecture/`; provider choices and deployment notes are in `docs/architecture/backend-auth-mobile.md`.

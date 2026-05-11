@@ -22,6 +22,7 @@ export default function LessonsPage() {
   const [view, setView] = useState<View>("home");
   const [filter, setFilter] = useState("All");
   const [selected, setSelected] = useState<Lesson>(() => pickToday(completed, mode));
+  const [modePulse, setModePulse] = useState<Mode | null>(null);
   const todayLesson = useMemo(() => pickToday(completed, mode), [completed, mode]);
 
   const openLesson = (lesson: Lesson) => {
@@ -31,6 +32,12 @@ export default function LessonsPage() {
 
   const markRead = (lesson: Lesson) => {
     markLessonRead(lesson.id);
+  };
+
+  const chooseMode = (item: Mode) => {
+    setLessonMode(item);
+    setModePulse(null);
+    window.setTimeout(() => setModePulse(item), 0);
   };
 
   const filteredLessons = LESSONS.filter((lesson) => {
@@ -70,9 +77,18 @@ export default function LessonsPage() {
                 <h2 className="h2" style={{ marginTop: 8 }}>{todayLesson.title}</h2>
                 <p className="lede" style={{ maxWidth: 680 }}>{todayLesson.takeaway}</p>
               </div>
-              <div style={{ display: "grid", gap: 8, alignContent: "start" }}>
+              <div className="lesson-mode-switch">
                 {(["sequential", "random"] as const).map((item) => (
-                  <button key={item} className={`chip ${mode === item ? "active" : ""}`} onClick={() => setLessonMode(item)}>{item}</button>
+                  <button
+                    key={item}
+                    type="button"
+                    className={`chip lesson-mode-chip ${mode === item ? "active" : ""} ${modePulse === item ? "pulse" : ""}`}
+                    aria-pressed={mode === item}
+                    onAnimationEnd={() => setModePulse((current) => (current === item ? null : current))}
+                    onClick={() => chooseMode(item)}
+                  >
+                    {item}
+                  </button>
                 ))}
               </div>
             </div>
