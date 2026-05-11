@@ -21,7 +21,7 @@ Use this skill to act as a forward deploy engineer for Atomicly: diagnose system
 2. Inspect local project context before proposing fixes:
    - Read `AGENTS.md` and use `atomic-habit-project-walkthrough` when codebase orientation is needed.
    - For Next.js routing, layouts, Server Components, Client Components, metadata, CSS, or navigation changes, read the relevant local docs under `node_modules/next/dist/docs/`.
-   - Check `README.md`, `package.json`, `next.config.*`, `prisma/schema.prisma`, `auth.ts`, `app/api/`, `lib/actions/`, `lib/repositories/`, and deployment-related scripts as relevant.
+   - Check `README.md`, `docs/architecture/backend-auth-mobile.md`, `package.json`, `next.config.*`, `.env.example`, `prisma/schema.prisma`, `auth.ts`, `proxy.ts`, `app/api/`, `app/api/v1/README.md`, `lib/actions/`, `lib/contracts/`, `lib/db/`, `lib/repositories/`, and deployment-related scripts as relevant.
 3. Form a short hypothesis list ordered by likelihood and blast radius.
 4. Gather evidence with focused commands: tests, build, logs, config inspection, dependency versions, database schema, query paths, bundle/build output, or CI definitions.
 5. Implement the narrowest fix that addresses the confirmed cause.
@@ -37,6 +37,17 @@ Review these before recommending or changing deployment architecture:
 - Data path: Prisma connection use, Postgres limits, migration order, seed data assumptions, backup/restore, idempotency, and tenant/user scoping.
 - Auth path: Auth.js callbacks, cookie/session settings, credentials handling, protected routes, and API authentication behavior.
 - Release path: CI checks, migration rollout, smoke tests, rollback plan, feature flags or dark launches, and environment parity.
+
+Atomicly-specific deployment facts:
+
+- Production hosting target is Vercel with Node.js runtime for Auth.js and Prisma paths.
+- Database access uses PostgreSQL through Prisma 7, `@prisma/adapter-pg`, and the generated client under `lib/generated/prisma`.
+- Prefer a managed PostgreSQL provider with pooled serverless connections, such as Neon or Vercel Postgres.
+- Required environment variables are `DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL`, and `NEXT_PUBLIC_APP_URL`.
+- Production-safe migration command is `npm run prisma:migrate:deploy`; local reset, seed, random-data, fake-history, and clean helpers must stay local-only.
+- `npm run backend:validate` runs Prisma validation/generation, TypeScript, scoped lint, tests, and build.
+- Versioned mobile-ready API contracts live under `app/api/v1/*` and use shared contracts from `lib/contracts/domain.ts`.
+- Canonical backend deployment specs live under `openspec/specs/deployment-architecture/spec.md` and related backend/API specs.
 
 ## Pipeline And Infra Principles
 

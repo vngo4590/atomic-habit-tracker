@@ -98,6 +98,32 @@ Run when the user explicitly says "apply skill updates", "run skill maintenance"
 
 4. Report what changed and what remains queued.
 
+## Current-State Audit Session
+
+Run when the user asks to "look through code and update Atomicly skills", "refresh Atomicly skills", or similar:
+
+1. Inspect current project state before editing:
+   ```bash
+   rg --files app lib components prisma scripts docs openspec
+   Get-Content -Raw package.json
+   Get-Content -Raw README.md
+   Get-Content -Raw AGENTS.md
+   openspec list --json
+   ```
+
+2. Check high-signal implementation files for architecture drift:
+   - `auth.ts`, `proxy.ts`, `lib/auth/*`, `lib/db/*`, `lib/contracts/*`, `lib/actions/domain.ts`, `lib/repositories/*`
+   - `app/(root)/layout.tsx`, `app/(auth)/*`, `app/api/v1/README.md`, and route handlers under `app/api/v1/`
+   - `prisma/schema.prisma`, `.env.example`, `docs/architecture/backend-auth-mobile.md`
+
+3. Update only `atomic-habit-*` skills under `.agents/skills/`, with preference for:
+   - factual version/path/status corrections,
+   - concise workflow changes future agents can apply,
+   - current OpenSpec archive/active-change state,
+   - deployment/runtime facts that prevent incorrect operational advice.
+
+4. Validate every edited skill with `quick_validate.py`, then run `.\scripts\sync-agent-skills.ps1`.
+
 ## New Skill Detection
 
 Log a `NEW_SKILL` opportunity when a recurring, project-specific pattern appears that no existing `atomic-habit-*` skill covers. Name new project skills `atomic-habit-<descriptive-name>`.
