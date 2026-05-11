@@ -137,6 +137,121 @@ npm exec eslint -- app components lib
 
 The broad `npm run lint` command may include generated or reference files. Prefer the scoped command above when validating app changes.
 
+## Local Kubernetes Deployment
+
+The repo includes a Docker Desktop-friendly Kubernetes overlay in `k8s/local/`. It runs:
+
+- A one-shot Prisma migration `Job`.
+- The Atomicly Next.js app as a standalone production container exposed on `localhost:30080`.
+
+It uses the existing local Docker Compose PostgreSQL database on the host at `host.docker.internal:55432`.
+
+Prerequisites:
+
+- Docker Desktop with Kubernetes enabled.
+- `kubectl` configured to use the Docker Desktop context.
+- Docker image builds running against the same Docker Desktop engine as the cluster.
+
+Check the Kubernetes context:
+
+```powershell
+kubectl config get-contexts
+kubectl config use-context docker-desktop
+kubectl get nodes
+```
+
+Build the local images:
+
+```powershell
+docker build `
+  --target runner `
+  --build-arg NEXT_PUBLIC_APP_URL=http://localhost:30080 `
+  --build-arg DEPLOYMENT_VERSION=local `
+  -t atomicly:local .
+
+docker build `
+  --target migrator `
+  -t atomicly-migrator:local .
+```
+
+Start the local Docker PostgreSQL database that the Kubernetes pods will use:
+
+```powershell
+npm run db:up
+```
+
+Apply the local Kubernetes resources:
+
+```powershell
+kubectl apply -k k8s/local
+```
+
+Wait for migrations and the app:
+
+```powershell
+kubectl -n atomicly-local wait --for=condition=complete job/atomicly-migrate --timeout=120s
+kubectl -n atomicly-local rollout status deployment/atomicly-web
+```
+
+Open the app:
+
+```powershell
+Start-Process http://localhost:30080
+```
+
+For local Kubernetes testing, register a new account through the UI. The Kubernetes migration job applies schema only; it does not seed the development user because `prisma/seed.ts` is intentionally blocked in production mode.
+
+Useful inspection commands:
+
+```powershell
+kubectl -n atomicly-local get pods,svc,jobs
+kubectl -n atomicly-local logs deployment/atomicly-web
+kubectl -n atomicly-local logs job/atomicly-migrate
+kubectl -n atomicly-local describe pod -l app.kubernetes.io/name=atomicly-web
+```
+
+Rebuild and restart the app after code changes:
+
+```powershell
+docker build `
+  --target runner `
+  --build-arg NEXT_PUBLIC_APP_URL=http://localhost:30080 `
+  --build-arg DEPLOYMENT_VERSION=local `
+  -t atomicly:local .
+
+kubectl -n atomicly-local rollout restart deployment/atomicly-web
+kubectl -n atomicly-local rollout status deployment/atomicly-web
+```
+
+If migrations changed, rebuild and rerun the migrator:
+
+```powershell
+docker build --target migrator -t atomicly-migrator:local .
+kubectl -n atomicly-local delete job atomicly-migrate --ignore-not-found
+kubectl apply -f k8s/local/migrate-job.yaml
+kubectl -n atomicly-local wait --for=condition=complete job/atomicly-migrate --timeout=120s
+```
+
+Clean up the local deployment:
+
+```powershell
+kubectl delete -k k8s/local
+```
+
+If you previously applied the older overlay that ran PostgreSQL inside Kubernetes, remove the old database resources once you have confirmed you no longer need that PVC data:
+
+```powershell
+kubectl -n atomicly-local delete statefulset,svc,pvc -l app.kubernetes.io/name=atomicly-postgres
+```
+
+Notes:
+
+- `k8s/local/secrets.yaml` contains local-only sample secrets. Replace them before adapting these manifests for a shared or production cluster.
+- Local Kubernetes uses the Docker Compose PostgreSQL database on the host at `host.docker.internal:55432`; run `npm run db:up` before applying or rerunning the migration job.
+- The app manifest uses `imagePullPolicy: Never`, so the cluster uses the images built locally as `atomicly:local` and `atomicly-migrator:local`.
+- The default app replica count is `1`. Before scaling horizontally, configure a stable `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` at build time and add shared cache coordination for Next.js revalidation/cache behavior.
+- `NEXT_PUBLIC_APP_URL` is inlined at build time by Next.js, so build the image with the public URL users will open.
+
 ## Project Structure
 
 - `app/`: Next.js App Router routes and layouts.

@@ -9,6 +9,7 @@ export function isAuthRoute(pathname: string) {
 export function isPublicPath(pathname: string) {
   return (
     pathname.startsWith("/api/auth") ||
+    pathname === "/api/healthz" ||
     pathname.startsWith("/_next") ||
     pathname === "/favicon.ico" ||
     pathname === "/robots.txt" ||
