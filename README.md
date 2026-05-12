@@ -199,6 +199,12 @@ docker build `
   -t atomicly-migrator:local .
 ```
 
+Or run the full local Kubernetes deployment flow:
+
+```powershell
+npm run deploy:kube
+```
+
 Start the local Docker PostgreSQL database that the Kubernetes pods will use:
 
 ```powershell
@@ -246,6 +252,15 @@ docker build `
 
 kubectl -n atomicly-local rollout restart deployment/atomicly-web
 kubectl -n atomicly-local rollout status deployment/atomicly-web
+```
+
+Equivalent npm shortcuts:
+
+```powershell
+npm run kube:update
+npm run kube:restart
+npm run kube:stop
+npm run kube:cleanup
 ```
 
 If migrations changed, rebuild and rerun the migrator:

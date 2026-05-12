@@ -8,6 +8,10 @@ Use `local-db.ps1` to manage the local Docker PostgreSQL database, apply Prisma 
 
 The script is guarded for local development. Destructive operations only run when `DATABASE_URL` points at the local Docker database on `localhost:55432` or `127.0.0.1:55432`, and the script refuses to run when `NODE_ENV=production`.
 
+## Local Kubernetes Helper
+
+Use `local-kube.ps1` to build the local Docker images, apply the Docker Desktop Kubernetes overlay, rerun migrations, restart the app deployment, stop app pods, or delete the local Kubernetes resources.
+
 ## Prerequisites
 
 - Docker Desktop or a compatible Docker engine.
@@ -108,6 +112,17 @@ npm run db:local
 npm run db:clean
 npm run db:random -- -Users 5 -HabitsPerUser 8 -Days 45
 npm run db:fake-history -- -Users 3 -HabitsPerUser 8 -Days 120
+```
+
+These package scripts call `local-kube.ps1`:
+
+```powershell
+npm run deploy:kube
+npm run kube:deploy
+npm run kube:update
+npm run kube:restart
+npm run kube:stop
+npm run kube:cleanup
 ```
 
 Use the direct PowerShell command, not `npm run`, when passing switch flags such as `-CleanFirst` or `-Force`.

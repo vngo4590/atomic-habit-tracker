@@ -27,7 +27,13 @@
     "db:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-db.ps1",
     "db:clean": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-db.ps1 clean",
     "db:random": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-db.ps1 random-data --%",
-    "db:fake-history": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-db.ps1 fake-history --%"
+    "db:fake-history": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-db.ps1 fake-history --%",
+    "deploy:kube": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-kube.ps1 deploy",
+    "kube:deploy": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-kube.ps1 deploy",
+    "kube:cleanup": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-kube.ps1 cleanup",
+    "kube:restart": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-kube.ps1 restart",
+    "kube:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-kube.ps1 stop",
+    "kube:update": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-kube.ps1 update"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",
