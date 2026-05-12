@@ -1,7 +1,7 @@
 # deployment-architecture Specification
 
 ## Purpose
-TBD - created by archiving change backend-auth-mobile-architecture. Update Purpose after archive.
+Define the production and local deployment architecture for Atomicly, including Vercel-compatible runtime boundaries, migration flow, validation expectations, and Docker Desktop Kubernetes support for local smoke testing.
 ## Requirements
 ### Requirement: Production configuration is documented
 The system SHALL document all required environment variables, provider setup, and deployment commands for Vercel.
@@ -31,3 +31,13 @@ The system SHALL keep database and auth code in Node.js-compatible runtime paths
 - **WHEN** a route handler reads or writes database data
 - **THEN** it executes in a runtime compatible with the configured database client
 
+### Requirement: Local Kubernetes deployment is documented and scriptable
+The system SHALL document and provide repeatable commands for the Docker Desktop Kubernetes deployment flow used for local deployment smoke testing.
+
+#### Scenario: Developer deploys to local Kubernetes
+- **WHEN** a developer runs the documented local Kubernetes deployment flow
+- **THEN** they can build the `atomicly:local` and `atomicly-migrator:local` images, start the local Docker PostgreSQL database, apply `k8s/local`, wait for the migration job and app rollout, and open the app at `http://localhost:30080`
+
+#### Scenario: Developer updates or restarts the local Kubernetes app
+- **WHEN** a developer needs to rebuild, restart, stop, or clean up the local deployment
+- **THEN** the documented commands include `npm run deploy:kube`, `npm run kube:update`, `npm run kube:restart`, `npm run kube:stop`, and `npm run kube:cleanup`

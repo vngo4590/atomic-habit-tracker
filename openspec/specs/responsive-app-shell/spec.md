@@ -1,7 +1,7 @@
 # responsive-app-shell Specification
 
 ## Purpose
-TBD - created by archiving change backend-auth-mobile-architecture. Update Purpose after archive.
+Define the responsive authenticated app shell behavior so Atomicly navigation and dense screen layouts remain usable across mobile, tablet, and desktop widths.
 ## Requirements
 ### Requirement: Navigation adapts to mobile screens
 The system SHALL provide mobile-compatible navigation for all authenticated app routes.
@@ -30,4 +30,3 @@ The system SHALL size primary controls, navigation controls, and form controls f
 #### Scenario: User checks in a habit on mobile
 - **WHEN** a user taps the check button on a mobile screen
 - **THEN** the target is large enough to activate reliably without zooming
-

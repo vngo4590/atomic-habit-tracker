@@ -1,7 +1,7 @@
 # habit-api Specification
 
 ## Purpose
-TBD - created by archiving change backend-auth-mobile-architecture. Update Purpose after archive.
+Define the authenticated habit query and mutation contracts shared by the web app and versioned API handlers so habit data remains validated, user-scoped, and mobile-ready.
 ## Requirements
 ### Requirement: Habit queries return only authenticated user data
 The system SHALL provide server-side habit list and detail queries scoped to the active user.
@@ -37,4 +37,3 @@ The system SHALL expose versioned route-handler contracts for habit data in addi
 #### Scenario: Mobile client requests habits
 - **WHEN** an authenticated API client requests `/api/v1/habits`
 - **THEN** the system returns the user's habits using the documented response shape
-

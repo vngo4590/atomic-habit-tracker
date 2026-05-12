@@ -1,7 +1,7 @@
 # reflection-api Specification
 
 ## Purpose
-TBD - created by archiving change backend-auth-mobile-architecture. Update Purpose after archive.
+Define the authenticated backend contracts for reflection, lesson, identity, preference, and formation-review data so those workflows persist consistently across the web app and future API clients.
 ## Requirements
 ### Requirement: Journal entries are persisted per user
 The system SHALL let authenticated users create and list their own journal entries.
@@ -37,4 +37,3 @@ The system SHALL store formation review verdicts and show inducted habits for th
 #### Scenario: User inducts a formed habit
 - **WHEN** a user completes the formation questionnaire and inducts a habit
 - **THEN** the habit appears in that user's Hall of Fame after refresh
-

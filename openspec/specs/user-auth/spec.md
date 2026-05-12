@@ -1,7 +1,7 @@
 # user-auth Specification
 
 ## Purpose
-TBD - created by archiving change backend-auth-mobile-architecture. Update Purpose after archive.
+Define Atomicly account, session, and route-protection behavior so only authenticated, server-verified users can access or mutate protected habit data.
 ## Requirements
 ### Requirement: Users can create and access accounts
 The system SHALL allow a new user to register, log in, log out, and return to the app with a server-verified session.
@@ -38,4 +38,3 @@ The system SHALL show clear pending and error states during login, registration,
 #### Scenario: Login fails with invalid credentials
 - **WHEN** a user submits invalid credentials
 - **THEN** the system shows an authentication error and keeps the user logged out
-

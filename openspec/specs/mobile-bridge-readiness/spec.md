@@ -1,7 +1,7 @@
 # mobile-bridge-readiness Specification
 
 ## Purpose
-TBD - created by archiving change backend-auth-mobile-architecture. Update Purpose after archive.
+Define the backend contract boundaries that let Atomicly support future mobile clients without depending on React client state, browser storage, or web-only implementation details.
 ## Requirements
 ### Requirement: Backend contracts are versioned
 The system SHALL expose mobile-ready backend contracts under a versioned API namespace.
@@ -30,4 +30,3 @@ The system SHALL return durable IDs, ISO timestamps, and user-local date keys wh
 #### Scenario: Mobile client loads habit history
 - **WHEN** a mobile client requests habit history
 - **THEN** each check-in includes a stable ID, date key, and timestamp fields
-

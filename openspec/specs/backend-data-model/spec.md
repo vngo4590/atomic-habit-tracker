@@ -1,7 +1,7 @@
 # backend-data-model Specification
 
 ## Purpose
-TBD - created by archiving change backend-auth-mobile-architecture. Update Purpose after archive.
+Define the persisted, user-scoped backend data model for Atomicly so authenticated habit, reflection, lesson, identity, and preference data survives refreshes, logins, and device changes.
 ## Requirements
 ### Requirement: Domain data is persisted in a database
 The system SHALL persist authenticated user data in a durable database instead of relying on sample data or browser-only storage.
@@ -37,4 +37,3 @@ The system SHALL not seed mock habits, journal entries, or identity data into no
 #### Scenario: New account opens Today screen
 - **WHEN** a newly registered user opens the Today screen
 - **THEN** the system shows an empty-state prompt instead of sample habits
-

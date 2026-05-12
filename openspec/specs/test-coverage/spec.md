@@ -70,7 +70,7 @@ The test suite or validation scripts SHALL check local deployment configuration 
 
 #### Scenario: Container build configuration changes
 - **WHEN** `Dockerfile`, `.dockerignore`, or local deployment documentation changes
-- **THEN** validation SHALL verify documented image targets and runtime assumptions remain aligned with the manifests
+- **THEN** validation SHALL verify documented image targets, local Kubernetes npm wrapper commands, and runtime assumptions remain aligned with the manifests
 
 ### Requirement: Test commands and boundaries are documented
 Project documentation SHALL describe how to run focused tests, the full deterministic test suite, and any optional environment-dependent checks.
