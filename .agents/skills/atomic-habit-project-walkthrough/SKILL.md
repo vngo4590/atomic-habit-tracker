@@ -221,7 +221,8 @@ Current OpenSpec state:
 - `openspec/changes/settings-account-email-notifications/` is the active in-progress change.
 - `openspec/changes/archive/2026-04-29-port-reference-ui/` contains the archived reference UI port.
 - `openspec/changes/archive/2026-05-11-backend-auth-mobile-architecture/` contains the archived backend/auth/mobile architecture change.
-- `openspec/specs/` now contains canonical specs synced from the archived backend/auth/mobile change: `backend-data-model`, `deployment-architecture`, `habit-api`, `mobile-bridge-readiness`, `reflection-api`, `responsive-app-shell`, and `user-auth`.
+- `openspec/changes/archive/2026-05-12-add-unit-integration-tests/` contains the archived unit and integration test coverage change.
+- `openspec/specs/` now contains canonical specs synced from archived changes: `backend-data-model`, `deployment-architecture`, `habit-api`, `mobile-bridge-readiness`, `reflection-api`, `responsive-app-shell`, `test-coverage`, and `user-auth`.
 
 To propose a new change: `/openspec-propose <description>`.
 To implement: `/opsx:apply`.
