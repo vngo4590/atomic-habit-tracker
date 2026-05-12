@@ -7,8 +7,6 @@ import type { StoreState } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
 // Mock useStoreContext — the page renders without a full StoreProvider tree.
-// The arrow function closes over `storeCtx` so reassigning it in tests
-// updates the value returned by all subsequent useStoreContext() calls.
 // ---------------------------------------------------------------------------
 let storeCtx: StoreState = testStoreContext();
 
@@ -96,7 +94,7 @@ describe("JournalPage initial state", () => {
     render(<JournalPage />);
 
     // When: the page renders
-    // Then: no body paragraph — the space is not wasted on an empty <p>
+    // Then: no body paragraph is rendered
     expect(screen.queryByRole("paragraph")).toBeNull();
   });
 });
@@ -212,11 +210,11 @@ describe("JournalPage Save entry button state", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Saving a new entry
+// Saving a new entry — preset moods
 // ---------------------------------------------------------------------------
 describe("JournalPage saving a new entry", () => {
   it("calls addJournal with title, body, default 'good' mood, and empty tags", () => {
-    // Given: the compose form is filled with a title and body; mood is left at default
+    // Given: the form is filled with a title and body; mood is left at the default
     const addJournal = vi.fn();
     storeCtx = makeStore({ journal: [], addJournal });
     render(<JournalPage />);
@@ -263,7 +261,7 @@ describe("JournalPage saving a new entry", () => {
     }));
   });
 
-  it("calls addJournal with 'meh' mood when So-so is selected", () => {
+  it("stores 'meh' when So-so is selected", () => {
     // Given: the user opens the form and picks So-so
     const addJournal = vi.fn();
     storeCtx = makeStore({ journal: [], addJournal });
@@ -281,7 +279,7 @@ describe("JournalPage saving a new entry", () => {
     expect(addJournal).toHaveBeenCalledWith(expect.objectContaining({ mood: "meh" }));
   });
 
-  it("calls addJournal with 'hard' mood when Hard is selected", () => {
+  it("stores 'hard' when Hard is selected", () => {
     // Given: the user selects the Hard mood chip
     const addJournal = vi.fn();
     storeCtx = makeStore({ journal: [], addJournal });
@@ -299,14 +297,14 @@ describe("JournalPage saving a new entry", () => {
     expect(addJournal).toHaveBeenCalledWith(expect.objectContaining({ mood: "hard" }));
   });
 
-  it("does not call addJournal when Save entry is disabled and clicked", () => {
+  it("does not call addJournal when Save entry is disabled", () => {
     // Given: the title is empty (Save entry is disabled)
     const addJournal = vi.fn();
     storeCtx = makeStore({ journal: [], addJournal });
     render(<JournalPage />);
     fireEvent.click(screen.getByRole("button", { name: "New entry" }));
 
-    // When: the user attempts to click the disabled Save entry button
+    // When: the user attempts to click the disabled button
     fireEvent.click(screen.getByRole("button", { name: "Save entry" }));
 
     // Then: addJournal is never reached
@@ -332,56 +330,180 @@ describe("JournalPage saving a new entry", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Custom emoji picker
+// Custom mood picker — two-step flow (emoji + label)
 // ---------------------------------------------------------------------------
-describe("JournalPage custom emoji picker", () => {
+describe("JournalPage custom mood picker", () => {
   beforeEach(() => {
     storeCtx = makeStore({ journal: [] });
     render(<JournalPage />);
     fireEvent.click(screen.getByRole("button", { name: "New entry" }));
   });
 
-  it("shows the emoji grid and the custom text input when Custom is clicked", () => {
+  it("shows the emoji grid and mood label input when Custom is clicked", () => {
     // Given: the compose form is open
 
     // When: the user clicks the Custom chip
     fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
 
-    // Then: the emoji grid and free-text input appear
-    expect(screen.getByPlaceholderText("Or paste / type any emoji…")).toBeTruthy();
+    // Then: the picker panel is visible with step labels, emoji grid, and label input
+    expect(screen.getByText("1. Pick an emoji")).toBeTruthy();
+    expect(screen.getByText("2. Name your mood")).toBeTruthy();
+    expect(screen.getByPlaceholderText("e.g. Energized, Calm, Grateful")).toBeTruthy();
     expect(screen.getByText("😊")).toBeTruthy();
-    expect(screen.getByText("🔥")).toBeTruthy();
-    expect(screen.getByText("🌈")).toBeTruthy();
+    expect(screen.getByText("🌟")).toBeTruthy();
   });
 
-  it("closes the emoji picker when Custom is clicked a second time", () => {
-    // Given: the emoji picker is open
+  it("closes the picker when Custom is clicked a second time", () => {
+    // Given: the picker is open
     fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
-    expect(screen.getByPlaceholderText("Or paste / type any emoji…")).toBeTruthy();
+    expect(screen.getByPlaceholderText("e.g. Energized, Calm, Grateful")).toBeTruthy();
 
     // When: the user clicks Custom again to dismiss
     fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
 
     // Then: the picker is hidden
-    expect(screen.queryByPlaceholderText("Or paste / type any emoji…")).toBeNull();
+    expect(screen.queryByPlaceholderText("e.g. Energized, Calm, Grateful")).toBeNull();
   });
 
-  it("closes the picker and selects the mood when an emoji is clicked in the grid", () => {
+  it("highlights an emoji in the grid when clicked and keeps the picker open", () => {
     // Given: the picker is open
     fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
 
     // When: the user clicks an emoji in the grid
-    fireEvent.click(screen.getByText("🥳"));
+    fireEvent.click(screen.getByText("🌟"));
 
-    // Then: the picker closes
-    expect(screen.queryByPlaceholderText("Or paste / type any emoji…")).toBeNull();
+    // Then: the picker stays open (emoji selection does not close the panel)
+    expect(screen.getByPlaceholderText("e.g. Energized, Calm, Grateful")).toBeTruthy();
   });
 
-  it("calls addJournal with the grid emoji as the mood string", () => {
-    // Given: the user opens the picker and picks an emoji from the grid
+  it("deselects the emoji when the same grid emoji is clicked a second time", () => {
+    // Given: an emoji is selected in the picker
+    fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
+    fireEvent.click(screen.getByText("🌟"));
+
+    // When: the user clicks the same emoji again (use getAllByText — preview span also shows 🌟)
+    const gridButton = screen.getAllByText("🌟").find((el) => el.tagName === "BUTTON") as HTMLElement;
+    fireEvent.click(gridButton);
+
+    // Then: the emoji preview next to the label input disappears
+    // (the emoji span is only rendered when customEmoji is non-empty)
+    expect(screen.queryByText("🌟", { selector: "span" })).toBeNull();
+  });
+
+  it("shows the selected emoji as a preview beside the label input", () => {
+    // Given: the picker is open
+    fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
+
+    // When: the user selects an emoji
+    fireEvent.click(screen.getByText("🥳"));
+
+    // Then: a preview span appears showing the chosen emoji next to the label input
+    // (there will be at least one instance — in the grid button and in the preview span)
+    const instances = screen.getAllByText("🥳");
+    expect(instances.length).toBeGreaterThan(1);
+  });
+
+  it("keeps the Use button disabled when neither emoji nor label is provided", () => {
+    // Given: the picker is open with no selection and no label typed
+    fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
+
+    // When: the button state is evaluated
+    const useBtn = screen.getByRole("button", { name: "Use" }) as HTMLButtonElement;
+
+    // Then: Use is disabled
+    expect(useBtn.disabled).toBe(true);
+  });
+
+  it("enables the Use button when only an emoji is selected (no label required)", () => {
+    // Given: the picker is open and the user selects only an emoji
+    fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
+    fireEvent.click(screen.getByText("🌟"));
+
+    // When: the button state is evaluated
+    const useBtn = screen.getByRole("button", { name: "Use" }) as HTMLButtonElement;
+
+    // Then: Use is enabled — emoji alone is sufficient
+    expect(useBtn.disabled).toBe(false);
+  });
+
+  it("enables the Use button when only a label is typed (no emoji required)", () => {
+    // Given: the picker is open with only a typed label
+    fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
+    fireEvent.change(screen.getByPlaceholderText("e.g. Energized, Calm, Grateful"), {
+      target: { value: "Grateful" },
+    });
+
+    // When: the button state is evaluated
+    const useBtn = screen.getByRole("button", { name: "Use" }) as HTMLButtonElement;
+
+    // Then: Use is enabled — label alone is sufficient
+    expect(useBtn.disabled).toBe(false);
+  });
+
+  it("keeps the Use button disabled when the label is whitespace-only and no emoji is selected", () => {
+    // Given: the picker is open with only whitespace in the label field
+    fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
+    fireEvent.change(screen.getByPlaceholderText("e.g. Energized, Calm, Grateful"), {
+      target: { value: "   " },
+    });
+
+    // When: the button state is evaluated
+    const useBtn = screen.getByRole("button", { name: "Use" }) as HTMLButtonElement;
+
+    // Then: the button remains disabled — trimmed label is empty and no emoji selected
+    expect(useBtn.disabled).toBe(true);
+  });
+
+  it("closes the picker when Use is clicked with a valid selection", () => {
+    // Given: the picker has an emoji selected and a label typed
+    fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
+    fireEvent.click(screen.getByText("🌟"));
+    fireEvent.change(screen.getByPlaceholderText("e.g. Energized, Calm, Grateful"), {
+      target: { value: "Energized" },
+    });
+
+    // When: the user clicks Use
+    fireEvent.click(screen.getByRole("button", { name: "Use" }));
+
+    // Then: the picker closes
+    expect(screen.queryByPlaceholderText("e.g. Energized, Calm, Grateful")).toBeNull();
+  });
+
+  it("closes the picker when Enter is pressed in the label input", () => {
+    // Given: the picker has a label typed
+    fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
+    fireEvent.change(screen.getByPlaceholderText("e.g. Energized, Calm, Grateful"), {
+      target: { value: "Calm" },
+    });
+
+    // When: the user presses Enter
+    fireEvent.keyDown(screen.getByPlaceholderText("e.g. Energized, Calm, Grateful"), { key: "Enter" });
+
+    // Then: the picker closes
+    expect(screen.queryByPlaceholderText("e.g. Energized, Calm, Grateful")).toBeNull();
+  });
+
+  it("closes the picker when a preset mood chip is clicked while it is open", () => {
+    // Given: the emoji picker is open
+    fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
+    expect(screen.getByPlaceholderText("e.g. Energized, Calm, Grateful")).toBeTruthy();
+
+    // When: the user clicks a preset chip instead
+    fireEvent.click(screen.getByRole("button", { name: /Hard/ }));
+
+    // Then: the picker closes
+    expect(screen.queryByPlaceholderText("e.g. Energized, Calm, Grateful")).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Custom mood — what gets stored in addJournal
+// ---------------------------------------------------------------------------
+describe("JournalPage custom mood stored value", () => {
+  it("stores 'emoji label' when both an emoji and a label are provided", () => {
+    // Given: the user picks an emoji and types a label
     const addJournal = vi.fn();
     storeCtx = makeStore({ journal: [], addJournal });
-    cleanup();
     render(<JournalPage />);
     fireEvent.click(screen.getByRole("button", { name: "New entry" }));
     fireEvent.change(screen.getByPlaceholderText("What happened today?"), {
@@ -389,107 +511,86 @@ describe("JournalPage custom emoji picker", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
     fireEvent.click(screen.getByText("🌟"));
+    fireEvent.change(screen.getByPlaceholderText("e.g. Energized, Calm, Grateful"), {
+      target: { value: "Energized" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Use" }));
 
     // When: the user saves
     fireEvent.click(screen.getByRole("button", { name: "Save entry" }));
 
-    // Then: the emoji character is stored as the mood field
-    expect(addJournal).toHaveBeenCalledWith(expect.objectContaining({ mood: "🌟" }));
+    // Then: the combined 'emoji label' string is stored as the mood
+    expect(addJournal).toHaveBeenCalledWith(expect.objectContaining({ mood: "🌟 Energized" }));
   });
 
-  it("applies a custom emoji from the text input when Use is clicked", () => {
-    // Given: the user opens the picker and types a custom emoji
-    fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
-    fireEvent.change(screen.getByPlaceholderText("Or paste / type any emoji…"), {
-      target: { value: "🎨" },
-    });
-
-    // When: the user clicks Use
-    fireEvent.click(screen.getByRole("button", { name: "Use" }));
-
-    // Then: the picker closes
-    expect(screen.queryByPlaceholderText("Or paste / type any emoji…")).toBeNull();
-  });
-
-  it("calls addJournal with the typed emoji when applied via Use", () => {
-    // Given: the user types a custom emoji and applies it
+  it("stores just the emoji when only an emoji is selected and no label is typed", () => {
+    // Given: the user selects an emoji but leaves the label empty
     const addJournal = vi.fn();
     storeCtx = makeStore({ journal: [], addJournal });
-    cleanup();
     render(<JournalPage />);
     fireEvent.click(screen.getByRole("button", { name: "New entry" }));
     fireEvent.change(screen.getByPlaceholderText("What happened today?"), {
-      target: { value: "Creative morning" },
+      target: { value: "Quick note" },
     });
     fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
-    fireEvent.change(screen.getByPlaceholderText("Or paste / type any emoji…"), {
-      target: { value: "🌺" },
+    fireEvent.click(screen.getByText("💪"));
+    fireEvent.click(screen.getByRole("button", { name: "Use" }));
+
+    // When: the user saves
+    fireEvent.click(screen.getByRole("button", { name: "Save entry" }));
+
+    // Then: just the emoji is stored as the mood
+    expect(addJournal).toHaveBeenCalledWith(expect.objectContaining({ mood: "💪" }));
+  });
+
+  it("stores just the label when only text is typed and no emoji is selected", () => {
+    // Given: the user types a mood label without selecting an emoji
+    const addJournal = vi.fn();
+    storeCtx = makeStore({ journal: [], addJournal });
+    render(<JournalPage />);
+    fireEvent.click(screen.getByRole("button", { name: "New entry" }));
+    fireEvent.change(screen.getByPlaceholderText("What happened today?"), {
+      target: { value: "Morning walk" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
+    fireEvent.change(screen.getByPlaceholderText("e.g. Energized, Calm, Grateful"), {
+      target: { value: "Calm and focused" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Use" }));
 
     // When: the user saves
     fireEvent.click(screen.getByRole("button", { name: "Save entry" }));
 
-    // Then: the typed emoji is stored as the mood
-    expect(addJournal).toHaveBeenCalledWith(expect.objectContaining({ mood: "🌺" }));
+    // Then: the label text is stored as the mood (no leading space)
+    expect(addJournal).toHaveBeenCalledWith(expect.objectContaining({ mood: "Calm and focused" }));
   });
 
-  it("applies a custom emoji when Enter is pressed in the text input", () => {
-    // Given: the picker is open and a custom emoji is typed
-    fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
-    fireEvent.change(screen.getByPlaceholderText("Or paste / type any emoji…"), {
-      target: { value: "💎" },
-    });
-
-    // When: the user presses Enter
-    fireEvent.keyDown(screen.getByPlaceholderText("Or paste / type any emoji…"), { key: "Enter" });
-
-    // Then: the picker closes — the emoji has been applied
-    expect(screen.queryByPlaceholderText("Or paste / type any emoji…")).toBeNull();
-  });
-
-  it("keeps the Use button disabled when the custom text input is empty", () => {
-    // Given: the picker is open but nothing has been typed
-    fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
-
-    // When: the input is empty
-    const useBtn = screen.getByRole("button", { name: "Use" }) as HTMLButtonElement;
-
-    // Then: Use is disabled so the user cannot apply a blank mood
-    expect(useBtn.disabled).toBe(true);
-  });
-
-  it("keeps the Use button disabled when the custom input contains only whitespace", () => {
-    // Given: the picker is open with a whitespace-only input
-    fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
-    fireEvent.change(screen.getByPlaceholderText("Or paste / type any emoji…"), {
-      target: { value: "   " },
-    });
-
-    // When: the button state is evaluated
-    const useBtn = screen.getByRole("button", { name: "Use" }) as HTMLButtonElement;
-
-    // Then: the button stays disabled — trimmed value is empty
-    expect(useBtn.disabled).toBe(true);
-  });
-
-  it("closes the picker when a preset mood chip is clicked while the picker is open", () => {
-    // Given: the emoji picker is open
-    fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
-    expect(screen.getByPlaceholderText("Or paste / type any emoji…")).toBeTruthy();
-
-    // When: the user clicks a preset mood chip instead
-    fireEvent.click(screen.getByRole("button", { name: /Hard/ }));
-
-    // Then: the picker closes and the preset takes effect
-    expect(screen.queryByPlaceholderText("Or paste / type any emoji…")).toBeNull();
-  });
-
-  it("reverts to 'good' mood when a preset is chosen after a custom emoji was selected", () => {
-    // Given: a custom emoji has been chosen from the grid
+  it("trims whitespace from the label before combining with the emoji", () => {
+    // Given: the user types a padded label
     const addJournal = vi.fn();
     storeCtx = makeStore({ journal: [], addJournal });
-    cleanup();
+    render(<JournalPage />);
+    fireEvent.click(screen.getByRole("button", { name: "New entry" }));
+    fireEvent.change(screen.getByPlaceholderText("What happened today?"), {
+      target: { value: "Good morning" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
+    fireEvent.click(screen.getByText("😊"));
+    fireEvent.change(screen.getByPlaceholderText("e.g. Energized, Calm, Grateful"), {
+      target: { value: "  Happy  " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Use" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save entry" }));
+
+    // When: the entry is saved
+    // Then: the mood is trimmed before combining
+    expect(addJournal).toHaveBeenCalledWith(expect.objectContaining({ mood: "😊 Happy" }));
+  });
+
+  it("stores the preset key when a preset is chosen after a custom mood was applied", () => {
+    // Given: the user applies a custom mood then changes their mind to a preset
+    const addJournal = vi.fn();
+    storeCtx = makeStore({ journal: [], addJournal });
     render(<JournalPage />);
     fireEvent.click(screen.getByRole("button", { name: "New entry" }));
     fireEvent.change(screen.getByPlaceholderText("What happened today?"), {
@@ -497,6 +598,7 @@ describe("JournalPage custom emoji picker", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
     fireEvent.click(screen.getByText("🥳"));
+    fireEvent.click(screen.getByRole("button", { name: "Use" }));
 
     // When: the user then clicks a preset mood chip
     fireEvent.click(screen.getByRole("button", { name: /Good day/ }));
@@ -504,6 +606,60 @@ describe("JournalPage custom emoji picker", () => {
 
     // Then: the preset key ('good') is stored, not the custom emoji
     expect(addJournal).toHaveBeenCalledWith(expect.objectContaining({ mood: "good" }));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Picker pre-population when reopening with an existing custom mood
+// ---------------------------------------------------------------------------
+describe("JournalPage custom picker pre-population", () => {
+  it("pre-fills the label input from an existing label-only custom mood", () => {
+    // Given: a custom label-only mood is already set and the picker is reopened
+    const addJournal = vi.fn();
+    storeCtx = makeStore({ journal: [], addJournal });
+    render(<JournalPage />);
+    fireEvent.click(screen.getByRole("button", { name: "New entry" }));
+    fireEvent.change(screen.getByPlaceholderText("What happened today?"), {
+      target: { value: "Entry" },
+    });
+    // First: apply "Calm" as a label-only mood
+    fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
+    fireEvent.change(screen.getByPlaceholderText("e.g. Energized, Calm, Grateful"), {
+      target: { value: "Calm" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Use" }));
+
+    // When: the user reopens the picker to adjust the mood
+    fireEvent.click(screen.getByRole("button", { name: /Calm/ }));
+
+    // Then: the label input is pre-filled with "Calm"
+    const labelInput = screen.getByPlaceholderText("e.g. Energized, Calm, Grateful") as HTMLInputElement;
+    expect(labelInput.value).toBe("Calm");
+  });
+
+  it("pre-fills emoji and label when reopening a combined emoji-label custom mood", () => {
+    // Given: a combined mood "🌟 Energized" is already set and the picker is reopened
+    const addJournal = vi.fn();
+    storeCtx = makeStore({ journal: [], addJournal });
+    render(<JournalPage />);
+    fireEvent.click(screen.getByRole("button", { name: "New entry" }));
+    fireEvent.change(screen.getByPlaceholderText("What happened today?"), {
+      target: { value: "Entry" },
+    });
+    // First: apply "🌟 Energized"
+    fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
+    fireEvent.click(screen.getByText("🌟"));
+    fireEvent.change(screen.getByPlaceholderText("e.g. Energized, Calm, Grateful"), {
+      target: { value: "Energized" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Use" }));
+
+    // When: the user reopens the picker
+    fireEvent.click(screen.getByRole("button", { name: /🌟 Energized/ }));
+
+    // Then: the label input is pre-filled with "Energized"
+    const labelInput = screen.getByPlaceholderText("e.g. Energized, Calm, Grateful") as HTMLInputElement;
+    expect(labelInput.value).toBe("Energized");
   });
 });
 
@@ -548,13 +704,13 @@ describe("JournalPage canceling the compose form", () => {
     render(<JournalPage />);
     fireEvent.click(screen.getByRole("button", { name: "New entry" }));
     fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
-    expect(screen.getByPlaceholderText("Or paste / type any emoji…")).toBeTruthy();
+    expect(screen.getByPlaceholderText("e.g. Energized, Calm, Grateful")).toBeTruthy();
 
     // When: the user cancels
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
     // Then: the picker is gone with the rest of the form
-    expect(screen.queryByPlaceholderText("Or paste / type any emoji…")).toBeNull();
+    expect(screen.queryByPlaceholderText("e.g. Energized, Calm, Grateful")).toBeNull();
   });
 });
 
@@ -581,9 +737,7 @@ describe("JournalPage editing an existing entry", () => {
 
   it("shows 'Save changes' instead of 'Save entry' when editing", () => {
     // Given: an entry is opened for editing
-    storeCtx = makeStore({
-      journal: [testJournalEntry({ id: "j1" })],
-    });
+    storeCtx = makeStore({ journal: [testJournalEntry({ id: "j1" })] });
     render(<JournalPage />);
 
     // When: Edit is clicked
@@ -622,8 +776,8 @@ describe("JournalPage editing an existing entry", () => {
     expect(addJournal).not.toHaveBeenCalled();
   });
 
-  it("saves a custom grid emoji when editing an entry", () => {
-    // Given: an entry is in edit mode and the user picks a custom emoji
+  it("saves a combined emoji-label mood when editing an entry", () => {
+    // Given: an entry is in edit mode and the user builds a custom mood
     const updateJournal = vi.fn();
     storeCtx = makeStore({
       journal: [testJournalEntry({ id: "j1", title: "Entry to edit", mood: "good" })],
@@ -633,41 +787,21 @@ describe("JournalPage editing an existing entry", () => {
     fireEvent.click(screen.getByRole("button", { name: "Edit" }));
     fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
     fireEvent.click(screen.getByText("💪"));
-
-    // When: the user saves
-    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
-
-    // Then: the custom emoji is forwarded to updateJournal
-    expect(updateJournal).toHaveBeenCalledWith("j1", expect.objectContaining({ mood: "💪" }));
-  });
-
-  it("saves a typed custom emoji when editing an entry", () => {
-    // Given: an entry is in edit mode and the user types a custom emoji
-    const updateJournal = vi.fn();
-    storeCtx = makeStore({
-      journal: [testJournalEntry({ id: "j1", title: "Entry to edit", mood: "meh" })],
-      updateJournal,
-    });
-    render(<JournalPage />);
-    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
-    fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
-    fireEvent.change(screen.getByPlaceholderText("Or paste / type any emoji…"), {
-      target: { value: "🦋" },
+    fireEvent.change(screen.getByPlaceholderText("e.g. Energized, Calm, Grateful"), {
+      target: { value: "Motivated" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Use" }));
 
     // When: the user saves
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
-    // Then: the typed emoji is stored
-    expect(updateJournal).toHaveBeenCalledWith("j1", expect.objectContaining({ mood: "🦋" }));
+    // Then: the combined mood is forwarded to updateJournal
+    expect(updateJournal).toHaveBeenCalledWith("j1", expect.objectContaining({ mood: "💪 Motivated" }));
   });
 
   it("closes the form after a successful edit", () => {
     // Given: an entry is edited and saved
-    storeCtx = makeStore({
-      journal: [testJournalEntry({ id: "j1", title: "Original" })],
-    });
+    storeCtx = makeStore({ journal: [testJournalEntry({ id: "j1", title: "Original" })] });
     render(<JournalPage />);
     fireEvent.click(screen.getByRole("button", { name: "Edit" }));
     fireEvent.change(screen.getByPlaceholderText("What happened today?"), {
@@ -683,7 +817,7 @@ describe("JournalPage editing an existing entry", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Entry list mood display (backward compatibility + custom emoji)
+// Entry list mood display (preset backward compat + custom text)
 // ---------------------------------------------------------------------------
 describe("JournalPage entry mood display", () => {
   it("shows 😄 face and 'Good day' label for a 'good' mood entry", () => {
@@ -719,25 +853,43 @@ describe("JournalPage entry mood display", () => {
     expect(screen.getByText(/Hard/)).toBeTruthy();
   });
 
-  it("shows the emoji as the face and 'Custom' as the label for a custom emoji mood", () => {
-    // Given: an entry stored with a custom emoji as the mood string
-    storeCtx = makeStore({ journal: [testJournalEntry({ mood: "🥰", title: "Creative day" })] });
+  it("shows a combined 'emoji label' custom mood directly in the chip", () => {
+    // Given: an entry whose mood was set via the two-step custom picker
+    storeCtx = makeStore({ journal: [testJournalEntry({ mood: "🌟 Energized" })] });
     render(<JournalPage />);
 
     // When: the page renders
-    // Then: the raw emoji appears as the face and 'Custom' is used as the label
-    const faces = screen.getAllByText("🥰");
-    expect(faces.length).toBeGreaterThan(0);
-    expect(screen.getByText(/Custom/)).toBeTruthy();
+    // Then: the full combined string appears in the entry chip
+    expect(screen.getByText("🌟 Energized")).toBeTruthy();
   });
 
-  it("shows 'Custom' label for any unrecognised mood string (backward compatibility)", () => {
-    // Given: an entry with an unknown mood string from a future or external source
+  it("shows an emoji-only custom mood in the chip", () => {
+    // Given: an entry whose mood is a single emoji (no label)
+    storeCtx = makeStore({ journal: [testJournalEntry({ mood: "🥰" })] });
+    render(<JournalPage />);
+
+    // When: the page renders
+    // Then: the emoji appears as-is in the chip
+    expect(screen.getByText("🥰")).toBeTruthy();
+  });
+
+  it("shows a label-only custom mood in the chip", () => {
+    // Given: an entry whose mood is written text with no emoji
+    storeCtx = makeStore({ journal: [testJournalEntry({ mood: "Grateful" })] });
+    render(<JournalPage />);
+
+    // When: the page renders
+    // Then: the text appears in the chip
+    expect(screen.getByText("Grateful")).toBeTruthy();
+  });
+
+  it("shows the raw mood string for any unrecognised value without crashing", () => {
+    // Given: an entry with an unknown mood key
     storeCtx = makeStore({ journal: [testJournalEntry({ mood: "unknown-value" })] });
     render(<JournalPage />);
 
     // When: the page renders
-    // Then: 'unknown-value' is used as the face and 'Custom' is the label — no crash
-    expect(screen.getByText(/Custom/)).toBeTruthy();
+    // Then: the raw string is displayed — no crash
+    expect(screen.getByText("unknown-value")).toBeTruthy();
   });
 });

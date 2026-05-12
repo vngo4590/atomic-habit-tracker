@@ -28,7 +28,7 @@ const CUSTOM_COLOR = "oklch(65% 0.06 250)";
 function moodFor(key: string) {
   const preset = MOODS.find((item) => item.key === key);
   if (preset) return preset;
-  return { key, label: "Custom", face: key, color: CUSTOM_COLOR };
+  return { key, label: key, face: "", color: CUSTOM_COLOR };
 }
 
 function isPreset(key: string) {
@@ -43,7 +43,8 @@ export default function JournalPage() {
   const [body, setBody] = useState("");
   const [mood, setMood] = useState<string>("good");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [customInput, setCustomInput] = useState("");
+  const [customEmoji, setCustomEmoji] = useState("");
+  const [customLabel, setCustomLabel] = useState("");
   const [entryOverrides, setEntryOverrides] = useState<Record<string, Partial<(typeof journal)[number]>>>({});
 
   const entries = useMemo(
@@ -54,15 +55,33 @@ export default function JournalPage() {
   const selectMood = (key: string) => {
     setMood(key);
     setShowEmojiPicker(false);
-    setCustomInput("");
+    setCustomEmoji("");
+    setCustomLabel("");
   };
 
-  const applyCustomEmoji = () => {
-    const emoji = customInput.trim();
-    if (!emoji) return;
-    setMood(emoji);
+  const toggleEmojiPicker = () => {
+    if (!showEmojiPicker && !isPreset(mood)) {
+      // Pre-populate picker fields from the current custom mood
+      const spaceIdx = mood.indexOf(" ");
+      const potentialEmoji = spaceIdx > 0 ? mood.slice(0, spaceIdx) : mood;
+      if (EMOJI_GRID.includes(potentialEmoji)) {
+        setCustomEmoji(potentialEmoji);
+        setCustomLabel(spaceIdx > 0 ? mood.slice(spaceIdx + 1) : "");
+      } else {
+        setCustomEmoji("");
+        setCustomLabel(mood);
+      }
+    }
+    setShowEmojiPicker((prev) => !prev);
+  };
+
+  const applyCustomMood = () => {
+    const parts = [customEmoji, customLabel.trim()].filter(Boolean);
+    if (parts.length === 0) return;
+    setMood(parts.join(" "));
     setShowEmojiPicker(false);
-    setCustomInput("");
+    setCustomEmoji("");
+    setCustomLabel("");
   };
 
   const resetCompose = () => {
@@ -71,7 +90,8 @@ export default function JournalPage() {
     setBody("");
     setMood("good");
     setShowEmojiPicker(false);
-    setCustomInput("");
+    setCustomEmoji("");
+    setCustomLabel("");
     setComposing(false);
   };
 
@@ -101,7 +121,8 @@ export default function JournalPage() {
     setBody(entry.body);
     setMood(entry.mood || "meh");
     setShowEmojiPicker(false);
-    setCustomInput("");
+    setCustomEmoji("");
+    setCustomLabel("");
     setComposing(true);
   };
 
@@ -118,6 +139,7 @@ export default function JournalPage() {
   };
 
   const customActive = !isPreset(mood);
+  const canApplyCustom = !!(customEmoji || customLabel.trim());
 
   return (
     <div className="fade-up">
@@ -155,10 +177,10 @@ export default function JournalPage() {
                 borderColor: customActive || showEmojiPicker ? CUSTOM_COLOR : "var(--rule)",
                 background: customActive || showEmojiPicker ? `color-mix(in oklch, ${CUSTOM_COLOR} 14%, var(--bg-elev))` : "var(--bg-sunk)",
               }}
-              onClick={() => setShowEmojiPicker((prev) => !prev)}
+              onClick={toggleEmojiPicker}
             >
-              <span>{customActive ? mood : "✨"}</span>
-              {customActive ? "Custom" : "Custom"}
+              <span>{customActive ? "" : "✨"}</span>
+              {customActive ? mood : "Custom"}
             </button>
           </div>
 
@@ -172,17 +194,20 @@ export default function JournalPage() {
                 border: "1px solid var(--rule)",
               }}
             >
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 4, marginBottom: 10 }}>
+              <div style={{ fontSize: 12, color: "var(--fg-muted)", marginBottom: 8 }}>
+                1. Pick an emoji
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 4, marginBottom: 12 }}>
                 {EMOJI_GRID.map((emoji) => (
                   <button
                     key={emoji}
-                    onClick={() => selectMood(emoji)}
+                    onClick={() => setCustomEmoji((prev) => (prev === emoji ? "" : emoji))}
                     style={{
                       fontSize: 22,
                       padding: 4,
                       borderRadius: 6,
-                      border: mood === emoji ? "2px solid var(--accent)" : "2px solid transparent",
-                      background: mood === emoji ? "color-mix(in oklch, var(--accent) 12%, var(--bg-elev))" : "transparent",
+                      border: customEmoji === emoji ? "2px solid var(--accent)" : "2px solid transparent",
+                      background: customEmoji === emoji ? "color-mix(in oklch, var(--accent) 12%, var(--bg-elev))" : "transparent",
                       cursor: "pointer",
                       lineHeight: 1,
                     }}
@@ -191,17 +216,23 @@ export default function JournalPage() {
                   </button>
                 ))}
               </div>
+              <div style={{ fontSize: 12, color: "var(--fg-muted)", marginBottom: 8 }}>
+                2. Name your mood
+              </div>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                {customEmoji && (
+                  <span style={{ fontSize: 20, lineHeight: 1, flexShrink: 0 }}>{customEmoji}</span>
+                )}
                 <input
                   className="input"
-                  style={{ flex: 1, fontSize: 18 }}
-                  placeholder="Or paste / type any emoji…"
-                  value={customInput}
-                  maxLength={10}
-                  onChange={(e) => setCustomInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") applyCustomEmoji(); }}
+                  style={{ flex: 1 }}
+                  placeholder="e.g. Energized, Calm, Grateful"
+                  value={customLabel}
+                  maxLength={30}
+                  onChange={(e) => setCustomLabel(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") applyCustomMood(); }}
                 />
-                <button className="btn btn-sm" onClick={applyCustomEmoji} disabled={!customInput.trim()}>
+                <button className="btn btn-sm" onClick={applyCustomMood} disabled={!canApplyCustom}>
                   Use
                 </button>
               </div>
