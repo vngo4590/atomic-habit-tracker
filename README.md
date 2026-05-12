@@ -117,10 +117,23 @@ Script actions:
 
 ## Validation
 
-Run unit tests:
+Run a focused test file while iterating:
+
+```bash
+npm exec vitest run path/to/file.test.ts
+```
+
+Run the full deterministic unit/integration suite. This suite is designed to run without Docker, Kubernetes, network access, seeded data, or a live database:
 
 ```bash
 npm exec vitest run
+```
+
+Run TypeScript and scoped linting:
+
+```bash
+npm run typecheck
+npm run lint:app
 ```
 
 Run a production build:
@@ -129,13 +142,20 @@ Run a production build:
 npm run build
 ```
 
-Run scoped linting for the app code:
+Validate the local Kubernetes overlay without applying it to a cluster:
 
-```bash
-npm exec eslint -- app components lib
+```powershell
+kubectl kustomize k8s/local
 ```
 
-The broad `npm run lint` command may include generated or reference files. Prefer the scoped command above when validating app changes.
+Optional environment-dependent smoke checks:
+
+- `npm run db:setup` starts the local Docker PostgreSQL database, applies migrations, and seeds the dev account.
+- `kubectl apply -k k8s/local` applies the local Kubernetes overlay to Docker Desktop Kubernetes.
+- `kubectl -n atomicly-local wait --for=condition=complete job/atomicly-migrate --timeout=120s` verifies the migration job against the host Docker PostgreSQL database.
+- `kubectl -n atomicly-local rollout status deployment/atomicly-web` verifies the local Kubernetes web rollout.
+
+The broad `npm run lint` command may include generated or reference files. Prefer `npm run lint:app` when validating app changes.
 
 ## Local Kubernetes Deployment
 

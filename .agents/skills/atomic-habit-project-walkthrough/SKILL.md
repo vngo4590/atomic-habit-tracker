@@ -231,8 +231,11 @@ To archive after completion: `$openspec-archive-change archive <change-name>`.
 
 ## Testing
 
-- Unit tests live alongside their modules in `__tests__/` subdirectories under `lib/`.
-- Run `npm exec vitest run` (not `npm test -- --run`, which doesn't pass flags correctly).
+- Unit and deterministic integration tests live alongside their modules in `__tests__/` subdirectories under `app/`, `components/`, `lib/`, and `scripts/`.
+- Shared deterministic test fixtures/helpers live under `lib/test/` for domain records, store context values, JSON route requests, and response parsing.
+- Run a focused file with `npm exec vitest run path/to/file.test.ts`; run the full deterministic suite with `npm exec vitest run` (not `npm test -- --run`, which doesn't pass flags correctly).
+- The default Vitest suite must not require Docker, Kubernetes, network access, seeded data, or a live database; document those checks as optional smoke tests instead.
 - After changing server actions, repositories, or store logic, run the full test suite.
+- Local Kubernetes manifests can be validated without applying them by running `kubectl kustomize k8s/local`; deterministic manifest assertions live in `scripts/__tests__/local-k8s.test.ts`.
 - Run `npm run build` before marking any broad change complete.
 - For broad backend/deployment changes, run `npm run backend:validate` when practical; it performs Prisma validation/generation, typecheck, scoped lint, tests, and build.

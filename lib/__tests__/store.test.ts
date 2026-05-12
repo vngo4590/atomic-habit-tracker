@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { dateAdd, todayKey } from "@/lib/helpers";
 import {
   createJournalEntryAction,
+  markLessonReadAction,
+  savePreferencesAction,
   saveIdentityAction,
   updateHabitAction,
   updateJournalEntryAction,
@@ -92,6 +94,18 @@ describe("store mutations", () => {
       tags: entry.tags ?? [],
     }));
     vi.mocked(saveIdentityAction).mockImplementation(async (identity) => identity);
+    vi.mocked(savePreferencesAction).mockImplementation(async (preferences) => ({
+      theme: "light",
+      accentHue: 60,
+      remindersEnabled: true,
+      weeklyReviewNudge: true,
+      accountabilityNudge: false,
+      onboardingSeen: false,
+      lessonMode: "sequential",
+      timezone: "UTC",
+      ...preferences,
+    }));
+    vi.mocked(markLessonReadAction).mockImplementation(async (lessonId) => [lessonId]);
     vi.mocked(updateHabitAction).mockImplementation(async () => null);
     vi.mocked(updateJournalEntryAction).mockImplementation(async () => null);
   });
@@ -379,6 +393,100 @@ describe("store mutations", () => {
       mood: "good",
       tags: [],
     });
+  });
+
+  it("updates lesson progress and reconciles with the server response", async () => {
+    vi.mocked(markLessonReadAction).mockResolvedValueOnce([1, 3, 5]);
+    const { result } = renderHook(() =>
+      useStore({
+        habits: [],
+        journal: [],
+        identity: { statement: "", values: [] },
+        weeklyReview: { wentWell: "", smallestFix: "", identityVote: "" },
+        completedLessons: [1],
+        formationVerdicts: [],
+        preferences: {
+          theme: "light",
+          accentHue: 60,
+          remindersEnabled: true,
+          weeklyReviewNudge: true,
+          accountabilityNudge: false,
+          onboardingSeen: false,
+          lessonMode: "sequential",
+          timezone: "UTC",
+        },
+      }),
+    );
+
+    act(() => result.current.markLessonRead(3));
+    expect(result.current.completedLessons.has(3)).toBe(true);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect([...result.current.completedLessons].sort((a, b) => a - b)).toEqual([1, 3, 5]);
+    expect(markLessonReadAction).toHaveBeenCalledWith(3);
+  });
+
+  it("persists lesson mode and preference updates", async () => {
+    vi.mocked(savePreferencesAction).mockResolvedValueOnce({
+      theme: "dark",
+      accentHue: 145,
+      remindersEnabled: false,
+      weeklyReviewNudge: false,
+      accountabilityNudge: true,
+      onboardingSeen: true,
+      lessonMode: "random",
+      timezone: "Australia/Sydney",
+    });
+    const { result } = renderHook(() =>
+      useStore({
+        habits: [],
+        journal: [],
+        identity: { statement: "", values: [] },
+        weeklyReview: { wentWell: "", smallestFix: "", identityVote: "" },
+        completedLessons: [],
+        formationVerdicts: [],
+        preferences: {
+          theme: "light",
+          accentHue: 60,
+          remindersEnabled: true,
+          weeklyReviewNudge: true,
+          accountabilityNudge: false,
+          onboardingSeen: false,
+          lessonMode: "sequential",
+          timezone: "UTC",
+        },
+      }),
+    );
+
+    act(() => result.current.setLessonMode("random"));
+    expect(result.current.lessonMode).toBe("random");
+    expect(result.current.preferences.lessonMode).toBe("random");
+    expect(savePreferencesAction).toHaveBeenCalledWith({ lessonMode: "random" });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(result.current.preferences).toMatchObject({ lessonMode: "random", timezone: "Australia/Sydney" });
+
+    vi.mocked(savePreferencesAction).mockResolvedValueOnce({
+      theme: "dark",
+      accentHue: 145,
+      remindersEnabled: false,
+      weeklyReviewNudge: false,
+      accountabilityNudge: true,
+      onboardingSeen: true,
+      lessonMode: "random",
+      timezone: "Australia/Sydney",
+    });
+    act(() => result.current.setPreferences({ theme: "dark", accentHue: 145 }));
+    expect(result.current.preferences).toMatchObject({ theme: "dark", accentHue: 145 });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(result.current.preferences).toMatchObject({ timezone: "Australia/Sydney", accountabilityNudge: true, lessonMode: "random" });
   });
 });
 
