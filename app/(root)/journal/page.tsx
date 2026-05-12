@@ -15,10 +15,24 @@ const MOODS = [
   { key: "meh", label: "So-so", face: "😐", color: "oklch(70% 0.04 90)" },
   { key: "hard", label: "Hard", face: "😕", color: "oklch(60% 0.12 30)" },
 ] as const;
-type MoodKey = (typeof MOODS)[number]["key"];
+
+const EMOJI_GRID = [
+  "😊", "😂", "🥰", "😍", "🤩", "😎", "🥳", "🤗",
+  "😌", "😔", "😢", "😭", "😡", "🤯", "😤", "🫠",
+  "🤔", "😴", "🤒", "😰", "🥺", "🫂", "💪", "🌟",
+  "🙏", "✨", "🔥", "💡", "🎯", "⚡", "🌈", "❤️",
+];
+
+const CUSTOM_COLOR = "oklch(65% 0.06 250)";
 
 function moodFor(key: string) {
-  return MOODS.find((item) => item.key === key) ?? MOODS[1];
+  const preset = MOODS.find((item) => item.key === key);
+  if (preset) return preset;
+  return { key, label: "Custom", face: key, color: CUSTOM_COLOR };
+}
+
+function isPreset(key: string) {
+  return MOODS.some((m) => m.key === key);
 }
 
 export default function JournalPage() {
@@ -27,7 +41,9 @@ export default function JournalPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [mood, setMood] = useState<MoodKey>("good");
+  const [mood, setMood] = useState<string>("good");
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [customInput, setCustomInput] = useState("");
   const [entryOverrides, setEntryOverrides] = useState<Record<string, Partial<(typeof journal)[number]>>>({});
 
   const entries = useMemo(
@@ -35,11 +51,36 @@ export default function JournalPage() {
     [entryOverrides, journal],
   );
 
+  const selectMood = (key: string) => {
+    setMood(key);
+    setShowEmojiPicker(false);
+    setCustomInput("");
+  };
+
+  const applyCustomEmoji = () => {
+    const emoji = customInput.trim();
+    if (!emoji) return;
+    setMood(emoji);
+    setShowEmojiPicker(false);
+    setCustomInput("");
+  };
+
+  const resetCompose = () => {
+    setEditingId(null);
+    setTitle("");
+    setBody("");
+    setMood("good");
+    setShowEmojiPicker(false);
+    setCustomInput("");
+    setComposing(false);
+  };
+
   const startPrompt = (prompt: string) => {
     setEditingId(null);
     setTitle(prompt);
     setBody("");
     setMood("good");
+    setShowEmojiPicker(false);
     setComposing(true);
   };
 
@@ -48,25 +89,24 @@ export default function JournalPage() {
     setTitle("");
     setBody("");
     setMood("good");
+    setShowEmojiPicker(false);
     setComposing(true);
   };
 
   const startEdit = (entryId: string) => {
     const entry = journal.find((item) => item.id === entryId);
-    if (!entry) {
-      return;
-    }
+    if (!entry) return;
     setEditingId(entry.id);
     setTitle(entry.title);
     setBody(entry.body);
-    setMood(moodFor(entry.mood).key);
+    setMood(entry.mood || "meh");
+    setShowEmojiPicker(false);
+    setCustomInput("");
     setComposing(true);
   };
 
   const save = () => {
-    if (!title.trim()) {
-      return;
-    }
+    if (!title.trim()) return;
     if (editingId) {
       const patch = { title: title.trim(), body: body.trim(), mood };
       setEntryOverrides((current) => ({ ...current, [editingId]: patch }));
@@ -74,12 +114,10 @@ export default function JournalPage() {
     } else {
       addJournal({ title: title.trim(), body: body.trim(), mood, tags: [] });
     }
-    setEditingId(null);
-    setTitle("");
-    setBody("");
-    setMood("good");
-    setComposing(false);
+    resetCompose();
   };
+
+  const customActive = !isPreset(mood);
 
   return (
     <div className="fade-up">
@@ -96,7 +134,7 @@ export default function JournalPage() {
           <label className="field-label">Title</label>
           <input className="input" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="What happened today?" />
           <label className="field-label" style={{ marginTop: 14 }}>Mood</label>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {MOODS.map((item) => (
               <button
                 key={item.key}
@@ -105,17 +143,75 @@ export default function JournalPage() {
                   borderColor: mood === item.key ? item.color : "var(--rule)",
                   background: mood === item.key ? `color-mix(in oklch, ${item.color} 14%, var(--bg-elev))` : "var(--bg-sunk)",
                 }}
-                onClick={() => setMood(item.key)}
+                onClick={() => selectMood(item.key)}
               >
                 <span>{item.face}</span>
                 {item.label}
               </button>
             ))}
+            <button
+              className="chip"
+              style={{
+                borderColor: customActive || showEmojiPicker ? CUSTOM_COLOR : "var(--rule)",
+                background: customActive || showEmojiPicker ? `color-mix(in oklch, ${CUSTOM_COLOR} 14%, var(--bg-elev))` : "var(--bg-sunk)",
+              }}
+              onClick={() => setShowEmojiPicker((prev) => !prev)}
+            >
+              <span>{customActive ? mood : "✨"}</span>
+              {customActive ? "Custom" : "Custom"}
+            </button>
           </div>
+
+          {showEmojiPicker && (
+            <div
+              style={{
+                marginTop: 10,
+                padding: 12,
+                background: "var(--bg-sunk)",
+                borderRadius: 10,
+                border: "1px solid var(--rule)",
+              }}
+            >
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 4, marginBottom: 10 }}>
+                {EMOJI_GRID.map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => selectMood(emoji)}
+                    style={{
+                      fontSize: 22,
+                      padding: 4,
+                      borderRadius: 6,
+                      border: mood === emoji ? "2px solid var(--accent)" : "2px solid transparent",
+                      background: mood === emoji ? "color-mix(in oklch, var(--accent) 12%, var(--bg-elev))" : "transparent",
+                      cursor: "pointer",
+                      lineHeight: 1,
+                    }}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input
+                  className="input"
+                  style={{ flex: 1, fontSize: 18 }}
+                  placeholder="Or paste / type any emoji…"
+                  value={customInput}
+                  maxLength={10}
+                  onChange={(e) => setCustomInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") applyCustomEmoji(); }}
+                />
+                <button className="btn btn-sm" onClick={applyCustomEmoji} disabled={!customInput.trim()}>
+                  Use
+                </button>
+              </div>
+            </div>
+          )}
+
           <label className="field-label" style={{ marginTop: 14 }}>Reflection</label>
           <textarea className="input" value={body} onChange={(event) => setBody(event.target.value)} rows={6} placeholder="Capture the lesson while it is fresh." />
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 14 }}>
-            <button className="btn" onClick={() => { setEditingId(null); setComposing(false); }}>Cancel</button>
+            <button className="btn" onClick={resetCompose}>Cancel</button>
             <button className="btn btn-primary" disabled={!title.trim()} onClick={save}>{editingId ? "Save changes" : "Save entry"}</button>
           </div>
         </section>
