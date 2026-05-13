@@ -77,6 +77,50 @@ The system SHALL allow deployment workflows to select environment and Azure regi
 - **WHEN** a new supported Azure region is introduced
 - **THEN** it is added through a new parameter file and allowed pipeline input rather than duplicating deployment logic
 
+### Requirement: Custom domain rollout is documented and parameterized
+The system SHALL document how an owned domain is connected to the Azure deployment and expose domain settings through deployment parameters.
+
+#### Scenario: Operator owns a domain
+- **WHEN** an operator prepares production domain rollout
+- **THEN** the documentation explains how to use an existing registrar or delegate the domain to Azure DNS
+
+#### Scenario: Domain is configured for an environment
+- **WHEN** a deployment target has a custom domain
+- **THEN** the target parameter file includes the canonical hostname and whether the hostname is apex or subdomain
+
+### Requirement: DNS records support Container Apps hostname verification
+The system SHALL document the DNS records required to verify and route custom domains to Azure Container Apps.
+
+#### Scenario: Subdomain is configured
+- **WHEN** a subdomain such as `www.example.com` is used
+- **THEN** DNS includes a CNAME to the generated Container Apps hostname and a TXT verification record for the subdomain
+
+#### Scenario: Apex domain is configured
+- **WHEN** an apex domain such as `example.com` is used
+- **THEN** DNS includes an A record to the Container Apps environment static IP and a TXT verification record for the apex domain
+
+### Requirement: Custom domains use managed TLS where possible
+The system SHALL bind custom domains to TLS certificates before treating the domain rollout as complete.
+
+#### Scenario: Managed certificate is issued
+- **WHEN** the DNS records satisfy Azure Container Apps managed certificate requirements
+- **THEN** the custom hostname is bound to a managed certificate and marked secured
+
+#### Scenario: Managed certificate cannot be issued
+- **WHEN** DNS, CAA, or routing constraints prevent managed certificate issuance
+- **THEN** the rollout documentation directs the operator to fix DNS/CAA records or use a certificate stored in Key Vault
+
+### Requirement: Application URLs match the custom domain
+The system SHALL configure application URL settings to match the public custom domain used by users.
+
+#### Scenario: Custom domain becomes canonical
+- **WHEN** a custom domain is promoted for an environment
+- **THEN** `AUTH_URL` and `NEXT_PUBLIC_APP_URL` are set to the exact HTTPS origin for that domain
+
+#### Scenario: Build-time public URL changes
+- **WHEN** `NEXT_PUBLIC_APP_URL` changes for a target deployment
+- **THEN** the deployment rebuilds or selects an image built with that public URL
+
 ### Requirement: Azure deployment exposes operational signals
 The system SHALL configure logging, metrics, and health validation for the Azure deployment.
 
