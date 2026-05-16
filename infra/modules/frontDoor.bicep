@@ -28,6 +28,13 @@ resource profile 'Microsoft.Cdn/profiles@2024-09-01' = {
 // ---------------------------------------------------------------------------
 // Front Door Endpoint — serves traffic on <name>.azurefd.net
 // No custom domain required for dev.
+//
+// NOTE: In some Azure subscriptions/regions, Front Door Standard endpoints
+// deployed via Bicep can get stuck with deploymentStatus: 'NotStarted'.
+// This is an Azure platform issue — the endpoint hostname resolves but
+// returns HTTP 404 because the route never reaches the edge POPs.
+// The deploy-local.sh script and CI/CD workflow detect this and fall back
+// to the App Service direct URL. See infra/README.md for details.
 // ---------------------------------------------------------------------------
 resource endpoint 'Microsoft.Cdn/profiles/afdEndpoints@2024-09-01' = {
   name: endpointName

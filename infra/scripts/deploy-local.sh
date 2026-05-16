@@ -136,18 +136,31 @@ ACTUAL_FD_HOSTNAME=$(az rest \
   --uri "https://management.azure.com/subscriptions/${SUB_ID}/resourceGroups/${RG_NAME}/providers/Microsoft.Cdn/profiles/${FD_PROFILE_NAME}/afdEndpoints/${FD_ENDPOINT_NAME}?api-version=2024-09-01" \
   --query "properties.hostName" -o tsv 2>/dev/null)
 
+FD_DEPLOYMENT_STATUS=""
 if [ -n "$ACTUAL_FD_HOSTNAME" ]; then
-  APP_PUBLIC_URL="https://${ACTUAL_FD_HOSTNAME}"
-else
-  # Fallback to Bicep output (may be wrong due to timing)
-  APP_PUBLIC_URL=$(echo "$DEPLOYMENT_OUTPUT" | grep -o '"frontDoorEndpoint": *"[^"]*"' | sed 's/.*: *"\([^"]*\)".*/\1/')
+  FD_DEPLOYMENT_STATUS=$(az rest \
+    --method GET \
+    --uri "https://management.azure.com/subscriptions/${SUB_ID}/resourceGroups/${RG_NAME}/providers/Microsoft.Cdn/profiles/${FD_PROFILE_NAME}/afdEndpoints/${FD_ENDPOINT_NAME}?api-version=2024-09-01" \
+    --query "properties.deploymentStatus" -o tsv 2>/dev/null)
 fi
 
-if [ -z "$APP_PUBLIC_URL" ] || [ "$APP_PUBLIC_URL" = "https://" ]; then
-  echo "WARNING: Could not extract Front Door URL. Using placeholder."
-  APP_PUBLIC_URL="https://placeholder.azurefd.net"
+APP_SERVICE_HOST=$(az webapp show --name "$APP_NAME" --resource-group "$RG_NAME" --query defaultHostName -o tsv)
+
+if [ -n "$ACTUAL_FD_HOSTNAME" ] && [ "$FD_DEPLOYMENT_STATUS" = "Succeeded" ]; then
+  APP_PUBLIC_URL="https://${ACTUAL_FD_HOSTNAME}"
+  echo "Front Door URL: $APP_PUBLIC_URL"
+else
+  # Fallback to App Service direct URL when Front Door is stuck
+  if [ -n "$ACTUAL_FD_HOSTNAME" ]; then
+    echo "WARNING: Front Door endpoint deploymentStatus is '${FD_DEPLOYMENT_STATUS}' (expected 'Succeeded')."
+    echo "         This is a known Azure platform issue. Falling back to App Service URL."
+    echo "         See infra/README.md § Front Door Endpoint Timing for details."
+  else
+    echo "WARNING: Could not extract Front Door hostname. Falling back to App Service URL."
+  fi
+  APP_PUBLIC_URL="https://${APP_SERVICE_HOST}"
+  echo "App Service URL: $APP_PUBLIC_URL"
 fi
-echo "Front Door URL: $APP_PUBLIC_URL"
 
 # ---------------------------------------------------------------------------
 # 2. Grant current user access to Key Vault (so we can write secrets)
@@ -281,13 +294,13 @@ for i in {1..12}; do
 done
 
 if curl -sf "${APP_PUBLIC_URL}/api/healthz" > /dev/null 2>&1; then
-  echo "✅ Health check passed on Front Door"
+  echo "✅ Health check passed on public URL"
 else
-  echo "⚠️  Front Door health check failed (may need a few more minutes to propagate)"
+  echo "⚠️  Public URL health check failed"
 fi
 
 echo ""
 echo "========================================"
 echo "Deployment complete!"
-echo "Front Door URL: $APP_PUBLIC_URL"
+echo "Public URL: $APP_PUBLIC_URL"
 echo "========================================"

@@ -226,10 +226,30 @@ The App Service managed identity needs `AcrPull` on ACR.  The Bicep template cre
 ### Key Vault Forbidden
 If the deployment script fails with `ForbiddenByRbac` when writing secrets, it means the current user's `Key Vault Secrets Officer` role assignment has not propagated yet.  The script now includes a 15-second wait after granting the role.  If it still fails, wait another 30 seconds and re-run the script — Bicep is idempotent and will skip already-created resources.
 
-### Front Door Hostname Timing Issue
+### Front Door Endpoint Timing
 Azure Front Door Standard auto-generates a unique hash suffix for every endpoint (e.g. `atomicly-dev-XXXX-fab7fhdwbsehg7af.z01.azurefd.net`).  This hash is created **after** the Bicep deployment finishes, so `endpoint.properties.hostName` evaluated inside Bicep returns the short base name (`atomicly-dev-XXXX.azurefd.net`) which does **not** resolve to your route.
 
 The deployment script and CI/CD workflow work around this by querying the Azure REST API **after** the Bicep deployment completes to get the real hostname.  If you see 404s from Front Door or redirects to the wrong domain, verify `AUTH_URL` and `NEXT_PUBLIC_APP_URL` in your App Service settings match the actual endpoint hostname shown in the Azure Portal.
+
+#### Endpoint Stuck in `NotStarted`
+In some Azure subscriptions/regions, Front Door Standard endpoints deployed via Bicep can get stuck with `deploymentStatus: NotStarted`.  The endpoint hostname resolves but returns HTTP 404 because the route was never pushed to the edge POPs.  This is an Azure platform issue, not a Bicep or app issue.
+
+**Symptoms:**
+- `az afd endpoint show` reports `deploymentStatus: NotStarted` indefinitely
+- Direct App Service access (`*.azurewebsites.net`) works perfectly
+- Front Door hostname returns HTTP 404
+
+**Workaround (automated in deploy script):**
+The `deploy-local.sh` script now checks `deploymentStatus` after Bicep deployment.  If it is not `Succeeded`, the script falls back to the App Service direct URL for `AUTH_URL` and `NEXT_PUBLIC_APP_URL` and prints a warning.  The app is fully functional without Front Door in dev.
+
+**Bicep fix attempt:**
+`infra/modules/frontDoor.bicep` adds `routeId` and `originId` tags to the endpoint resource.  This forces Bicep to update the endpoint **after** the route and origin are created, which can trigger the edge deployment that would otherwise be skipped.
+
+**Manual remediation:**
+If you need Front Door working and the endpoint is stuck:
+1. Delete the endpoint (or the entire profile) in the Azure Portal.
+2. Recreate it manually or re-run the deployment script.
+3. If it remains stuck, open an Azure support ticket — this is a platform-side propagation issue.
 
 ---
 

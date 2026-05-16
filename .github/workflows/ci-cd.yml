@@ -157,12 +157,27 @@ jobs:
             --method GET \
             --uri "https://management.azure.com/subscriptions/${SUB_ID}/resourceGroups/${RG}/providers/Microsoft.Cdn/profiles/${PROFILE}/afdEndpoints/${ENDPOINT}?api-version=2024-09-01" \
             --query "properties.hostName" -o tsv)
-          if [ -z "$ACTUAL_HOSTNAME" ]; then
-            echo "WARNING: Could not resolve Front Door hostname. Falling back to short name."
-            ACTUAL_HOSTNAME="atomicly-dev-${{ secrets.AZURE_UNIQUE_SUFFIX }}.azurefd.net"
+          DEPLOYMENT_STATUS=$(az rest \
+            --method GET \
+            --uri "https://management.azure.com/subscriptions/${SUB_ID}/resourceGroups/${RG}/providers/Microsoft.Cdn/profiles/${PROFILE}/afdEndpoints/${ENDPOINT}?api-version=2024-09-01" \
+            --query "properties.deploymentStatus" -o tsv)
+
+          APP_HOST=$(az webapp show --name "app-atomicly-dev-aue" --resource-group "$RG" --query defaultHostName -o tsv)
+
+          if [ -n "$ACTUAL_HOSTNAME" ] && [ "$DEPLOYMENT_STATUS" = "Succeeded" ]; then
+            echo "hostname=$ACTUAL_HOSTNAME" >> "$GITHUB_OUTPUT"
+            echo "public_url=https://${ACTUAL_HOSTNAME}" >> "$GITHUB_OUTPUT"
+            echo "Front Door hostname: $ACTUAL_HOSTNAME"
+          else
+            if [ -n "$ACTUAL_HOSTNAME" ]; then
+              echo "WARNING: Front Door endpoint deploymentStatus is '${DEPLOYMENT_STATUS}'. Falling back to App Service URL."
+            else
+              echo "WARNING: Could not resolve Front Door hostname. Falling back to App Service URL."
+            fi
+            echo "hostname=$APP_HOST" >> "$GITHUB_OUTPUT"
+            echo "public_url=https://${APP_HOST}" >> "$GITHUB_OUTPUT"
+            echo "App Service URL: https://${APP_HOST}"
           fi
-          echo "hostname=$ACTUAL_HOSTNAME" >> "$GITHUB_OUTPUT"
-          echo "Front Door hostname: $ACTUAL_HOSTNAME"
 
       - name: Update Key Vault secrets
         run: |
@@ -241,7 +256,7 @@ jobs:
         run: |
           APP_NAME="app-atomicly-dev-aue"
           RG="rg-atomicly-dev-aue-${{ secrets.AZURE_UNIQUE_SUFFIX }}"
-          FD_URL="https://${{ steps.fd.outputs.hostname }}"
+          PUBLIC_URL="https://${{ steps.fd.outputs.hostname }}"
           HOSTNAME=$(az webapp show --name "$APP_NAME" --resource-group "$RG" --query defaultHostName -o tsv)
           echo "Testing App Service: https://$HOSTNAME/api/healthz"
           for i in {1..12}; do
@@ -252,9 +267,9 @@ jobs:
             echo "  Waiting for app to be healthy ..."
             sleep 10
           done
-          echo "Testing Front Door: $FD_URL/api/healthz"
-          if curl -sf "$FD_URL/api/healthz" > /dev/null 2>&1; then
-            echo "✅ Front Door health check passed"
+          echo "Testing public URL: $PUBLIC_URL/api/healthz"
+          if curl -sf "$PUBLIC_URL/api/healthz" > /dev/null 2>&1; then
+            echo "✅ Public URL health check passed"
           else
-            echo "⚠️  Front Door health check failed (may need more time to propagate)"
+            echo "⚠️  Public URL health check failed"
           fi
