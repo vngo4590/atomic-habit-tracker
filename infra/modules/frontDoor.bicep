@@ -42,22 +42,7 @@ resource wafPolicy 'Microsoft.Network/frontDoorWebApplicationFirewallPolicies@20
       requestBodyCheck: 'Enabled'
     }
     managedRules: {
-      managedRuleSets: [
-        {
-          ruleSetType: 'Microsoft_DefaultRuleSet'
-          ruleSetVersion: '2.1'
-          ruleSetAction: 'Block'
-          exclusions: []
-          ruleGroupOverrides: []
-        }
-        {
-          ruleSetType: 'Microsoft_BotManagerRuleSet'
-          ruleSetVersion: '1.1'
-          ruleSetAction: 'Block'
-          exclusions: []
-          ruleGroupOverrides: []
-        }
-      ]
+      managedRuleSets: []
     }
   }
 }
