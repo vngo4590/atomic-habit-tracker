@@ -64,8 +64,6 @@ resource appServiceDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01
   name: 'appServiceDiagnostics'
   scope: webApp
   properties: {
-    workspaceId: ''
-    applicationInsightsDestinationType: 'AzureDiagnostics'
     logs: [
       {
         category: 'AppServiceHTTPLogs'
@@ -97,4 +95,3 @@ output id string = webApp.id
 output name string = webApp.name
 output principalId string = webApp.identity.principalId
 output defaultHostName string = webApp.properties.defaultHostName
-output scmHostName string = webApp.properties.scmSiteAlsoStopped

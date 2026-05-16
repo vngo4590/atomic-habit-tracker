@@ -38,12 +38,6 @@ param postgresAdminUsername string = 'psqladmin'
 @secure()
 param postgresAdminPassword string
 
-@description('Container CPU cores.')
-param containerCpu string = '0.5'
-
-@description('Container memory in Gibibytes (e.g. 1 or 1.5).')
-param containerMemory string = '1'
-
 @description('Docker image tag to deploy (e.g. dev-latest or git SHA).')
 param imageTag string = 'dev-latest'
 
