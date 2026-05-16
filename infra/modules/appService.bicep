@@ -53,7 +53,11 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
       detailedErrorLoggingEnabled: true
       requestTracingEnabled: true
       numberOfWorkers: 1
-      http20Enabled: true
+      // HTTP/2 is disabled because Azure Front Door Standard has protocol
+      // compatibility issues when communicating with Linux container origins
+      // over HTTP/2.  Front Door still serves HTTP/2 to clients; this only
+      // affects the origin-to-Front-Door hop which falls back to HTTP/1.1.
+      http20Enabled: false
     }
   }
 }
