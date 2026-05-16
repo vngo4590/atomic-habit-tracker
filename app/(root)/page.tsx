@@ -11,6 +11,7 @@ import { MoodCheckSheet } from "@/components/MoodCheckSheet";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { useStoreContext } from "@/components/StoreProvider";
 import { dateAdd, fmt, todayKey } from "@/lib/helpers";
+import { useMotionReduced } from "@/lib/hooks/useMotionReduced";
 import type { Habit } from "@/lib/types";
 
 const TIMES = ["Morning", "Afternoon", "Evening"] as const;
@@ -18,6 +19,7 @@ const TIMES = ["Morning", "Afternoon", "Evening"] as const;
 export default function TodayPage() {
   const router = useRouter();
   const store = useStoreContext();
+  const reduced = useMotionReduced();
   const { habits, toggleHabit, logCheckIn, streak } = store;
   const today = todayKey();
   const [moodHabit, setMoodHabit] = useState<Habit | null>(null);
@@ -94,7 +96,7 @@ export default function TodayPage() {
         <div style={{ display: "flex", gap: 8 }}>
           <motion.button
             className="btn btn-sm"
-            whileHover={{ y: -1 }}
+            whileHover={reduced ? undefined : { y: -1 }}
             whileTap={{ scale: 0.97 }}
           >
             <IconSearch style={{ width: 13, height: 13 }} />
@@ -103,7 +105,7 @@ export default function TodayPage() {
           <motion.button
             className="btn btn-sm btn-primary"
             onClick={() => router.push("/habits/new")}
-            whileHover={{ y: -1 }}
+            whileHover={reduced ? undefined : { y: -1 }}
             whileTap={{ scale: 0.97 }}
           >
             <IconPlus style={{ width: 13, height: 13 }} />
@@ -121,7 +123,7 @@ export default function TodayPage() {
         <motion.div
           className="card card-pad"
           style={{ display: "flex", gap: 20, alignItems: "center" }}
-          whileHover={{ y: -2, boxShadow: "var(--shadow-md)" }}
+          whileHover={reduced ? undefined : { y: -2, boxShadow: "var(--shadow-md)" }}
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
         >
           <CompletionRing pct={pct} />
@@ -143,7 +145,7 @@ export default function TodayPage() {
 
         <motion.div
           className="card card-pad"
-          whileHover={{ y: -2, boxShadow: "var(--shadow-md)" }}
+          whileHover={reduced ? undefined : { y: -2, boxShadow: "var(--shadow-md)" }}
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
         >
           <div className="eyebrow">Longest active streak</div>
@@ -162,7 +164,7 @@ export default function TodayPage() {
 
         <motion.div
           className="card card-pad"
-          whileHover={{ y: -2, boxShadow: "var(--shadow-md)" }}
+          whileHover={reduced ? undefined : { y: -2, boxShadow: "var(--shadow-md)" }}
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
         >
           <div className="eyebrow">Last 14 days</div>
@@ -323,7 +325,7 @@ export default function TodayPage() {
           <motion.button
             className="btn btn-primary"
             onClick={() => router.push("/habits/new")}
-            whileHover={{ y: -1 }}
+            whileHover={reduced ? undefined : { y: -1 }}
             whileTap={{ scale: 0.97 }}
           >
             <IconPlus style={{ width: 13, height: 13 }} />
