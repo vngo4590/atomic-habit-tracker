@@ -13,25 +13,11 @@ resource acr 'Microsoft.ContainerRegistry/registries@2023-11-01-preview' = {
   name: acrName
   location: location
   sku: {
-    name: 'Standard'
+    name: 'Basic'
   }
   properties: {
     adminUserEnabled: false
     anonymousPullEnabled: false
-    policies: {
-      trustPolicy: {
-        status: 'disabled'
-        type: 'Notary'
-      }
-      retentionPolicy: {
-        status: 'enabled'
-        days: 7
-      }
-      softDeletePolicy: {
-        status: 'enabled'
-        retentionDays: 7
-      }
-    }
   }
 }
 
