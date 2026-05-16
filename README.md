@@ -2,7 +2,7 @@
 
 Atomicly is a habit tracking app inspired by Atomic Habits. It helps users design small habits, check them in daily, reflect on patterns, learn through a 36-lesson curriculum, and track identity votes over time.
 
-The app is implemented with Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, Prisma, Auth.js, PostgreSQL, and the App Router. Authenticated habit, reflection, lesson, identity, and preference data is loaded from the backend and written through server actions or `/api/v1` route handlers.
+The app is implemented with Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, Framer Motion, Prisma, Auth.js, PostgreSQL, and the App Router. Authenticated habit, reflection, lesson, identity, and preference data is loaded from the backend and written through server actions or `/api/v1` route handlers.
 
 ## Features
 

@@ -52,6 +52,16 @@ This project uses Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, and the Ap
 - Default to ASCII in new files unless the existing file or UI text needs otherwise.
 - Avoid broad refactors while porting planned OpenSpec phases.
 
+## Animation Conventions
+
+- **Framer Motion** is the primary animation library. Prefer it for entrance animations, page transitions, gesture interactions, and staggered lists.
+- **CSS transitions/keyframes** are still used for simple hover states and always-running ambient animations (e.g., `principle-float`).
+- Use `components/motion/` primitives for consistency: `FadeIn`, `StaggerContainer`, `HoverLift`, `ScaleOnTap`, `PageTransition`, `AnimatedNumber`.
+- Shared animation configs live in `lib/animations.ts` — spring presets, easing curves, durations, and variants.
+- Prefer spring physics (`type: "spring"`) for tactile interactions (buttons, cards, toggles).
+- Use `whileInView` for scroll-triggered reveals; `AnimatePresence` for mount/unmount transitions.
+- Keep animations performant: animate `transform` and `opacity` only where possible. Avoid animating `width`, `height`, or `box-shadow` on large lists.
+
 ## Validation
 
 - Run focused tests after changing helpers, store logic, or components with tests:

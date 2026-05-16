@@ -1,8 +1,10 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 
 import { IconClose } from "@/components/Icons";
+import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { useStoreContext } from "@/components/StoreProvider";
 
 export default function IdentityPage() {
@@ -44,7 +46,7 @@ export default function IdentityPage() {
   };
 
   return (
-    <div className="fade-up">
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}>
       <div className="page-header">
         <div>
           <div className="eyebrow">Become</div>
@@ -108,12 +110,14 @@ export default function IdentityPage() {
             </button>
           )}
           <div className="eyebrow" style={{ marginTop: 22 }}>Core values</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+          <StaggerContainer style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }} staggerDelay={0.03}>
             {identity.values.map((value) => (
-              <button key={value} className="chip active" aria-label={`Remove core value ${value}`} onClick={() => removeValue(value)}>
-                <span>{value}</span>
-                <IconClose style={{ width: 11, height: 11 }} />
-              </button>
+              <StaggerItem key={value}>
+                <motion.button className="chip active" aria-label={`Remove core value ${value}`} onClick={() => removeValue(value)} whileTap={{ scale: 0.95 }}>
+                  <span>{value}</span>
+                  <IconClose style={{ width: 11, height: 11 }} />
+                </motion.button>
+              </StaggerItem>
             ))}
             <input className="input" value={newValue} onChange={(event) => setNewValue(event.target.value)} placeholder="+ Add value" style={{ width: 140, height: 32, borderStyle: "dashed" }} onKeyDown={(event) => {
               if (event.key === "Enter") {
@@ -121,8 +125,8 @@ export default function IdentityPage() {
                 addValue();
               }
             }} />
-            <button className="chip" onClick={addValue}>+ Add</button>
-          </div>
+            <motion.button className="chip" onClick={addValue} whileTap={{ scale: 0.95 }}>+ Add</motion.button>
+          </StaggerContainer>
         </section>
 
         <section className="card card-pad">
@@ -133,21 +137,28 @@ export default function IdentityPage() {
             </div>
             <div className="mono muted" style={{ fontSize: 11 }}>{total} TOTAL</div>
           </div>
-          <div style={{ display: "grid", gap: 16, marginTop: 18 }}>
+          <StaggerContainer style={{ display: "grid", gap: 16, marginTop: 18 }} staggerDelay={0.05}>
             {ledger.map(([label, votes]) => (
-              <div key={label}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 14 }}>
-                  <div style={{ fontFamily: "var(--serif)", fontStyle: "italic", fontSize: 18 }}>I am {label}</div>
-                  <div className="mono" style={{ fontSize: 12 }}>{votes}</div>
-                </div>
-                <div style={{ height: 7, borderRadius: 99, overflow: "hidden", background: "var(--bg-sunk)", marginTop: 7 }}>
-                  <div style={{ width: `${Math.round((votes / max) * 100)}%`, height: "100%", background: "var(--accent)" }} />
-                </div>
-              </div>
+              <StaggerItem key={label}>
+                <motion.div whileHover={{ x: 2 }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 14 }}>
+                    <div style={{ fontFamily: "var(--serif)", fontStyle: "italic", fontSize: 18 }}>I am {label}</div>
+                    <div className="mono" style={{ fontSize: 12 }}>{votes}</div>
+                  </div>
+                  <div style={{ height: 7, borderRadius: 99, overflow: "hidden", background: "var(--bg-sunk)", marginTop: 7 }}>
+                    <motion.div
+                      style={{ height: "100%", background: "var(--accent)" }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.round((votes / max) * 100)}%` }}
+                      transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+                    />
+                  </div>
+                </motion.div>
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerContainer>
         </section>
       </div>
-    </div>
+    </motion.div>
   );
 }

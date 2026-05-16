@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
 import { IconMoon, IconSun } from "@/components/Icons";
@@ -69,7 +70,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="fade-up">
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}>
       <div className="page-header">
         <div>
           <div className="eyebrow">Become</div>
@@ -86,17 +87,17 @@ export default function SettingsPage() {
         <SettingGroup title="Appearance">
           <SettingRow label="Theme" value={theme}>
             <div style={{ display: "flex", gap: 8 }}>
-              <button className={`btn btn-sm ${theme === "light" ? "btn-primary" : ""}`} onClick={() => setNextTheme("light")}><IconSun style={{ width: 13, height: 13 }} /> Light</button>
-              <button className={`btn btn-sm ${theme === "dark" ? "btn-primary" : ""}`} onClick={() => setNextTheme("dark")}><IconMoon style={{ width: 13, height: 13 }} /> Dark</button>
+              <motion.button className={`btn btn-sm ${theme === "light" ? "btn-primary" : ""}`} onClick={() => setNextTheme("light")} whileTap={{ scale: 0.97 }}><IconSun style={{ width: 13, height: 13 }} /> Light</motion.button>
+              <motion.button className={`btn btn-sm ${theme === "dark" ? "btn-primary" : ""}`} onClick={() => setNextTheme("dark")} whileTap={{ scale: 0.97 }}><IconMoon style={{ width: 13, height: 13 }} /> Dark</motion.button>
             </div>
           </SettingRow>
           <SettingRow label="Accent" value={ACCENTS.find((item) => item.hue === accent)?.name ?? "Custom"}>
             <div style={{ display: "flex", gap: 8 }}>
               {ACCENTS.map((item) => (
-                <button key={item.hue} className={`btn btn-sm ${accent === item.hue ? "btn-primary" : ""}`} onClick={() => setNextAccent(item.hue)}>
+                <motion.button key={item.hue} className={`btn btn-sm ${accent === item.hue ? "btn-primary" : ""}`} onClick={() => setNextAccent(item.hue)} whileTap={{ scale: 0.97 }}>
                   <span style={{ width: 10, height: 10, borderRadius: 99, background: `oklch(62% 0.13 ${item.hue})`, display: "inline-block" }} />
                   {item.name}
-                </button>
+                </motion.button>
               ))}
             </div>
           </SettingRow>
@@ -109,8 +110,9 @@ export default function SettingsPage() {
             accountability: "Accountability contract alerts",
           }).map(([key, label]) => (
             <SettingRow key={key} label={label} value={notifications[key as keyof typeof notifications] ? "On" : "Off"}>
-              <button
+              <motion.button
                 className={`chip ${notifications[key as keyof typeof notifications] ? "active" : ""}`}
+                whileTap={{ scale: 0.97 }}
                 onClick={() => setNotifications((current) => {
                   const next = { ...current, [key]: !current[key as keyof typeof notifications] };
                   store.setPreferences({
@@ -122,21 +124,21 @@ export default function SettingsPage() {
                 })}
               >
                 {notifications[key as keyof typeof notifications] ? "On" : "Off"}
-              </button>
+              </motion.button>
             </SettingRow>
           ))}
         </SettingGroup>
 
         <SettingGroup title="Data">
           <SettingRow label="Export" value={`${store.habits.length} habits`}>
-            <button className="btn btn-sm" onClick={exportJson}>Download JSON</button>
+            <motion.button className="btn btn-sm" onClick={exportJson} whileTap={{ scale: 0.97 }}>Download JSON</motion.button>
           </SettingRow>
           <SettingRow label="Reset" value="Clear browser data">
-            <button className="btn btn-sm" onClick={resetData}>Reset...</button>
+            <motion.button className="btn btn-sm" onClick={resetData} whileTap={{ scale: 0.97 }}>Reset...</motion.button>
           </SettingRow>
         </SettingGroup>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

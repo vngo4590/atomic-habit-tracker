@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import type { CSSProperties } from "react";
 import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -63,7 +64,7 @@ function PrincipleIntro({
         <div className="eyebrow">{eyebrow}</div>
         <h3 className="h3">{title}</h3>
         <p>{body}</p>
-        <button className="btn btn-primary btn-sm" onClick={onStart}>{action}</button>
+        <motion.button className="btn btn-primary btn-sm" onClick={onStart} whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>{action}</motion.button>
       </div>
       <div className="principle-bubbles" aria-hidden="true">
         {bubbles.map((bubble, index) => (
@@ -103,12 +104,12 @@ export default function HabitDetailPage() {
 
   if (!habit || !stats) {
     return (
-      <div className="fade-up">
-        <button className="btn btn-ghost btn-sm btn-back" onClick={() => router.push("/habits")}>
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}>
+        <motion.button className="btn btn-ghost btn-sm btn-back" onClick={() => router.push("/habits")} whileTap={{ scale: 0.97 }}>
           <IconBack /> All habits
-        </button>
+        </motion.button>
         <div className="card card-pad" style={{ marginTop: 24 }}>Habit not found.</div>
-      </div>
+      </motion.div>
     );
   }
 
@@ -141,10 +142,10 @@ export default function HabitDetailPage() {
   };
 
   return (
-    <div className="fade-up">
-      <button className="btn btn-ghost btn-sm btn-back" onClick={() => router.push("/habits")} style={{ marginBottom: 18 }}>
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}>
+      <motion.button className="btn btn-ghost btn-sm btn-back" onClick={() => router.push("/habits")} style={{ marginBottom: 18 }} whileTap={{ scale: 0.97 }}>
         <IconBack /> All habits
-      </button>
+      </motion.button>
 
       <div className="page-header" style={{ alignItems: "flex-start", flexDirection: "column", gap: 18 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%" }}>
@@ -156,7 +157,7 @@ export default function HabitDetailPage() {
             </p>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-            <button
+            <motion.button
               className={`btn btn-lg ${doneToday ? "btn-accent" : "btn-primary"}`}
               onClick={() => {
                 if (!doneToday) {
@@ -164,20 +165,22 @@ export default function HabitDetailPage() {
                 }
                 setShowMood(true);
               }}
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.97 }}
             >
               {doneToday ? <><IconCheck style={{ width: 14, height: 14 }} /> Done today · edit</> : "Mark done"}
-            </button>
+            </motion.button>
             {confirmDelete ? (
               <>
-                <button className="btn btn-lg btn-danger" onClick={deleteHabit}>
+                <motion.button className="btn btn-lg btn-danger" onClick={deleteHabit} whileTap={{ scale: 0.97 }}>
                   <IconTrash style={{ width: 14, height: 14 }} /> Confirm delete
-                </button>
-                <button className="btn btn-lg btn-ghost" onClick={() => setConfirmDelete(false)}>Cancel</button>
+                </motion.button>
+                <motion.button className="btn btn-lg btn-ghost" onClick={() => setConfirmDelete(false)} whileTap={{ scale: 0.97 }}>Cancel</motion.button>
               </>
             ) : (
-              <button className="btn btn-lg btn-ghost btn-danger-ghost" onClick={() => setConfirmDelete(true)}>
+              <motion.button className="btn btn-lg btn-ghost btn-danger-ghost" onClick={() => setConfirmDelete(true)} whileTap={{ scale: 0.97 }}>
                 <IconTrash style={{ width: 14, height: 14 }} /> Delete habit
-              </button>
+              </motion.button>
             )}
           </div>
         </div>
@@ -192,9 +195,9 @@ export default function HabitDetailPage() {
 
       <div className="tabs">
         {TABS.map((item) => (
-          <button key={item} className={`tab ${tab === item ? "active" : ""}`} onClick={() => setTab(item)}>
+          <motion.button key={item} className={`tab ${tab === item ? "active" : ""}`} onClick={() => setTab(item)} whileTap={{ scale: 0.97 }}>
             {item[0].toUpperCase() + item.slice(1)}
-          </button>
+          </motion.button>
         ))}
       </div>
 
@@ -331,6 +334,6 @@ export default function HabitDetailPage() {
       {showMood && (
         <MoodCheckSheet habit={habit} dateKey={today} onClose={() => setShowMood(false)} onSave={(payload) => store.logCheckIn(habit.id, payload)} />
       )}
-    </div>
+    </motion.div>
   );
 }

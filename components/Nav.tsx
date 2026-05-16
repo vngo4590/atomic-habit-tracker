@@ -1,10 +1,10 @@
 "use client";
 
+import { motion } from "framer-motion";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-import { logoutAction } from "@/lib/actions/auth";
 import {
   IconBook,
   IconChart,
@@ -18,6 +18,8 @@ import {
   IconReview,
 } from "@/components/Icons";
 import { useStoreContext } from "@/components/StoreProvider";
+import { logoutAction } from "@/lib/actions/auth";
+import { navItemVariants, sidebarStagger } from "@/lib/animations";
 
 const NAV = [
   { href: "/", label: "Today", icon: IconToday, key: "T", group: "Practice" },
@@ -59,10 +61,13 @@ export function Nav({ user }: NavProps) {
   const router = useRouter();
   const { habits } = useStoreContext();
   const totalVotes = habits.reduce((sum, habit) => sum + Object.keys(habit.history).length, 0);
-  const groups = NAV.reduce<Record<string, typeof NAV[number][]>>((acc, item) => {
-    acc[item.group] = [...(acc[item.group] ?? []), item];
-    return acc;
-  }, {});
+  const groups = NAV.reduce<Record<string, typeof NAV[number][]>>(
+    (acc, item) => {
+      acc[item.group] = [...(acc[item.group] ?? []), item];
+      return acc;
+    },
+    {}
+  );
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -83,46 +88,75 @@ export function Nav({ user }: NavProps) {
 
   return (
     <aside className="sidebar">
-      <div className="brand">
-        <div className="brand-mark" />
+      <motion.div
+        className="brand"
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+      >
+        <motion.div
+          className="brand-mark"
+          whileHover={{ scale: 1.1, rotate: 15 }}
+          transition={{ type: "spring", stiffness: 300, damping: 15 }}
+        />
         <div>
           <div className="brand-name">Atomicly</div>
           <div className="brand-sub">Habit Practice</div>
         </div>
-      </div>
+      </motion.div>
 
       {(["Practice", "Reflect", "Learn", "Become"] as const).map((group) => (
         <div key={group}>
           <div className="nav-group">{group}</div>
-          {groups[group]?.map((item) => {
-            const Icon = item.icon;
-            const active =
-              pathname === item.href ||
-              (item.href === "/habits" && pathname.startsWith("/habits/") && pathname !== "/habits/new");
+          <motion.div variants={sidebarStagger} initial="hidden" animate="visible">
+            {groups[group]?.map((item) => {
+              const Icon = item.icon;
+              const active =
+                pathname === item.href ||
+                (item.href === "/habits" && pathname.startsWith("/habits/") && pathname !== "/habits/new");
 
-            return (
-              <Link key={item.href} className={`nav-item ${active ? "active" : ""}`} href={item.href}>
-                <Icon className="nav-icon" />
-                <span>{item.label}</span>
-                <span className="ni-key">{item.key}</span>
-              </Link>
-            );
-          })}
+              return (
+                <motion.div key={item.href} variants={navItemVariants}>
+                  <Link className={`nav-item ${active ? "active" : ""}`} href={item.href}>
+                    <Icon className="nav-icon" />
+                    <span>{item.label}</span>
+                    <span className="ni-key">{item.key}</span>
+                  </Link>
+                </motion.div>
+              );
+            })}
+          </motion.div>
         </div>
       ))}
 
-      <div className="sidebar-foot">
-        <div className="avatar">{initials(user.name, user.email)}</div>
+      <motion.div
+        className="sidebar-foot"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.4, duration: 0.3 }}
+      >
+        <motion.div
+          className="avatar"
+          whileHover={{ scale: 1.1 }}
+          transition={{ type: "spring", stiffness: 400, damping: 15 }}
+        >
+          {initials(user.name, user.email)}
+        </motion.div>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div className="who-name">{user.name ?? user.email ?? "Atomicly user"}</div>
           <div className="who-id">{totalVotes} votes cast</div>
         </div>
         <form action={logoutAction}>
-          <button className="btn btn-sm" type="submit" title="Sign out">
+          <motion.button
+            className="btn btn-sm"
+            type="submit"
+            title="Sign out"
+            whileTap={{ scale: 0.95 }}
+          >
             Out
-          </button>
+          </motion.button>
         </form>
-      </div>
+      </motion.div>
     </aside>
   );
 }
