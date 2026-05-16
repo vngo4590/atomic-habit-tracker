@@ -3,7 +3,6 @@
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 
-import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { LineChart } from "@/components/LineChart";
 import { useStoreContext } from "@/components/StoreProvider";

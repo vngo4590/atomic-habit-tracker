@@ -3,7 +3,6 @@
 import { motion } from "framer-motion";
 import type { ReactNode } from "react";
 
-import { fadeUpVariants } from "@/lib/animations";
 
 interface FadeInProps {
   children: ReactNode;
