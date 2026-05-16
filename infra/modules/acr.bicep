@@ -18,9 +18,6 @@ resource acr 'Microsoft.ContainerRegistry/registries@2023-11-01-preview' = {
   properties: {
     adminUserEnabled: false
     anonymousPullEnabled: false
-    networkRuleSet: {
-      defaultAction: 'Allow'
-    }
     policies: {
       trustPolicy: {
         status: 'disabled'
