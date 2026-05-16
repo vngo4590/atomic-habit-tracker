@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Reference UI is a standalone HTML/JSX implementation, not part of the Next.js app
+    "reference_ui/**",
   ]),
 ]);
 
