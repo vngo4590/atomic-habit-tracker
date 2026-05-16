@@ -43,6 +43,7 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
     clientAffinityEnabled: false
     siteConfig: {
       linuxFxVersion: 'DOCKER|${acrLoginServer}/atomicly:${imageTag}'
+      acrUseManagedIdentityCreds: true
       alwaysOn: false
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'

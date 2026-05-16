@@ -11,13 +11,14 @@
 #   1. Generates secure secrets if they don't exist locally
 #   2. Pre-creates ACR and builds/pushes images BEFORE Bicep deploy
 #   3. Deploys the full Bicep stack
-#   4. Seeds Key Vault with runtime secrets
-#   5. Grants App Service managed identity access to ACR and Key Vault
-#   6. Configures App Service app settings (with Key Vault references)
-#   7. Temporarily adds local IP to PostgreSQL firewall
-#   8. Runs Prisma migrations from local machine
-#   9. Removes local IP from PostgreSQL firewall
-#  10. Smoke-tests the deployment
+#   4. Grants current user Key Vault Secrets Officer role
+#   5. Seeds Key Vault with runtime secrets
+#   6. Grants App Service managed identity access to ACR and Key Vault
+#   7. Configures App Service app settings (with Key Vault references)
+#   8. Temporarily adds local IP to PostgreSQL firewall
+#   9. Runs Prisma migrations from local machine
+#  10. Removes local IP from PostgreSQL firewall
+#  11. Smoke-tests the deployment
 # ---------------------------------------------------------------------------
 set -euo pipefail
 
@@ -40,7 +41,6 @@ ACR_NAME="cr${PROJECT_NAME}${ENVIRONMENT}${UNIQUE_SUFFIX}"
 KV_NAME="kv-${PROJECT_NAME}${ENVIRONMENT}${UNIQUE_SUFFIX}"
 APP_NAME="app-${PROJECT_NAME}-${ENVIRONMENT}-aue"
 POSTGRES_NAME="psql-${PROJECT_NAME}-${ENVIRONMENT}-aue-${UNIQUE_SUFFIX}"
-FD_ENDPOINT="${PROJECT_NAME}-${ENVIRONMENT}-${UNIQUE_SUFFIX}"
 
 # Secret files (gitignored)
 SECRETS_DIR="$PROJECT_ROOT/.secrets"
@@ -78,7 +78,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # 0. Ensure resource group and ACR exist so we can build images early
 # ---------------------------------------------------------------------------
-echo "[0/10] Ensuring ACR exists for image build ..."
+echo "[0/11] Ensuring ACR exists for image build ..."
 az group create --name "$RG_NAME" --location "$LOCATION" --output none
 az acr create \
   --resource-group "$RG_NAME" \
@@ -90,14 +90,13 @@ az acr create \
 
 az acr login --name "$ACR_NAME"
 ACR_LOGIN_SERVER="${ACR_NAME}.azurecr.io"
-APP_PUBLIC_URL="https://${FD_ENDPOINT}.azurefd.net"
 
 cd "$PROJECT_ROOT"
 
 docker build \
   --target runner \
   --tag "${ACR_LOGIN_SERVER}/atomicly:dev-latest" \
-  --build-arg NEXT_PUBLIC_APP_URL="$APP_PUBLIC_URL" \
+  --build-arg NEXT_PUBLIC_APP_URL="https://placeholder.azurefd.net" \
   --build-arg DEPLOYMENT_VERSION="dev-latest" \
   .
 
@@ -113,8 +112,8 @@ docker push "${ACR_LOGIN_SERVER}/atomicly-migrator:dev-latest"
 # 1. Deploy Bicep infrastructure (image already exists in ACR)
 # ---------------------------------------------------------------------------
 echo ""
-echo "[1/10] Deploying Bicep infrastructure ..."
-az deployment sub create \
+echo "[1/11] Deploying Bicep infrastructure ..."
+DEPLOYMENT_OUTPUT=$(az deployment sub create \
   --name "atomicly-${ENVIRONMENT}-local-$(date +%s)" \
   --location "$LOCATION" \
   --template-file "$PROJECT_ROOT/infra/main.bicep" \
@@ -123,43 +122,75 @@ az deployment sub create \
     environment="$ENVIRONMENT" \
     uniqueSuffix="$UNIQUE_SUFFIX" \
     postgresAdminPassword="$POSTGRES_PASSWORD" \
-    imageTag="dev-latest"
+    imageTag="dev-latest" \
+  --query properties.outputs)
+
+APP_PUBLIC_URL=$(echo "$DEPLOYMENT_OUTPUT" | grep -o '"frontDoorEndpoint": *"[^"]*"' | sed 's/.*: *"\([^"]*\)".*/\1/')
+if [ -z "$APP_PUBLIC_URL" ]; then
+  echo "WARNING: Could not extract Front Door URL from deployment output. Using placeholder."
+  APP_PUBLIC_URL="https://placeholder.azurefd.net"
+fi
+echo "Front Door URL: $APP_PUBLIC_URL"
 
 # ---------------------------------------------------------------------------
-# 2. Seed Key Vault secrets
+# 2. Grant current user access to Key Vault (so we can write secrets)
 # ---------------------------------------------------------------------------
 echo ""
-echo "[2/10] Seeding Key Vault secrets ..."
+echo "[2/11] Granting current user Key Vault Secrets Officer role ..."
+USER_OID=$(az ad signed-in-user show --query id -o tsv)
+KV_ID=$(az keyvault show --name "$KV_NAME" --resource-group "$RG_NAME" --query id -o tsv)
+KV_ROLE_DEF_ID=$(az role definition list --name "Key Vault Secrets Officer" --query "[0].id" -o tsv)
+ASSIGNMENT_ID=$(powershell -Command "[guid]::NewGuid().ToString()")
+
+az rest \
+  --method PUT \
+  --uri "https://management.azure.com${KV_ID}/providers/Microsoft.Authorization/roleAssignments/${ASSIGNMENT_ID}?api-version=2022-04-01" \
+  --body "{
+    \"properties\": {
+      \"roleDefinitionId\": \"${KV_ROLE_DEF_ID}\",
+      \"principalId\": \"${USER_OID}\",
+      \"principalType\": \"User\"
+    }
+  }" \
+  --output none 2>/dev/null || true
+
+sleep 15
+
+# ---------------------------------------------------------------------------
+# 3. Seed Key Vault secrets
+# ---------------------------------------------------------------------------
+echo ""
+echo "[3/11] Seeding Key Vault secrets ..."
 DB_URL="postgresql://psqladmin:${POSTGRES_PASSWORD}@${POSTGRES_NAME}.postgres.database.azure.com:5432/atomicly?schema=public&sslmode=require"
 az keyvault secret set --vault-name "$KV_NAME" --name database-url --value "$DB_URL" --output none
 az keyvault secret set --vault-name "$KV_NAME" --name auth-secret --value "$AUTH_SECRET" --output none
 
 # ---------------------------------------------------------------------------
-# 3. Grant App Service access to ACR and Key Vault
+# 4. Grant App Service access to ACR and Key Vault
 # ---------------------------------------------------------------------------
 echo ""
-echo "[3/10] Granting App Service access to ACR and Key Vault ..."
+echo "[4/11] Granting App Service access to ACR and Key Vault ..."
 APP_PRINCIPAL_ID=$(az webapp show --name "$APP_NAME" --resource-group "$RG_NAME" --query identity.principalId -o tsv)
 
-# AcrPull
 az role assignment create \
-  --assignee "$APP_PRINCIPAL_ID" \
+  --assignee-object-id "$APP_PRINCIPAL_ID" \
+  --assignee-principal-type ServicePrincipal \
   --role AcrPull \
   --scope $(az acr show --name "$ACR_NAME" --resource-group "$RG_NAME" --query id -o tsv) \
   --output none 2>/dev/null || true
 
-# Key Vault Secrets User
 az role assignment create \
-  --assignee "$APP_PRINCIPAL_ID" \
+  --assignee-object-id "$APP_PRINCIPAL_ID" \
+  --assignee-principal-type ServicePrincipal \
   --role "Key Vault Secrets User" \
   --scope $(az keyvault show --name "$KV_NAME" --resource-group "$RG_NAME" --query id -o tsv) \
   --output none 2>/dev/null || true
 
 # ---------------------------------------------------------------------------
-# 4. Update App Service app settings with Key Vault references
+# 5. Update App Service app settings with Key Vault references
 # ---------------------------------------------------------------------------
 echo ""
-echo "[4/10] Updating App Service app settings ..."
+echo "[5/11] Updating App Service app settings ..."
 KV_URL="https://${KV_NAME}.vault.azure.net"
 
 az webapp config appsettings set \
@@ -176,14 +207,13 @@ az webapp config appsettings set \
     "AUTH_SECRET=@Microsoft.KeyVault(SecretUri=${KV_URL}/secrets/auth-secret/)" \
   --output none
 
-# Restart to pick up new settings and image
 az webapp restart --name "$APP_NAME" --resource-group "$RG_NAME" --output none
 
 # ---------------------------------------------------------------------------
-# 5. Add local IP to PostgreSQL firewall for migrations
+# 6. Add local IP to PostgreSQL firewall for migrations
 # ---------------------------------------------------------------------------
 echo ""
-echo "[5/10] Adding local IP to PostgreSQL firewall ..."
+echo "[6/11] Adding local IP to PostgreSQL firewall ..."
 LOCAL_IP=$(curl -s https://api.ipify.org)
 az postgres flexible-server firewall-rule create \
   --name "$POSTGRES_NAME" \
@@ -194,22 +224,20 @@ az postgres flexible-server firewall-rule create \
   --output none
 
 # ---------------------------------------------------------------------------
-# 6. Run database migrations
+# 7. Run database migrations
 # ---------------------------------------------------------------------------
 echo ""
-echo "[6/10] Running database migrations ..."
-# Run the migrator image locally, pointing at the public PostgreSQL endpoint
-# The migrator image already has Prisma CLI and the schema.
+echo "[7/11] Running database migrations ..."
 docker run --rm \
   -e "DATABASE_URL=$DB_URL" \
   -e "NODE_ENV=production" \
   "${ACR_LOGIN_SERVER}/atomicly-migrator:dev-latest"
 
 # ---------------------------------------------------------------------------
-# 7. Remove local IP from PostgreSQL firewall
+# 8. Remove local IP from PostgreSQL firewall
 # ---------------------------------------------------------------------------
 echo ""
-echo "[7/10] Removing local IP from PostgreSQL firewall ..."
+echo "[8/11] Removing local IP from PostgreSQL firewall ..."
 az postgres flexible-server firewall-rule delete \
   --name "$POSTGRES_NAME" \
   --resource-group "$RG_NAME" \
@@ -218,10 +246,10 @@ az postgres flexible-server firewall-rule delete \
   --output none
 
 # ---------------------------------------------------------------------------
-# 8. Smoke test
+# 9. Smoke test
 # ---------------------------------------------------------------------------
 echo ""
-echo "[8/10] Running smoke tests ..."
+echo "[9/11] Running smoke tests ..."
 APP_HOST=$(az webapp show --name "$APP_NAME" --resource-group "$RG_NAME" --query defaultHostName -o tsv)
 echo "App Service URL: https://$APP_HOST"
 echo "Front Door URL:  $APP_PUBLIC_URL"
@@ -235,7 +263,7 @@ for i in {1..12}; do
   sleep 10
 done
 
-if curl -sf "https://${FD_ENDPOINT}.azurefd.net/api/healthz" > /dev/null 2>&1; then
+if curl -sf "${APP_PUBLIC_URL}/api/healthz" > /dev/null 2>&1; then
   echo "✅ Health check passed on Front Door"
 else
   echo "⚠️  Front Door health check failed (may need a few more minutes to propagate)"
