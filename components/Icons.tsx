@@ -7,6 +7,7 @@ import {
   LayoutList,
   LineChart,
   Link as LinkIcon,
+  Menu,
   Pencil,
   Plus,
   RotateCcw,
@@ -124,4 +125,8 @@ export function IconClose(props: IconProps) {
 
 export function IconBook(props: IconProps) {
   return <BookOpen {...iconDefaults} {...props} />;
+}
+
+export function IconMenu(props: IconProps) {
+  return <Menu {...iconDefaults} {...props} />;
 }
