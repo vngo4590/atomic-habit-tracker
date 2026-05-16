@@ -14,37 +14,10 @@ param adminPassword string
 @description('Initial database name')
 param databaseName string = 'atomicly'
 
-@description('Resource ID of the delegated subnet for private VNet access')
-param subnetId string
-
-@description('Resource ID of the VNet (for private DNS zone linking)')
-param vnetId string
-
-// ---------------------------------------------------------------------------
-// Private DNS Zone — resolves the PostgreSQL FQDN to its private IP inside
-// the VNet so the Container App never needs public routes to reach the DB.
-// ---------------------------------------------------------------------------
-resource privateDnsZone 'Microsoft.Network/privateDnsZones@2024-06-01' = {
-  name: 'privatelink.postgres.database.azure.com'
-  location: 'global'
-}
-
-// Link the DNS zone to the VNet so containers can resolve .postgres.database.azure.com
-resource privateDnsZoneLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2024-06-01' = {
-  name: '${privateDnsZone.name}-link'
-  parent: privateDnsZone
-  location: 'global'
-  properties: {
-    registrationEnabled: false
-    virtualNetwork: {
-      id: vnetId
-    }
-  }
-}
-
 // ---------------------------------------------------------------------------
 // PostgreSQL Flexible Server — Burstable B1ms keeps dev cost low.
-// Public access is fully disabled; only VNet-integrated clients can connect.
+// Public access is enabled but locked down to Azure services and an
+// optional local-admin IP range applied post-deployment.
 // ---------------------------------------------------------------------------
 resource postgres 'Microsoft.DBforPostgreSQL/flexibleServers@2023-12-01-preview' = {
   name: serverName
@@ -69,14 +42,22 @@ resource postgres 'Microsoft.DBforPostgreSQL/flexibleServers@2023-12-01-preview'
       mode: 'Disabled'
     }
     network: {
-      delegatedSubnetResourceId: subnetId
-      privateDnsZoneArmResourceId: privateDnsZone.id
-      publicNetworkAccess: 'Disabled'
+      publicNetworkAccess: 'Enabled'
     }
   }
-  dependsOn: [
-    privateDnsZoneLink
-  ]
+}
+
+// ---------------------------------------------------------------------------
+// Firewall rule — allows all Azure services to reach the DB.
+// (0.0.0.0 → 0.0.0.0 is the Azure-services magic range.)
+// ---------------------------------------------------------------------------
+resource allowAzureServices 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2023-12-01-preview' = {
+  name: 'AllowAllAzureServices'
+  parent: postgres
+  properties: {
+    startIpAddress: '0.0.0.0'
+    endIpAddress: '0.0.0.0'
+  }
 }
 
 // ---------------------------------------------------------------------------

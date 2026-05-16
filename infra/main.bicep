@@ -8,15 +8,15 @@ targetScope = 'subscription'
 // Atomicly Next.js habit tracker.  It provisions:
 //   • Resource group
 //   • Azure Container Registry (Basic)
-//   • Log Analytics workspace for observability
-//   • Virtual network with dedicated subnets for Container Apps and PostgreSQL
-//   • Azure Database for PostgreSQL Flexible Server (private VNet access)
+//   • Log Analytics workspace + Application Insights for observability
+//   • Azure Database for PostgreSQL Flexible Server (public access locked
+//     down to Azure services + optional admin IP)
 //   • Azure Key Vault for secret management
-//   • Azure Container Apps environment + app (Next.js standalone container)
+//   • Azure App Service Plan + Web App (Linux container)
 //   • Azure Front Door Standard with WAF for edge security and DDoS protection
 //
-// All data-plane traffic stays inside the VNet.  Secrets are injected from
-// Key Vault at runtime via a user-assigned managed identity.
+// Secrets are stored in Key Vault and injected at runtime via a
+// system-assigned managed identity.
 // ---------------------------------------------------------------------------
 
 @description('Environment name (dev, staging, prod).')
@@ -44,12 +44,6 @@ param containerCpu string = '0.5'
 @description('Container memory in Gibibytes (e.g. 1 or 1.5).')
 param containerMemory string = '1'
 
-@description('Minimum replicas (0 = scale-to-zero for dev cost savings).')
-param minReplicas int = 0
-
-@description('Maximum replicas.')
-param maxReplicas int = 3
-
 @description('Docker image tag to deploy (e.g. dev-latest or git SHA).')
 param imageTag string = 'dev-latest'
 
@@ -75,7 +69,7 @@ resource rg 'Microsoft.Resources/resourceGroups@2024-11-01' = {
 }
 
 // ---------------------------------------------------------------------------
-// Monitoring — Log Analytics (feeds Container Apps, Front Door diagnostics)
+// Monitoring — Log Analytics (feeds diagnostics)
 // ---------------------------------------------------------------------------
 module monitoring 'modules/monitoring.bicep' = {
   name: 'monitoring'
@@ -84,22 +78,6 @@ module monitoring 'modules/monitoring.bicep' = {
     location: location
     logAnalyticsName: 'law-${projectName}-${environment}-aue'
     appInsightsName: 'appi-${projectName}-${environment}-aue'
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Networking — VNet + delegated subnets for Container Apps and PostgreSQL
-// ---------------------------------------------------------------------------
-module networking 'modules/networking.bicep' = {
-  name: 'networking'
-  scope: rg
-  params: {
-    location: location
-    vnetName: 'vnet-${projectName}-${environment}-aue'
-    containerAppsSubnetName: 'containers'
-    containerAppsSubnetPrefix: '10.0.0.0/23'
-    postgresSubnetName: 'postgres'
-    postgresSubnetPrefix: '10.0.2.0/28'
   }
 }
 
@@ -116,7 +94,7 @@ module acr 'modules/acr.bicep' = {
 }
 
 // ---------------------------------------------------------------------------
-// PostgreSQL Flexible Server — private VNet integration only, no public access
+// PostgreSQL Flexible Server — public access with Azure-services firewall
 // ---------------------------------------------------------------------------
 module postgres 'modules/postgres.bicep' = {
   name: 'postgres'
@@ -127,13 +105,11 @@ module postgres 'modules/postgres.bicep' = {
     adminUsername: postgresAdminUsername
     adminPassword: postgresAdminPassword
     databaseName: 'atomicly'
-    subnetId: networking.outputs.postgresSubnetId
-    vnetId: networking.outputs.vnetId
   }
 }
 
 // ---------------------------------------------------------------------------
-// Key Vault — holds runtime secrets; accessed by Container App via managed id
+// Key Vault — holds runtime secrets; accessed by Web App via managed id
 // ---------------------------------------------------------------------------
 module keyvault 'modules/keyvault.bicep' = {
   name: 'keyvault'
@@ -146,24 +122,27 @@ module keyvault 'modules/keyvault.bicep' = {
 }
 
 // ---------------------------------------------------------------------------
-// Container Apps — Next.js runtime with health probes and Key Vault secrets
+// App Service Plan + Web App — Next.js standalone container runtime
 // ---------------------------------------------------------------------------
-module containerApp 'modules/containerApp.bicep' = {
-  name: 'containerApp'
+module appServicePlan 'modules/appServicePlan.bicep' = {
+  name: 'appServicePlan'
   scope: rg
   params: {
     location: location
-    environmentName: 'cae-${projectName}-${environment}-aue'
-    appName: 'ca-${projectName}-${environment}-aue'
+    planName: 'plan-${projectName}-${environment}-aue'
+  }
+}
+
+module appService 'modules/appService.bicep' = {
+  name: 'appService'
+  scope: rg
+  params: {
+    location: location
+    appName: 'app-${projectName}-${environment}-aue'
+    planId: appServicePlan.outputs.id
     acrLoginServer: acr.outputs.loginServer
-    subnetId: networking.outputs.containerAppsSubnetId
-    logAnalyticsWorkspaceId: monitoring.outputs.logAnalyticsWorkspaceId
-    containerCpu: containerCpu
-    containerMemory: containerMemory
-    minReplicas: minReplicas
-    maxReplicas: maxReplicas
     imageTag: imageTag
-    appPublicUrl: frontDoorEndpointUrl
+    appInsightsConnectionString: monitoring.outputs.appInsightsConnectionString
   }
 }
 
@@ -176,34 +155,31 @@ module frontDoor 'modules/frontDoor.bicep' = {
   params: {
     profileName: 'afd-${projectName}${environment}${uniqueSuffix}'
     endpointName: frontDoorEndpointName
-    originHostName: containerApp.outputs.fqdn
+    originHostName: appService.outputs.defaultHostName
     logAnalyticsWorkspaceId: monitoring.outputs.logAnalyticsWorkspaceId
   }
 }
 
 // ---------------------------------------------------------------------------
-// Post-deploy role assignment — grant Container App managed identity access
-// to Key Vault so it can resolve secret references at runtime.
+// Post-deploy role assignments — grant Web App managed identity access
+// to Key Vault and ACR.  These are created after the Web App so the
+// principalId is known.
 // ---------------------------------------------------------------------------
 module keyVaultAccess 'modules/keyvaultAccess.bicep' = {
   name: 'keyVaultAccess'
   scope: rg
   params: {
     vaultName: keyvault.outputs.vaultName
-    principalId: containerApp.outputs.managedIdentityPrincipalId
+    principalId: appService.outputs.principalId
   }
 }
 
-// ---------------------------------------------------------------------------
-// Post-deploy role assignment — grant Container App managed identity AcrPull
-// so it can pull images from ACR without using admin credentials.
-// ---------------------------------------------------------------------------
 module acrPullAccess 'modules/acrPull.bicep' = {
   name: 'acrPullAccess'
   scope: rg
   params: {
     acrName: acr.outputs.name
-    principalId: containerApp.outputs.managedIdentityPrincipalId
+    principalId: appService.outputs.principalId
   }
 }
 
@@ -213,7 +189,8 @@ module acrPullAccess 'modules/acrPull.bicep' = {
 output resourceGroupName string = rg.name
 output acrLoginServer string = acr.outputs.loginServer
 output acrName string = acr.outputs.name
-output containerAppFqdn string = containerApp.outputs.fqdn
+output appServiceName string = appService.outputs.name
+output appServiceHostName string = appService.outputs.defaultHostName
 output frontDoorEndpoint string = frontDoorEndpointUrl
 output postgresFqdn string = postgres.outputs.fqdn
 output keyVaultUri string = keyvault.outputs.vaultUri
