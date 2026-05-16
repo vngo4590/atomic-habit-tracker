@@ -227,6 +227,56 @@ Never hardcode full fixture objects inline — drift from the type definition wi
 
 Use `todayKey()` from `lib/helpers.ts` for the current local date. Use `lib/date-keys.ts` helpers when UTC/local conversion matters. Never use `new Date().toISOString().slice(0, 10)` as a habit day key.
 
+## Animation-Specific Testing Gotchas
+
+### Framer Motion in jsdom
+
+- **`whileInView`** requires an `IntersectionObserver` mock in tests:
+  ```typescript
+  beforeEach(() => {
+    global.IntersectionObserver = vi.fn(() => ({
+      observe: vi.fn(),
+      disconnect: vi.fn(),
+      unobserve: vi.fn(),
+    })) as unknown as typeof IntersectionObserver;
+  });
+  ```
+- **`AnimatePresence` with `mode="wait"`** causes tests to hang in jsdom because exit animations never complete. Avoid this mode in testable components, or mock `AnimatePresence` as a pass-through.
+- **Spring transitions support exactly 2 keyframes**. Using `[1, 1.15, 1]` with `type: "spring"` causes a hard runtime crash. Use `duration` + `ease` tween for multi-keyframe animations.
+
+### Lucide icons
+
+Lucide-react icons use `LucideProps`, not `SVGProps<SVGSVGElement>`. The `size` prop is valid:
+```typescript
+import type { LucideProps } from "lucide-react";
+type IconProps = LucideProps;
+```
+
+## Module Resolution Gotchas
+
+### `next-auth` / `next/server` ESM interop
+
+`next-auth` internally imports `next/server` (without `.js`), which fails in vitest on Node.js with ESM/CJS interop errors. If a test file or its imports transitively pull in `next-auth`, mock `@/lib/actions/domain` (or whichever local module imports `next-auth`) at the **very top** of the test file:
+
+```typescript
+vi.mock("@/lib/actions/domain", () => ({
+  createHabitAction: vi.fn(),
+  toggleHabitAction: vi.fn(),
+  // ... every exported action
+}));
+```
+
+### App Router pages in component tests
+
+Importing App Router `page.tsx` files directly into jsdom tests can trigger hydration and module-resolution issues. Prefer testing the underlying client components (the ones marked `"use client"`) rather than the page entry point. If you must test a page, ensure all server-side dependencies (auth, data fetching) are mocked before the import.
+
+## Test Istraction
+
+If a test passes individually but fails in the full suite, suspect:
+1. **Module cache pollution** — another test loaded a real module that conflicts with your mock.
+2. **Global state leakage** — `localStorage`, `document.documentElement` attributes, or timers not cleaned up in `afterEach`.
+3. **Missing mock reset** — `vi.clearAllMocks()` in `beforeEach` is not always enough; use `vi.resetAllMocks()` or re-assign `vi.fn()` references.
+
 ## Validation Commands
 
 Run after writing or changing tests:
