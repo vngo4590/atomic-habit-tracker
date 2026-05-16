@@ -41,8 +41,8 @@ param postgresAdminPassword string
 @description('Container CPU cores.')
 param containerCpu string = '0.5'
 
-@description('Container memory (Gi).')
-param containerMemory string = '1Gi'
+@description('Container memory in Gibibytes (e.g. 1 or 1.5).')
+param containerMemory string = '1'
 
 @description('Minimum replicas (0 = scale-to-zero for dev cost savings).')
 param minReplicas int = 0
