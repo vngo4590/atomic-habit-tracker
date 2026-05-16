@@ -13,8 +13,8 @@ param acrLoginServer string
 @description('Docker image tag to deploy')
 param imageTag string = 'dev-latest'
 
-@description('Application Insights connection string for telemetry')
-param appInsightsConnectionString string = ''
+@description('Log Analytics workspace resource ID for diagnostics')
+param logAnalyticsWorkspaceId string = ''
 
 // ---------------------------------------------------------------------------
 // Web App — runs the Next.js standalone container.

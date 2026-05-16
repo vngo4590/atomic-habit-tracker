@@ -136,7 +136,7 @@ module appService 'modules/appService.bicep' = {
     planId: appServicePlan.outputs.id
     acrLoginServer: acr.outputs.loginServer
     imageTag: imageTag
-    appInsightsConnectionString: monitoring.outputs.appInsightsConnectionString
+    logAnalyticsWorkspaceId: monitoring.outputs.logAnalyticsWorkspaceId
   }
 }
 
