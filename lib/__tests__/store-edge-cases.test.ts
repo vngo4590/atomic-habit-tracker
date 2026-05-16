@@ -160,7 +160,7 @@ describe("logCheckIn behavior", () => {
     act(() => result.current.logCheckIn("h1", { mood: undefined }));
 
     // Then: the mood property is removed but the check-in remains done
-    const entry = result.current.habits[0].history[TODAY] as Record<string, unknown>;
+    const entry = result.current.habits[0].history[TODAY] as unknown as Record<string, unknown>;
     expect(Object.prototype.hasOwnProperty.call(entry, "mood")).toBe(false);
     expect(entry.done).toBe(true);
   });
@@ -174,7 +174,7 @@ describe("logCheckIn behavior", () => {
     act(() => result.current.logCheckIn("h1", { journal: undefined }));
 
     // Then: the journal property is removed but the check-in remains done
-    const entry = result.current.habits[0].history[TODAY] as Record<string, unknown>;
+    const entry = result.current.habits[0].history[TODAY] as unknown as Record<string, unknown>;
     expect(Object.prototype.hasOwnProperty.call(entry, "journal")).toBe(false);
     expect(entry.done).toBe(true);
   });
@@ -231,13 +231,13 @@ describe("updateHabit race condition handling", () => {
     let resolveSecond: (patch: Partial<Habit>) => void = () => {};
     vi.mocked(updateHabitAction)
       .mockReturnValueOnce(
-        new Promise((resolve) => {
-          resolveFirst = resolve;
+        new Promise<Habit | null>((resolve) => {
+          resolveFirst = resolve as (patch: Partial<Habit>) => void;
         }),
       )
       .mockReturnValueOnce(
-        new Promise((resolve) => {
-          resolveSecond = resolve;
+        new Promise<Habit | null>((resolve) => {
+          resolveSecond = resolve as (patch: Partial<Habit>) => void;
         }),
       );
 

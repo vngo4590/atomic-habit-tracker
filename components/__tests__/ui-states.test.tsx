@@ -35,20 +35,20 @@ const paramsMock = vi.hoisted(() => ({ current: { id: "missing-id" } }));
 const storeMock = vi.hoisted(() => ({
   habits: [] as Habit[],
   journal: [],
-  identity: { statement: "", values: [] },
+  identity: { statement: "", values: [] as string[] },
   weeklyReview: { wentWell: "", smallestFix: "", identityVote: "" },
   weeklyReviews: [],
   completedLessons: new Set<number>(),
   lessonMode: "sequential" as const,
   formationVerdicts: [],
   preferences: {
-    theme: "light" as const,
+    theme: "light" as "light" | "dark",
     accentHue: 60,
     remindersEnabled: true,
     weeklyReviewNudge: true,
     accountabilityNudge: false,
     onboardingSeen: false,
-    lessonMode: "sequential" as const,
+    lessonMode: "sequential" as "sequential" | "free",
     timezone: "UTC",
   },
   toast: null as { id: number; msg: string; sub?: string } | null,
@@ -503,7 +503,7 @@ describe("Dark Mode States", () => {
     // Given: the store preferences are set to dark mode with a custom accent
     storeMock.preferences = {
       ...storeMock.preferences,
-      theme: "dark" as const,
+      theme: "dark" as "light" | "dark",
       accentHue: 145,
     };
 

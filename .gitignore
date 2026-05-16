@@ -50,3 +50,8 @@ next-env.d.ts
 
 # local database helper temp file
 /scripts/.local-db-random-data.tmp.ts
+
+# Azure deployment secrets
+.secrets/
+.azure-suffix
+

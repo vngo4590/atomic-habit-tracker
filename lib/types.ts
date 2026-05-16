@@ -1,6 +1,6 @@
 export interface CheckIn {
   done: boolean;
-  mood?: number;
+  mood?: number | null;
   journal?: string;
 }
 
