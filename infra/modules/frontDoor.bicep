@@ -80,8 +80,9 @@ resource origin 'Microsoft.Cdn/profiles/originGroups/origins@2024-09-01' = {
 }
 
 // ---------------------------------------------------------------------------
-// Route — maps the endpoint to the origin group with HTTPS redirect,
-// caching disabled for dynamic app content, and compression off.
+// Route — maps the endpoint to the origin group with HTTPS redirect.
+// Caching is intentionally disabled for the dev environment to prevent
+// stale 404s from being served when the App Service container restarts.
 // ---------------------------------------------------------------------------
 resource route 'Microsoft.Cdn/profiles/afdEndpoints/routes@2024-09-01' = {
   name: 'default-route'
@@ -102,13 +103,9 @@ resource route 'Microsoft.Cdn/profiles/afdEndpoints/routes@2024-09-01' = {
     forwardingProtocol: 'HttpsOnly'
     linkToDefaultDomain: 'Enabled'
     httpsRedirect: 'Enabled'
-    cacheConfiguration: {
-      queryStringCachingBehavior: 'IgnoreQueryString'
-      compressionSettings: {
-        isCompressionEnabled: false
-        contentTypesToCompress: []
-      }
-    }
+    // No cacheConfiguration — dev environment should not cache responses.
+    // Front Door will still provide global edge termination and DDoS
+    // protection; caching can be enabled for staging/prod if needed.
   }
 }
 
