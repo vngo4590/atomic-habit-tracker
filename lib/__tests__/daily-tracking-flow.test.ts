@@ -156,7 +156,7 @@ describe("logCheckIn store optimistic update", () => {
     act(() => result.current.logCheckIn("h1", { mood: undefined }));
 
     // Then: the mood key is no longer present in the optimistic entry
-    const entry = result.current.habits[0].history[TODAY] as Record<string, unknown>;
+    const entry = result.current.habits[0].history[TODAY] as unknown as Record<string, unknown>;
     expect(Object.prototype.hasOwnProperty.call(entry, "mood")).toBe(false);
   });
 
