@@ -78,3 +78,13 @@ This project uses Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, and the Ap
 - Run `.\scripts\sync-agent-skills.ps1` after changing shared skills so Claude and Codex see the same canonical skills.
 - Use `.agents/skills/skill-improvement-loop/` to log and apply skill improvement opportunities.
 - Project skill opportunities should be recorded in `.agents/skill-improvement/opportunities.jsonl` via the skill's scripts, not by manual JSON edits.
+
+## Agent Workflow
+
+Read `.agents/skills/atomic-habit-workflow/SKILL.md` at the start of every session. Key rules:
+- Branch per task (`feat/`, `fix/`, `docs/`, `test/`).
+- Small incremental commits — one logical change per commit.
+- Test every change. No exceptions.
+- Comment everything for non-coder understanding.
+- Update skills and docs when you discover new patterns or stale info.
+- Validate before push: tests, typecheck, build, sync skills.
