@@ -9,8 +9,8 @@
 #
 # What it does:
 #   1. Generates secure secrets if they don't exist locally
-#   2. Deploys the full Bicep stack (infra only — no app image yet)
-#   3. Builds and pushes runner + migrator images to ACR
+#   2. Pre-creates ACR and builds/pushes images BEFORE Bicep deploy
+#   3. Deploys the full Bicep stack
 #   4. Seeds Key Vault with runtime secrets
 #   5. Updates Container App with Key Vault secret references
 #   6. Runs Prisma migrations via a temporary Container App job
@@ -73,25 +73,18 @@ echo "========================================"
 echo ""
 
 # ---------------------------------------------------------------------------
-# 1. Deploy Bicep infrastructure
+# 0. Ensure resource group and ACR exist so we can build images early
 # ---------------------------------------------------------------------------
-echo "[1/7] Deploying Bicep infrastructure ..."
-az deployment sub create \
-  --name "atomicly-${ENVIRONMENT}-local-$(date +%s)" \
+echo "[0/7] Ensuring ACR exists for image build ..."
+az group create --name "$RG_NAME" --location "$LOCATION" --output none
+az acr create \
+  --resource-group "$RG_NAME" \
+  --name "$ACR_NAME" \
+  --sku Basic \
   --location "$LOCATION" \
-  --template-file "$PROJECT_ROOT/infra/main.bicep" \
-  --parameters \
-    location="$LOCATION" \
-    environment="$ENVIRONMENT" \
-    uniqueSuffix="$UNIQUE_SUFFIX" \
-    postgresAdminPassword="$POSTGRES_PASSWORD" \
-    imageTag="dev-latest"
+  --admin-enabled false \
+  --output none
 
-# ---------------------------------------------------------------------------
-# 2. Login to ACR and build/push images
-# ---------------------------------------------------------------------------
-echo ""
-echo "[2/7] Building and pushing Docker images ..."
 az acr login --name "$ACR_NAME"
 ACR_LOGIN_SERVER="${ACR_NAME}.azurecr.io"
 APP_PUBLIC_URL="https://${FD_ENDPOINT}.azurefd.net"
@@ -114,19 +107,35 @@ docker push "${ACR_LOGIN_SERVER}/atomicly:dev-latest"
 docker push "${ACR_LOGIN_SERVER}/atomicly-migrator:dev-latest"
 
 # ---------------------------------------------------------------------------
-# 3. Seed Key Vault secrets
+# 1. Deploy Bicep infrastructure (image already exists in ACR)
 # ---------------------------------------------------------------------------
 echo ""
-echo "[3/7] Seeding Key Vault secrets ..."
+echo "[1/7] Deploying Bicep infrastructure ..."
+az deployment sub create \
+  --name "atomicly-${ENVIRONMENT}-local-$(date +%s)" \
+  --location "$LOCATION" \
+  --template-file "$PROJECT_ROOT/infra/main.bicep" \
+  --parameters \
+    location="$LOCATION" \
+    environment="$ENVIRONMENT" \
+    uniqueSuffix="$UNIQUE_SUFFIX" \
+    postgresAdminPassword="$POSTGRES_PASSWORD" \
+    imageTag="dev-latest"
+
+# ---------------------------------------------------------------------------
+# 2. Seed Key Vault secrets
+# ---------------------------------------------------------------------------
+echo ""
+echo "[2/7] Seeding Key Vault secrets ..."
 DB_URL="postgresql://psqladmin:${POSTGRES_PASSWORD}@${POSTGRES_NAME}.postgres.database.azure.com:5432/atomicly?schema=public&sslmode=require"
 az keyvault secret set --vault-name "$KV_NAME" --name database-url --value "$DB_URL" --output none
 az keyvault secret set --vault-name "$KV_NAME" --name auth-secret --value "$AUTH_SECRET" --output none
 
 # ---------------------------------------------------------------------------
-# 4. Update Container App with Key Vault secret references
+# 3. Update Container App with Key Vault secret references
 # ---------------------------------------------------------------------------
 echo ""
-echo "[4/7] Updating Container App with Key Vault secrets ..."
+echo "[3/7] Updating Container App with Key Vault secrets ..."
 MANAGED_IDENTITY_ID=$(az containerapp show --name "$APP_NAME" --resource-group "$RG_NAME" --query identity.userAssignedIdentities -o json | grep -o '/subscriptions/[^"]*' | head -1)
 KV_URL="https://${KV_NAME}.vault.azure.net"
 
@@ -143,13 +152,11 @@ az containerapp update \
   --output none
 
 # ---------------------------------------------------------------------------
-# 5. Run database migrations
+# 4. Run database migrations
 # ---------------------------------------------------------------------------
 echo ""
-echo "[5/7] Running database migrations ..."
+echo "[4/7] Running database migrations ..."
 
-# We create a transient Container App job in the same environment so it can
-# reach the private PostgreSQL instance.  The job uses the migrator image.
 JOB_NAME="atomicly-migrate-$(date +%s)"
 
 az containerapp job create \
@@ -165,14 +172,12 @@ az containerapp job create \
   --replica-retry-limit 1 \
   --output none || true
 
-# Wait a moment for the job to be ready, then execute it.
 sleep 5
 az containerapp job start \
   --name "$JOB_NAME" \
   --resource-group "$RG_NAME" \
   --output none
 
-# Poll until the job execution finishes.
 echo "Waiting for migration job to complete ..."
 for i in {1..30}; do
   STATUS=$(az containerapp job execution list \
@@ -191,10 +196,10 @@ for i in {1..30}; do
 done
 
 # ---------------------------------------------------------------------------
-# 6. Verify Container App is healthy
+# 5. Verify Container App is healthy
 # ---------------------------------------------------------------------------
 echo ""
-echo "[6/7] Running smoke tests ..."
+echo "[5/7] Running smoke tests ..."
 FQDN=$(az containerapp show --name "$APP_NAME" --resource-group "$RG_NAME" --query properties.configuration.ingress.fqdn -o tsv)
 echo "Container App FQDN: https://$FQDN"
 echo "Front Door URL:     $APP_PUBLIC_URL"
@@ -215,10 +220,10 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 7. Cleanup migration job
+# 6. Cleanup migration job
 # ---------------------------------------------------------------------------
 echo ""
-echo "[7/7] Cleaning up migration job ..."
+echo "[6/7] Cleaning up migration job ..."
 az containerapp job delete --name "$JOB_NAME" --resource-group "$RG_NAME" --yes --output none 2>/dev/null || true
 
 echo ""
