@@ -64,6 +64,7 @@ resource appServiceDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01
   name: 'appServiceDiagnostics'
   scope: webApp
   properties: {
+    workspaceId: logAnalyticsWorkspaceId
     logs: [
       {
         category: 'AppServiceHTTPLogs'
