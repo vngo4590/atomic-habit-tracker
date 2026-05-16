@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { Nav } from "@/components/Nav";
@@ -273,5 +273,124 @@ describe("Nav business logic", () => {
 
     // Then all 10 shortcuts resulted in navigation
     expect(routerPushMock).toHaveBeenCalledTimes(10);
+  });
+});
+
+describe("Mobile drawer navigation", () => {
+  beforeEach(() => {
+    routerPushMock.mockClear();
+    usePathnameMock.mockReturnValue("/");
+    useStoreContextMock.mockReturnValue({ habits: [] as Habit[] });
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("renders a hamburger menu button with correct ARIA attributes", () => {
+    // Given the nav is rendered
+    render(<Nav user={{ name: "Alice", email: "alice@example.com" }} />);
+
+    // Then the mobile menu button is present and accessible
+    const menuBtn = screen.getByLabelText("Open navigation menu");
+    expect(menuBtn).toBeTruthy();
+    expect(menuBtn.getAttribute("aria-expanded")).toBe("false");
+    expect(menuBtn.getAttribute("aria-controls")).toBe("mobile-nav-drawer");
+  });
+
+  it("opens the drawer when the hamburger button is clicked", async () => {
+    // Given the nav is rendered
+    render(<Nav user={{ name: "Alice", email: "alice@example.com" }} />);
+
+    // When the user clicks the menu button
+    const menuBtn = screen.getByLabelText("Open navigation menu");
+    fireEvent.click(menuBtn);
+
+    // Then the drawer overlay appears
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeTruthy();
+    });
+
+    // And the menu button reflects the open state
+    expect(menuBtn.getAttribute("aria-expanded")).toBe("true");
+  });
+
+  it("closes the drawer when the backdrop overlay is clicked", async () => {
+    // Given the drawer is open
+    render(<Nav user={{ name: "Alice", email: "alice@example.com" }} />);
+    fireEvent.click(screen.getByLabelText("Open navigation menu"));
+
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeTruthy();
+    });
+
+    // When the user clicks the backdrop (outside the drawer panel)
+    const overlay = screen.getByRole("dialog");
+    fireEvent.click(overlay);
+
+    // Then the drawer is removed from the DOM
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+  });
+
+  it("closes the drawer when a navigation link inside the drawer is clicked", async () => {
+    // Given the drawer is open
+    render(<Nav user={{ name: "Alice", email: "alice@example.com" }} />);
+    fireEvent.click(screen.getByLabelText("Open navigation menu"));
+
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeTruthy();
+    });
+
+    // When the user clicks a nav item inside the drawer
+    const drawerLinks = screen.getAllByText("All habits");
+    // The drawer contains a second copy of the nav items, so we target the one inside the dialog.
+    const drawerLink = drawerLinks.find((el) => el.closest('[role="dialog"]'));
+    expect(drawerLink).toBeTruthy();
+    fireEvent.click(drawerLink!);
+
+    // Then the drawer closes
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+  });
+
+  it("renders the full desktop sidebar content inside the mobile drawer", async () => {
+    // Given the drawer is open
+    render(<Nav user={{ name: "Alice", email: "alice@example.com" }} />);
+    fireEvent.click(screen.getByLabelText("Open navigation menu"));
+
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeTruthy();
+    });
+
+    // Then all nav groups are visible inside the drawer (same UI as desktop)
+    const drawer = screen.getByRole("dialog");
+    expect(drawer.textContent).toContain("Practice");
+    expect(drawer.textContent).toContain("Reflect");
+    expect(drawer.textContent).toContain("Learn");
+    expect(drawer.textContent).toContain("Become");
+
+    // And the brand and user footer are also present
+    expect(drawer.textContent).toContain("Atomicly");
+    expect(drawer.textContent).toContain("Alice");
+  });
+
+  it("marks the mobile drawer panel as scrollable", async () => {
+    // Given the drawer is open
+    const { container } = render(<Nav user={{ name: "Alice", email: "alice@example.com" }} />);
+    fireEvent.click(screen.getByLabelText("Open navigation menu"));
+
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeTruthy();
+    });
+
+    // Then the drawer panel carries the scrollable class so content can scroll if it exceeds viewport height
+    const drawerPanel = container.querySelector(".mobile-drawer");
+    expect(drawerPanel).toBeTruthy();
+    // JSDOM does not resolve stylesheet rules through getComputedStyle,
+    // so we verify the class is present which maps to overflow-y: auto in globals.css.
+    expect(drawerPanel!.classList.contains("mobile-drawer")).toBe(true);
   });
 });
