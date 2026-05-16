@@ -637,6 +637,91 @@ textarea.input { resize: vertical; min-height: 80px; line-height: 1.55; }
   .main-inner [style*="gap: 3"] {
     gap: 5px !important;
   }
+
+  /* ---------------------------------------------------------------
+     Additional mobile overrides for inline font sizes and layouts
+     that overflow on small screens.
+  --------------------------------------------------------------- */
+  .main-inner [style*="font-size: 32px"] {
+    font-size: 26px !important;
+  }
+
+  .main-inner [style*="font-size: 52px"] {
+    font-size: 32px !important;
+  }
+
+  .main-inner [style*="font-size: 44px"] {
+    font-size: 30px !important;
+  }
+
+  .main-inner [style*="font-size: 30px"] {
+    font-size: 24px !important;
+  }
+
+  .main-inner [style*="font-size: 26px"] {
+    font-size: 22px !important;
+  }
+
+  .main-inner [style*="font-size: 22px"] {
+    font-size: 18px !important;
+  }
+
+  .main-inner [style*="font-size: 19px"] {
+    font-size: 16px !important;
+  }
+
+  .main-inner [style*="font-size: 18px"] {
+    font-size: 15px !important;
+  }
+
+  .main-inner [style*="font-size: 16px"] {
+    font-size: 14px !important;
+  }
+
+  /* Inputs in the habit sentence should stack and grow on mobile */
+  .main-inner .card [style*="display: inline-block"][style*="width: 150"],
+  .main-inner .card [style*="display: inline-block"][style*="width: 220"] {
+    display: block !important;
+    width: 100% !important;
+    margin: 6px 0 !important;
+  }
+
+  /* History wall horizontal scroll container */
+  .history-wall-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 8px;
+  }
+
+  /* Reduce stat grid to 2 columns on mobile */
+  .main-inner [style*="grid-template-columns: repeat(4"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+  }
+
+  /* Compress large gap values */
+  .main-inner [style*="gap: 20px"] {
+    gap: 12px !important;
+  }
+
+  .main-inner [style*="gap: 18px"] {
+    gap: 12px !important;
+  }
+
+  .main-inner [style*="gap: 32px"] {
+    gap: 18px !important;
+  }
+
+  /* Page header buttons should wrap */
+  .page-header > div:last-child[style*="display: flex"] {
+    flex-wrap: wrap !important;
+  }
+
+  /* Habit detail title shouldn't be oversized */
+  .main-inner h1[style*="font-size: 52px"] {
+    font-size: 28px !important;
+    line-height: 1.1 !important;
+  }
 }
 
 @media (min-width: 901px) and (max-width: 1180px) {

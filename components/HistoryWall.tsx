@@ -42,20 +42,22 @@ export function HistoryWall({
         </div>
       </div>
       <div className="card card-pad">
-        <div style={{ display: "flex", gap: 3 }}>
-          {cols.map((col, index) => (
-            <div key={index} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              {col.map((day) => (
-                <span
-                  key={day.key}
-                  title={`${fmt.short(day.key)} · ${day.done ? "done" : "missed"}`}
-                  className={`dot ${day.done ? "l3" : ""} ${day.today ? "today" : ""}`}
-                  style={{ display: "block" }}
-                  aria-label={`${fmt.short(day.key)} ${day.done ? "done" : "missed"}`}
-                />
-              ))}
-            </div>
-          ))}
+        <div className="history-wall-scroll">
+          <div style={{ display: "flex", gap: 3, minWidth: "max-content" }}>
+            {cols.map((col, index) => (
+              <div key={index} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                {col.map((day) => (
+                  <span
+                    key={day.key}
+                    title={`${fmt.short(day.key)} · ${day.done ? "done" : "missed"}`}
+                    className={`dot ${day.done ? "l3" : ""} ${day.today ? "today" : ""}`}
+                    style={{ display: "block" }}
+                    aria-label={`${fmt.short(day.key)} ${day.done ? "done" : "missed"}`}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
         <div className="muted mono" style={{ fontSize: 10, letterSpacing: "0.06em", marginTop: 14, display: "flex", justifyContent: "space-between" }}>
           <span>26 WEEKS AGO</span><span>TODAY</span>

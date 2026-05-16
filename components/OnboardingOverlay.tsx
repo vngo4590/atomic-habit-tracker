@@ -32,9 +32,11 @@ const STEPS = [
   },
 ];
 
-export function OnboardingOverlay({ onComplete }: { onComplete: (name?: string) => void }) {
-  const [step, setStep] = useState(0);
-  const [name, setName] = useState("");
+export function OnboardingOverlay({ onComplete, initialName }: { onComplete: (name?: string) => void; initialName?: string }) {
+  // If the user already provided a name during registration, skip the name step.
+  const hasName = Boolean(initialName?.trim());
+  const [step, setStep] = useState(hasName ? 0 : 0);
+  const [name, setName] = useState(initialName ?? "");
   const current = STEPS[step];
   const blocked = step === 1 && !name.trim();
 
@@ -44,6 +46,11 @@ export function OnboardingOverlay({ onComplete }: { onComplete: (name?: string) 
     }
     if (step === STEPS.length - 1) {
       onComplete(name.trim() || undefined);
+      return;
+    }
+    // Skip the name step (index 1) when the user already has a name.
+    if (step === 0 && hasName) {
+      setStep(2);
       return;
     }
     setStep((value) => value + 1);

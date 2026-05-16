@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useStoreContext } from "@/components/StoreProvider";
@@ -31,22 +31,52 @@ function MLInput({
   placeholder: string;
   wide?: boolean;
 }) {
+  const minWidth = wide ? 160 : 110;
+  const text = value || placeholder;
+  // Measure the text in a hidden span so the input container grows with content.
+  const measureRef = useRef<HTMLSpanElement>(null);
+  const [textWidth, setTextWidth] = useState(minWidth);
+
+  useLayoutEffect(() => {
+    if (measureRef.current) {
+      setTextWidth(Math.max(minWidth, measureRef.current.offsetWidth + 24));
+    }
+  }, [text, minWidth]);
+
   return (
-    <input
-      className="input"
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      placeholder={placeholder}
-      style={{
-        display: "inline-block",
-        width: wide ? 220 : 150,
-        height: 38,
-        margin: "0 6px",
-        fontFamily: "var(--serif)",
-        fontSize: 22,
-        fontStyle: "italic",
-      }}
-    />
+    <span style={{ display: "inline-block", position: "relative", verticalAlign: "middle", margin: "0 4px", width: textWidth }}>
+      <input
+        className="input"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        style={{
+          width: "100%",
+          height: 38,
+          fontFamily: "var(--serif)",
+          fontSize: 22,
+          fontStyle: "italic",
+        }}
+      />
+      <span
+        ref={measureRef}
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          visibility: "hidden",
+          whiteSpace: "pre",
+          fontFamily: "var(--serif)",
+          fontSize: 22,
+          fontStyle: "italic",
+          padding: "0 12px",
+          pointerEvents: "none",
+        }}
+      >
+        {text}
+      </span>
+    </span>
   );
 }
 

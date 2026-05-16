@@ -7,7 +7,7 @@ import { useStoreContext } from "@/components/StoreProvider";
 
 const SEEN_KEY = "atomicly:onboarding-seen";
 
-export function OnboardingGate() {
+export function OnboardingGate({ userName }: { userName?: string | null }) {
   const { preferences, setPreferences } = useStoreContext();
   const [visible, setVisible] = useState(false);
 
@@ -24,5 +24,5 @@ export function OnboardingGate() {
     setVisible(false);
   };
 
-  return visible ? <OnboardingOverlay onComplete={complete} /> : null;
+  return visible ? <OnboardingOverlay onComplete={complete} initialName={userName ?? undefined} /> : null;
 }

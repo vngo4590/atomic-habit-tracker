@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import type { ReactNode } from "react";
 
 import { staggerItemVariants } from "@/lib/animations";
+import { useMotionReduced } from "@/lib/hooks/useMotionReduced";
 
 interface StaggerContainerProps {
   children: ReactNode;
@@ -16,9 +17,13 @@ interface StaggerContainerProps {
 export function StaggerContainer({
   children,
   className,
-  staggerDelay = 0.05,
-  delayChildren = 0.05,
 }: StaggerContainerProps) {
+  const reduced = useMotionReduced();
+
+  if (reduced) {
+    return <div className={className}>{children}</div>;
+  }
+
   return (
     <motion.div
       className={className}
@@ -26,7 +31,7 @@ export function StaggerContainer({
         hidden: { opacity: 1 },
         visible: {
           opacity: 1,
-          transition: { staggerChildren: staggerDelay, delayChildren },
+          transition: { staggerChildren: 0.05, delayChildren: 0.05 },
         },
       }}
       initial="hidden"
@@ -43,6 +48,12 @@ interface StaggerItemProps {
 }
 
 export function StaggerItem({ children, className }: StaggerItemProps) {
+  const reduced = useMotionReduced();
+
+  if (reduced) {
+    return <div className={className}>{children}</div>;
+  }
+
   return (
     <motion.div className={className} variants={staggerItemVariants}>
       {children}
