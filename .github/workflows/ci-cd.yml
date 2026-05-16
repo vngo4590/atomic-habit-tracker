@@ -1,0 +1,191 @@
+name: CI / CD
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      imageTag:
+        description: 'Docker image tag to deploy'
+        required: false
+        default: 'dev-latest'
+
+# ---------------------------------------------------------------------------
+# OIDC permissions — required for passwordless Azure login from GitHub Actions.
+# ---------------------------------------------------------------------------
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  LOCATION: australiaeast
+  ENVIRONMENT: dev
+
+jobs:
+  # -------------------------------------------------------------------------
+  # VALIDATE — run the same checks that developers run locally so we never
+  # deploy broken code.
+  # -------------------------------------------------------------------------
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
+      - name: TypeScript check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint:app
+
+      - name: Run tests
+        run: npm run test:run
+
+      - name: Build application
+        run: npm run build
+
+  # -------------------------------------------------------------------------
+  # DEPLOY — provision Azure infrastructure and release the container.
+  # Only runs on the master branch after validation passes.
+  # -------------------------------------------------------------------------
+  deploy:
+    needs: validate
+    if: github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Derive image tag
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ github.event.inputs.imageTag }}" ]; then
+            echo "tag=${{ github.event.inputs.imageTag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=sha-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy infrastructure (Bicep)
+        id: bicep
+        run: |
+          az deployment sub create \
+            --name "atomicly-${{ env.ENVIRONMENT }}-${{ github.run_id }}" \
+            --location ${{ env.LOCATION }} \
+            --template-file infra/main.bicep \
+            --parameters \
+              location=${{ env.LOCATION }} \
+              environment=${{ env.ENVIRONMENT }} \
+              uniqueSuffix=${{ secrets.AZURE_UNIQUE_SUFFIX }} \
+              postgresAdminPassword='${{ secrets.POSTGRES_ADMIN_PASSWORD }}' \
+              authSecretValue='${{ secrets.AUTH_SECRET }}' \
+              imageTag=${{ steps.vars.outputs.tag }} \
+            --query properties.outputs
+
+      - name: Login to Azure Container Registry
+        run: |
+          az acr login --name cratomiclydev${{ secrets.AZURE_UNIQUE_SUFFIX }}
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push runner image
+        run: |
+          ACR_LOGIN_SERVER="cratomiclydev${{ secrets.AZURE_UNIQUE_SUFFIX }}.azurecr.io"
+          docker build \
+            --target runner \
+            --tag "$ACR_LOGIN_SERVER/atomicly:${{ steps.vars.outputs.tag }}" \
+            --tag "$ACR_LOGIN_SERVER/atomicly:dev-latest" \
+            --build-arg NEXT_PUBLIC_APP_URL="https://atomicly-dev-${{ secrets.AZURE_UNIQUE_SUFFIX }}.azurefd.net" \
+            --build-arg DEPLOYMENT_VERSION="${{ steps.vars.outputs.tag }}" \
+            --cache-to type=inline \
+            --cache-from type=inline \
+            --push \
+            .
+
+      - name: Build and push migrator image
+        run: |
+          ACR_LOGIN_SERVER="cratomiclydev${{ secrets.AZURE_UNIQUE_SUFFIX }}.azurecr.io"
+          docker build \
+            --target migrator \
+            --tag "$ACR_LOGIN_SERVER/atomicly-migrator:${{ steps.vars.outputs.tag }}" \
+            --tag "$ACR_LOGIN_SERVER/atomicly-migrator:dev-latest" \
+            --push \
+            .
+
+      - name: Update Key Vault secrets
+        run: |
+          KV_NAME="kv-atomiclydev${{ secrets.AZURE_UNIQUE_SUFFIX }}"
+          # DB URL is constructed from known values; in a real prod pipeline
+          # you might query the Bicep outputs instead.
+          DB_URL="postgresql://psqladmin:${{ secrets.POSTGRES_ADMIN_PASSWORD }}@psql-atomicly-dev-aue-${{ secrets.AZURE_UNIQUE_SUFFIX }}.postgres.database.azure.com:5432/atomicly?schema=public&sslmode=require"
+          az keyvault secret set --vault-name "$KV_NAME" --name database-url --value "$DB_URL"
+          az keyvault secret set --vault-name "$KV_NAME" --name auth-secret --value '${{ secrets.AUTH_SECRET }}'
+
+      - name: Run database migrations (Container App Job)
+        run: |
+          ENV_NAME="cae-atomicly-dev-aue"
+          APP_NAME="ca-atomicly-dev-aue"
+          ACR_LOGIN_SERVER="cratomiclydev${{ secrets.AZURE_UNIQUE_SUFFIX }}.azurecr.io"
+          RG="rg-atomicly-dev-aue"
+
+          # Create a one-off job to run migrations in the same VNet as the app.
+          az containerapp job create \
+            --name "atomicly-migrate-${{ github.run_id }}" \
+            --resource-group "$RG" \
+            --environment "$ENV_NAME" \
+            --image "$ACR_LOGIN_SERVER/atomicly-migrator:dev-latest" \
+            --cpu "0.5" \
+            --memory "1Gi" \
+            --secrets "database-url=secretref:database-url" "auth-secret=secretref:auth-secret" \
+            --env-vars "DATABASE_URL=secretref:database-url" "AUTH_SECRET=secretref:auth-secret" \
+            --trigger-type Manual \
+            --replica-timeout 300 \
+            --replica-retry-limit 1 \
+            --registry-server "$ACR_LOGIN_SERVER" \
+            --registry-identity "system" || true
+
+          # Execute the job and wait for completion.
+          az containerapp job start \
+            --name "atomicly-migrate-${{ github.run_id }}" \
+            --resource-group "$RG"
+
+      - name: Update Container App revision
+        run: |
+          APP_NAME="ca-atomicly-dev-aue"
+          RG="rg-atomicly-dev-aue"
+          ACR_LOGIN_SERVER="cratomiclydev${{ secrets.AZURE_UNIQUE_SUFFIX }}.azurecr.io"
+          az containerapp update \
+            --name "$APP_NAME" \
+            --resource-group "$RG" \
+            --image "$ACR_LOGIN_SERVER/atomicly:${{ steps.vars.outputs.tag }}"
+
+      - name: Verify deployment
+        run: |
+          APP_NAME="ca-atomicly-dev-aue"
+          RG="rg-atomicly-dev-aue"
+          FQDN=$(az containerapp show --name "$APP_NAME" --resource-group "$RG" --query properties.configuration.ingress.fqdn -o tsv)
+          echo "Container App FQDN: $FQDN"
+          curl -sf "https://$FQDN/api/healthz" || exit 1
+          echo "Health check passed."
