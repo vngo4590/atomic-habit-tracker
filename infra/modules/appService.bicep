@@ -58,9 +58,9 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
 }
 
 // ---------------------------------------------------------------------------
-// Diagnostic settings — ship logs and metrics to App Insights.
+// Diagnostic settings — ship logs and metrics to Log Analytics.
 // ---------------------------------------------------------------------------
-resource appServiceDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (!empty(appInsightsConnectionString)) {
+resource appServiceDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (!empty(logAnalyticsWorkspaceId)) {
   name: 'appServiceDiagnostics'
   scope: webApp
   properties: {
