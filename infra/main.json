@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "9938999232704507962"
+      "templateHash": "15415675885137716371"
     }
   },
   "parameters": {
@@ -47,12 +47,6 @@
       "type": "securestring",
       "metadata": {
         "description": "PostgreSQL admin password.  Must be strong."
-      }
-    },
-    "authSecretValue": {
-      "type": "securestring",
-      "metadata": {
-        "description": "Auth.js secret value (openssl rand -base64 32)."
       }
     },
     "containerCpu": {
@@ -773,9 +767,6 @@
           "logAnalyticsWorkspaceId": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'monitoring'), '2025-04-01').outputs.logAnalyticsWorkspaceId.value]"
           },
-          "keyVaultName": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'keyvault'), '2025-04-01').outputs.vaultName.value]"
-          },
           "containerCpu": {
             "value": "[parameters('containerCpu')]"
           },
@@ -802,7 +793,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "12496210222930375640"
+              "templateHash": "1040735983099851131"
             }
           },
           "parameters": {
@@ -841,12 +832,6 @@
               "type": "string",
               "metadata": {
                 "description": "Log Analytics workspace resource ID"
-              }
-            },
-            "keyVaultName": {
-              "type": "string",
-              "metadata": {
-                "description": "Key Vault name (used to build secret URLs)"
               }
             },
             "containerCpu": {
@@ -890,9 +875,6 @@
                 "description": "Public URL exposed to users (Front Door endpoint)"
               }
             }
-          },
-          "variables": {
-            "keyVaultUrl": "[format('https://{0}{1}', parameters('keyVaultName'), environment().suffixes.keyvaultDns)]"
           },
           "resources": [
             {
@@ -958,18 +940,6 @@
                       "server": "[parameters('acrLoginServer')]",
                       "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('appName')))]"
                     }
-                  ],
-                  "secrets": [
-                    {
-                      "name": "database-url",
-                      "keyVaultUrl": "[format('{0}/secrets/database-url', variables('keyVaultUrl'))]",
-                      "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('appName')))]"
-                    },
-                    {
-                      "name": "auth-secret",
-                      "keyVaultUrl": "[format('{0}/secrets/auth-secret', variables('keyVaultUrl'))]",
-                      "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('appName')))]"
-                    }
                   ]
                 },
                 "template": {
@@ -1006,14 +976,6 @@
                         {
                           "name": "NEXT_PUBLIC_APP_URL",
                           "value": "[parameters('appPublicUrl')]"
-                        },
-                        {
-                          "name": "DATABASE_URL",
-                          "secretRef": "database-url"
-                        },
-                        {
-                          "name": "AUTH_SECRET",
-                          "secretRef": "auth-secret"
                         },
                         {
                           "name": "DEPLOYMENT_VERSION",
@@ -1080,7 +1042,6 @@
       },
       "dependsOn": [
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'acr')]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'keyvault')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'monitoring')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'networking')]",
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', variables('rgName'))]"

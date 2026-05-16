@@ -158,7 +158,6 @@ module containerApp 'modules/containerApp.bicep' = {
     acrLoginServer: acr.outputs.loginServer
     subnetId: networking.outputs.containerAppsSubnetId
     logAnalyticsWorkspaceId: monitoring.outputs.logAnalyticsWorkspaceId
-    keyVaultName: keyvault.outputs.vaultName
     containerCpu: containerCpu
     containerMemory: containerMemory
     minReplicas: minReplicas

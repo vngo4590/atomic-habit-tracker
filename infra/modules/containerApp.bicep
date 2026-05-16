@@ -16,9 +16,6 @@ param subnetId string
 @description('Log Analytics workspace resource ID')
 param logAnalyticsWorkspaceId string
 
-@description('Key Vault name (used to build secret URLs)')
-param keyVaultName string
-
 @description('Container CPU cores')
 param containerCpu string = '0.5'
 
@@ -36,8 +33,6 @@ param imageTag string = 'dev-latest'
 
 @description('Public URL exposed to users (Front Door endpoint)')
 param appPublicUrl string
-
-var keyVaultUrl = 'https://${keyVaultName}${environment().suffixes.keyvaultDns}'
 
 // ---------------------------------------------------------------------------
 // User-assigned managed identity — created first so we can grant it access
@@ -79,15 +74,15 @@ resource containerAppEnv 'Microsoft.App/managedEnvironments@2024-03-01' = {
 // ---------------------------------------------------------------------------
 // Container App — Next.js standalone runtime.
 //
-// Secrets are injected via Key Vault references resolved at runtime by the
-// platform using the user-assigned managed identity.
+// NOTE: Key Vault secret references are applied AFTER deployment by the
+// deployment script so that the secrets exist before the app tries to
+// resolve them.  This avoids a chicken-and-egg problem during first provision.
 //
 // Environment variables:
 //   • NODE_ENV=production
 //   • HOSTNAME=0.0.0.0
 //   • PORT=3000
 //   • AUTH_URL & NEXT_PUBLIC_APP_URL = Front Door endpoint
-//   • DATABASE_URL & AUTH_SECRET read from Key Vault secrets
 //
 // Probes:
 //   • readiness on /api/healthz (10 s initial, 5 s period)
@@ -128,18 +123,6 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
           identity: managedIdentity.id
         }
       ]
-      secrets: [
-        {
-          name: 'database-url'
-          keyVaultUrl: '${keyVaultUrl}/secrets/database-url'
-          identity: managedIdentity.id
-        }
-        {
-          name: 'auth-secret'
-          keyVaultUrl: '${keyVaultUrl}/secrets/auth-secret'
-          identity: managedIdentity.id
-        }
-      ]
     }
     template: {
       scale: {
@@ -175,14 +158,6 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
             {
               name: 'NEXT_PUBLIC_APP_URL'
               value: appPublicUrl
-            }
-            {
-              name: 'DATABASE_URL'
-              secretRef: 'database-url'
-            }
-            {
-              name: 'AUTH_SECRET'
-              secretRef: 'auth-secret'
             }
             {
               name: 'DEPLOYMENT_VERSION'

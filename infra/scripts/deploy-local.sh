@@ -12,8 +12,8 @@
 #   2. Deploys the full Bicep stack (infra only — no app image yet)
 #   3. Builds and pushes runner + migrator images to ACR
 #   4. Seeds Key Vault with runtime secrets
-#   5. Runs Prisma migrations via a temporary Container App job
-#   6. Updates the Container App to the new image revision
+#   5. Updates Container App with Key Vault secret references
+#   6. Runs Prisma migrations via a temporary Container App job
 #   7. Smoke-tests the deployment
 # ---------------------------------------------------------------------------
 set -euo pipefail
@@ -75,7 +75,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # 1. Deploy Bicep infrastructure
 # ---------------------------------------------------------------------------
-echo "[1/6] Deploying Bicep infrastructure ..."
+echo "[1/7] Deploying Bicep infrastructure ..."
 az deployment sub create \
   --name "atomicly-${ENVIRONMENT}-local-$(date +%s)" \
   --location "$LOCATION" \
@@ -85,14 +85,13 @@ az deployment sub create \
     environment="$ENVIRONMENT" \
     uniqueSuffix="$UNIQUE_SUFFIX" \
     postgresAdminPassword="$POSTGRES_PASSWORD" \
-    authSecretValue="$AUTH_SECRET" \
     imageTag="dev-latest"
 
 # ---------------------------------------------------------------------------
 # 2. Login to ACR and build/push images
 # ---------------------------------------------------------------------------
 echo ""
-echo "[2/6] Building and pushing Docker images ..."
+echo "[2/7] Building and pushing Docker images ..."
 az acr login --name "$ACR_NAME"
 ACR_LOGIN_SERVER="${ACR_NAME}.azurecr.io"
 APP_PUBLIC_URL="https://${FD_ENDPOINT}.azurefd.net"
@@ -118,16 +117,36 @@ docker push "${ACR_LOGIN_SERVER}/atomicly-migrator:dev-latest"
 # 3. Seed Key Vault secrets
 # ---------------------------------------------------------------------------
 echo ""
-echo "[3/6] Seeding Key Vault secrets ..."
+echo "[3/7] Seeding Key Vault secrets ..."
 DB_URL="postgresql://psqladmin:${POSTGRES_PASSWORD}@${POSTGRES_NAME}.postgres.database.azure.com:5432/atomicly?schema=public&sslmode=require"
 az keyvault secret set --vault-name "$KV_NAME" --name database-url --value "$DB_URL" --output none
 az keyvault secret set --vault-name "$KV_NAME" --name auth-secret --value "$AUTH_SECRET" --output none
 
 # ---------------------------------------------------------------------------
-# 4. Run database migrations
+# 4. Update Container App with Key Vault secret references
 # ---------------------------------------------------------------------------
 echo ""
-echo "[4/6] Running database migrations ..."
+echo "[4/7] Updating Container App with Key Vault secrets ..."
+MANAGED_IDENTITY_ID=$(az containerapp show --name "$APP_NAME" --resource-group "$RG_NAME" --query identity.userAssignedIdentities -o json | grep -o '/subscriptions/[^"]*' | head -1)
+KV_URL="https://${KV_NAME}.vault.azure.net"
+
+az containerapp update \
+  --name "$APP_NAME" \
+  --resource-group "$RG_NAME" \
+  --image "${ACR_LOGIN_SERVER}/atomicly:dev-latest" \
+  --secrets \
+    "database-url=keyvaultref:${KV_URL}/secrets/database-url,identityref:${MANAGED_IDENTITY_ID}" \
+    "auth-secret=keyvaultref:${KV_URL}/secrets/auth-secret,identityref:${MANAGED_IDENTITY_ID}" \
+  --env-vars \
+    "DATABASE_URL=secretref:database-url" \
+    "AUTH_SECRET=secretref:auth-secret" \
+  --output none
+
+# ---------------------------------------------------------------------------
+# 5. Run database migrations
+# ---------------------------------------------------------------------------
+echo ""
+echo "[5/7] Running database migrations ..."
 
 # We create a transient Container App job in the same environment so it can
 # reach the private PostgreSQL instance.  The job uses the migrator image.
@@ -144,8 +163,6 @@ az containerapp job create \
   --trigger-type Manual \
   --replica-timeout 300 \
   --replica-retry-limit 1 \
-  --registry-server "$ACR_LOGIN_SERVER" \
-  --registry-identity "system" \
   --output none || true
 
 # Wait a moment for the job to be ready, then execute it.
@@ -174,21 +191,10 @@ for i in {1..30}; do
 done
 
 # ---------------------------------------------------------------------------
-# 5. Update Container App to the new image
+# 6. Verify Container App is healthy
 # ---------------------------------------------------------------------------
 echo ""
-echo "[5/6] Updating Container App revision ..."
-az containerapp update \
-  --name "$APP_NAME" \
-  --resource-group "$RG_NAME" \
-  --image "${ACR_LOGIN_SERVER}/atomicly:dev-latest" \
-  --output none
-
-# ---------------------------------------------------------------------------
-# 6. Smoke test
-# ---------------------------------------------------------------------------
-echo ""
-echo "[6/6] Running smoke tests ..."
+echo "[6/7] Running smoke tests ..."
 FQDN=$(az containerapp show --name "$APP_NAME" --resource-group "$RG_NAME" --query properties.configuration.ingress.fqdn -o tsv)
 echo "Container App FQDN: https://$FQDN"
 echo "Front Door URL:     $APP_PUBLIC_URL"
@@ -207,6 +213,13 @@ if curl -sf "https://${FD_ENDPOINT}.azurefd.net/api/healthz" > /dev/null 2>&1; t
 else
   echo "⚠️  Front Door health check failed (may need a few more minutes to propagate)"
 fi
+
+# ---------------------------------------------------------------------------
+# 7. Cleanup migration job
+# ---------------------------------------------------------------------------
+echo ""
+echo "[7/7] Cleaning up migration job ..."
+az containerapp job delete --name "$JOB_NAME" --resource-group "$RG_NAME" --yes --output none 2>/dev/null || true
 
 echo ""
 echo "========================================"

@@ -99,7 +99,6 @@ jobs:
               environment=${{ env.ENVIRONMENT }} \
               uniqueSuffix=${{ secrets.AZURE_UNIQUE_SUFFIX }} \
               postgresAdminPassword='${{ secrets.POSTGRES_ADMIN_PASSWORD }}' \
-              authSecretValue='${{ secrets.AUTH_SECRET }}' \
               imageTag=${{ steps.vars.outputs.tag }} \
             --query properties.outputs
 
@@ -113,11 +112,12 @@ jobs:
       - name: Build and push runner image
         run: |
           ACR_LOGIN_SERVER="cratomiclydev${{ secrets.AZURE_UNIQUE_SUFFIX }}.azurecr.io"
+          FD_URL="https://atomicly-dev-${{ secrets.AZURE_UNIQUE_SUFFIX }}.azurefd.net"
           docker build \
             --target runner \
             --tag "$ACR_LOGIN_SERVER/atomicly:${{ steps.vars.outputs.tag }}" \
             --tag "$ACR_LOGIN_SERVER/atomicly:dev-latest" \
-            --build-arg NEXT_PUBLIC_APP_URL="https://atomicly-dev-${{ secrets.AZURE_UNIQUE_SUFFIX }}.azurefd.net" \
+            --build-arg NEXT_PUBLIC_APP_URL="$FD_URL" \
             --build-arg DEPLOYMENT_VERSION="${{ steps.vars.outputs.tag }}" \
             --cache-to type=inline \
             --cache-from type=inline \
@@ -137,49 +137,71 @@ jobs:
       - name: Update Key Vault secrets
         run: |
           KV_NAME="kv-atomiclydev${{ secrets.AZURE_UNIQUE_SUFFIX }}"
-          # DB URL is constructed from known values; in a real prod pipeline
-          # you might query the Bicep outputs instead.
           DB_URL="postgresql://psqladmin:${{ secrets.POSTGRES_ADMIN_PASSWORD }}@psql-atomicly-dev-aue-${{ secrets.AZURE_UNIQUE_SUFFIX }}.postgres.database.azure.com:5432/atomicly?schema=public&sslmode=require"
           az keyvault secret set --vault-name "$KV_NAME" --name database-url --value "$DB_URL"
           az keyvault secret set --vault-name "$KV_NAME" --name auth-secret --value '${{ secrets.AUTH_SECRET }}'
 
+      - name: Update Container App with Key Vault secrets
+        run: |
+          APP_NAME="ca-atomicly-dev-aue"
+          RG="rg-atomicly-dev-aue"
+          ACR_LOGIN_SERVER="cratomiclydev${{ secrets.AZURE_UNIQUE_SUFFIX }}.azurecr.io"
+          KV_NAME="kv-atomiclydev${{ secrets.AZURE_UNIQUE_SUFFIX }}"
+          MANAGED_IDENTITY_ID=$(az containerapp show --name "$APP_NAME" --resource-group "$RG" --query "identity.userAssignedIdentities.*.principalId" -o tsv)
+          KV_URL="https://${KV_NAME}.vault.azure.net"
+          az containerapp update \
+            --name "$APP_NAME" \
+            --resource-group "$RG" \
+            --image "$ACR_LOGIN_SERVER/atomicly:${{ steps.vars.outputs.tag }}" \
+            --secrets \
+              "database-url=keyvaultref:${KV_URL}/secrets/database-url,identityref:${MANAGED_IDENTITY_ID}" \
+              "auth-secret=keyvaultref:${KV_URL}/secrets/auth-secret,identityref:${MANAGED_IDENTITY_ID}" \
+            --env-vars \
+              "DATABASE_URL=secretref:database-url" \
+              "AUTH_SECRET=secretref:auth-secret"
+
       - name: Run database migrations (Container App Job)
         run: |
           ENV_NAME="cae-atomicly-dev-aue"
-          APP_NAME="ca-atomicly-dev-aue"
-          ACR_LOGIN_SERVER="cratomiclydev${{ secrets.AZURE_UNIQUE_SUFFIX }}.azurecr.io"
           RG="rg-atomicly-dev-aue"
+          ACR_LOGIN_SERVER="cratomiclydev${{ secrets.AZURE_UNIQUE_SUFFIX }}.azurecr.io"
+          DB_URL="postgresql://psqladmin:${{ secrets.POSTGRES_ADMIN_PASSWORD }}@psql-atomicly-dev-aue-${{ secrets.AZURE_UNIQUE_SUFFIX }}.postgres.database.azure.com:5432/atomicly?schema=public&sslmode=require"
+          JOB_NAME="atomicly-migrate-${{ github.run_id }}"
 
-          # Create a one-off job to run migrations in the same VNet as the app.
           az containerapp job create \
-            --name "atomicly-migrate-${{ github.run_id }}" \
+            --name "$JOB_NAME" \
             --resource-group "$RG" \
             --environment "$ENV_NAME" \
             --image "$ACR_LOGIN_SERVER/atomicly-migrator:dev-latest" \
             --cpu "0.5" \
             --memory "1Gi" \
-            --secrets "database-url=secretref:database-url" "auth-secret=secretref:auth-secret" \
-            --env-vars "DATABASE_URL=secretref:database-url" "AUTH_SECRET=secretref:auth-secret" \
+            --env-vars "DATABASE_URL=$DB_URL" "NODE_ENV=production" \
             --trigger-type Manual \
             --replica-timeout 300 \
             --replica-retry-limit 1 \
-            --registry-server "$ACR_LOGIN_SERVER" \
-            --registry-identity "system" || true
+            --output none || true
 
-          # Execute the job and wait for completion.
+          sleep 5
           az containerapp job start \
-            --name "atomicly-migrate-${{ github.run_id }}" \
-            --resource-group "$RG"
-
-      - name: Update Container App revision
-        run: |
-          APP_NAME="ca-atomicly-dev-aue"
-          RG="rg-atomicly-dev-aue"
-          ACR_LOGIN_SERVER="cratomiclydev${{ secrets.AZURE_UNIQUE_SUFFIX }}.azurecr.io"
-          az containerapp update \
-            --name "$APP_NAME" \
+            --name "$JOB_NAME" \
             --resource-group "$RG" \
-            --image "$ACR_LOGIN_SERVER/atomicly:${{ steps.vars.outputs.tag }}"
+            --output none
+
+          # Poll for completion
+          for i in {1..30}; do
+            STATUS=$(az containerapp job execution list --name "$JOB_NAME" --resource-group "$RG" --query '[0].properties.status' -o tsv 2>/dev/null || echo "Running")
+            if [ "$STATUS" == "Succeeded" ]; then
+              echo "Migrations completed successfully."
+              break
+            elif [ "$STATUS" == "Failed" ]; then
+              echo "Migration job failed!"
+              exit 1
+            fi
+            echo "  status=$STATUS (waiting ...)"
+            sleep 10
+          done
+
+          az containerapp job delete --name "$JOB_NAME" --resource-group "$RG" --yes --output none 2>/dev/null || true
 
       - name: Verify deployment
         run: |
@@ -187,5 +209,11 @@ jobs:
           RG="rg-atomicly-dev-aue"
           FQDN=$(az containerapp show --name "$APP_NAME" --resource-group "$RG" --query properties.configuration.ingress.fqdn -o tsv)
           echo "Container App FQDN: $FQDN"
-          curl -sf "https://$FQDN/api/healthz" || exit 1
-          echo "Health check passed."
+          for i in {1..12}; do
+            if curl -sf "https://$FQDN/api/healthz" > /dev/null 2>&1; then
+              echo "✅ Health check passed"
+              break
+            fi
+            echo "  Waiting for app to be healthy ..."
+            sleep 10
+          done
