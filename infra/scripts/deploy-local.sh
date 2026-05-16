@@ -125,9 +125,26 @@ DEPLOYMENT_OUTPUT=$(az deployment sub create \
     imageTag="dev-latest" \
   --query properties.outputs)
 
-APP_PUBLIC_URL=$(echo "$DEPLOYMENT_OUTPUT" | grep -o '"frontDoorEndpoint": *"[^"]*"' | sed 's/.*: *"\([^"]*\)".*/\1/')
-if [ -z "$APP_PUBLIC_URL" ]; then
-  echo "WARNING: Could not extract Front Door URL from deployment output. Using placeholder."
+# Bicep's endpoint.properties.hostName is evaluated during deployment BEFORE
+# Azure generates the unique hash suffix, so it returns the short base name.
+# We must query the actual hostname via REST API after deployment completes.
+SUB_ID=$(az account show --query id -o tsv)
+FD_PROFILE_NAME="afd-${PROJECT_NAME}${ENVIRONMENT}${UNIQUE_SUFFIX}"
+FD_ENDPOINT_NAME="${PROJECT_NAME}-${ENVIRONMENT}-${UNIQUE_SUFFIX}"
+ACTUAL_FD_HOSTNAME=$(az rest \
+  --method GET \
+  --uri "https://management.azure.com/subscriptions/${SUB_ID}/resourceGroups/${RG_NAME}/providers/Microsoft.Cdn/profiles/${FD_PROFILE_NAME}/afdEndpoints/${FD_ENDPOINT_NAME}?api-version=2024-09-01" \
+  --query "properties.hostName" -o tsv 2>/dev/null)
+
+if [ -n "$ACTUAL_FD_HOSTNAME" ]; then
+  APP_PUBLIC_URL="https://${ACTUAL_FD_HOSTNAME}"
+else
+  # Fallback to Bicep output (may be wrong due to timing)
+  APP_PUBLIC_URL=$(echo "$DEPLOYMENT_OUTPUT" | grep -o '"frontDoorEndpoint": *"[^"]*"' | sed 's/.*: *"\([^"]*\)".*/\1/')
+fi
+
+if [ -z "$APP_PUBLIC_URL" ] || [ "$APP_PUBLIC_URL" = "https://" ]; then
+  echo "WARNING: Could not extract Front Door URL. Using placeholder."
   APP_PUBLIC_URL="https://placeholder.azurefd.net"
 fi
 echo "Front Door URL: $APP_PUBLIC_URL"

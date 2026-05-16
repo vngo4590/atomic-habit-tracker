@@ -226,8 +226,10 @@ The App Service managed identity needs `AcrPull` on ACR.  The Bicep template cre
 ### Key Vault Forbidden
 If the deployment script fails with `ForbiddenByRbac` when writing secrets, it means the current user's `Key Vault Secrets Officer` role assignment has not propagated yet.  The script now includes a 15-second wait after granting the role.  If it still fails, wait another 30 seconds and re-run the script — Bicep is idempotent and will skip already-created resources.
 
-### Front Door URL Changes
-Azure Front Door automatically appends a unique hash to the endpoint hostname (e.g. `atomicly-dev-XXXX.azurefd.net` becomes `atomicly-dev-XXXX-fab7fhdwbsehg7af.z01.azurefd.net`).  The deployment script reads the **actual** hostname from the Bicep deployment output, so `AUTH_URL` and `NEXT_PUBLIC_APP_URL` are always correct.
+### Front Door Hostname Timing Issue
+Azure Front Door Standard auto-generates a unique hash suffix for every endpoint (e.g. `atomicly-dev-XXXX-fab7fhdwbsehg7af.z01.azurefd.net`).  This hash is created **after** the Bicep deployment finishes, so `endpoint.properties.hostName` evaluated inside Bicep returns the short base name (`atomicly-dev-XXXX.azurefd.net`) which does **not** resolve to your route.
+
+The deployment script and CI/CD workflow work around this by querying the Azure REST API **after** the Bicep deployment completes to get the real hostname.  If you see 404s from Front Door or redirects to the wrong domain, verify `AUTH_URL` and `NEXT_PUBLIC_APP_URL` in your App Service settings match the actual endpoint hostname shown in the Azure Portal.
 
 ---
 

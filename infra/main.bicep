@@ -47,7 +47,11 @@ param imageTag string = 'dev-latest'
 var rgName = 'rg-${projectName}-${environment}-aue-${uniqueSuffix}'
 var baseName = '${projectName}${environment}${uniqueSuffix}'
 var frontDoorEndpointName = '${projectName}-${environment}-${uniqueSuffix}'
-var frontDoorEndpointUrl = 'https://${frontDoorEndpointName}.azurefd.net'
+// NOTE: Front Door Standard auto-generates a unique hash suffix for the endpoint
+// hostname (e.g. atomicly-dev-XXXX-fab7fhdwbsehg7af.z01.azurefd.net).  This
+// hash is NOT available at Bicep deployment time, so we cannot construct the
+// real URL here.  The deploy script queries the actual hostname via REST API
+// after the deployment completes.
 
 // ---------------------------------------------------------------------------
 // Resource Group
@@ -185,6 +189,9 @@ output acrLoginServer string = acr.outputs.loginServer
 output acrName string = acr.outputs.name
 output appServiceName string = appService.outputs.name
 output appServiceHostName string = appService.outputs.defaultHostName
+// WARNING: This may return the short base name (without Azure's auto-generated
+// hash suffix) because Bicep evaluates outputs during deployment.  Always
+// verify the actual hostname via REST API after deployment.
 output frontDoorEndpoint string = 'https://${frontDoor.outputs.endpointHostName}'
 output postgresFqdn string = postgres.outputs.fqdn
 output keyVaultUri string = keyvault.outputs.vaultUri
