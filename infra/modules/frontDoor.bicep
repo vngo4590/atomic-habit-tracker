@@ -4,7 +4,7 @@ param profileName string
 @description('Globally unique endpoint name')
 param endpointName string
 
-@description('Backend host name (Container App FQDN)')
+@description('Backend host name (App Service default hostname)')
 param originHostName string
 
 @description('Log Analytics workspace resource ID for diagnostics')
@@ -22,28 +22,6 @@ resource profile 'Microsoft.Cdn/profiles@2024-09-01' = {
   }
   properties: {
     originResponseTimeoutSeconds: 60
-  }
-}
-
-// ---------------------------------------------------------------------------
-// WAF Policy — OWASP Core Rule Set to block common attacks
-// (SQLi, XSS, LFI, RFI, etc.).  Mode=Prevention actively blocks requests.
-// ---------------------------------------------------------------------------
-resource wafPolicy 'Microsoft.Network/frontDoorWebApplicationFirewallPolicies@2024-02-01' = {
-  name: '${profileName}-waf'
-  location: 'Global'
-  sku: {
-    name: 'Standard_AzureFrontDoor'
-  }
-  properties: {
-    policySettings: {
-      enabledState: 'Enabled'
-      mode: 'Prevention'
-      requestBodyCheck: 'Enabled'
-    }
-    managedRules: {
-      managedRuleSets: []
-    }
   }
 }
 
@@ -83,8 +61,8 @@ resource originGroup 'Microsoft.Cdn/profiles/originGroups@2024-09-01' = {
 }
 
 // ---------------------------------------------------------------------------
-// Origin — the Container App backend.  We use the Container App FQDN
-// and preserve the host header so the Container Apps ingress routing works.
+// Origin — the App Service backend.  We use the App Service hostname
+// and preserve the host header so the App Service routing works.
 // ---------------------------------------------------------------------------
 resource origin 'Microsoft.Cdn/profiles/originGroups/origins@2024-09-01' = {
   name: 'atomicly-origin'
@@ -135,38 +113,7 @@ resource route 'Microsoft.Cdn/profiles/afdEndpoints/routes@2024-09-01' = {
 }
 
 // ---------------------------------------------------------------------------
-// Security Policy — links the WAF policy to the endpoint.
-// ---------------------------------------------------------------------------
-resource securityPolicy 'Microsoft.Cdn/profiles/securityPolicies@2024-09-01' = {
-  name: 'waf-policy-link'
-  parent: profile
-  dependsOn: [
-    route
-  ]
-  properties: {
-    parameters: {
-      type: 'WebApplicationFirewall'
-      wafPolicy: {
-        id: wafPolicy.id
-      }
-      associations: [
-        {
-          domains: [
-            {
-              id: endpoint.id
-            }
-          ]
-          patternsToMatch: [
-            '/*'
-          ]
-        }
-      ]
-    }
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Diagnostics — send Front Door access logs and WAF logs to Log Analytics.
+// Diagnostics — send Front Door access logs to Log Analytics.
 // ---------------------------------------------------------------------------
 resource frontDoorDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
   name: 'frontDoorDiagnostics'
@@ -176,10 +123,6 @@ resource frontDoorDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-
     logs: [
       {
         category: 'FrontDoorAccessLog'
-        enabled: true
-      }
-      {
-        category: 'FrontDoorWebApplicationFirewallLog'
         enabled: true
       }
     ]
@@ -194,4 +137,3 @@ resource frontDoorDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-
 
 output profileId string = profile.id
 output endpointHostName string = endpoint.properties.hostName
-output wafPolicyId string = wafPolicy.id
