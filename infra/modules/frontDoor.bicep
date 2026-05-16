@@ -29,7 +29,7 @@ resource profile 'Microsoft.Cdn/profiles@2024-09-01' = {
 // WAF Policy — OWASP Core Rule Set to block common attacks
 // (SQLi, XSS, LFI, RFI, etc.).  Mode=Prevention actively blocks requests.
 // ---------------------------------------------------------------------------
-resource wafPolicy 'Microsoft.Network/frontDoorWebApplicationFirewallPolicies@2024-05-01' = {
+resource wafPolicy 'Microsoft.Network/frontDoorWebApplicationFirewallPolicies@2024-02-01' = {
   name: '${profileName}-waf'
   location: 'Global'
   sku: {
