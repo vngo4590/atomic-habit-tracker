@@ -1,7 +1,9 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 
+import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { useStoreContext } from "@/components/StoreProvider";
 import { fmt } from "@/lib/helpers";
 
@@ -142,13 +144,13 @@ export default function JournalPage() {
   const canApplyCustom = !!(customEmoji || customLabel.trim());
 
   return (
-    <div className="fade-up">
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}>
       <div className="page-header">
         <div>
           <div className="eyebrow">Reflect</div>
           <h1 className="h1">Journal</h1>
         </div>
-        <button className="btn btn-primary" onClick={startNew}>New entry</button>
+        <motion.button className="btn btn-primary" onClick={startNew} whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>New entry</motion.button>
       </div>
 
       {composing ? (
@@ -242,24 +244,25 @@ export default function JournalPage() {
           <label className="field-label" style={{ marginTop: 14 }}>Reflection</label>
           <textarea className="input" value={body} onChange={(event) => setBody(event.target.value)} rows={6} placeholder="Capture the lesson while it is fresh." />
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 14 }}>
-            <button className="btn" onClick={resetCompose}>Cancel</button>
-            <button className="btn btn-primary" disabled={!title.trim()} onClick={save}>{editingId ? "Save changes" : "Save entry"}</button>
+            <motion.button className="btn" onClick={resetCompose} whileTap={{ scale: 0.97 }}>Cancel</motion.button>
+            <motion.button className="btn btn-primary" disabled={!title.trim()} onClick={save} whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>{editingId ? "Save changes" : "Save entry"}</motion.button>
           </div>
         </section>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 22 }}>
           {PROMPTS.map((prompt) => (
-            <button key={prompt} className="card card-pad click-row" style={{ textAlign: "left" }} onClick={() => startPrompt(prompt)}>
+            <motion.button key={prompt} className="card card-pad click-row" style={{ textAlign: "left" }} onClick={() => startPrompt(prompt)} whileHover={{ y: -2, boxShadow: "var(--shadow-md)" }} whileTap={{ scale: 0.98 }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
               <div className="eyebrow">Prompt</div>
               <div style={{ fontFamily: "var(--serif)", fontSize: 20, lineHeight: 1.25, marginTop: 8 }}>{prompt}</div>
-            </button>
+            </motion.button>
           ))}
         </div>
       )}
 
-      <div style={{ display: "grid", gap: 14 }}>
+      <StaggerContainer style={{ display: "grid", gap: 14 }} staggerDelay={0.05}>
         {entries.map((entry) => (
-          <article key={entry.id} className="card card-pad" style={{ borderColor: moodFor(entry.mood).color }}>
+          <StaggerItem key={entry.id}>
+            <motion.article className="card card-pad" style={{ borderColor: moodFor(entry.mood).color }} whileHover={{ y: -1 }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
               <div>
                 <div className="eyebrow">{fmt.long(entry.date)}</div>
@@ -274,9 +277,10 @@ export default function JournalPage() {
               </div>
             </div>
             {entry.body && <p className="muted" style={{ marginTop: 12, lineHeight: 1.6 }}>{entry.body}</p>}
-          </article>
+            </motion.article>
+          </StaggerItem>
         ))}
-      </div>
-    </div>
+      </StaggerContainer>
+    </motion.div>
   );
 }

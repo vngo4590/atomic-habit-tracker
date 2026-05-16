@@ -1,6 +1,9 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
+
+import { slideUpVariants } from "@/lib/animations";
 
 const STEPS = [
   {
@@ -47,24 +50,84 @@ export function OnboardingOverlay({ onComplete }: { onComplete: (name?: string) 
   };
 
   return (
-    <div className="overlay">
-      <div className="overlay-card" style={{ width: 560, maxWidth: "92vw" }}>
-        <div style={{ display: "flex", gap: 6, marginBottom: 18 }}>
-          {STEPS.map((item, index) => (
-            <span key={item.eyebrow} style={{ width: 34, height: 4, borderRadius: 99, background: index <= step ? "var(--accent)" : "var(--rule-strong)" }} />
-          ))}
-        </div>
-        <div className="eyebrow">{current.eyebrow}</div>
-        <h2 className="h1" style={{ marginTop: 8 }}>{current.title}</h2>
-        <p className="lede" style={{ lineHeight: 1.6 }}>{current.body}</p>
-        {step === 1 && (
-          <input className="input" value={name} onChange={(event) => setName(event.target.value)} placeholder="Your name" autoFocus />
-        )}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 22 }}>
-          <button className="btn" onClick={() => onComplete(name.trim() || undefined)}>Skip</button>
-          <button className="btn btn-primary" disabled={blocked} onClick={next}>{current.action}</button>
-        </div>
-      </div>
-    </div>
+    <motion.div
+      className="overlay"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={step}
+          className="overlay-card"
+          style={{ width: 560, maxWidth: "92vw" }}
+          variants={slideUpVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+        >
+          <div style={{ display: "flex", gap: 6, marginBottom: 18 }}>
+            {STEPS.map((item, index) => (
+              <motion.span
+                key={item.eyebrow}
+                style={{
+                  width: 34,
+                  height: 4,
+                  borderRadius: 99,
+                  background: index <= step ? "var(--accent)" : "var(--rule-strong)",
+                }}
+                initial={index === step ? { scaleX: 0 } : {}}
+                animate={{ scaleX: 1 }}
+                transition={{ duration: 0.3, delay: index === step ? 0.1 : 0 }}
+              />
+            ))}
+          </div>
+          <div className="eyebrow">{current.eyebrow}</div>
+          <h2 className="h1" style={{ marginTop: 8 }}>
+            {current.title}
+          </h2>
+          <p className="lede" style={{ lineHeight: 1.6 }}>
+            {current.body}
+          </p>
+          {step === 1 && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+            >
+              <input
+                className="input"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="Your name"
+                autoFocus
+              />
+            </motion.div>
+          )}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginTop: 22,
+            }}
+          >
+            <motion.button className="btn" onClick={() => onComplete(name.trim() || undefined)} whileTap={{ scale: 0.97 }}>
+              Skip
+            </motion.button>
+            <motion.button
+              className="btn btn-primary"
+              disabled={blocked}
+              onClick={next}
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.97 }}
+            >
+              {current.action}
+            </motion.button>
+          </div>
+        </motion.div>
+      </AnimatePresence>
+    </motion.div>
   );
 }

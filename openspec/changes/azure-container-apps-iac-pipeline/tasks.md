@@ -3,6 +3,7 @@
 - [ ] 1.1 Create `infra/` with Bicep entry point, modules directory, and environment/region parameter directory.
 - [ ] 1.2 Add naming, tagging, and location parameters shared by all Azure resources.
 - [ ] 1.3 Add parameter files for the initial dev and production Azure regions.
+- [ ] 1.4 Add domain parameters for canonical hostname, apex versus subdomain routing, DNS zone usage, and certificate mode.
 
 ## 2. Azure Resource Modules
 
@@ -13,6 +14,8 @@
 - [ ] 2.5 Add Bicep module for Azure Container Apps environment with observability integration.
 - [ ] 2.6 Add Bicep module for the web Container App using the Docker `runner` image, health endpoint, ingress, scale settings, and Key Vault-backed secrets.
 - [ ] 2.7 Add Bicep module or resource definition for the migration Container Apps Job using the Docker `migrator` image.
+- [ ] 2.8 Add optional Azure DNS zone and record support for managed domains hosted in Azure DNS.
+- [ ] 2.9 Add custom hostname and managed certificate binding support for the web Container App where it can be automated safely.
 
 ## 3. Pipeline Authentication And Planning
 
@@ -30,6 +33,7 @@
 - [ ] 4.5 Deploy the web image as a new Container Apps revision.
 - [ ] 4.6 Run `/api/healthz` smoke validation before routing production traffic to the new revision.
 - [ ] 4.7 Add rollback instructions or workflow steps for shifting traffic back to the previous healthy revision.
+- [ ] 4.8 Add custom-domain rollout workflow or runbook steps to read Container Apps DNS targets, verify DNS records, bind the hostname, and validate HTTPS.
 
 ## 5. Documentation And Runtime Configuration
 
@@ -38,6 +42,9 @@
 - [ ] 5.3 Document cost settings and trade-offs for Container Apps minimum replicas and PostgreSQL compute tier.
 - [ ] 5.4 Document security guardrails for Key Vault, managed identity, private database connectivity, and secret rotation.
 - [ ] 5.5 Document horizontal scale prerequisites, including stable server action encryption key and cache/revalidation constraints.
+- [ ] 5.6 Document domain registration options, including using an external registrar with Azure DNS delegation or leaving DNS at the existing provider.
+- [ ] 5.7 Document required DNS records for subdomain and apex Container Apps bindings, including CNAME, A, TXT verification, and DigiCert CAA considerations.
+- [ ] 5.8 Document how custom domain rollout updates `AUTH_URL`, `NEXT_PUBLIC_APP_URL`, and image build selection when the public URL changes.
 
 ## 6. Validation
 
@@ -45,4 +52,5 @@
 - [ ] 6.2 Run a `what-if` preview against at least the dev Azure target.
 - [ ] 6.3 Run the full application validation suite with `npm run backend:validate`.
 - [ ] 6.4 Perform a dev Azure smoke deployment and verify migration job completion, web revision health, and `/api/healthz`.
-- [ ] 6.5 Verify the OpenSpec change status is apply-ready after all artifacts are complete.
+- [ ] 6.5 Validate custom domain DNS and HTTPS binding in a non-production or staging target where a test domain is available.
+- [ ] 6.6 Verify the OpenSpec change status is apply-ready after all artifacts are complete.

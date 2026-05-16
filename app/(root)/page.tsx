@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
 
 import { CompletionRing } from "@/components/CompletionRing";
 import { HabitRow } from "@/components/HabitRow";
 import { IconPlus, IconSearch } from "@/components/Icons";
 import { MoodCheckSheet } from "@/components/MoodCheckSheet";
+import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { useStoreContext } from "@/components/StoreProvider";
 import { dateAdd, fmt, todayKey } from "@/lib/helpers";
 import type { Habit } from "@/lib/types";
@@ -62,160 +64,272 @@ export default function TodayPage() {
   const topHabit = [...habits].sort((a, b) => streak(b) - streak(a))[0];
 
   return (
-    <div className="fade-up">
-      <div className="page-header">
+    <div>
+      <motion.div
+        className="page-header"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+      >
         <div>
-          <div className="eyebrow">{greet} · {fmt.long(today)}</div>
+          <div className="eyebrow">
+            {greet} · {fmt.long(today)}
+          </div>
           <h1 className="h1">
             {doneToday === habits.length && habits.length > 0 ? (
-              <>A clean sweep. <em>Vote cast.</em></>
+              <>
+                A clean sweep. <em>Vote cast.</em>
+              </>
             ) : doneToday === 0 ? (
-              <>Start with <em>one small thing.</em></>
+              <>
+                Start with <em>one small thing.</em>
+              </>
             ) : (
-              <>You&apos;re <em>{pct}%</em> through today.</>
+              <>
+                You&apos;re <em>{pct}%</em> through today.
+              </>
             )}
           </h1>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button className="btn btn-sm">
+          <motion.button
+            className="btn btn-sm"
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.97 }}
+          >
             <IconSearch style={{ width: 13, height: 13 }} />
             Search
-          </button>
-          <button className="btn btn-sm btn-primary" onClick={() => router.push("/habits/new")}>
+          </motion.button>
+          <motion.button
+            className="btn btn-sm btn-primary"
+            onClick={() => router.push("/habits/new")}
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.97 }}
+          >
             <IconPlus style={{ width: 13, height: 13 }} />
             New habit
-          </button>
+          </motion.button>
         </div>
-      </div>
+      </motion.div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr 1fr", gap: 18, marginBottom: 32 }}>
-        <div className="card card-pad" style={{ display: "flex", gap: 20, alignItems: "center" }}>
+      <motion.div
+        style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr 1fr", gap: 18, marginBottom: 32 }}
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.1, ease: [0.4, 0, 0.2, 1] }}
+      >
+        <motion.div
+          className="card card-pad"
+          style={{ display: "flex", gap: 20, alignItems: "center" }}
+          whileHover={{ y: -2, boxShadow: "var(--shadow-md)" }}
+          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+        >
           <CompletionRing pct={pct} />
           <div>
             <div className="eyebrow">Today</div>
             <div style={{ fontFamily: "var(--serif)", fontSize: 32, lineHeight: 1, marginTop: 4 }}>
-              {doneToday}<span style={{ color: "var(--ink-3)" }}>/{habits.length}</span>
+              {doneToday}
+              <span style={{ color: "var(--ink-3)" }}>/{habits.length}</span>
             </div>
             <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-              {doneToday === 0 ? "Nothing checked yet" : doneToday === habits.length ? "All done - well done." : `${habits.length - doneToday} habits remaining`}
+              {doneToday === 0
+                ? "Nothing checked yet"
+                : doneToday === habits.length
+                  ? "All done - well done."
+                  : `${habits.length - doneToday} habits remaining`}
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="card card-pad">
+        <motion.div
+          className="card card-pad"
+          whileHover={{ y: -2, boxShadow: "var(--shadow-md)" }}
+          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+        >
           <div className="eyebrow">Longest active streak</div>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 6 }}>
             <div style={{ fontFamily: "var(--serif)", fontSize: 32, lineHeight: 1 }}>
               {Math.max(0, ...habits.map(streak))}
             </div>
-            <div className="muted mono" style={{ fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase" }}>days</div>
+            <div className="muted mono" style={{ fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+              days
+            </div>
           </div>
           <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
             {topHabit ? `${topHabit.name} - keep it warm.` : "-"}
           </div>
-        </div>
+        </motion.div>
 
-        <div className="card card-pad">
+        <motion.div
+          className="card card-pad"
+          whileHover={{ y: -2, boxShadow: "var(--shadow-md)" }}
+          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+        >
           <div className="eyebrow">Last 14 days</div>
           <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 48, marginTop: 10 }}>
             {last14.map((day, index) => {
               const height = day.total ? (day.done / day.total) * 100 : 0;
               const isToday = index === last14.length - 1;
               return (
-                <div key={day.key} style={{ flex: 1, height: "100%", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-                  <div
+                <div
+                  key={day.key}
+                  style={{ flex: 1, height: "100%", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}
+                >
+                  <motion.div
                     style={{
                       height: `${Math.max(4, height)}%`,
                       background: isToday ? "var(--accent)" : height > 50 ? "var(--ink-2)" : "var(--rule-strong)",
                       borderRadius: 2,
                     }}
+                    initial={{ scaleY: 0 }}
+                    animate={{ scaleY: 1 }}
+                    transition={{ duration: 0.5, delay: 0.2 + index * 0.03, ease: [0.4, 0, 0.2, 1] }}
                   />
                 </div>
               );
             })}
           </div>
-          <div className="muted mono" style={{ fontSize: 10, letterSpacing: "0.06em", marginTop: 8, display: "flex", justifyContent: "space-between" }}>
-            <span>2 WEEKS AGO</span><span>TODAY</span>
+          <div
+            className="muted mono"
+            style={{ fontSize: 10, letterSpacing: "0.06em", marginTop: 8, display: "flex", justifyContent: "space-between" }}
+          >
+            <span>2 WEEKS AGO</span>
+            <span>TODAY</span>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
-      <div className="card card-pad" style={{ marginBottom: 32, background: "var(--bg-sunk)", borderStyle: "dashed" }}>
+      <motion.div
+        className="card card-pad"
+        style={{ marginBottom: 32, background: "var(--bg-sunk)", borderStyle: "dashed" }}
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.15, ease: [0.4, 0, 0.2, 1] }}
+      >
         <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 32, alignItems: "center" }}>
           <div>
             <div className="eyebrow">Today, you&apos;re voting for</div>
-            <div style={{ fontFamily: "var(--serif)", fontSize: 22, fontStyle: "italic", marginTop: 6, color: "var(--ink-2)", lineHeight: 1.4 }}>
+            <div
+              style={{
+                fontFamily: "var(--serif)",
+                fontSize: 22,
+                fontStyle: "italic",
+                marginTop: 6,
+                color: "var(--ink-2)",
+                lineHeight: 1.4,
+              }}
+            >
               {store.identity.statement}
             </div>
           </div>
           <div>
-            <div className="eyebrow" style={{ marginBottom: 10 }}>Today&apos;s votes by identity</div>
+            <div className="eyebrow" style={{ marginBottom: 10 }}>
+              Today&apos;s votes by identity
+            </div>
             {votes.length === 0 ? (
               <div className="muted" style={{ fontStyle: "italic", fontFamily: "var(--serif)", fontSize: 14 }}>
                 No votes cast yet - check off a habit below.
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <StaggerContainer style={{ display: "flex", flexDirection: "column", gap: 6 }} staggerDelay={0.04}>
                 {votes.map(([identity, count]) => (
-                  <div key={identity} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 13 }}>
-                    <span style={{ fontFamily: "var(--serif)", fontStyle: "italic" }}>I am <span style={{ color: "var(--accent)" }}>{identity}</span></span>
-                    <span className="mono" style={{ fontSize: 11.5 }}>+{count}</span>
-                  </div>
+                  <StaggerItem key={identity}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 13 }}>
+                      <span style={{ fontFamily: "var(--serif)", fontStyle: "italic" }}>
+                        I am <span style={{ color: "var(--accent)" }}>{identity}</span>
+                      </span>
+                      <span className="mono" style={{ fontSize: 11.5 }}>
+                        +{count}
+                      </span>
+                    </div>
+                  </StaggerItem>
                 ))}
-              </div>
+              </StaggerContainer>
             )}
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      {TIMES.map((label) => {
+      {TIMES.map((label, sectionIndex) => {
         const list = groups[label];
         if (list.length === 0) {
           return null;
         }
 
         return (
-          <section key={label} style={{ marginBottom: 24 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <motion.section
+            key={label}
+            style={{ marginBottom: 24 }}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.2 + sectionIndex * 0.08, ease: [0.4, 0, 0.2, 1] }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 12,
+              }}
+            >
               <h2 className="h3">{label}</h2>
-              <span className="muted mono" style={{ fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+              <span
+                className="muted mono"
+                style={{ fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase" }}
+              >
                 {list.filter((habit) => habit.history[today]).length} / {list.length}
               </span>
             </div>
             <div className="card">
-              {list.map((habit) => (
-                <HabitRow
-                  key={habit.id}
-                  habit={habit}
-                  done={Boolean(habit.history[today])}
-                  streak={streak(habit)}
-                  onCheck={() => {
-                    const wasDone = Boolean(habit.history[today]);
-                    toggleHabit(habit.id);
-                    if (!wasDone) {
-                      setMoodHabit(habit);
-                    }
-                  }}
-                  onOpen={() => router.push(`/habits/${habit.id}`)}
-                />
-              ))}
+              <StaggerContainer staggerDelay={0.04} delayChildren={0.05}>
+                {list.map((habit) => (
+                  <StaggerItem key={habit.id}>
+                    <HabitRow
+                      habit={habit}
+                      done={Boolean(habit.history[today])}
+                      streak={streak(habit)}
+                      onCheck={() => {
+                        const wasDone = Boolean(habit.history[today]);
+                        toggleHabit(habit.id);
+                        if (!wasDone) {
+                          setMoodHabit(habit);
+                        }
+                      }}
+                      onOpen={() => router.push(`/habits/${habit.id}`)}
+                    />
+                  </StaggerItem>
+                ))}
+              </StaggerContainer>
             </div>
-          </section>
+          </motion.section>
         );
       })}
 
       {habits.length === 0 && (
-        <div className="card card-pad" style={{ textAlign: "center", padding: "42px 20px" }}>
+        <motion.div
+          className="card card-pad"
+          style={{ textAlign: "center", padding: "42px 20px" }}
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+        >
           <div className="eyebrow">No habits yet</div>
-          <h2 className="h2" style={{ marginTop: 8 }}>Design your first daily vote.</h2>
+          <h2 className="h2" style={{ marginTop: 8 }}>
+            Design your first daily vote.
+          </h2>
           <p className="muted" style={{ margin: "10px auto 18px", maxWidth: 460, lineHeight: 1.5 }}>
             Start with one small behavior tied to a clear identity.
           </p>
-          <button className="btn btn-primary" onClick={() => router.push("/habits/new")}>
+          <motion.button
+            className="btn btn-primary"
+            onClick={() => router.push("/habits/new")}
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.97 }}
+          >
             <IconPlus style={{ width: 13, height: 13 }} />
             Create habit
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
       )}
 
       {moodHabit && (

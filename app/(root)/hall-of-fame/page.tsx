@@ -1,7 +1,9 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 
+import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { FormationQuestionnaire } from "@/components/FormationQuestionnaire";
 import { useStoreContext } from "@/components/StoreProvider";
 import { todayKey } from "@/lib/helpers";
@@ -34,7 +36,7 @@ export default function HallOfFamePage() {
   };
 
   return (
-    <div className="fade-up">
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}>
       <div className="page-header">
         <div>
           <div className="eyebrow">Become</div>
@@ -45,15 +47,21 @@ export default function HallOfFamePage() {
       <section className="card card-pad" style={{ marginBottom: 18 }}>
         <div className="eyebrow">Ready for review</div>
         <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
-          {ready.length ? ready.map((habit) => (
-            <div key={habit.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 14 }}>
-              <div>
-                <div className="habit-name">{habit.name}</div>
-                <div className="muted mono" style={{ fontSize: 11 }}>{daysSince(habit.createdAt)} days old · {habit.identity}</div>
-              </div>
-              <button className="btn btn-primary" onClick={() => setReviewing(habit)}>Review</button>
-            </div>
-          )) : <div className="muted">No habits have reached 66 days yet.</div>}
+          {ready.length ? (
+            <StaggerContainer staggerDelay={0.05}>
+              {ready.map((habit) => (
+                <StaggerItem key={habit.id}>
+                  <motion.div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 14 }} whileHover={{ x: 2 }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
+                    <div>
+                      <div className="habit-name">{habit.name}</div>
+                      <div className="muted mono" style={{ fontSize: 11 }}>{daysSince(habit.createdAt)} days old · {habit.identity}</div>
+                    </div>
+                    <motion.button className="btn btn-primary" onClick={() => setReviewing(habit)} whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>Review</motion.button>
+                  </motion.div>
+                </StaggerItem>
+              ))}
+            </StaggerContainer>
+          ) : <div className="muted">No habits have reached 66 days yet.</div>}
         </div>
       </section>
 
@@ -102,6 +110,6 @@ export default function HallOfFamePage() {
       </div>
 
       {reviewing && <FormationQuestionnaire habit={reviewing} onClose={() => setReviewing(null)} onSubmit={saveVerdict} />}
-    </div>
+    </motion.div>
   );
 }

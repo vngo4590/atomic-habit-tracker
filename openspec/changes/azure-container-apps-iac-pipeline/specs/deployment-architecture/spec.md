@@ -44,6 +44,17 @@ The system SHALL configure Azure deployment defaults that minimize secret exposu
 - **WHEN** the Azure deployment is promoted beyond a simple development environment
 - **THEN** PostgreSQL connectivity is restricted through private networking or private endpoint access from the Azure application environment
 
+### Requirement: Azure deployment supports custom domain rollout
+The system SHALL document how to register, delegate, verify, bind, and validate an owned custom domain for Azure-hosted Atomicly environments.
+
+#### Scenario: Developer prepares custom domain rollout
+- **WHEN** a developer reads the Azure deployment documentation
+- **THEN** they can identify the domain registration or ownership prerequisite, DNS hosting option, required DNS records, certificate binding step, and app URL configuration update
+
+#### Scenario: Custom domain is validated
+- **WHEN** the custom domain rollout is complete
+- **THEN** the domain serves the app over HTTPS and the authenticated app uses the custom domain as its canonical origin
+
 ### Requirement: Horizontal scale is explicitly gated
 The system SHALL document and enforce the application prerequisites for scaling Azure web replicas horizontally.
 

@@ -1,8 +1,10 @@
 "use client";
 
+import { motion } from "framer-motion";
 import type { CSSProperties } from "react";
 import { useMemo, useState } from "react";
 
+import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { useStoreContext } from "@/components/StoreProvider";
 import { dateAdd, fmt, todayKey } from "@/lib/helpers";
 import type { WeeklyReview, WeeklyReviewAnswers } from "@/lib/types";
@@ -136,7 +138,7 @@ export default function ReviewPage() {
   };
 
   return (
-    <div className="fade-up">
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}>
       <div className="page-header">
         <div>
           <div className="eyebrow">Reflect</div>
@@ -156,18 +158,23 @@ export default function ReviewPage() {
             const count = habits.filter((habit) => habit.history[day]).length;
             const pct = habits.length ? Math.round((count / habits.length) * 100) : 0;
             return (
-              <div key={day} style={{ minHeight: 132, background: "var(--bg-sunk)", border: "1px solid var(--rule)", borderRadius: 8, padding: 12, display: "grid", alignContent: "space-between" }}>
+              <motion.div key={day} style={{ minHeight: 132, background: "var(--bg-sunk)", border: "1px solid var(--rule)", borderRadius: 8, padding: 12, display: "grid", alignContent: "space-between" }} whileHover={{ y: -2, borderColor: "var(--rule-strong)" }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
                 <div>
                   <div className="mono muted" style={{ fontSize: 10 }}>{fmt.weekday(day)}</div>
                   <div style={{ fontFamily: "var(--serif)", fontSize: 24 }}>{day.slice(-2)}</div>
                 </div>
                 <div>
                   <div style={{ height: 72, display: "flex", alignItems: "end" }}>
-                    <div style={{ width: "100%", height: `${Math.max(4, pct)}%`, background: "var(--accent)", borderRadius: 4 }} />
+                    <motion.div
+                      style={{ width: "100%", background: "var(--accent)", borderRadius: 4 }}
+                      initial={{ height: 0 }}
+                      animate={{ height: `${Math.max(4, pct)}%` }}
+                      transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+                    />
                   </div>
                   <div className="mono muted" style={{ fontSize: 10, marginTop: 6 }}>{pct}%</div>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>
@@ -176,25 +183,29 @@ export default function ReviewPage() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginBottom: 18 }}>
         <section className="card card-pad">
           <div className="eyebrow">Wins</div>
-          <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
+          <StaggerContainer style={{ display: "grid", gap: 12, marginTop: 14 }} staggerDelay={0.05}>
             {wins.length ? wins.map((habit) => (
-              <div key={habit.id}>
+              <StaggerItem key={habit.id}>
+                <motion.div whileHover={{ x: 2 }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
                 <div className="habit-name">{habit.name}</div>
                 <div className="muted mono" style={{ fontSize: 11 }}>{Math.round(completionRate(habit, 7) * 100)}% this week</div>
-              </div>
+              </motion.div>
+              </StaggerItem>
             )) : <div className="muted">No habit was 85%+ this week</div>}
-          </div>
+          </StaggerContainer>
         </section>
         <section className="card card-pad">
           <div className="eyebrow">Slips</div>
-          <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
+          <StaggerContainer style={{ display: "grid", gap: 12, marginTop: 14 }} staggerDelay={0.05}>
             {slips.length ? slips.map((habit) => (
-              <div key={habit.id}>
+              <StaggerItem key={habit.id}>
+                <motion.div whileHover={{ x: 2 }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
                 <div className="habit-name">{habit.name}</div>
                 <div className="muted mono" style={{ fontSize: 11 }}>{Math.round(completionRate(habit, 7) * 100)}% this week</div>
-              </div>
+              </motion.div>
+              </StaggerItem>
             )) : <div className="muted">No habit fell below 50% this week</div>}
-          </div>
+          </StaggerContainer>
         </section>
       </div>
 
@@ -214,8 +225,8 @@ export default function ReviewPage() {
             })}
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 14 }}>
-            <button className="btn" onClick={() => setEditingWeekStartKey(null)}>Cancel</button>
-            <button className="btn btn-primary" onClick={saveReview}>Save review</button>
+            <motion.button className="btn" onClick={() => setEditingWeekStartKey(null)} whileTap={{ scale: 0.97 }}>Cancel</motion.button>
+            <motion.button className="btn btn-primary" onClick={saveReview} whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>Save review</motion.button>
           </div>
         </section>
       ) : currentHasReview ? (
@@ -262,6 +273,6 @@ export default function ReviewPage() {
           </div>
         )}
       </section>
-    </div>
+    </motion.div>
   );
 }

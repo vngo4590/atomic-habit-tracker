@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -117,7 +118,7 @@ export default function NewHabitPage() {
   };
 
   return (
-    <div className="fade-up">
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}>
       <div className="page-header">
         <div>
           <div className="eyebrow">Create</div>
@@ -150,21 +151,22 @@ export default function NewHabitPage() {
           <div className="eyebrow">Schedule</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
             {(Object.keys(PRESETS) as Preset[]).map((key) => (
-              <button key={key} className={`chip ${preset === key ? "active" : ""}`} type="button" onClick={() => setPreset(key)}>
+              <motion.button key={key} className={`chip ${preset === key ? "active" : ""}`} type="button" onClick={() => setPreset(key)} whileTap={{ scale: 0.95 }}>
                 {PRESETS[key].label}
-              </button>
+              </motion.button>
             ))}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6, marginTop: 16 }}>
             {DAYS.map((day) => (
-              <button
+              <motion.button
                 key={day}
                 className={`btn btn-sm ${activeDays.includes(day) ? "btn-primary" : ""}`}
                 type="button"
                 onClick={() => toggleDay(day)}
+                whileTap={{ scale: 0.95 }}
               >
                 {day}
-              </button>
+              </motion.button>
             ))}
           </div>
           <label className="field-label" style={{ marginTop: 18 }}>
@@ -227,11 +229,11 @@ export default function NewHabitPage() {
       </div>
 
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 24 }}>
-        <button className="btn" type="button" onClick={() => router.push("/habits")}>Cancel</button>
-        <button className="btn btn-primary" type="button" disabled={!name.trim() || !identity.trim()} onClick={finalize}>
+        <motion.button className="btn" type="button" onClick={() => router.push("/habits")} whileTap={{ scale: 0.97 }}>Cancel</motion.button>
+        <motion.button className="btn btn-primary" type="button" disabled={!name.trim() || !identity.trim()} onClick={finalize} whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
           Create habit
-        </button>
+        </motion.button>
       </div>
-    </div>
+    </motion.div>
   );
 }

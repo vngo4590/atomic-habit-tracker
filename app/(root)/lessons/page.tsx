@@ -1,7 +1,9 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 
+import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { useStoreContext } from "@/components/StoreProvider";
 import { CHAPTERS, LESSONS, type Lesson } from "@/lib/lessons-data";
 
@@ -53,7 +55,7 @@ export default function LessonsPage() {
   const progress = Math.round((completed.size / LESSONS.length) * 100);
 
   return (
-    <div className="fade-up">
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}>
       <div className="page-header">
         <div>
           <div className="eyebrow">Learn</div>
@@ -92,7 +94,7 @@ export default function LessonsPage() {
                 ))}
               </div>
             </div>
-            <button className="btn btn-primary" onClick={() => openLesson(todayLesson)}>Read lesson</button>
+            <motion.button className="btn btn-primary" onClick={() => openLesson(todayLesson)} whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>Read lesson</motion.button>
           </section>
           <CurriculumMap completed={completed} todayId={todayLesson.id} />
           <div className="muted mono" style={{ marginTop: 12, fontSize: 11 }}>{completed.size} / {LESSONS.length} read · {progress}%</div>
@@ -110,9 +112,9 @@ export default function LessonsPage() {
             <div className="eyebrow">Practice</div>
             <p style={{ margin: "8px 0 0" }}>{selected.practice}</p>
           </div>
-          <button className="btn btn-primary" style={{ marginTop: 18 }} onClick={() => markRead(selected)}>
+          <motion.button className="btn btn-primary" style={{ marginTop: 18 }} onClick={() => markRead(selected)} whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
             {completed.has(selected.id) ? "Read" : "I've read this"}
-          </button>
+          </motion.button>
         </section>
       )}
 
@@ -123,19 +125,21 @@ export default function LessonsPage() {
               <button key={item} className={`tab ${filter === item ? "active" : ""}`} onClick={() => setFilter(item)}>{item}</button>
             ))}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
+          <StaggerContainer style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }} staggerDelay={0.04}>
             {filteredLessons.map((lesson) => (
-              <button key={lesson.id} className="card card-pad click-row" style={{ textAlign: "left" }} onClick={() => openLesson(lesson)}>
+              <StaggerItem key={lesson.id}>
+                <motion.button className="card card-pad click-row" style={{ textAlign: "left" }} onClick={() => openLesson(lesson)} whileHover={{ y: -2, boxShadow: "var(--shadow-md)" }} whileTap={{ scale: 0.98 }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
                 <div className="eyebrow">{lesson.chapter}</div>
                 <h2 className="h3" style={{ marginTop: 8 }}>{lesson.title}</h2>
                 <p className="muted" style={{ lineHeight: 1.45 }}>{lesson.takeaway}</p>
                 <span className="chip">{completed.has(lesson.id) ? "Read" : `${lesson.minutes} min`}</span>
-              </button>
+                </motion.button>
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerContainer>
         </>
       )}
-    </div>
+    </motion.div>
   );
 }
 
