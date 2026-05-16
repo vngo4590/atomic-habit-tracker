@@ -87,20 +87,12 @@ jobs:
             echo "tag=sha-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Deploy infrastructure (Bicep)
-        id: bicep
+      - name: Pre-create ACR
         run: |
-          az deployment sub create \
-            --name "atomicly-${{ env.ENVIRONMENT }}-${{ github.run_id }}" \
-            --location ${{ env.LOCATION }} \
-            --template-file infra/main.bicep \
-            --parameters \
-              location=${{ env.LOCATION }} \
-              environment=${{ env.ENVIRONMENT }} \
-              uniqueSuffix=${{ secrets.AZURE_UNIQUE_SUFFIX }} \
-              postgresAdminPassword='${{ secrets.POSTGRES_ADMIN_PASSWORD }}' \
-              imageTag=${{ steps.vars.outputs.tag }} \
-            --query properties.outputs
+          RG="rg-atomicly-dev-aue-${{ secrets.AZURE_UNIQUE_SUFFIX }}"
+          ACR="cratomiclydev${{ secrets.AZURE_UNIQUE_SUFFIX }}"
+          az group create --name "$RG" --location ${{ env.LOCATION }} --output none
+          az acr create --resource-group "$RG" --name "$ACR" --sku Basic --location ${{ env.LOCATION }} --output none
 
       - name: Login to Azure Container Registry
         run: |
@@ -134,6 +126,21 @@ jobs:
             --push \
             .
 
+      - name: Deploy infrastructure (Bicep)
+        id: bicep
+        run: |
+          az deployment sub create \
+            --name "atomicly-${{ env.ENVIRONMENT }}-${{ github.run_id }}" \
+            --location ${{ env.LOCATION }} \
+            --template-file infra/main.bicep \
+            --parameters \
+              location=${{ env.LOCATION }} \
+              environment=${{ env.ENVIRONMENT }} \
+              uniqueSuffix=${{ secrets.AZURE_UNIQUE_SUFFIX }} \
+              postgresAdminPassword='${{ secrets.POSTGRES_ADMIN_PASSWORD }}' \
+              imageTag=${{ steps.vars.outputs.tag }} \
+            --query properties.outputs
+
       - name: Update Key Vault secrets
         run: |
           KV_NAME="kv-atomiclydev${{ secrets.AZURE_UNIQUE_SUFFIX }}"
@@ -141,76 +148,79 @@ jobs:
           az keyvault secret set --vault-name "$KV_NAME" --name database-url --value "$DB_URL"
           az keyvault secret set --vault-name "$KV_NAME" --name auth-secret --value '${{ secrets.AUTH_SECRET }}'
 
-      - name: Update Container App with Key Vault secrets
+      - name: Grant App Service access to ACR and Key Vault
         run: |
-          APP_NAME="ca-atomicly-dev-aue"
+          APP_NAME="app-atomicly-dev-aue"
           RG="rg-atomicly-dev-aue-${{ secrets.AZURE_UNIQUE_SUFFIX }}"
-          ACR_LOGIN_SERVER="cratomiclydev${{ secrets.AZURE_UNIQUE_SUFFIX }}.azurecr.io"
+          ACR="cratomiclydev${{ secrets.AZURE_UNIQUE_SUFFIX }}"
           KV_NAME="kv-atomiclydev${{ secrets.AZURE_UNIQUE_SUFFIX }}"
-          MANAGED_IDENTITY_ID=$(az containerapp show --name "$APP_NAME" --resource-group "$RG" --query "identity.userAssignedIdentities.*.principalId" -o tsv)
+          APP_PRINCIPAL_ID=$(az webapp show --name "$APP_NAME" --resource-group "$RG" --query identity.principalId -o tsv)
+          az role assignment create --assignee "$APP_PRINCIPAL_ID" --role AcrPull --scope $(az acr show --name "$ACR" --resource-group "$RG" --query id -o tsv) --output none 2>/dev/null || true
+          az role assignment create --assignee "$APP_PRINCIPAL_ID" --role "Key Vault Secrets User" --scope $(az keyvault show --name "$KV_NAME" --resource-group "$RG" --query id -o tsv) --output none 2>/dev/null || true
+
+      - name: Update App Service app settings
+        run: |
+          APP_NAME="app-atomicly-dev-aue"
+          RG="rg-atomicly-dev-aue-${{ secrets.AZURE_UNIQUE_SUFFIX }}"
+          KV_NAME="kv-atomiclydev${{ secrets.AZURE_UNIQUE_SUFFIX }}"
+          ACR_LOGIN_SERVER="cratomiclydev${{ secrets.AZURE_UNIQUE_SUFFIX }}.azurecr.io"
+          FD_URL="https://atomicly-dev-${{ secrets.AZURE_UNIQUE_SUFFIX }}.azurefd.net"
           KV_URL="https://${KV_NAME}.vault.azure.net"
-          az containerapp update \
+          az webapp config appsettings set \
             --name "$APP_NAME" \
             --resource-group "$RG" \
-            --image "$ACR_LOGIN_SERVER/atomicly:${{ steps.vars.outputs.tag }}" \
-            --secrets \
-              "database-url=keyvaultref:${KV_URL}/secrets/database-url,identityref:${MANAGED_IDENTITY_ID}" \
-              "auth-secret=keyvaultref:${KV_URL}/secrets/auth-secret,identityref:${MANAGED_IDENTITY_ID}" \
-            --env-vars \
-              "DATABASE_URL=secretref:database-url" \
-              "AUTH_SECRET=secretref:auth-secret"
+            --settings \
+              "NODE_ENV=production" \
+              "HOSTNAME=0.0.0.0" \
+              "PORT=3000" \
+              "AUTH_URL=$FD_URL" \
+              "NEXT_PUBLIC_APP_URL=$FD_URL" \
+              "DEPLOYMENT_VERSION=${{ steps.vars.outputs.tag }}" \
+              "DATABASE_URL=@Microsoft.KeyVault(SecretUri=${KV_URL}/secrets/database-url/)" \
+              "AUTH_SECRET=@Microsoft.KeyVault(SecretUri=${KV_URL}/secrets/auth-secret/)"
 
-      - name: Run database migrations (Container App Job)
+      - name: Update App Service container image
         run: |
-          ENV_NAME="cae-atomicly-dev-aue"
+          APP_NAME="app-atomicly-dev-aue"
           RG="rg-atomicly-dev-aue-${{ secrets.AZURE_UNIQUE_SUFFIX }}"
           ACR_LOGIN_SERVER="cratomiclydev${{ secrets.AZURE_UNIQUE_SUFFIX }}.azurecr.io"
-          DB_URL="postgresql://psqladmin:${{ secrets.POSTGRES_ADMIN_PASSWORD }}@psql-atomicly-dev-aue-${{ secrets.AZURE_UNIQUE_SUFFIX }}.postgres.database.azure.com:5432/atomicly?schema=public&sslmode=require"
-          JOB_NAME="atomicly-migrate-${{ github.run_id }}"
-
-          az containerapp job create \
-            --name "$JOB_NAME" \
+          az webapp config container set \
+            --name "$APP_NAME" \
             --resource-group "$RG" \
-            --environment "$ENV_NAME" \
-            --image "$ACR_LOGIN_SERVER/atomicly-migrator:dev-latest" \
-            --cpu "0.5" \
-            --memory "1Gi" \
-            --env-vars "DATABASE_URL=$DB_URL" "NODE_ENV=production" \
-            --trigger-type Manual \
-            --replica-timeout 300 \
-            --replica-retry-limit 1 \
-            --output none || true
+            --docker-custom-image-name "$ACR_LOGIN_SERVER/atomicly:${{ steps.vars.outputs.tag }}" \
+            --docker-registry-server-url "https://$ACR_LOGIN_SERVER"
 
-          sleep 5
-          az containerapp job start \
-            --name "$JOB_NAME" \
+      - name: Run database migrations
+        run: |
+          RG="rg-atomicly-dev-aue-${{ secrets.AZURE_UNIQUE_SUFFIX }}"
+          POSTGRES_NAME="psql-atomicly-dev-aue-${{ secrets.AZURE_UNIQUE_SUFFIX }}"
+          DB_URL="postgresql://psqladmin:${{ secrets.POSTGRES_ADMIN_PASSWORD }}@${POSTGRES_NAME}.postgres.database.azure.com:5432/atomicly?schema=public&sslmode=require"
+          # Add GitHub Actions runner IP to PostgreSQL firewall temporarily
+          RUNNER_IP=$(curl -s https://api.ipify.org)
+          az postgres flexible-server firewall-rule create \
+            --name "$POSTGRES_NAME" \
             --resource-group "$RG" \
+            --rule-name "github-actions" \
+            --start-ip-address "$RUNNER_IP" \
+            --end-ip-address "$RUNNER_IP" \
             --output none
-
-          # Poll for completion
-          for i in {1..30}; do
-            STATUS=$(az containerapp job execution list --name "$JOB_NAME" --resource-group "$RG" --query '[0].properties.status' -o tsv 2>/dev/null || echo "Running")
-            if [ "$STATUS" == "Succeeded" ]; then
-              echo "Migrations completed successfully."
-              break
-            elif [ "$STATUS" == "Failed" ]; then
-              echo "Migration job failed!"
-              exit 1
-            fi
-            echo "  status=$STATUS (waiting ...)"
-            sleep 10
-          done
-
-          az containerapp job delete --name "$JOB_NAME" --resource-group "$RG" --yes --output none 2>/dev/null || true
+          # Run migrations via the migrator image
+          docker run --rm -e "DATABASE_URL=$DB_URL" -e "NODE_ENV=production" "${ACR_LOGIN_SERVER}/atomicly-migrator:dev-latest"
+          # Clean up firewall rule
+          az postgres flexible-server firewall-rule delete \
+            --name "$POSTGRES_NAME" \
+            --resource-group "$RG" \
+            --rule-name "github-actions" \
+            --yes \
+            --output none
 
       - name: Verify deployment
         run: |
-          APP_NAME="ca-atomicly-dev-aue"
+          APP_NAME="app-atomicly-dev-aue"
           RG="rg-atomicly-dev-aue-${{ secrets.AZURE_UNIQUE_SUFFIX }}"
-          FQDN=$(az containerapp show --name "$APP_NAME" --resource-group "$RG" --query properties.configuration.ingress.fqdn -o tsv)
-          echo "Container App FQDN: $FQDN"
+          HOSTNAME=$(az webapp show --name "$APP_NAME" --resource-group "$RG" --query defaultHostName -o tsv)
           for i in {1..12}; do
-            if curl -sf "https://$FQDN/api/healthz" > /dev/null 2>&1; then
+            if curl -sf "https://$HOSTNAME/api/healthz" > /dev/null 2>&1; then
               echo "✅ Health check passed"
               break
             fi
