@@ -144,7 +144,7 @@ jobs:
       - name: Update Container App with Key Vault secrets
         run: |
           APP_NAME="ca-atomicly-dev-aue"
-          RG="rg-atomicly-dev-aue"
+          RG="rg-atomicly-dev-aue-${{ secrets.AZURE_UNIQUE_SUFFIX }}"
           ACR_LOGIN_SERVER="cratomiclydev${{ secrets.AZURE_UNIQUE_SUFFIX }}.azurecr.io"
           KV_NAME="kv-atomiclydev${{ secrets.AZURE_UNIQUE_SUFFIX }}"
           MANAGED_IDENTITY_ID=$(az containerapp show --name "$APP_NAME" --resource-group "$RG" --query "identity.userAssignedIdentities.*.principalId" -o tsv)
@@ -163,7 +163,7 @@ jobs:
       - name: Run database migrations (Container App Job)
         run: |
           ENV_NAME="cae-atomicly-dev-aue"
-          RG="rg-atomicly-dev-aue"
+          RG="rg-atomicly-dev-aue-${{ secrets.AZURE_UNIQUE_SUFFIX }}"
           ACR_LOGIN_SERVER="cratomiclydev${{ secrets.AZURE_UNIQUE_SUFFIX }}.azurecr.io"
           DB_URL="postgresql://psqladmin:${{ secrets.POSTGRES_ADMIN_PASSWORD }}@psql-atomicly-dev-aue-${{ secrets.AZURE_UNIQUE_SUFFIX }}.postgres.database.azure.com:5432/atomicly?schema=public&sslmode=require"
           JOB_NAME="atomicly-migrate-${{ github.run_id }}"
@@ -206,7 +206,7 @@ jobs:
       - name: Verify deployment
         run: |
           APP_NAME="ca-atomicly-dev-aue"
-          RG="rg-atomicly-dev-aue"
+          RG="rg-atomicly-dev-aue-${{ secrets.AZURE_UNIQUE_SUFFIX }}"
           FQDN=$(az containerapp show --name "$APP_NAME" --resource-group "$RG" --query properties.configuration.ingress.fqdn -o tsv)
           echo "Container App FQDN: $FQDN"
           for i in {1..12}; do

@@ -32,7 +32,7 @@ if [ -z "$UNIQUE_SUFFIX" ]; then
   echo "Generated new unique suffix: $UNIQUE_SUFFIX (saved to .azure-suffix)"
 fi
 
-RG_NAME="rg-${PROJECT_NAME}-${ENVIRONMENT}-aue"
+RG_NAME="rg-${PROJECT_NAME}-${ENVIRONMENT}-aue-${UNIQUE_SUFFIX}"
 ACR_NAME="cr${PROJECT_NAME}${ENVIRONMENT}${UNIQUE_SUFFIX}"
 KV_NAME="kv-${PROJECT_NAME}${ENVIRONMENT}${UNIQUE_SUFFIX}"
 APP_NAME="ca-${PROJECT_NAME}-${ENVIRONMENT}-aue"

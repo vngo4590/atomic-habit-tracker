@@ -56,7 +56,7 @@ param imageTag string = 'dev-latest'
 // ---------------------------------------------------------------------------
 // Local naming helpers
 // ---------------------------------------------------------------------------
-var rgName = 'rg-${projectName}-${environment}-aue'
+var rgName = 'rg-${projectName}-${environment}-aue-${uniqueSuffix}'
 var baseName = '${projectName}${environment}${uniqueSuffix}'
 var frontDoorEndpointName = '${projectName}-${environment}-${uniqueSuffix}'
 var frontDoorEndpointUrl = 'https://${frontDoorEndpointName}.azurefd.net'
