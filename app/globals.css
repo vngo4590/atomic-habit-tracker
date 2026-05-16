@@ -275,58 +275,90 @@ textarea.input { resize: vertical; min-height: 80px; line-height: 1.55; }
     display: block;
     height: auto;
     min-height: 100dvh;
-    padding-bottom: 86px;
   }
 
+  /* Hide the desktop sidebar on mobile — navigation now lives in a drawer. */
   .sidebar {
-    position: fixed;
-    z-index: 90;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 74px;
-    padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
-    border-right: 0;
-    border-top: 1px solid var(--rule);
-    display: flex;
-    flex-direction: row;
-    gap: 8px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    background: color-mix(in oklch, var(--bg-sunk) 94%, transparent);
-    backdrop-filter: blur(14px);
-  }
-
-  .sidebar > .brand,
-  .sidebar > .sidebar-foot,
-  .sidebar .nav-group {
     display: none;
   }
 
-  .sidebar > div:not(.brand):not(.sidebar-foot) {
-    display: contents;
+  /* Fixed hamburger button that opens the mobile navigation drawer. */
+  .mobile-menu-btn {
+    position: fixed;
+    z-index: 80;
+    top: 12px;
+    left: 12px;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--r-md);
+    border: 1px solid var(--rule);
+    background: var(--bg-elev);
+    color: var(--ink);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: background var(--transition-fast), transform var(--transition-fast);
   }
 
-  .nav-item {
-    flex: 0 0 76px;
-    min-height: 54px;
-    padding: 7px 6px;
-    justify-content: center;
+  .mobile-menu-btn:hover {
+    background: var(--bg-sunk);
+    transform: scale(1.05);
+  }
+
+  .mobile-menu-btn:active {
+    transform: scale(0.95);
+  }
+
+  /* Backdrop overlay behind the mobile drawer. Tapping it closes the menu. */
+  .mobile-drawer-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: oklch(from var(--bg) l c h / 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+  }
+
+  /* The drawer panel itself — same look as the desktop sidebar but slides in from the left. */
+  .mobile-drawer {
+    display: flex;
     flex-direction: column;
     gap: 4px;
-    font-size: 10.5px;
-    text-align: center;
-    line-height: 1.15;
-    border-radius: var(--r-md);
+    width: 260px;
+    max-width: 80vw;
+    height: 100dvh;
+    padding: 22px 14px;
+    background: var(--bg-sunk);
+    border-right: 1px solid var(--rule);
+    overflow-y: auto;
+    /* Ensure the scrollbar styling from the global rule still applies. */
+    -webkit-overflow-scrolling: touch;
   }
 
-  .nav-item .ni-key {
-    display: none;
+  .mobile-drawer .desktop-nav {
+    display: block;
   }
 
-  .nav-icon {
-    width: 18px;
-    height: 18px;
+  .mobile-drawer .nav-item {
+    /* Restore desktop-sized nav items inside the drawer. */
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 7px 10px;
+    font-size: 13.5px;
+    text-align: left;
+    min-height: auto;
+  }
+
+  .mobile-drawer .nav-item .ni-key {
+    display: inline-flex;
+    margin-left: auto;
+  }
+
+  .mobile-drawer .nav-icon {
+    width: 14px;
+    height: 14px;
   }
 
   .main {

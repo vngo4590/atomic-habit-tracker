@@ -1,9 +1,9 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import {
   IconBook,
@@ -11,6 +11,7 @@ import {
   IconIdentity,
   IconJournal,
   IconList,
+  IconMenu,
   IconPlus,
   IconSettings,
   IconStar,
@@ -51,43 +52,56 @@ interface NavProps {
   };
 }
 
+type NavGroupMap = Record<string, (typeof NAV)[number][]>;
+
 function initials(name: string | null, email: string | null) {
   const source = name || email || "A";
   return source.slice(0, 1).toUpperCase();
 }
 
-export function Nav({ user }: NavProps) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const { habits } = useStoreContext();
-  const totalVotes = habits.reduce((sum, habit) => sum + Object.keys(habit.history).length, 0);
-  const groups = NAV.reduce<Record<string, typeof NAV[number][]>>(
-    (acc, item) => {
-      acc[item.group] = [...(acc[item.group] ?? []), item];
-      return acc;
-    },
-    {}
-  );
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (isEditableTarget(event.target)) {
-        return;
-      }
-
-      const href = SHORTCUTS.get(event.key.toLowerCase());
-      if (href) {
-        event.preventDefault();
-        router.push(href);
-      }
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [router]);
+function NavItemLink({
+  item,
+  pathname,
+  onClick,
+}: {
+  item: (typeof NAV)[number];
+  pathname: string;
+  onClick?: () => void;
+}) {
+  const Icon = item.icon;
+  const active =
+    pathname === item.href ||
+    (item.href === "/habits" && pathname.startsWith("/habits/") && pathname !== "/habits/new");
 
   return (
-    <aside className="sidebar">
+    <Link className={`nav-item ${active ? "active" : ""}`} href={item.href} onClick={onClick}>
+      <Icon className="nav-icon" />
+      <span>{item.label}</span>
+      <span className="ni-key">{item.key}</span>
+    </Link>
+  );
+}
+
+/**
+ * SidebarContent renders the full sidebar UI used on desktop and inside the mobile drawer.
+ * It includes the brand mark, grouped navigation links, and the user footer.
+ */
+function SidebarContent({
+  pathname,
+  user,
+  groups,
+  onNavClick,
+}: {
+  pathname: string;
+  user: NavProps["user"];
+  groups: NavGroupMap;
+  onNavClick?: () => void;
+}) {
+  const { habits } = useStoreContext();
+  const totalVotes = habits.reduce((sum, habit) => sum + Object.keys(habit.history).length, 0);
+
+  return (
+    <>
       <motion.div
         className="brand"
         initial={{ opacity: 0, y: -8 }}
@@ -105,29 +119,21 @@ export function Nav({ user }: NavProps) {
         </div>
       </motion.div>
 
-      {(["Practice", "Reflect", "Learn", "Become"] as const).map((group) => (
-        <div key={group}>
-          <div className="nav-group">{group}</div>
-          <motion.div variants={sidebarStagger} initial="hidden" animate="visible">
-            {groups[group]?.map((item) => {
-              const Icon = item.icon;
-              const active =
-                pathname === item.href ||
-                (item.href === "/habits" && pathname.startsWith("/habits/") && pathname !== "/habits/new");
-
-              return (
+      {/* Grouped nav with stagger animations — same layout on desktop and mobile drawer */}
+      <div className="desktop-nav">
+        {(["Practice", "Reflect", "Learn", "Become"] as const).map((group) => (
+          <div key={group}>
+            <div className="nav-group">{group}</div>
+            <motion.div variants={sidebarStagger} initial="hidden" animate="visible">
+              {groups[group]?.map((item) => (
                 <motion.div key={item.href} variants={navItemVariants}>
-                  <Link className={`nav-item ${active ? "active" : ""}`} href={item.href}>
-                    <Icon className="nav-icon" />
-                    <span>{item.label}</span>
-                    <span className="ni-key">{item.key}</span>
-                  </Link>
+                  <NavItemLink item={item} pathname={pathname} onClick={onNavClick} />
                 </motion.div>
-              );
-            })}
-          </motion.div>
-        </div>
-      ))}
+              ))}
+            </motion.div>
+          </div>
+        ))}
+      </div>
 
       <motion.div
         className="sidebar-foot"
@@ -157,6 +163,99 @@ export function Nav({ user }: NavProps) {
           </motion.button>
         </form>
       </motion.div>
-    </aside>
+    </>
+  );
+}
+
+export function Nav({ user }: NavProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const groups = NAV.reduce<NavGroupMap>
+    (
+      (acc, item) => {
+        acc[item.group] = [...(acc[item.group] ?? []), item];
+        return acc;
+      },
+      {}
+    );
+
+  // Close the mobile drawer automatically when the user navigates to a new page.
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (isEditableTarget(event.target)) {
+        return;
+      }
+
+      const href = SHORTCUTS.get(event.key.toLowerCase());
+      if (href) {
+        event.preventDefault();
+        router.push(href);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [router]);
+
+  return (
+    <>
+      {/* Desktop sidebar — always visible on large screens, hidden on mobile via CSS */}
+      <aside className="sidebar" aria-label="Main navigation">
+        <SidebarContent pathname={pathname} user={user} groups={groups} />
+      </aside>
+
+      {/* Mobile hamburger button — fixed to the top-left, visible only on small screens */}
+      <button
+        className="mobile-menu-btn"
+        type="button"
+        aria-label="Open navigation menu"
+        aria-expanded={drawerOpen}
+        aria-controls="mobile-nav-drawer"
+        onClick={() => setDrawerOpen(true)}
+      >
+        <IconMenu size={20} />
+      </button>
+
+      {/* Mobile drawer — slides in from the left with a backdrop overlay */}
+      <AnimatePresence>
+        {drawerOpen && (
+          <motion.div
+            className="mobile-drawer-overlay"
+            role="dialog"
+            aria-modal="true"
+            id="mobile-nav-drawer"
+            aria-label="Navigation drawer"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setDrawerOpen(false)}
+          >
+            <motion.aside
+              className="sidebar mobile-drawer"
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              onClick={(e) => e.stopPropagation()}
+              aria-label="Main navigation"
+            >
+              <SidebarContent
+                pathname={pathname}
+                user={user}
+                groups={groups}
+                onNavClick={() => setDrawerOpen(false)}
+              />
+            </motion.aside>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
