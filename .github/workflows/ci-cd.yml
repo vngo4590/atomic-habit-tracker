@@ -232,6 +232,7 @@ jobs:
         run: |
           RG="rg-atomicly-dev-aue-${{ secrets.AZURE_UNIQUE_SUFFIX }}"
           POSTGRES_NAME="psql-atomicly-dev-aue-${{ secrets.AZURE_UNIQUE_SUFFIX }}"
+          ACR_LOGIN_SERVER="cratomiclydev${{ secrets.AZURE_UNIQUE_SUFFIX }}.azurecr.io"
           DB_URL="postgresql://psqladmin:${{ secrets.POSTGRES_ADMIN_PASSWORD }}@${POSTGRES_NAME}.postgres.database.azure.com:5432/atomicly?schema=public&sslmode=require"
           # Add GitHub Actions runner IP to PostgreSQL firewall temporarily
           RUNNER_IP=$(curl -s https://api.ipify.org)
