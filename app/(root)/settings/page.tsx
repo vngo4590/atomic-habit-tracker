@@ -1,11 +1,13 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 
 import { IconMoon, IconSun } from "@/components/Icons";
 import { useStoreContext } from "@/components/StoreProvider";
 import { applyAppearance } from "@/lib/appearance";
+import { changePasswordAction, updateProfileAction } from "@/lib/actions/auth";
+import type { ProfileFormState } from "@/lib/actions/auth";
 
 interface SessionUser {
   name: string | null;
@@ -27,6 +29,23 @@ export default function SettingsPage() {
   const [accent, setAccent] = useState(store.preferences.accentHue);
   const [user, setUser] = useState<SessionUser | null>(null);
 
+  // Profile name editing state
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState("");
+
+  // Password change state
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  // Server action states (React 19 useActionState)
+  const [profileState, profileAction, profilePending] = useActionState<ProfileFormState, FormData>(
+    updateProfileAction,
+    { ok: false, message: "" },
+  );
+  const [passwordState, passwordAction, passwordPending] = useActionState<ProfileFormState, FormData>(
+    changePasswordAction,
+    { ok: false, message: "" },
+  );
+
   useEffect(() => {
     window.queueMicrotask(() => {
       setTheme(store.preferences.theme);
@@ -40,12 +59,18 @@ export default function SettingsPage() {
       .then((data) => {
         if (data.user) {
           setUser(data.user);
+          setNameValue(data.user.name ?? "");
         }
       })
       .catch(() => {
         // silently fail — profile will show fallback
       });
   }, []);
+
+  // Derive a local success flag for the profile form so we can offer a
+  // "Done" button that closes the panel without triggering cascading renders.
+  const profileSuccess = profileState.ok;
+  const passwordSuccess = passwordState.ok;
 
   const setNextTheme = (nextTheme: Theme) => {
     setTheme(nextTheme);
@@ -89,8 +114,147 @@ export default function SettingsPage() {
       </div>
 
       <div style={{ display: "grid", gap: 18 }}>
+        {/* ------------------------------------------------------------------
+            Account section: Profile (editable name), Email (read-only),
+            and Change Password.
+            ------------------------------------------------------------------ */}
         <SettingGroup title="Account">
-          <SettingRow label="Profile" value={user?.name ?? user?.email ?? "—"} />
+          {/* Name row — toggles between read-only and edit mode. */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 180px auto", gap: 18, alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--rule)" }}>
+            <div className="habit-name">Name</div>
+            <div className="muted mono" style={{ fontSize: 11, textTransform: "uppercase" }}>
+              {user?.name ?? "—"}
+            </div>
+            <div>
+              {!editingName ? (
+                <motion.button className="btn btn-sm" onClick={() => setEditingName(true)} whileTap={{ scale: 0.97 }}>
+                  Edit
+                </motion.button>
+              ) : (
+                <motion.button className="btn btn-sm" onClick={() => setEditingName(false)} whileTap={{ scale: 0.97 }}>
+                  Cancel
+                </motion.button>
+              )}
+            </div>
+          </div>
+
+          {/* Name edit form — appears when the user clicks Edit. */}
+          {editingName && (
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--rule)", background: "var(--bg-sunk)" }}>
+              {!profileSuccess ? (
+                <form action={profileAction} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                  <input
+                    className="input"
+                    name="name"
+                    value={nameValue}
+                    onChange={(e) => setNameValue(e.target.value)}
+                    placeholder="Your name"
+                    minLength={2}
+                    maxLength={80}
+                    required
+                    style={{ flex: 1, height: 34, fontSize: 13 }}
+                  />
+                  <motion.button
+                    className="btn btn-sm btn-primary"
+                    type="submit"
+                    disabled={profilePending || nameValue.trim().length < 2}
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    {profilePending ? "Saving..." : "Save"}
+                  </motion.button>
+                </form>
+              ) : (
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ color: "var(--accent)", fontSize: 13 }}>Profile updated.</span>
+                  <motion.button
+                    className="btn btn-sm btn-primary"
+                    onClick={() => {
+                      setEditingName(false);
+                      setUser((prev) => (prev ? { ...prev, name: nameValue } : prev));
+                      store.showToast("Profile updated");
+                    }}
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    Done
+                  </motion.button>
+                </div>
+              )}
+              {!profileSuccess && profileState.message && (
+                <div className="muted" style={{ color: "oklch(52% 0.18 25)", fontSize: 12, marginTop: 8 }}>
+                  {profileState.message}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Email row — always read-only. */}
+          <SettingRow label="Email" value={user?.email ?? "—"} />
+
+          {/* Change Password row — toggles a form when clicked. */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 180px auto", gap: 18, alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--rule)" }}>
+            <div className="habit-name">Password</div>
+            <div className="muted mono" style={{ fontSize: 11, textTransform: "uppercase" }}>
+              ••••••••
+            </div>
+            <div>
+              {!changingPassword ? (
+                <motion.button className="btn btn-sm" onClick={() => setChangingPassword(true)} whileTap={{ scale: 0.97 }}>
+                  Change
+                </motion.button>
+              ) : (
+                <motion.button className="btn btn-sm" onClick={() => setChangingPassword(false)} whileTap={{ scale: 0.97 }}>
+                  Cancel
+                </motion.button>
+              )}
+            </div>
+          </div>
+
+          {/* Password change form — appears when the user clicks Change. */}
+          {changingPassword && (
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--rule)", background: "var(--bg-sunk)" }}>
+              {!passwordSuccess ? (
+                <form action={passwordAction} style={{ display: "grid", gap: 10, maxWidth: 400 }}>
+                  <label>
+                    <span className="field-label">Current password</span>
+                    <input className="input" name="currentPassword" type="password" required minLength={8} style={{ height: 34, fontSize: 13 }} />
+                  </label>
+                  <label>
+                    <span className="field-label">New password</span>
+                    <input className="input" name="newPassword" type="password" required minLength={8} style={{ height: 34, fontSize: 13 }} />
+                  </label>
+                  <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+                    <motion.button
+                      className="btn btn-sm btn-primary"
+                      type="submit"
+                      disabled={passwordPending}
+                      whileTap={{ scale: 0.97 }}
+                    >
+                      {passwordPending ? "Changing..." : "Change password"}
+                    </motion.button>
+                  </div>
+                </form>
+              ) : (
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ color: "var(--accent)", fontSize: 13 }}>Password changed.</span>
+                  <motion.button
+                    className="btn btn-sm btn-primary"
+                    onClick={() => {
+                      setChangingPassword(false);
+                      store.showToast("Password changed");
+                    }}
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    Done
+                  </motion.button>
+                </div>
+              )}
+              {!passwordSuccess && passwordState.message && (
+                <div className="muted" style={{ color: "oklch(52% 0.18 25)", fontSize: 12, marginTop: 8 }}>
+                  {passwordState.message}
+                </div>
+              )}
+            </div>
+          )}
         </SettingGroup>
 
         <SettingGroup title="Appearance">
