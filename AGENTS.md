@@ -25,6 +25,10 @@ This project uses Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, and the Ap
 - Product: Atomicly, an Atomic Habits practice app for designing habits, casting daily identity votes, reflecting on progress, and learning from a 24-lesson curriculum.
 - Data model: authenticated user data lives in PostgreSQL through Prisma repositories and is loaded from `app/(root)/layout.tsx` with `getStoreSnapshot(userId, todayKey())`. `components/StoreProvider.tsx` and `lib/store.ts` manage in-memory optimistic cache state around server actions; they are not a browser persistence layer. Browser `localStorage` is limited to local UI mirrors such as `atomicly:onboarding-seen`, `atomicly:theme`, and `atomicly:accent`.
 - Screens/routes: `/`, `/habits`, `/habits/new`, `/habits/[id]`, `/analytics`, `/journal`, `/review`, `/lessons`, `/hall-of-fame`, `/identity`, and `/settings`.
+- Today page (`/`): shows only habits scheduled for today that are not yet done. No Morning/Afternoon/Evening grouping. Each card shows check circle, name+identity, streak, and 30-day progress. Supports habit search across all habits.
+- All Habits (`/habits`): three tabs — All, Done Habits, Upcoming Habits. Each row has a check/undo circle. Supports habit search and sort by streak, rate, newest, or name.
+- Schedule helpers (`lib/schedule.ts`): `isScheduledForDate(dateKey, schedule)`, `nextScheduledDateKey(fromDateKey, schedule)`, `formatNextDayLabel(dateKey)`.
+- Auth redirect: `/login` and `/register` server components check `auth()` and redirect authenticated users to `/` (or a validated `callbackUrl`).
 - UI shell: all app screens live under `app/(root)/` and share the sidebar layout in `app/(root)/layout.tsx`.
 - Current OpenSpec status: `port-reference-ui` tasks are complete through phase 25 and the change is ready to archive.
 

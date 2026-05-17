@@ -6,9 +6,10 @@ The app is implemented with Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, 
 
 ## Features
 
-- Today dashboard with grouped habits, completion stats, streaks, mood check-in, and toast feedback.
-- Habit library, habit detail pages, history wall, notes, contracts, and editable habit-loop fields.
-- New habit builder using an inline Mad-Libs implementation intention sentence.
+- Today dashboard showing only undone habits scheduled for today, with completion stats, streaks, 30-day progress, mood check-in, toast feedback, and habit search.
+- Habit library with All / Done / Upcoming tabs, check/undo circles, streaks, 30-day progress, and habit search.
+- Habit detail pages with history wall, notes, contracts, editable habit-loop fields, and back-button navigation.
+- New habit builder using an inline Mad-Libs implementation intention sentence with schedule presets and time-block selection.
 - Analytics with adherence stats, completion trend chart, weekday bars, and leaderboard.
 - Journal, weekly review, identity ledger, settings, onboarding, lessons, and Hall of Fame flows.
 - Backend persistence for habits, journal entries, identity, completed lessons, formation verdicts, and user preferences, with local mirroring only for immediate appearance/onboarding UI.
@@ -27,7 +28,7 @@ The app is implemented with Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, 
 | `/lessons` | Daily lessons and library |
 | `/hall-of-fame` | 66-day habit formation review |
 | `/identity` | Identity statement and vote ledger |
-| `/settings` | Account, appearance, notification, and data controls |
+| `/settings` | Account, appearance, and data controls |
 
 ## Quick Start With Docker
 
@@ -320,6 +321,8 @@ Notes:
 - Screens read the authenticated backend snapshot from the root layout and issue mutations through server actions.
 - Shared client state is exposed through `components/StoreProvider.tsx` and `lib/store.ts` as optimistic cache coordination.
 - Date keys use local `YYYY-MM-DD` strings via `lib/helpers.ts`.
+- Schedule evaluation uses `lib/schedule.ts` helpers (`isScheduledForDate`, `nextScheduledDateKey`) to determine which habits appear on a given day.
 - Design tokens and reference classes live in `app/globals.css`.
+- Auth pages (`/login`, `/register`) redirect already-authenticated users to the main app flow.
 - The active OpenSpec change is `settings-account-email-notifications`.
 - Deployment architecture specs live under `openspec/specs/deployment-architecture/`; provider choices and deployment notes are in `docs/architecture/backend-auth-mobile.md`.

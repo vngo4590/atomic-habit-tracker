@@ -40,9 +40,8 @@ Review these before recommending or changing deployment architecture:
 
 Atomicly-specific deployment facts:
 
-- Production hosting target is Vercel with Node.js runtime for Auth.js and Prisma paths.
+- Production hosting target is Azure (App Service + Container Registry + PostgreSQL Flexible Server + Front Door + Key Vault) with GitHub Actions CI/CD (`.github/workflows/ci-cd.yml`).
 - Database access uses PostgreSQL through Prisma 7, `@prisma/adapter-pg`, and the generated client under `lib/generated/prisma`.
-- Prefer a managed PostgreSQL provider with pooled serverless connections, such as Neon or Vercel Postgres.
 - Required environment variables are `DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL`, and `NEXT_PUBLIC_APP_URL`.
 - Production-safe migration command is `npm run prisma:migrate:deploy`; local reset, seed, random-data, fake-history, and clean helpers must stay local-only.
 - `npm run backend:validate` runs Prisma validation/generation, TypeScript, scoped lint, tests, and build.
@@ -50,6 +49,9 @@ Atomicly-specific deployment facts:
 - Local Kubernetes testing uses `Dockerfile` targets `runner` (`atomicly:local`) and `migrator` (`atomicly-migrator:local`) plus `k8s/local/`, exposed through Docker Desktop NodePort `30080`, with PostgreSQL provided by the host Docker Compose database at `host.docker.internal:55432`.
 - Local Kubernetes npm wrappers are `npm run deploy:kube` or `npm run kube:deploy` for the full flow, plus `npm run kube:update`, `npm run kube:restart`, `npm run kube:stop`, and `npm run kube:cleanup`.
 - Container/Kubernetes probes use the public `app/api/healthz/route.ts` endpoint.
+- **GitHub Actions CI/CD:** `.github/workflows/ci-cd.yml` runs validate (typecheck, lint, tests, build) then deploys to Azure via OIDC. The deploy job uses `azure/login@v2` with federated credentials. Required GitHub secrets: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `AZURE_UNIQUE_SUFFIX`, `POSTGRES_ADMIN_PASSWORD`, `AUTH_SECRET`.
+- **Azure OIDC setup:** Create an Azure AD app registration with federated credentials for `repo:<owner>/<repo>:ref:refs/heads/master`, `:environment:dev`, and `:pull_request`. Assign the service principal Contributor + User Access Administrator + Key Vault Secrets Officer roles.
+- **Azure infrastructure:** Bicep templates in `infra/main.bicep` provision Resource Group, ACR, App Service, PostgreSQL Flexible Server, Key Vault, and Front Door. The unique suffix is stored in `.azure-suffix`.
 - Canonical backend deployment specs live under `openspec/specs/deployment-architecture/spec.md` and related backend/API specs.
 
 ## Pipeline And Infra Principles
