@@ -181,11 +181,6 @@ export function Nav({ user }: NavProps) {
       {}
     );
 
-  // Close the mobile drawer automatically when the user navigates to a new page.
-  useEffect(() => {
-    setDrawerOpen(false);
-  }, [pathname]);
-
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (isEditableTarget(event.target)) {

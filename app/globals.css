@@ -265,6 +265,12 @@ textarea.input { resize: vertical; min-height: 80px; line-height: 1.55; }
   box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
 }
 
+/* Mobile-only hamburger button — hidden on desktop so it does not become
+   an extra grid item inside .app and break the sidebar + main layout. */
+.mobile-menu-btn {
+  display: none;
+}
+
 @media (max-width: 900px) {
   html, body {
     min-width: 0;
