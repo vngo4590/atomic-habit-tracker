@@ -49,7 +49,7 @@ export function HabitRow({
         <motion.span
           className="chip"
           style={{
-            background: done ? "var(--accent-soft)" : "transparent",
+            background: done ? "var(--accent-soft)" : "rgba(0,0,0,0)",
             borderColor: done ? "transparent" : "var(--rule)",
             color: done ? "oklch(35% 0.10 60)" : "var(--ink-3)",
             fontStyle: "normal",
@@ -58,7 +58,7 @@ export function HabitRow({
           animate={
             done
               ? { scale: [1, 1.15, 1], background: "var(--accent-soft)" }
-              : { scale: 1, background: "transparent" }
+              : { scale: 1, background: "rgba(0,0,0,0)" }
           }
           transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
         >
