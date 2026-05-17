@@ -105,8 +105,8 @@ export default function HabitDetailPage() {
   if (!habit || !stats) {
     return (
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}>
-        <motion.button className="btn btn-ghost btn-sm btn-back" onClick={() => router.push("/habits")} whileTap={{ scale: 0.97 }}>
-          <IconBack /> All habits
+        <motion.button className="btn btn-ghost btn-sm btn-back" onClick={() => router.back()} whileTap={{ scale: 0.97 }}>
+          <IconBack /> Back
         </motion.button>
         <div className="card card-pad" style={{ marginTop: 24 }}>Habit not found.</div>
       </motion.div>
@@ -143,8 +143,8 @@ export default function HabitDetailPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}>
-      <motion.button className="btn btn-ghost btn-sm btn-back" onClick={() => router.push("/habits")} style={{ marginBottom: 18 }} whileTap={{ scale: 0.97 }}>
-        <IconBack /> All habits
+      <motion.button className="btn btn-ghost btn-sm btn-back" onClick={() => router.back()} style={{ marginBottom: 18 }} whileTap={{ scale: 0.97 }}>
+        <IconBack /> Back
       </motion.button>
 
       <div className="page-header" style={{ alignItems: "flex-start", flexDirection: "column", gap: 18 }}>
@@ -160,16 +160,28 @@ export default function HabitDetailPage() {
             <motion.button
               className={`btn btn-lg ${doneToday ? "btn-accent" : "btn-primary"}`}
               onClick={() => {
-                if (!doneToday) {
+                if (doneToday) {
                   store.toggleHabit(habit.id);
+                } else {
+                  store.toggleHabit(habit.id);
+                  setShowMood(true);
                 }
-                setShowMood(true);
               }}
               whileHover={{ y: -1 }}
               whileTap={{ scale: 0.97 }}
             >
-              {doneToday ? <><IconCheck style={{ width: 14, height: 14 }} /> Done today · edit</> : "Mark done"}
+              {doneToday ? <><IconCheck style={{ width: 14, height: 14 }} /> Done today · undo</> : "Mark done"}
             </motion.button>
+            {doneToday && (
+              <motion.button
+                className="btn btn-lg btn-ghost"
+                onClick={() => setShowMood(true)}
+                whileHover={{ y: -1 }}
+                whileTap={{ scale: 0.97 }}
+              >
+                Edit entry
+              </motion.button>
+            )}
             {confirmDelete ? (
               <>
                 <motion.button className="btn btn-lg btn-danger" onClick={deleteHabit} whileTap={{ scale: 0.97 }}>

@@ -219,7 +219,7 @@ textarea.input { resize: vertical; min-height: 80px; line-height: 1.55; }
 .habit-sort-row .field-label { margin: 0; }
 .habit-sort-select { width: auto; min-width: 190px; height: 40px; padding: 0 36px 0 15px; border-radius: 999px; font-size: 12.5px; background-color: var(--bg-elev); box-shadow: var(--shadow); }
 .habit-list { display: grid; gap: 12px; }
-.habit-list-header { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr) 90px 90px 100px; padding: 0 22px 2px; }
+.habit-list-header { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr) 90px 90px 100px; padding: 0 22px 2px; gap: 18px; }
 .habit-list-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr) 90px 90px 100px; padding: 20px 22px; align-items: center; gap: 18px; background: var(--bg-elev); border: 1px solid var(--rule); border-radius: var(--r-lg); box-shadow: var(--shadow); transition: background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast); }
 .habit-list-row:hover { background: color-mix(in oklch, var(--bg-elev) 68%, var(--bg-sunk)); border-color: var(--rule-strong); transform: translateY(-1px); box-shadow: var(--shadow-md); }
 .habit-list-label { display: none; }
@@ -300,6 +300,7 @@ textarea.input { resize: vertical; min-height: 80px; line-height: 1.55; }
     border: 1px solid var(--rule);
     background: var(--bg-elev);
     color: var(--ink);
+    opacity: 0.7;
     display: grid;
     place-items: center;
     cursor: pointer;
@@ -490,41 +491,12 @@ textarea.input { resize: vertical; min-height: 80px; line-height: 1.55; }
   }
 
   .habit-list-field {
-    display: grid !important;
-    grid-template-columns: minmax(88px, 0.34fr) minmax(0, 1fr);
-    gap: 12px;
-    align-items: start !important;
+    display: block !important;
     min-width: 0;
-  }
-
-  .habit-list-field > :not(.habit-list-label) {
-    grid-column: 2;
-    min-width: 0;
-  }
-
-  .habit-list-progress {
-    align-self: center;
   }
 
   .habit-list-label {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--ink-3);
-    min-height: 20px;
-  }
-
-  .habit-list-label::before {
-    content: "";
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: var(--accent);
-    flex: 0 0 auto;
+    display: none !important;
   }
 
   .loop {

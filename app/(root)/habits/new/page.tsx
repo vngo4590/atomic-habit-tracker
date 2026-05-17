@@ -104,9 +104,6 @@ export default function NewHabitPage() {
   const [identity, setIdentity] = useState("");
   const [preset, setPreset] = useState<Preset>("daily");
   const [customDays, setCustomDays] = useState<string[]>([]);
-  const [showStack, setShowStack] = useState(false);
-  const [stack, setStack] = useState("");
-  const [twoMin, setTwoMin] = useState("");
 
   const existingIdentities = useMemo(() => {
     const values = new Set<string>([...profile.values, ...habits.map((habit) => habit.identity)].filter(Boolean));
@@ -141,12 +138,9 @@ export default function NewHabitPage() {
       identity: identity.trim(),
       time: cleanTime,
       schedule,
-      stack,
-      cue: stack.trim()
-        ? `After I ${stack.trim()}, I will ${cleanName.toLowerCase()}.`
-        : `At ${cleanTime.toLowerCase()} ${cleanLocation}, I will ${cleanName.toLowerCase()}.`,
+      cue: `At ${cleanTime.toLowerCase()} ${cleanLocation}, I will ${cleanName.toLowerCase()}.`,
       response: cleanName,
-      twoMin: twoMin.trim() || `Do ${cleanName.toLowerCase()} for two minutes.`,
+      twoMin: `Do ${cleanName.toLowerCase()} for two minutes.`,
       craving: `Become ${identity.trim()}.`,
       reward: "A visible vote for the person I am becoming.",
       environment: cleanLocation,
@@ -233,36 +227,6 @@ export default function NewHabitPage() {
           )}
         </section>
 
-        <section className="card card-pad">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <div className="eyebrow">Habit stack</div>
-              <h2 className="h3" style={{ marginTop: 4 }}>Attach it to a rail</h2>
-            </div>
-            {!showStack && (
-              <button className="btn btn-sm" type="button" onClick={() => setShowStack(true)}>
-                + Add
-              </button>
-            )}
-          </div>
-          {showStack && (
-            <div style={{ marginTop: 16 }}>
-              <label className="field-label">After I...</label>
-              <input className="input" value={stack} onChange={(event) => setStack(event.target.value)} placeholder="pour coffee" />
-              <label className="field-label" style={{ marginTop: 14 }}>Quick pick</label>
-              <select className="input" value="" onChange={(event) => setStack(event.target.value.toLowerCase())}>
-                <option value="">Choose an existing habit</option>
-                {habits.map((habit) => (
-                  <option key={habit.id} value={habit.name}>
-                    {habit.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          <label className="field-label" style={{ marginTop: 18 }}>Two-minute version</label>
-          <input className="input" value={twoMin} onChange={(event) => setTwoMin(event.target.value)} placeholder="Open the book and read one paragraph" />
-        </section>
       </div>
 
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 24 }}>

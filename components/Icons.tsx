@@ -2,6 +2,7 @@ import type { LucideProps } from "lucide-react";
 import {
   CalendarCheck,
   Check,
+  ChevronLeft,
   ChevronRight,
   Flame,
   LayoutList,
@@ -88,7 +89,7 @@ export function IconArrow(props: IconProps) {
 }
 
 export function IconBack(props: IconProps) {
-  return <RotateCcw {...iconDefaults} {...props} />;
+  return <ChevronLeft {...iconDefaults} {...props} />;
 }
 
 export function IconEdit(props: IconProps) {

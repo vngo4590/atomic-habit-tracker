@@ -17,7 +17,6 @@ function makeHabit(): Habit {
     loopResponse: "",
     loopReward: "",
     twoMin: "",
-    stack: "",
     identity: "reader",
     environment: "",
     schedule: "Mon, Tue, Wed, Thu, Fri",
@@ -37,8 +36,9 @@ const routerMock = vi.hoisted(() => ({
 const storeMock = vi.hoisted(() => ({
   habits: [] as Habit[],
   streak: vi.fn(() => 0),
-  longestStreak: vi.fn(() => 0),
   completionRate: vi.fn(() => 0),
+  toggleHabit: vi.fn(),
+  logCheckIn: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -52,16 +52,21 @@ vi.mock("@/components/StoreProvider", () => ({
 import HabitsPage from "@/app/(root)/habits/page";
 
 describe("HabitsPage", () => {
-  it("renders per-field labels for the responsive habit list layout", () => {
+  it("renders simplified habit cards with check circles, name, identity, streak and 30-day rate", () => {
     storeMock.habits = [makeHabit()];
 
     render(<HabitsPage />);
 
-    expect(screen.getAllByText("Habit").length).toBeGreaterThan(0);
-    expect(screen.getByText("Cue")).toBeTruthy();
-    expect(screen.getAllByText("Streak").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Best").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("30-day").length).toBeGreaterThan(0);
-    expect(screen.getByText(/reader · Weekdays/i)).toBeTruthy();
+    expect(screen.getByText("Read")).toBeTruthy();
+    expect(screen.getByText(/reader/i)).toBeTruthy();
+    expect(screen.getByText("0d")).toBeTruthy();
+    expect(screen.getByText("0%")).toBeTruthy();
+
+    // No header row or column labels
+    expect(screen.queryByText("Habit")).toBeFalsy();
+    expect(screen.queryByText("Streak")).toBeFalsy();
+    expect(screen.queryByText("30-day")).toBeFalsy();
+    expect(screen.queryByText("Cue")).toBeFalsy();
+    expect(screen.queryByText("Best")).toBeFalsy();
   });
 });

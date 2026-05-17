@@ -18,7 +18,6 @@ function makeHabit(patch: Partial<Habit> = {}): Habit {
     loopResponse: "",
     loopReward: "",
     twoMin: "",
-    stack: "",
     identity: "reader",
     environment: "",
     schedule: "Daily",

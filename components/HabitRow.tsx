@@ -40,7 +40,7 @@ export function HabitRow({
       <div>
         <div className="habit-name">{habit.name}</div>
         <div className="habit-meta">
-          <span>{habit.stack ? `-> ${habit.stack}` : habit.cue.slice(0, 40)}</span>
+          <span>{habit.cue.slice(0, 40)}</span>
           <span className="dot">.</span>
           <span>{habit.identity}</span>
         </div>

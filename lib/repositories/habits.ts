@@ -26,7 +26,6 @@ type HabitRecord = {
   loopResponse: string;
   loopReward: string;
   twoMin: string;
-  stack: string;
   identity: string;
   environment: string;
   schedule: string;
@@ -79,7 +78,6 @@ function toHabit(record: HabitRecord): Habit {
     loopResponse: record.loopResponse,
     loopReward: record.loopReward,
     twoMin: record.twoMin,
-    stack: record.stack,
     identity: record.identity,
     environment: record.environment,
     schedule: record.schedule,
@@ -137,7 +135,6 @@ export async function createHabit(userId: string, input: HabitCreateInput, db: D
       loopResponse: data.loopResponse,
       loopReward: data.loopReward,
       twoMin: data.twoMin,
-      stack: data.stack,
       identity: data.identity,
       environment: data.environment,
       schedule: data.schedule,

@@ -4,24 +4,46 @@ import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
-import { IconPlus } from "@/components/Icons";
+import { IconCheck, IconPlus } from "@/components/Icons";
+import { MoodCheckSheet } from "@/components/MoodCheckSheet";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { useStoreContext } from "@/components/StoreProvider";
-import { formatScheduleLabel } from "@/lib/schedule";
+import { todayKey } from "@/lib/helpers";
+import { formatNextDayLabel, nextScheduledDateKey } from "@/lib/schedule";
+import type { Habit } from "@/lib/types";
 
-type Filter = "all" | "morning" | "afternoon" | "evening";
+type Filter = "all" | "done" | "upcoming";
 type Sort = "streak" | "rate" | "newest" | "name";
 
-const FILTERS: Filter[] = ["all", "morning", "afternoon", "evening"];
+const FILTERS: Filter[] = ["all", "done", "upcoming"];
+
+const TAB_LABELS: Record<Filter, string> = {
+  all: "All",
+  done: "Done Habits",
+  upcoming: "Upcoming Habits",
+};
 
 export default function HabitsPage() {
   const router = useRouter();
-  const { habits, streak, longestStreak, completionRate } = useStoreContext();
+  const { habits, streak, completionRate, toggleHabit, logCheckIn } = useStoreContext();
+  const today = todayKey();
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<Sort>("streak");
+  const [moodHabit, setMoodHabit] = useState<Habit | null>(null);
 
   const filtered = useMemo(() => {
-    const list = habits.filter((habit) => filter === "all" || habit.time.toLowerCase() === filter);
+    const list = habits.filter((habit) => {
+      if (filter === "all") {
+        return true;
+      }
+      const isDone = Boolean(habit.history[today]);
+      if (filter === "done") {
+        return isDone;
+      }
+      // upcoming = habits with a next scheduled day in the future
+      const next = nextScheduledDateKey(today, habit.schedule);
+      return next !== null;
+    });
     return [...list].sort((a, b) => {
       if (sort === "streak") {
         return streak(b) - streak(a);
@@ -34,7 +56,15 @@ export default function HabitsPage() {
       }
       return a.name.localeCompare(b.name);
     });
-  }, [completionRate, filter, habits, sort, streak]);
+  }, [completionRate, filter, habits, sort, streak, today]);
+
+  const handleCheck = (habit: Habit) => {
+    const isDone = Boolean(habit.history[today]);
+    if (!isDone) {
+      setMoodHabit(habit);
+    }
+    toggleHabit(habit.id);
+  };
 
   return (
     <motion.div
@@ -69,7 +99,7 @@ export default function HabitsPage() {
               whileHover={{ y: -1 }}
               whileTap={{ scale: 0.97 }}
             >
-              {item[0].toUpperCase() + item.slice(1)}
+              {TAB_LABELS[item]}
             </motion.button>
           ))}
         </div>
@@ -89,41 +119,47 @@ export default function HabitsPage() {
       </div>
 
       <div className="habit-list">
-        <div className="habit-list-header">
-          {["Habit", "Cue -> response", "Streak", "Best", "30-day"].map((heading) => (
-            <div
-              key={heading}
-              className="mono"
-              style={{
-                fontSize: 10,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                color: "var(--ink-3)",
-              }}
-            >
-              {heading}
-            </div>
-          ))}
-        </div>
         <StaggerContainer staggerDelay={0.04}>
           {filtered.map((habit) => {
             const activeStreak = streak(habit);
-            const best = longestStreak(habit);
             const rate = Math.round(completionRate(habit) * 100);
+            const nextDay = nextScheduledDateKey(today, habit.schedule);
+            const nextLabel = formatNextDayLabel(nextDay);
+            const isDone = Boolean(habit.history[today]);
             return (
               <StaggerItem key={habit.id}>
                 <motion.div
                   className="click-row habit-list-row"
+                  style={{
+                    gridTemplateColumns: "44px minmax(0, 1fr) 80px 140px",
+                    alignItems: "center",
+                  }}
                   onClick={() => router.push(`/habits/${habit.id}`)}
                   whileHover={{ y: -2, boxShadow: "var(--shadow-md)" }}
                   transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 >
+                  {/* Check */}
+                  <div className="habit-list-field" style={{ alignItems: "center" }}>
+                    <motion.button
+                      className={`check ${isDone ? "done" : ""}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleCheck(habit);
+                      }}
+                      aria-label={isDone ? "Uncheck" : "Check"}
+                      whileTap={{ scale: 0.85 }}
+                      transition={{ type: "spring", stiffness: 500, damping: 20 }}
+                    >
+                      <IconCheck />
+                    </motion.button>
+                  </div>
+
+                  {/* Habit */}
                   <div className="habit-list-field">
-                    <div className="habit-list-label">Habit</div>
                     <div style={{ minWidth: 0 }}>
                       <div className="habit-name">{habit.name}</div>
                       <div
-                        className="muted mono"
+                        className="mono muted"
                         style={{
                           fontSize: 10.5,
                           marginTop: 3,
@@ -131,35 +167,30 @@ export default function HabitsPage() {
                           textTransform: "uppercase",
                         }}
                       >
-                        {habit.identity} · {formatScheduleLabel(habit.schedule)}
+                        {habit.identity}
+                        {nextLabel && (
+                          <span style={{ marginLeft: 8, color: "var(--ink-3)" }}>· {nextLabel}</span>
+                        )}
                       </div>
                     </div>
                   </div>
+
+                  {/* Streak */}
                   <div className="habit-list-field">
-                    <div className="habit-list-label">Cue</div>
                     <div
-                      className="muted"
+                      className="mono"
                       style={{
-                        fontSize: 12,
-                        fontStyle: "italic",
-                        fontFamily: "var(--serif)",
-                        lineHeight: 1.35,
+                        fontSize: 16,
+                        fontWeight: 500,
+                        color: activeStreak > 0 ? "var(--ink)" : "var(--ink-3)",
                       }}
                     >
-                      &quot;{habit.cue.slice(0, 38)}
-                      {habit.cue.length > 38 ? "..." : ""}&quot;
+                      {activeStreak}d
                     </div>
                   </div>
-                  <div className="mono habit-list-field" style={{ fontSize: 13, fontWeight: 500 }}>
-                    <div className="habit-list-label">Streak</div>
-                    {activeStreak}d
-                  </div>
-                  <div className="mono muted habit-list-field" style={{ fontSize: 13 }}>
-                    <div className="habit-list-label">Best</div>
-                    {best}d
-                  </div>
-                  <div className="habit-list-field" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <div className="habit-list-label">30-day</div>
+
+                  {/* 30-Day */}
+                  <div className="habit-list-field">
                     <div className="habit-list-progress">
                       <div
                         style={{
@@ -179,7 +210,12 @@ export default function HabitsPage() {
                       </div>
                       <span
                         className="mono"
-                        style={{ fontSize: 11, color: "var(--ink-3)", minWidth: 24, textAlign: "right" }}
+                        style={{
+                          fontSize: 11,
+                          color: "var(--ink-3)",
+                          minWidth: 28,
+                          textAlign: "right",
+                        }}
                       >
                         {rate}%
                       </span>
@@ -220,6 +256,15 @@ export default function HabitsPage() {
           </div>
         )}
       </div>
+
+      {moodHabit && (
+        <MoodCheckSheet
+          habit={moodHabit}
+          dateKey={today}
+          onClose={() => setMoodHabit(null)}
+          onSave={(payload) => logCheckIn(moodHabit.id, payload)}
+        />
+      )}
     </motion.div>
   );
 }

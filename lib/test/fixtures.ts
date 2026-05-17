@@ -60,7 +60,6 @@ export function testHabit(patch: Partial<Habit> = {}): Habit {
     loopResponse: "Read one page",
     loopReward: "Check it off",
     twoMin: "Open the book",
-    stack: "After coffee",
     identity: "reader",
     environment: "Book on desk",
     schedule: "Daily",

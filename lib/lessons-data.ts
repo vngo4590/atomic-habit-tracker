@@ -79,7 +79,7 @@ export const LESSONS: Lesson[] = [
     quote: 'After [CURRENT HABIT], I will [NEW HABIT].',
     body: "New habits ride the rails of old ones. Coffee → vitamins. Brush teeth → meditate. The existing habit is the cue you don't need to remember.",
     takeaway: "Don't fight for new attention. Borrow attention you already pay.",
-    practice: "Pick a habit. What's the existing rail you can stack it onto?",
+    practice: "Pick a habit. What's the existing rail you can attach it to?",
     minutes: 2,
   },
   {

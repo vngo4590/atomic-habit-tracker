@@ -53,7 +53,6 @@ function normalizeDraft(draft: HabitDraft): Omit<Habit, "id" | "history" | "note
     loopResponse: draft.loopResponse ?? draft.response ?? "",
     loopReward: draft.loopReward ?? draft.reward ?? "",
     twoMin: draft.twoMin ?? "",
-    stack: draft.stack ?? "",
     identity: draft.identity,
     environment: draft.environment ?? "",
     schedule: draft.schedule ?? "Daily",
