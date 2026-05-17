@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
-import { IconCheck, IconPlus } from "@/components/Icons";
+import { IconCheck, IconClose, IconPlus, IconSearch } from "@/components/Icons";
 import { MoodCheckSheet } from "@/components/MoodCheckSheet";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { useStoreContext } from "@/components/StoreProvider";
@@ -29,6 +29,7 @@ export default function HabitsPage() {
   const today = todayKey();
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<Sort>("streak");
+  const [searchQuery, setSearchQuery] = useState("");
   const [moodHabit, setMoodHabit] = useState<Habit | null>(null);
 
   const filtered = useMemo(() => {
@@ -44,7 +45,16 @@ export default function HabitsPage() {
       const next = nextScheduledDateKey(today, habit.schedule);
       return next !== null;
     });
-    return [...list].sort((a, b) => {
+    const q = searchQuery.trim().toLowerCase();
+    const searched = q
+      ? list.filter(
+          (habit) =>
+            habit.name.toLowerCase().includes(q) ||
+            habit.identity.toLowerCase().includes(q) ||
+            habit.cue.toLowerCase().includes(q)
+        )
+      : list;
+    return [...searched].sort((a, b) => {
       if (sort === "streak") {
         return streak(b) - streak(a);
       }
@@ -56,7 +66,7 @@ export default function HabitsPage() {
       }
       return a.name.localeCompare(b.name);
     });
-  }, [completionRate, filter, habits, sort, streak, today]);
+  }, [completionRate, filter, habits, searchQuery, sort, streak, today]);
 
   const handleCheck = (habit: Habit) => {
     const isDone = Boolean(habit.history[today]);
@@ -103,18 +113,38 @@ export default function HabitsPage() {
             </motion.button>
           ))}
         </div>
-        <div className="habit-sort-row">
-          <span className="field-label">Sort</span>
-          <select
-            className="input habit-sort-select"
-            value={sort}
-            onChange={(event) => setSort(event.target.value as Sort)}
-          >
-            <option value="streak">Active streak</option>
-            <option value="rate">30-day rate</option>
-            <option value="newest">Newest</option>
-            <option value="name">Name</option>
-          </select>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ position: "relative" }}>
+            <IconSearch style={{ width: 13, height: 13, position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--ink-3)", pointerEvents: "none" }} />
+            <input
+              className="input"
+              placeholder="Search habits..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ paddingLeft: 30, height: 34, fontSize: 13, width: searchQuery ? 220 : 160 }}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--ink-3)" }}
+              >
+                <IconClose style={{ width: 12, height: 12 }} />
+              </button>
+            )}
+          </div>
+          <div className="habit-sort-row">
+            <span className="field-label">Sort</span>
+            <select
+              className="input habit-sort-select"
+              value={sort}
+              onChange={(event) => setSort(event.target.value as Sort)}
+            >
+              <option value="streak">Active streak</option>
+              <option value="rate">30-day rate</option>
+              <option value="newest">Newest</option>
+              <option value="name">Name</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -252,7 +282,7 @@ export default function HabitsPage() {
         )}
         {habits.length > 0 && filtered.length === 0 && (
           <div className="muted" style={{ padding: "28px 22px", textAlign: "center" }}>
-            No habits match this filter.
+            {searchQuery ? `No habits match "${searchQuery}".` : "No habits match this filter."}
           </div>
         )}
       </div>

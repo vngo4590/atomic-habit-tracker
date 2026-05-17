@@ -177,7 +177,7 @@ export default function NewHabitPage() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 18 }}>
         <section className="card card-pad">
           <div className="eyebrow">Schedule</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>

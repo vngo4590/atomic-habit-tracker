@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { CompletionRing } from "@/components/CompletionRing";
-import { IconCheck, IconPlus, IconSearch } from "@/components/Icons";
+import { IconCheck, IconClose, IconPlus, IconSearch } from "@/components/Icons";
 import { MoodCheckSheet } from "@/components/MoodCheckSheet";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { useStoreContext } from "@/components/StoreProvider";
@@ -22,8 +22,20 @@ export default function TodayPage() {
   const { habits, toggleHabit, logCheckIn, streak } = store;
   const [today] = useState(() => todayKey());
   const [moodHabit, setMoodHabit] = useState<Habit | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const scheduledToday = habits.filter((habit) => isScheduledForDate(today, habit.schedule));
   const scheduledUndone = scheduledToday.filter((habit) => !habit.history[today]);
+
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const q = searchQuery.toLowerCase();
+    return habits.filter(
+      (habit) =>
+        habit.name.toLowerCase().includes(q) ||
+        habit.identity.toLowerCase().includes(q) ||
+        habit.cue.toLowerCase().includes(q)
+    );
+  }, [habits, searchQuery]);
   const doneToday = habits.filter((habit) => habit.history[today]).length;
   const pct = habits.length ? Math.round((doneToday / habits.length) * 100) : 0;
   const hour = new Date().getHours();
@@ -79,15 +91,25 @@ export default function TodayPage() {
             )}
           </h1>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <motion.button
-            className="btn btn-sm"
-            whileHover={reduced ? undefined : { y: -1 }}
-            whileTap={{ scale: 0.97 }}
-          >
-            <IconSearch style={{ width: 13, height: 13 }} />
-            Search
-          </motion.button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ position: "relative" }}>
+            <IconSearch style={{ width: 13, height: 13, position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--ink-3)", pointerEvents: "none" }} />
+            <input
+              className="input"
+              placeholder="Search habits..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ paddingLeft: 30, height: 34, fontSize: 13, width: searchQuery ? 220 : 160 }}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--ink-3)" }}
+              >
+                <IconClose style={{ width: 12, height: 12 }} />
+              </button>
+            )}
+          </div>
           <motion.button
             className="btn btn-sm btn-primary"
             onClick={() => router.push("/habits/new")}
@@ -238,7 +260,152 @@ export default function TodayPage() {
         </div>
       </motion.div>
 
-      {scheduledUndone.length > 0 && (
+      {searchQuery && searchResults.length > 0 && (
+        <motion.section
+          style={{ marginBottom: 24 }}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2, ease: [0.4, 0, 0.2, 1] }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 12,
+            }}
+          >
+            <h2 className="h3">Search results</h2>
+            <span
+              className="muted mono"
+              style={{ fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase" }}
+            >
+              {searchResults.length} found
+            </span>
+          </div>
+          <div className="habit-list">
+            <StaggerContainer staggerDelay={0.04}>
+              {searchResults.map((habit) => {
+                const activeStreak = streak(habit);
+                const rate = Math.round(completionRate(habit) * 100);
+                const isDone = Boolean(habit.history[today]);
+                const isScheduled = isScheduledForDate(today, habit.schedule);
+                return (
+                  <StaggerItem key={habit.id}>
+                    <motion.div
+                      className="click-row habit-list-row"
+                      style={{
+                        gridTemplateColumns: "44px minmax(0, 1fr) 80px 140px",
+                        alignItems: "center",
+                      }}
+                      onClick={() => router.push(`/habits/${habit.id}`)}
+                      whileHover={reduced ? undefined : { y: -2, boxShadow: "var(--shadow-md)" }}
+                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    >
+                      <div className="habit-list-field" style={{ alignItems: "center" }}>
+                        <motion.button
+                          className={`check ${isDone ? "done" : ""}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            if (!isDone) setMoodHabit(habit);
+                            toggleHabit(habit.id);
+                          }}
+                          aria-label={isDone ? "Uncheck" : "Check"}
+                          whileTap={{ scale: 0.85 }}
+                          transition={{ type: "spring", stiffness: 500, damping: 20 }}
+                        >
+                          <IconCheck />
+                        </motion.button>
+                      </div>
+
+                      <div className="habit-list-field">
+                        <div style={{ minWidth: 0 }}>
+                          <div className="habit-name">{habit.name}</div>
+                          <div
+                            className="mono muted"
+                            style={{
+                              fontSize: 10.5,
+                              marginTop: 3,
+                              letterSpacing: "0.04em",
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            {habit.identity}
+                            {!isScheduled && <span style={{ marginLeft: 8, color: "var(--ink-3)" }}>· Not today</span>}
+                            {isDone && <span style={{ marginLeft: 8, color: "var(--accent)" }}>· Done</span>}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="habit-list-field">
+                        <div
+                          className="mono"
+                          style={{
+                            fontSize: 16,
+                            fontWeight: 500,
+                            color: activeStreak > 0 ? "var(--ink)" : "var(--ink-3)",
+                          }}
+                        >
+                          {activeStreak}d
+                        </div>
+                      </div>
+
+                      <div className="habit-list-field">
+                        <div className="habit-list-progress">
+                          <div
+                            style={{
+                              flex: 1,
+                              height: 4,
+                              background: "var(--bg-sunk)",
+                              borderRadius: 99,
+                              overflow: "hidden",
+                            }}
+                          >
+                            <motion.div
+                              style={{ height: "100%", background: "var(--accent)" }}
+                              initial={{ width: 0 }}
+                              animate={{ width: `${rate}%` }}
+                              transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+                            />
+                          </div>
+                          <span
+                            className="mono"
+                            style={{
+                              fontSize: 11,
+                              color: "var(--ink-3)",
+                              minWidth: 28,
+                              textAlign: "right",
+                            }}
+                          >
+                            {rate}%
+                          </span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </StaggerItem>
+                );
+              })}
+            </StaggerContainer>
+          </div>
+        </motion.section>
+      )}
+
+      {searchQuery && searchResults.length === 0 && (
+        <motion.div
+          className="card card-pad"
+          style={{ textAlign: "center", padding: "42px 20px", marginBottom: 24 }}
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+        >
+          <div className="eyebrow">No results</div>
+          <h2 className="h2" style={{ marginTop: 8 }}>
+            No habits match &quot;{searchQuery}&quot;.
+          </h2>
+        </motion.div>
+      )}
+
+      {!searchQuery && scheduledUndone.length > 0 && (
         <motion.section
           style={{ marginBottom: 24 }}
           initial={{ opacity: 0, y: 16 }}
@@ -364,7 +531,7 @@ export default function TodayPage() {
         </motion.section>
       )}
 
-      {habits.length > 0 && scheduledUndone.length === 0 && (
+      {!searchQuery && habits.length > 0 && scheduledUndone.length === 0 && (
         <motion.div
           className="card card-pad"
           style={{ textAlign: "center", padding: "42px 20px", marginBottom: 24 }}
