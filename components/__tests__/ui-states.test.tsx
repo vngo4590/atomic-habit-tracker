@@ -330,7 +330,7 @@ describe("Error States", () => {
 
     // Then: the not-found message and back button are visible
     expect(screen.getByText("Habit not found.")).toBeTruthy();
-    expect(screen.getByText("All habits")).toBeTruthy();
+    expect(screen.getByText("Back")).toBeTruthy();
   });
 
   it("dateAdd handles invalid date keys gracefully without throwing", () => {
