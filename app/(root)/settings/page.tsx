@@ -7,6 +7,11 @@ import { IconMoon, IconSun } from "@/components/Icons";
 import { useStoreContext } from "@/components/StoreProvider";
 import { applyAppearance } from "@/lib/appearance";
 
+interface SessionUser {
+  name: string | null;
+  email: string | null;
+}
+
 const ACCENTS = [
   { name: "Ochre", hue: 60 },
   { name: "Sage", hue: 145 },
@@ -20,11 +25,7 @@ export default function SettingsPage() {
   const store = useStoreContext();
   const [theme, setTheme] = useState<Theme>(store.preferences.theme);
   const [accent, setAccent] = useState(store.preferences.accentHue);
-  const [notifications, setNotifications] = useState({
-    reminders: store.preferences.remindersEnabled,
-    review: store.preferences.weeklyReviewNudge,
-    accountability: store.preferences.accountabilityNudge,
-  });
+  const [user, setUser] = useState<SessionUser | null>(null);
 
   useEffect(() => {
     window.queueMicrotask(() => {
@@ -32,6 +33,19 @@ export default function SettingsPage() {
       setAccent(store.preferences.accentHue);
     });
   }, [store.preferences.accentHue, store.preferences.theme]);
+
+  useEffect(() => {
+    fetch("/api/v1/session")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.user) {
+          setUser(data.user);
+        }
+      })
+      .catch(() => {
+        // silently fail — profile will show fallback
+      });
+  }, []);
 
   const setNextTheme = (nextTheme: Theme) => {
     setTheme(nextTheme);
@@ -65,10 +79,6 @@ export default function SettingsPage() {
     URL.revokeObjectURL(url);
   };
 
-  const resetData = () => {
-    store.showToast("Reset is disabled", "Authenticated data lives in your account database");
-  };
-
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}>
       <div className="page-header">
@@ -80,8 +90,7 @@ export default function SettingsPage() {
 
       <div style={{ display: "grid", gap: 18 }}>
         <SettingGroup title="Account">
-          <SettingRow label="Profile" value="Alex Rivera" />
-          <SettingRow label="Storage" value="This browser" />
+          <SettingRow label="Profile" value={user?.name ?? user?.email ?? "—"} />
         </SettingGroup>
 
         <SettingGroup title="Appearance">
@@ -103,38 +112,9 @@ export default function SettingsPage() {
           </SettingRow>
         </SettingGroup>
 
-        <SettingGroup title="Notifications">
-          {Object.entries({
-            reminders: "Daily habit reminders",
-            review: "Weekly review nudge",
-            accountability: "Accountability contract alerts",
-          }).map(([key, label]) => (
-            <SettingRow key={key} label={label} value={notifications[key as keyof typeof notifications] ? "On" : "Off"}>
-              <motion.button
-                className={`chip ${notifications[key as keyof typeof notifications] ? "active" : ""}`}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setNotifications((current) => {
-                  const next = { ...current, [key]: !current[key as keyof typeof notifications] };
-                  store.setPreferences({
-                    remindersEnabled: next.reminders,
-                    weeklyReviewNudge: next.review,
-                    accountabilityNudge: next.accountability,
-                  });
-                  return next;
-                })}
-              >
-                {notifications[key as keyof typeof notifications] ? "On" : "Off"}
-              </motion.button>
-            </SettingRow>
-          ))}
-        </SettingGroup>
-
         <SettingGroup title="Data">
           <SettingRow label="Export" value={`${store.habits.length} habits`}>
             <motion.button className="btn btn-sm" onClick={exportJson} whileTap={{ scale: 0.97 }}>Download JSON</motion.button>
-          </SettingRow>
-          <SettingRow label="Reset" value="Clear browser data">
-            <motion.button className="btn btn-sm" onClick={resetData} whileTap={{ scale: 0.97 }}>Reset...</motion.button>
           </SettingRow>
         </SettingGroup>
       </div>
