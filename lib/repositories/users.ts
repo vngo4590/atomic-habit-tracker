@@ -62,3 +62,23 @@ export async function createUserWithDefaults(input: CreateUserInput, client: DbC
     select: authUserSelect,
   });
 }
+
+export async function updateUserName(id: string, name: string, client: DbClient = db): Promise<AuthUserRecord> {
+  validateDatabaseUrl();
+
+  return client.user.update({
+    where: { id },
+    data: { name },
+    select: authUserSelect,
+  });
+}
+
+export async function updateUserPassword(id: string, passwordHash: string, client: DbClient = db): Promise<AuthUserRecord> {
+  validateDatabaseUrl();
+
+  return client.user.update({
+    where: { id },
+    data: { passwordHash },
+    select: authUserSelect,
+  });
+}

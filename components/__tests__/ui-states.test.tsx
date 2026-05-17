@@ -84,6 +84,8 @@ vi.mock("@/components/StoreProvider", () => ({
 
 vi.mock("@/lib/actions/auth", () => ({
   logoutAction: vi.fn(),
+  updateProfileAction: vi.fn(),
+  changePasswordAction: vi.fn(),
 }));
 
 // ---------------------------------------------------------------------------
