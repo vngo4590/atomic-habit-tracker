@@ -57,9 +57,10 @@ export default function SettingsPage() {
     fetch("/api/v1/session")
       .then((res) => res.json())
       .then((data) => {
-        if (data.user) {
-          setUser(data.user);
-          setNameValue(data.user.name ?? "");
+        const userData = data.data?.user;
+        if (userData) {
+          setUser(userData);
+          setNameValue(userData.name ?? "");
         }
       })
       .catch(() => {
