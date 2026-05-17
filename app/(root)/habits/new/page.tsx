@@ -32,6 +32,8 @@ function MLInput({
   wide?: boolean;
 }) {
   const minWidth = wide ? 160 : 110;
+  const maxWidth = wide ? 320 : 260;
+  const maxChars = 60;
   const text = value || placeholder;
   // Measure the text in a hidden span so the input container grows with content.
   const measureRef = useRef<HTMLSpanElement>(null);
@@ -39,23 +41,27 @@ function MLInput({
 
   useLayoutEffect(() => {
     if (measureRef.current) {
-      setTextWidth(Math.max(minWidth, measureRef.current.offsetWidth + 24));
+      setTextWidth(Math.min(maxWidth, Math.max(minWidth, measureRef.current.offsetWidth + 24)));
     }
-  }, [text, minWidth]);
+  }, [text, minWidth, maxWidth]);
 
   return (
-    <span style={{ display: "inline-block", position: "relative", verticalAlign: "middle", margin: "0 4px", width: textWidth }}>
+    <span style={{ display: "inline-block", position: "relative", verticalAlign: "middle", margin: "0 4px", width: textWidth, maxWidth }}>
       <input
         className="input"
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
+        maxLength={maxChars}
         style={{
           width: "100%",
           height: 38,
           fontFamily: "var(--serif)",
           fontSize: 22,
           fontStyle: "italic",
+          overflowWrap: "break-word",
+          wordBreak: "break-word",
+          hyphens: "auto",
         }}
       />
       <span
@@ -72,6 +78,7 @@ function MLInput({
           fontStyle: "italic",
           padding: "0 12px",
           pointerEvents: "none",
+          maxWidth,
         }}
       >
         {text}
