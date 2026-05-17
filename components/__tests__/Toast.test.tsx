@@ -13,7 +13,11 @@ vi.mock("@/components/StoreProvider", () => ({
 vi.mock("framer-motion", () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   motion: {
-    div: ({ children, layout: _layout, variants: _variants, initial: _initial, animate: _animate, exit: _exit, ...props }: Record<string, unknown>) => <div {...props}>{children as React.ReactNode}</div>,
+    div: (p: Record<string, unknown>) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { children, layout, variants, initial, animate, exit, ...props } = p;
+      return <div {...props}>{children as React.ReactNode}</div>;
+    },
   },
 }));
 

@@ -13,7 +13,7 @@ import {
   updateJournalEntryAction,
 } from "@/lib/actions/domain";
 import { testHabit, testPreferences } from "@/lib/test/fixtures";
-import { useStore, streak, longestStreak, completionRate } from "@/lib/store";
+import { useStore, streak, longestStreak } from "@/lib/store";
 import { applyAppearance } from "@/lib/appearance";
 import { LESSONS } from "@/lib/lessons-data";
 import type { StoreSnapshot } from "@/lib/types";
@@ -157,8 +157,7 @@ describe("Flow 1: The Complete Habit Lifecycle", () => {
 
     // When: They miss Thursday
     vi.setSystemTime(new Date("2030-01-10T12:00:00Z"));
-    const thursday = "2030-01-10";
-    // (no check-in on Thursday)
+    // (no check-in on Thursday — date is 2030-01-10)
 
     // Then: Their streak resets to 0
     // BUG: The current streak() implementation counts backward from yesterday
