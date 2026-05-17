@@ -12,7 +12,6 @@ function makeHabit(overrides: Partial<Habit> = {}): Habit {
     identity: "a reader",
     time: "Morning",
     schedule: "Every day",
-    stack: "",
     cue: "After I pour coffee",
     response: "Read 10 pages",
     twoMin: "Open the book",
@@ -99,20 +98,6 @@ describe("HabitRow business logic", () => {
     // Then only the first 40 characters of the cue are shown
     expect(screen.getByText(longCue.slice(0, 40))).toBeTruthy();
     expect(screen.queryByText(longCue)).toBeNull();
-  });
-
-  it("shows stack text instead of cue when a stack is present", () => {
-    // Given a habit with a stack value
-    const habit = makeHabit({ stack: "After morning coffee", cue: "Some other cue" });
-
-    // When the row is rendered
-    render(<HabitRow habit={habit} done={false} streak={0} onCheck={vi.fn()} onOpen={vi.fn()} />);
-
-    // Then the stack text is shown with an arrow prefix
-    expect(screen.getByText("-> After morning coffee")).toBeTruthy();
-
-    // And the original cue is not shown
-    expect(screen.queryByText("Some other cue")).toBeNull();
   });
 
   it("hides the streak pill when the streak is 0", () => {

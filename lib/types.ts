@@ -23,7 +23,6 @@ export interface Habit {
   loopResponse: string;
   loopReward: string;
   twoMin: string;
-  stack: string;
   identity: string;
   environment: string;
   schedule: string;

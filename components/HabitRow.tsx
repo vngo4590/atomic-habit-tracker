@@ -22,8 +22,8 @@ export function HabitRow({
     <motion.div
       className={`habit-row ${done ? "done" : ""}`}
       onClick={onOpen}
-      whileHover={{ x: 4 }}
-      transition={{ type: "spring", stiffness: 300, damping: 25 }}
+      whileHover={{ y: -2, boxShadow: "var(--shadow-md)" }}
+      transition={{ type: "spring", stiffness: 300, damping: 20 }}
     >
       <motion.button
         className={`check ${done ? "done" : ""}`}
@@ -40,7 +40,7 @@ export function HabitRow({
       <div>
         <div className="habit-name">{habit.name}</div>
         <div className="habit-meta">
-          <span>{habit.stack ? `-> ${habit.stack}` : habit.cue.slice(0, 40)}</span>
+          <span>{habit.cue.slice(0, 40)}</span>
           <span className="dot">.</span>
           <span>{habit.identity}</span>
         </div>
@@ -49,17 +49,13 @@ export function HabitRow({
         <motion.span
           className="chip"
           style={{
-            background: done ? "var(--accent-soft)" : "transparent",
+            background: done ? "var(--accent-soft)" : "rgba(0,0,0,0)",
             borderColor: done ? "transparent" : "var(--rule)",
             color: done ? "oklch(35% 0.10 60)" : "var(--ink-3)",
             fontStyle: "normal",
             fontSize: 10,
           }}
-          animate={
-            done
-              ? { scale: [1, 1.15, 1], background: "var(--accent-soft)" }
-              : { scale: 1, background: "transparent" }
-          }
+          animate={done ? { scale: [1, 1.15, 1] } : { scale: 1 }}
           transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
         >
           {done ? "+1" : "."}{" "}

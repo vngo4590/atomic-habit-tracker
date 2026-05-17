@@ -126,7 +126,6 @@ model Habit {
   loopResponse String    @default("")
   loopReward   String    @default("")
   twoMin       String    @default("")
-  stack        String    @default("")
   identity     String
   environment  String    @default("")
   schedule     String    @default("Daily")

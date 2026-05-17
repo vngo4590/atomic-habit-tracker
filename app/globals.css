@@ -219,7 +219,7 @@ textarea.input { resize: vertical; min-height: 80px; line-height: 1.55; }
 .habit-sort-row .field-label { margin: 0; }
 .habit-sort-select { width: auto; min-width: 190px; height: 40px; padding: 0 36px 0 15px; border-radius: 999px; font-size: 12.5px; background-color: var(--bg-elev); box-shadow: var(--shadow); }
 .habit-list { display: grid; gap: 12px; }
-.habit-list-header { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr) 90px 90px 100px; padding: 0 22px 2px; }
+.habit-list-header { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr) 90px 90px 100px; padding: 0 22px 2px; gap: 18px; }
 .habit-list-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr) 90px 90px 100px; padding: 20px 22px; align-items: center; gap: 18px; background: var(--bg-elev); border: 1px solid var(--rule); border-radius: var(--r-lg); box-shadow: var(--shadow); transition: background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast); }
 .habit-list-row:hover { background: color-mix(in oklch, var(--bg-elev) 68%, var(--bg-sunk)); border-color: var(--rule-strong); transform: translateY(-1px); box-shadow: var(--shadow-md); }
 .habit-list-label { display: none; }
@@ -265,6 +265,12 @@ textarea.input { resize: vertical; min-height: 80px; line-height: 1.55; }
   box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
 }
 
+/* Mobile-only hamburger button — hidden on desktop so it does not become
+   an extra grid item inside .app and break the sidebar + main layout. */
+.mobile-menu-btn {
+  display: none;
+}
+
 @media (max-width: 900px) {
   html, body {
     min-width: 0;
@@ -275,58 +281,91 @@ textarea.input { resize: vertical; min-height: 80px; line-height: 1.55; }
     display: block;
     height: auto;
     min-height: 100dvh;
-    padding-bottom: 86px;
   }
 
+  /* Hide the desktop sidebar on mobile — navigation now lives in a drawer. */
   .sidebar {
-    position: fixed;
-    z-index: 90;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 74px;
-    padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
-    border-right: 0;
-    border-top: 1px solid var(--rule);
-    display: flex;
-    flex-direction: row;
-    gap: 8px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    background: color-mix(in oklch, var(--bg-sunk) 94%, transparent);
-    backdrop-filter: blur(14px);
-  }
-
-  .sidebar > .brand,
-  .sidebar > .sidebar-foot,
-  .sidebar .nav-group {
     display: none;
   }
 
-  .sidebar > div:not(.brand):not(.sidebar-foot) {
-    display: contents;
+  /* Fixed hamburger button that opens the mobile navigation drawer. */
+  .mobile-menu-btn {
+    position: fixed;
+    z-index: 80;
+    top: 12px;
+    left: 12px;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--r-md);
+    border: 1px solid var(--rule);
+    background: var(--bg-elev);
+    color: var(--ink);
+    opacity: 0.7;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: background var(--transition-fast), transform var(--transition-fast);
   }
 
-  .nav-item {
-    flex: 0 0 76px;
-    min-height: 54px;
-    padding: 7px 6px;
-    justify-content: center;
+  .mobile-menu-btn:hover {
+    background: var(--bg-sunk);
+    transform: scale(1.05);
+  }
+
+  .mobile-menu-btn:active {
+    transform: scale(0.95);
+  }
+
+  /* Backdrop overlay behind the mobile drawer. Tapping it closes the menu. */
+  .mobile-drawer-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: oklch(from var(--bg) l c h / 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+  }
+
+  /* The drawer panel itself — same look as the desktop sidebar but slides in from the left. */
+  .mobile-drawer {
+    display: flex;
     flex-direction: column;
     gap: 4px;
-    font-size: 10.5px;
-    text-align: center;
-    line-height: 1.15;
-    border-radius: var(--r-md);
+    width: 260px;
+    max-width: 80vw;
+    height: 100dvh;
+    padding: 22px 14px;
+    background: var(--bg-sunk);
+    border-right: 1px solid var(--rule);
+    overflow-y: auto;
+    /* Ensure the scrollbar styling from the global rule still applies. */
+    -webkit-overflow-scrolling: touch;
   }
 
-  .nav-item .ni-key {
-    display: none;
+  .mobile-drawer .desktop-nav {
+    display: block;
   }
 
-  .nav-icon {
-    width: 18px;
-    height: 18px;
+  .mobile-drawer .nav-item {
+    /* Restore desktop-sized nav items inside the drawer. */
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 7px 10px;
+    font-size: 13.5px;
+    text-align: left;
+    min-height: auto;
+  }
+
+  .mobile-drawer .nav-item .ni-key {
+    display: inline-flex;
+    margin-left: auto;
+  }
+
+  .mobile-drawer .nav-icon {
+    width: 14px;
+    height: 14px;
   }
 
   .main {
@@ -452,41 +491,12 @@ textarea.input { resize: vertical; min-height: 80px; line-height: 1.55; }
   }
 
   .habit-list-field {
-    display: grid !important;
-    grid-template-columns: minmax(88px, 0.34fr) minmax(0, 1fr);
-    gap: 12px;
-    align-items: start !important;
+    display: block !important;
     min-width: 0;
-  }
-
-  .habit-list-field > :not(.habit-list-label) {
-    grid-column: 2;
-    min-width: 0;
-  }
-
-  .habit-list-progress {
-    align-self: center;
   }
 
   .habit-list-label {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--ink-3);
-    min-height: 20px;
-  }
-
-  .habit-list-label::before {
-    content: "";
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: var(--accent);
-    flex: 0 0 auto;
+    display: none !important;
   }
 
   .loop {
@@ -604,6 +614,91 @@ textarea.input { resize: vertical; min-height: 80px; line-height: 1.55; }
 
   .main-inner [style*="gap: 3"] {
     gap: 5px !important;
+  }
+
+  /* ---------------------------------------------------------------
+     Additional mobile overrides for inline font sizes and layouts
+     that overflow on small screens.
+  --------------------------------------------------------------- */
+  .main-inner [style*="font-size: 32px"] {
+    font-size: 26px !important;
+  }
+
+  .main-inner [style*="font-size: 52px"] {
+    font-size: 32px !important;
+  }
+
+  .main-inner [style*="font-size: 44px"] {
+    font-size: 30px !important;
+  }
+
+  .main-inner [style*="font-size: 30px"] {
+    font-size: 24px !important;
+  }
+
+  .main-inner [style*="font-size: 26px"] {
+    font-size: 22px !important;
+  }
+
+  .main-inner [style*="font-size: 22px"] {
+    font-size: 18px !important;
+  }
+
+  .main-inner [style*="font-size: 19px"] {
+    font-size: 16px !important;
+  }
+
+  .main-inner [style*="font-size: 18px"] {
+    font-size: 15px !important;
+  }
+
+  .main-inner [style*="font-size: 16px"] {
+    font-size: 14px !important;
+  }
+
+  /* Inputs in the habit sentence should stack and grow on mobile */
+  .main-inner .card [style*="display: inline-block"][style*="width: 150"],
+  .main-inner .card [style*="display: inline-block"][style*="width: 220"] {
+    display: block !important;
+    width: 100% !important;
+    margin: 6px 0 !important;
+  }
+
+  /* History wall horizontal scroll container */
+  .history-wall-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 8px;
+  }
+
+  /* Reduce stat grid to 2 columns on mobile */
+  .main-inner [style*="grid-template-columns: repeat(4"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+  }
+
+  /* Compress large gap values */
+  .main-inner [style*="gap: 20px"] {
+    gap: 12px !important;
+  }
+
+  .main-inner [style*="gap: 18px"] {
+    gap: 12px !important;
+  }
+
+  .main-inner [style*="gap: 32px"] {
+    gap: 18px !important;
+  }
+
+  /* Page header buttons should wrap */
+  .page-header > div:last-child[style*="display: flex"] {
+    flex-wrap: wrap !important;
+  }
+
+  /* Habit detail title shouldn't be oversized */
+  .main-inner h1[style*="font-size: 52px"] {
+    font-size: 28px !important;
+    line-height: 1.1 !important;
   }
 }
 

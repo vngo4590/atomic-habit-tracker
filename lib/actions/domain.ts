@@ -55,7 +55,6 @@ export async function createHabitAction(draft: HabitDraft) {
     loopResponse: draft.response ?? draft.name,
     loopReward: draft.reward ?? "",
     twoMin: "",
-    stack: "",
     environment: "",
     schedule: "Daily",
     time: "Morning",

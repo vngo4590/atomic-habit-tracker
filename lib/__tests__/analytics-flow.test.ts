@@ -37,7 +37,6 @@ function habitWith(history: Habit["history"]): Habit {
     loopResponse: "",
     loopReward: "",
     twoMin: "",
-    stack: "",
     identity: "tester",
     environment: "",
     schedule: "Daily",

@@ -2,11 +2,13 @@ import type { LucideProps } from "lucide-react";
 import {
   CalendarCheck,
   Check,
+  ChevronLeft,
   ChevronRight,
   Flame,
   LayoutList,
   LineChart,
   Link as LinkIcon,
+  Menu,
   Pencil,
   Plus,
   RotateCcw,
@@ -87,7 +89,7 @@ export function IconArrow(props: IconProps) {
 }
 
 export function IconBack(props: IconProps) {
-  return <RotateCcw {...iconDefaults} {...props} />;
+  return <ChevronLeft {...iconDefaults} {...props} />;
 }
 
 export function IconEdit(props: IconProps) {
@@ -124,4 +126,8 @@ export function IconClose(props: IconProps) {
 
 export function IconBook(props: IconProps) {
   return <BookOpen {...iconDefaults} {...props} />;
+}
+
+export function IconMenu(props: IconProps) {
+  return <Menu {...iconDefaults} {...props} />;
 }

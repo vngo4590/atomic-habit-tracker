@@ -103,7 +103,6 @@ function makeHabit(patch: Partial<Habit> = {}): Habit {
     loopResponse: "",
     loopReward: "",
     twoMin: "",
-    stack: "",
     identity: "reader",
     environment: "",
     schedule: "Daily",
@@ -331,7 +330,7 @@ describe("Error States", () => {
 
     // Then: the not-found message and back button are visible
     expect(screen.getByText("Habit not found.")).toBeTruthy();
-    expect(screen.getByText("All habits")).toBeTruthy();
+    expect(screen.getByText("Back")).toBeTruthy();
   });
 
   it("dateAdd handles invalid date keys gracefully without throwing", () => {
@@ -490,7 +489,7 @@ describe("Accessibility", () => {
     buttons.forEach((btn) => {
       const hasText = btn.textContent && btn.textContent.trim().length > 0;
       const hasLabel = btn.getAttribute("aria-label");
-      expect(hasText || hasLabel).toBe(true);
+      expect(hasText || hasLabel).toBeTruthy();
     });
   });
 });

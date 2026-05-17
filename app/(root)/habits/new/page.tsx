@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useStoreContext } from "@/components/StoreProvider";
@@ -31,22 +31,59 @@ function MLInput({
   placeholder: string;
   wide?: boolean;
 }) {
+  const minWidth = wide ? 160 : 110;
+  const maxWidth = wide ? 320 : 260;
+  const maxChars = 60;
+  const text = value || placeholder;
+  // Measure the text in a hidden span so the input container grows with content.
+  const measureRef = useRef<HTMLSpanElement>(null);
+  const [textWidth, setTextWidth] = useState(minWidth);
+
+  useLayoutEffect(() => {
+    if (measureRef.current) {
+      setTextWidth(Math.min(maxWidth, Math.max(minWidth, measureRef.current.offsetWidth + 24)));
+    }
+  }, [text, minWidth, maxWidth]);
+
   return (
-    <input
-      className="input"
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      placeholder={placeholder}
-      style={{
-        display: "inline-block",
-        width: wide ? 220 : 150,
-        height: 38,
-        margin: "0 6px",
-        fontFamily: "var(--serif)",
-        fontSize: 22,
-        fontStyle: "italic",
-      }}
-    />
+    <span style={{ display: "inline-block", position: "relative", verticalAlign: "middle", margin: "0 4px", width: textWidth, maxWidth }}>
+      <input
+        className="input"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        maxLength={maxChars}
+        style={{
+          width: "100%",
+          height: 38,
+          fontFamily: "var(--serif)",
+          fontSize: 22,
+          fontStyle: "italic",
+          overflowWrap: "break-word",
+          wordBreak: "break-word",
+          hyphens: "auto",
+        }}
+      />
+      <span
+        ref={measureRef}
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          visibility: "hidden",
+          whiteSpace: "pre",
+          fontFamily: "var(--serif)",
+          fontSize: 22,
+          fontStyle: "italic",
+          padding: "0 12px",
+          pointerEvents: "none",
+          maxWidth,
+        }}
+      >
+        {text}
+      </span>
+    </span>
   );
 }
 
@@ -67,9 +104,6 @@ export default function NewHabitPage() {
   const [identity, setIdentity] = useState("");
   const [preset, setPreset] = useState<Preset>("daily");
   const [customDays, setCustomDays] = useState<string[]>([]);
-  const [showStack, setShowStack] = useState(false);
-  const [stack, setStack] = useState("");
-  const [twoMin, setTwoMin] = useState("");
 
   const existingIdentities = useMemo(() => {
     const values = new Set<string>([...profile.values, ...habits.map((habit) => habit.identity)].filter(Boolean));
@@ -104,12 +138,9 @@ export default function NewHabitPage() {
       identity: identity.trim(),
       time: cleanTime,
       schedule,
-      stack,
-      cue: stack.trim()
-        ? `After I ${stack.trim()}, I will ${cleanName.toLowerCase()}.`
-        : `At ${cleanTime.toLowerCase()} ${cleanLocation}, I will ${cleanName.toLowerCase()}.`,
+      cue: `At ${cleanTime.toLowerCase()} ${cleanLocation}, I will ${cleanName.toLowerCase()}.`,
       response: cleanName,
-      twoMin: twoMin.trim() || `Do ${cleanName.toLowerCase()} for two minutes.`,
+      twoMin: `Do ${cleanName.toLowerCase()} for two minutes.`,
       craving: `Become ${identity.trim()}.`,
       reward: "A visible vote for the person I am becoming.",
       environment: cleanLocation,
@@ -196,36 +227,6 @@ export default function NewHabitPage() {
           )}
         </section>
 
-        <section className="card card-pad">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <div className="eyebrow">Habit stack</div>
-              <h2 className="h3" style={{ marginTop: 4 }}>Attach it to a rail</h2>
-            </div>
-            {!showStack && (
-              <button className="btn btn-sm" type="button" onClick={() => setShowStack(true)}>
-                + Add
-              </button>
-            )}
-          </div>
-          {showStack && (
-            <div style={{ marginTop: 16 }}>
-              <label className="field-label">After I...</label>
-              <input className="input" value={stack} onChange={(event) => setStack(event.target.value)} placeholder="pour coffee" />
-              <label className="field-label" style={{ marginTop: 14 }}>Quick pick</label>
-              <select className="input" value="" onChange={(event) => setStack(event.target.value.toLowerCase())}>
-                <option value="">Choose an existing habit</option>
-                {habits.map((habit) => (
-                  <option key={habit.id} value={habit.name}>
-                    {habit.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          <label className="field-label" style={{ marginTop: 18 }}>Two-minute version</label>
-          <input className="input" value={twoMin} onChange={(event) => setTwoMin(event.target.value)} placeholder="Open the book and read one paragraph" />
-        </section>
       </div>
 
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 24 }}>

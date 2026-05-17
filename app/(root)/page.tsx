@@ -5,41 +5,29 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { CompletionRing } from "@/components/CompletionRing";
-import { HabitRow } from "@/components/HabitRow";
-import { IconPlus, IconSearch } from "@/components/Icons";
+import { IconCheck, IconPlus, IconSearch } from "@/components/Icons";
 import { MoodCheckSheet } from "@/components/MoodCheckSheet";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { useStoreContext } from "@/components/StoreProvider";
 import { dateAdd, fmt, todayKey } from "@/lib/helpers";
+import { useMotionReduced } from "@/lib/hooks/useMotionReduced";
+import { isScheduledForDate } from "@/lib/schedule";
+import { completionRate } from "@/lib/store";
 import type { Habit } from "@/lib/types";
-
-const TIMES = ["Morning", "Afternoon", "Evening"] as const;
 
 export default function TodayPage() {
   const router = useRouter();
   const store = useStoreContext();
+  const reduced = useMotionReduced();
   const { habits, toggleHabit, logCheckIn, streak } = store;
-  const today = todayKey();
+  const [today] = useState(() => todayKey());
   const [moodHabit, setMoodHabit] = useState<Habit | null>(null);
+  const scheduledToday = habits.filter((habit) => isScheduledForDate(today, habit.schedule));
+  const scheduledUndone = scheduledToday.filter((habit) => !habit.history[today]);
   const doneToday = habits.filter((habit) => habit.history[today]).length;
   const pct = habits.length ? Math.round((doneToday / habits.length) * 100) : 0;
   const hour = new Date().getHours();
   const greet = hour < 5 ? "Late night" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-
-  const groups = useMemo(() => {
-    const grouped: Record<(typeof TIMES)[number], Habit[]> = {
-      Morning: [],
-      Afternoon: [],
-      Evening: [],
-    };
-    habits.forEach((habit) => {
-      const time = TIMES.includes(habit.time as (typeof TIMES)[number])
-        ? (habit.time as (typeof TIMES)[number])
-        : "Morning";
-      grouped[time].push(habit);
-    });
-    return grouped;
-  }, [habits]);
 
   const last14 = useMemo(() => {
     const days = [];
@@ -94,7 +82,7 @@ export default function TodayPage() {
         <div style={{ display: "flex", gap: 8 }}>
           <motion.button
             className="btn btn-sm"
-            whileHover={{ y: -1 }}
+            whileHover={reduced ? undefined : { y: -1 }}
             whileTap={{ scale: 0.97 }}
           >
             <IconSearch style={{ width: 13, height: 13 }} />
@@ -103,7 +91,7 @@ export default function TodayPage() {
           <motion.button
             className="btn btn-sm btn-primary"
             onClick={() => router.push("/habits/new")}
-            whileHover={{ y: -1 }}
+            whileHover={reduced ? undefined : { y: -1 }}
             whileTap={{ scale: 0.97 }}
           >
             <IconPlus style={{ width: 13, height: 13 }} />
@@ -121,7 +109,7 @@ export default function TodayPage() {
         <motion.div
           className="card card-pad"
           style={{ display: "flex", gap: 20, alignItems: "center" }}
-          whileHover={{ y: -2, boxShadow: "var(--shadow-md)" }}
+          whileHover={reduced ? undefined : { y: -2, boxShadow: "var(--shadow-md)" }}
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
         >
           <CompletionRing pct={pct} />
@@ -143,7 +131,7 @@ export default function TodayPage() {
 
         <motion.div
           className="card card-pad"
-          whileHover={{ y: -2, boxShadow: "var(--shadow-md)" }}
+          whileHover={reduced ? undefined : { y: -2, boxShadow: "var(--shadow-md)" }}
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
         >
           <div className="eyebrow">Longest active streak</div>
@@ -162,7 +150,7 @@ export default function TodayPage() {
 
         <motion.div
           className="card card-pad"
-          whileHover={{ y: -2, boxShadow: "var(--shadow-md)" }}
+          whileHover={reduced ? undefined : { y: -2, boxShadow: "var(--shadow-md)" }}
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
         >
           <div className="eyebrow">Last 14 days</div>
@@ -250,60 +238,155 @@ export default function TodayPage() {
         </div>
       </motion.div>
 
-      {TIMES.map((label, sectionIndex) => {
-        const list = groups[label];
-        if (list.length === 0) {
-          return null;
-        }
-
-        return (
-          <motion.section
-            key={label}
-            style={{ marginBottom: 24 }}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.2 + sectionIndex * 0.08, ease: [0.4, 0, 0.2, 1] }}
+      {scheduledUndone.length > 0 && (
+        <motion.section
+          style={{ marginBottom: 24 }}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2, ease: [0.4, 0, 0.2, 1] }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 12,
+            }}
           >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 12,
-              }}
+            <h2 className="h3">Habits</h2>
+            <span
+              className="muted mono"
+              style={{ fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase" }}
             >
-              <h2 className="h3">{label}</h2>
-              <span
-                className="muted mono"
-                style={{ fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase" }}
-              >
-                {list.filter((habit) => habit.history[today]).length} / {list.length}
-              </span>
-            </div>
-            <div className="card">
-              <StaggerContainer staggerDelay={0.04} delayChildren={0.05}>
-                {list.map((habit) => (
+              {scheduledUndone.length} remaining
+            </span>
+          </div>
+          <div className="habit-list">
+            <StaggerContainer staggerDelay={0.04}>
+              {scheduledUndone.map((habit) => {
+                const activeStreak = streak(habit);
+                const rate = Math.round(completionRate(habit) * 100);
+                return (
                   <StaggerItem key={habit.id}>
-                    <HabitRow
-                      habit={habit}
-                      done={Boolean(habit.history[today])}
-                      streak={streak(habit)}
-                      onCheck={() => {
-                        const wasDone = Boolean(habit.history[today]);
-                        toggleHabit(habit.id);
-                        if (!wasDone) {
-                          setMoodHabit(habit);
-                        }
+                    <motion.div
+                      className="click-row habit-list-row"
+                      style={{
+                        gridTemplateColumns: "44px minmax(0, 1fr) 80px 140px",
+                        alignItems: "center",
                       }}
-                      onOpen={() => router.push(`/habits/${habit.id}`)}
-                    />
+                      onClick={() => router.push(`/habits/${habit.id}`)}
+                      whileHover={reduced ? undefined : { y: -2, boxShadow: "var(--shadow-md)" }}
+                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    >
+                      <div className="habit-list-field" style={{ alignItems: "center" }}>
+                        <motion.button
+                          className="check"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setMoodHabit(habit);
+                            toggleHabit(habit.id);
+                          }}
+                          aria-label="Check"
+                          whileTap={{ scale: 0.85 }}
+                          transition={{ type: "spring", stiffness: 500, damping: 20 }}
+                        >
+                          <IconCheck />
+                        </motion.button>
+                      </div>
+
+                      <div className="habit-list-field">
+                        <div style={{ minWidth: 0 }}>
+                          <div className="habit-name">{habit.name}</div>
+                          <div
+                            className="mono muted"
+                            style={{
+                              fontSize: 10.5,
+                              marginTop: 3,
+                              letterSpacing: "0.04em",
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            {habit.identity}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="habit-list-field">
+                        <div
+                          className="mono"
+                          style={{
+                            fontSize: 16,
+                            fontWeight: 500,
+                            color: activeStreak > 0 ? "var(--ink)" : "var(--ink-3)",
+                          }}
+                        >
+                          {activeStreak}d
+                        </div>
+                      </div>
+
+                      <div className="habit-list-field">
+                        <div className="habit-list-progress">
+                          <div
+                            style={{
+                              flex: 1,
+                              height: 4,
+                              background: "var(--bg-sunk)",
+                              borderRadius: 99,
+                              overflow: "hidden",
+                            }}
+                          >
+                            <motion.div
+                              style={{ height: "100%", background: "var(--accent)" }}
+                              initial={{ width: 0 }}
+                              animate={{ width: `${rate}%` }}
+                              transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+                            />
+                          </div>
+                          <span
+                            className="mono"
+                            style={{
+                              fontSize: 11,
+                              color: "var(--ink-3)",
+                              minWidth: 28,
+                              textAlign: "right",
+                            }}
+                          >
+                            {rate}%
+                          </span>
+                        </div>
+                      </div>
+                    </motion.div>
                   </StaggerItem>
-                ))}
-              </StaggerContainer>
-            </div>
-          </motion.section>
-        );
-      })}
+                );
+              })}
+            </StaggerContainer>
+          </div>
+        </motion.section>
+      )}
+
+      {habits.length > 0 && scheduledUndone.length === 0 && (
+        <motion.div
+          className="card card-pad"
+          style={{ textAlign: "center", padding: "42px 20px", marginBottom: 24 }}
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+        >
+          <div className="eyebrow">
+            {scheduledToday.length === 0 ? "Nothing scheduled" : "All caught up"}
+          </div>
+          <h2 className="h2" style={{ marginTop: 8 }}>
+            {scheduledToday.length === 0
+              ? "No habits scheduled for today."
+              : "Every scheduled habit is complete."}
+          </h2>
+          <p className="muted" style={{ margin: "10px auto 0", maxWidth: 460, lineHeight: 1.5 }}>
+            {scheduledToday.length === 0
+              ? "Enjoy your free time or browse your habit library."
+              : "Great work casting your identity votes today."}
+          </p>
+        </motion.div>
+      )}
 
       {habits.length === 0 && (
         <motion.div
@@ -323,7 +406,7 @@ export default function TodayPage() {
           <motion.button
             className="btn btn-primary"
             onClick={() => router.push("/habits/new")}
-            whileHover={{ y: -1 }}
+            whileHover={reduced ? undefined : { y: -1 }}
             whileTap={{ scale: 0.97 }}
           >
             <IconPlus style={{ width: 13, height: 13 }} />

@@ -12,7 +12,6 @@ function makeHabit(overrides: Partial<Habit> = {}): Habit {
     identity: "a reader",
     time: "Morning",
     schedule: "Every day",
-    stack: "",
     cue: "After I pour coffee",
     response: "Read 10 pages",
     twoMin: "Open the book",
