@@ -6,14 +6,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // ---------------------------------------------------------------------------
 
 const redirectMock = vi.hoisted(() => vi.fn());
-const authMock = vi.hoisted(() => vi.fn());
+const getCurrentUserMock = vi.hoisted(() => vi.fn());
 
 vi.mock("next/navigation", () => ({
   redirect: redirectMock,
 }));
 
-vi.mock("@/auth", () => ({
-  auth: authMock,
+vi.mock("@/lib/auth/session", () => ({
+  getCurrentUser: getCurrentUserMock,
 }));
 
 vi.mock("@/lib/actions/auth", () => ({
@@ -26,7 +26,7 @@ import LoginPage from "@/app/(auth)/login/page";
 afterEach(() => {
   cleanup();
   redirectMock.mockClear();
-  authMock.mockClear();
+  getCurrentUserMock.mockClear();
 });
 
 describe("LoginPage", () => {
@@ -34,7 +34,7 @@ describe("LoginPage", () => {
   // Authenticated users should be redirected away from the login page.
   // -------------------------------------------------------------------------
   it("redirects an authenticated user to / when no callbackUrl is provided", async () => {
-    authMock.mockResolvedValue({ user: { id: "u1", name: "Alex" } });
+    getCurrentUserMock.mockResolvedValue({ id: "u1", name: "Alex", email: "a@b.com", image: null, passwordHash: "hash" });
 
     await LoginPage({ searchParams: Promise.resolve({}) });
 
@@ -43,7 +43,7 @@ describe("LoginPage", () => {
   });
 
   it("redirects an authenticated user to the provided callbackUrl", async () => {
-    authMock.mockResolvedValue({ user: { id: "u1", name: "Alex" } });
+    getCurrentUserMock.mockResolvedValue({ id: "u1", name: "Alex", email: "a@b.com", image: null, passwordHash: "hash" });
 
     await LoginPage({ searchParams: Promise.resolve({ callbackUrl: "/journal" }) });
 
@@ -55,7 +55,7 @@ describe("LoginPage", () => {
   // Open-redirect protection: external URLs must be ignored.
   // -------------------------------------------------------------------------
   it("redirects to / when callbackUrl is an external URL", async () => {
-    authMock.mockResolvedValue({ user: { id: "u1", name: "Alex" } });
+    getCurrentUserMock.mockResolvedValue({ id: "u1", name: "Alex", email: "a@b.com", image: null, passwordHash: "hash" });
 
     await LoginPage({
       searchParams: Promise.resolve({ callbackUrl: "https://evil.com" }),
@@ -66,7 +66,7 @@ describe("LoginPage", () => {
   });
 
   it("redirects to / when callbackUrl is a protocol-relative URL", async () => {
-    authMock.mockResolvedValue({ user: { id: "u1", name: "Alex" } });
+    getCurrentUserMock.mockResolvedValue({ id: "u1", name: "Alex", email: "a@b.com", image: null, passwordHash: "hash" });
 
     await LoginPage({
       searchParams: Promise.resolve({ callbackUrl: "//evil.com" }),
@@ -80,7 +80,7 @@ describe("LoginPage", () => {
   // Unauthenticated users should see the login form.
   // -------------------------------------------------------------------------
   it("renders the login form for an unauthenticated user", async () => {
-    authMock.mockResolvedValue(null);
+    getCurrentUserMock.mockResolvedValue(null);
 
     const jsx = await LoginPage({ searchParams: Promise.resolve({}) });
     render(jsx);
@@ -93,7 +93,7 @@ describe("LoginPage", () => {
   });
 
   it("renders the login form when auth returns a session without a user", async () => {
-    authMock.mockResolvedValue({ user: null });
+    getCurrentUserMock.mockResolvedValue(null);
 
     const jsx = await LoginPage({ searchParams: Promise.resolve({}) });
     render(jsx);
