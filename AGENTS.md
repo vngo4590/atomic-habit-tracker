@@ -68,6 +68,8 @@ This project uses Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, and the Ap
   `npm exec vitest run`
 - Run the full test suite when completing a phase:
   `npm exec vitest run`
+- Run typecheck and lint after any implementation:
+  `npm run typecheck && npm run lint`
 - Run build verification before final handoff for broad app changes:
   `npm run build`
 - `npm test -- --run` may not pass flags through correctly in this project; prefer `npm exec vitest run`.

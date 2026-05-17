@@ -23,9 +23,17 @@ Mandatory workflow conventions for every coding session on the Atomicly habit tr
 - If you modify `lib/` helpers, write or update a unit test.
 - Run focused tests after every file change: `npm exec vitest run path/to/file.test.ts`
 - Run the full suite before pushing: `npm exec vitest run`
+- Run typecheck and lint before pushing: `npm run typecheck && npm run lint`
 - Run the build before final handoff: `npm run build`
 - A change is NOT complete until tests pass.
 - If a test is hard to write, that is a signal the code has too many side effects — refactor first.
+- When manual testing requires user data, ensure the local database is running and seeded:
+  ```powershell
+  .\scripts\local-db.ps1 up
+  .\scripts\local-db.ps1 migrate-deploy
+  .\scripts\local-db.ps1 fake-history   # generates fake user + habit history
+  ```
+  The fake user credentials are typically `history1@atomicly.local` / `Atomicly1!`.
 
 ## 4. Comment for Non-Coders
 - Every function, component, and non-trivial block of code MUST have a comment explaining what it does and why.
@@ -57,6 +65,7 @@ Mandatory workflow conventions for every coding session on the Atomicly habit tr
 ```
 □ Tests pass:      npm exec vitest run
 □ TypeScript clean: npm run typecheck
+□ Lint clean:       npm run lint
 □ Build succeeds:   npm run build
 □ Skills synced:    ./scripts/sync-agent-skills.ps1
 □ Docs updated:     README.md, AGENTS.md reviewed
