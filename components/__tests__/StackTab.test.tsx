@@ -134,4 +134,24 @@ describe("StackTab", () => {
     expect(onUpdate).toHaveBeenCalledWith("B", { stackAfterId: null });
     expect(onUpdate).toHaveBeenCalledWith("C", { stackAfterId: "A" });
   });
+
+  it("auto-corrects and warns when existing data has a multi-successor conflict", () => {
+    // Corrupted state: both B and C already point to A (A has two successors)
+    const habits = [makeHabit("A"), makeHabit("B", "A"), makeHabit("C", "A"), makeHabit("D")];
+    const onUpdate = vi.fn();
+
+    render(<StackTab habit={habits[3]} habits={habits} onUpdateHabit={onUpdate} />);
+
+    // When: the user links D after A
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "A" } });
+    fireEvent.click(screen.getByText("Link habits"));
+
+    // Then: the patches include a corrective detachment for the extra successor
+    const calls = onUpdate.mock.calls;
+    const detachedId = calls.find(([, patch]) => patch.stackAfterId === null)?.[0];
+    expect(detachedId).toBeTruthy();
+
+    // And: a warning message is shown to the user
+    expect(screen.getByText(/removed from the stack after/i)).toBeTruthy();
+  });
 });

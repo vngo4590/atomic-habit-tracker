@@ -7,6 +7,7 @@ import {
   getStackHabits,
   stackInsertPatches,
   stackRemovePatches,
+  validateStackPatches,
   wouldCreateCycle,
 } from "@/lib/stack";
 import type { Habit } from "@/lib/types";
@@ -34,6 +35,7 @@ export function StackTab({
 }) {
   const [selectedId, setSelectedId] = useState<string>("");
   const [position, setPosition] = useState<"before" | "after">("after");
+  const [validationMessage, setValidationMessage] = useState<string | null>(null);
 
   // Other habits that can be linked (exclude the current habit)
   const linkableHabits = useMemo(
@@ -62,7 +64,18 @@ export function StackTab({
   const handleLink = () => {
     if (!canLink) return;
     const patches = stackInsertPatches(habit.id, selectedId, position, habits);
-    patches.forEach((patch, id) => {
+
+    // Defensive check: ensure no habit ends up with more than one successor.
+    // If the data was already in a bad state, we auto-correct and tell the user.
+    const { patches: validPatches, messages } = validateStackPatches(habits, patches);
+
+    if (messages.length > 0) {
+      setValidationMessage(messages.join(" "));
+    } else {
+      setValidationMessage(null);
+    }
+
+    validPatches.forEach((patch, id) => {
       onUpdateHabit(id, patch);
     });
     setSelectedId("");
@@ -147,6 +160,21 @@ export function StackTab({
                 }}
               >
                 {cycleError}
+              </div>
+            )}
+
+            {validationMessage && (
+              <div
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 8,
+                  background: "var(--bg-sunk)",
+                  color: "var(--accent)",
+                  fontSize: 13,
+                  marginBottom: 12,
+                }}
+              >
+                {validationMessage}
               </div>
             )}
 
