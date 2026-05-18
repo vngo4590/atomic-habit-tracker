@@ -10,7 +10,7 @@ The app is implemented with Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, 
 - Habit library with All / Done / Upcoming tabs, check/undo circles, streaks, 30-day progress, and habit search.
 - Habit detail pages with history wall, notes, contracts, editable habit-loop fields, and back-button navigation.
 - New habit builder using an inline Mad-Libs implementation intention sentence with schedule presets and time-block selection.
-- Analytics with adherence stats, completion trend chart, weekday bars, and leaderboard.
+- Analytics with schedule-aware adherence stats, completion trend chart, weekday bars, and leaderboard. Metrics evaluate progress against scheduled days only, and bonus completions on unscheduled days are counted positively.
 - Journal, weekly review, identity ledger, settings, onboarding, lessons, and Hall of Fame flows.
 - Backend persistence for habits, journal entries, identity, completed lessons, formation verdicts, and user preferences, with local mirroring only for immediate appearance/onboarding UI.
 
@@ -322,6 +322,7 @@ Notes:
 - Shared client state is exposed through `components/StoreProvider.tsx` and `lib/store.ts` as optimistic cache coordination.
 - Date keys use local `YYYY-MM-DD` strings via `lib/helpers.ts`.
 - Schedule evaluation uses `lib/schedule.ts` helpers (`isScheduledForDate`, `nextScheduledDateKey`) to determine which habits appear on a given day.
+- Streaks, completion rates, and analytics charts are **schedule-aware**: unscheduled days do not break streaks, and completion rates are measured against scheduled days (bonus completions can exceed 100%). See `lib/store.ts`.
 - Design tokens and reference classes live in `app/globals.css`.
 - Auth pages (`/login`, `/register`) redirect already-authenticated users to the main app flow.
 - The active OpenSpec change is `settings-account-email-notifications`.

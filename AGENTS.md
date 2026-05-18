@@ -28,6 +28,7 @@ This project uses Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, and the Ap
 - Today page (`/`): shows only habits scheduled for today that are not yet done. No Morning/Afternoon/Evening grouping. Each card shows check circle, name+identity, streak, and 30-day progress. Supports habit search across all habits.
 - All Habits (`/habits`): three tabs — All, Done Habits, Upcoming Habits. Each row has a check/undo circle. Supports habit search and sort by streak, rate, newest, or name.
 - Schedule helpers (`lib/schedule.ts`): `isScheduledForDate(dateKey, schedule)`, `nextScheduledDateKey(fromDateKey, schedule)`, `formatNextDayLabel(dateKey)`.
+- Schedule-aware metrics (`lib/store.ts`): `streak()`, `longestStreak()`, and `completionRate()` all respect `habit.schedule`. Unscheduled days do not break streaks; completion-rate denominator is scheduled days (bonus completions can exceed 100%).
 - Auth redirect: `/login` and `/register` server components check `auth()` and redirect authenticated users to `/` (or a validated `callbackUrl`).
 - UI shell: all app screens live under `app/(root)/` and share the sidebar layout in `app/(root)/layout.tsx`.
 - Current OpenSpec status: `port-reference-ui` tasks are complete through phase 25 and the change is ready to archive.
