@@ -7,6 +7,7 @@ import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContai
 import { LineChart } from "@/components/LineChart";
 import { useStoreContext } from "@/components/StoreProvider";
 import { dateAdd, fmt, todayKey } from "@/lib/helpers";
+import { isScheduledForDate } from "@/lib/schedule";
 
 const RANGES = [14, 30, 90] as const;
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
@@ -19,10 +20,12 @@ export default function AnalyticsPage() {
   const chartData = useMemo(() => {
     return Array.from({ length: range }, (_, index) => {
       const key = dateAdd(today, index - range + 1);
-      const done = habits.filter((habit) => habit.history[key]).length;
+      // Only count habits that were actually scheduled for this day.
+      const scheduled = habits.filter((habit) => isScheduledForDate(key, habit.schedule));
+      const done = scheduled.filter((habit) => habit.history[key]).length;
       return {
         label: fmt.short(key),
-        pct: habits.length ? Math.round((done / habits.length) * 100) : 0,
+        pct: scheduled.length ? Math.round((done / scheduled.length) * 100) : 0,
       };
     });
   }, [habits, range, today]);
@@ -47,8 +50,12 @@ export default function AnalyticsPage() {
       for (let i = 0; i < 90; i++) {
         const key = dateAdd(today, -i);
         if (new Date(`${key}T00:00:00`).getDay() === weekday) {
-          total += habits.length;
-          done += habits.filter((habit) => habit.history[key]).length;
+          habits.forEach((habit) => {
+            if (isScheduledForDate(key, habit.schedule)) {
+              total++;
+              if (habit.history[key]) done++;
+            }
+          });
         }
       }
       return { label, pct: total ? Math.round((done / total) * 100) : 0, total };

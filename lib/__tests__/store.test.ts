@@ -536,4 +536,27 @@ describe("streak calculations", () => {
 
     expect(completionRate(makeHabit(history), 30)).toBe(0.8);
   });
+
+  it("skips unscheduled days when computing streak", () => {
+    const today = todayKey();
+    const habit = makeHabit({
+      [dateAdd(today, -2)]: true,
+      [today]: true,
+    });
+    habit.schedule = "Mon, Wed";
+
+    expect(streak(habit)).toBe(2);
+  });
+
+  it("counts bonus days toward schedule-aware completion rate", () => {
+    const today = todayKey();
+    const habit = makeHabit({
+      [today]: true,
+      [dateAdd(today, -2)]: true,
+      [dateAdd(today, -4)]: true,
+    });
+    habit.schedule = "Mon, Wed";
+
+    expect(completionRate(habit, 7)).toBe(1.5);
+  });
 });
