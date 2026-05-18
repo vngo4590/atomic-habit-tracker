@@ -291,4 +291,41 @@ describe("completionRate()", () => {
     // When + Then: 20/30 ≈ 0.667
     expect(completionRate(habit)).toBeCloseTo(20 / 30);
   });
+
+  it("ignores unscheduled days when computing longestStreak across gaps", () => {
+    // Given: Mon/Wed schedule with done on Mon and Wed (Tue unscheduled in between)
+    const habit = habitWith({
+      "2030-01-07": true, // Mon
+      "2030-01-09": true, // Wed
+    });
+    habit.schedule = "Mon, Wed";
+
+    // When + Then: streak continues across the unscheduled Tue gap
+    expect(longestStreak(habit)).toBe(2);
+  });
+
+  it("uses scheduled days as the denominator for completionRate", () => {
+    // Given: Mon/Wed schedule, 2 done in a 7-day window
+    const history: Habit["history"] = {};
+    history[dateAdd(todayKey(), -2)] = true;
+    history[dateAdd(todayKey(), -4)] = true;
+    const habit = habitWith(history);
+    habit.schedule = "Mon, Wed";
+
+    // When + Then: 2 completions / 2 scheduled days in window = 1.0
+    expect(completionRate(habit, 7)).toBe(1);
+  });
+
+  it("rewards bonus completions with a completionRate above 1.0", () => {
+    // Given: Mon/Wed schedule, done on Mon, Wed, and a bonus Fri
+    const history: Habit["history"] = {};
+    history[dateAdd(todayKey(), -0)] = true; // Fri (bonus)
+    history[dateAdd(todayKey(), -2)] = true; // Wed
+    history[dateAdd(todayKey(), -4)] = true; // Mon
+    const habit = habitWith(history);
+    habit.schedule = "Mon, Wed";
+
+    // When + Then: 3 done / 2 scheduled = 1.5
+    expect(completionRate(habit, 7)).toBe(1.5);
+  });
 });
