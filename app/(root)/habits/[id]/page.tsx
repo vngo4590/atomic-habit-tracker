@@ -19,13 +19,14 @@ import { LoopDiagram } from "@/components/LoopDiagram";
 import { MoodChart } from "@/components/MoodChart";
 import { MoodCheckSheet } from "@/components/MoodCheckSheet";
 import { NotesManager } from "@/components/NotesManager";
+import { StackTab } from "@/components/StackTab";
 import { useStoreContext } from "@/components/StoreProvider";
 import { todayKey } from "@/lib/helpers";
 import { formatScheduleLabel } from "@/lib/schedule";
 
-type Tab = "overview" | "journal" | "history" | "notes";
+type Tab = "overview" | "journal" | "history" | "notes" | "stack";
 
-const TABS: Tab[] = ["overview", "journal", "history", "notes"];
+const TABS: Tab[] = ["overview", "journal", "history", "notes", "stack"];
 
 type BubbleItem = {
   label: string;
@@ -339,6 +340,7 @@ export default function HabitDetailPage() {
       )}
       {tab === "history" && <HistoryWall habit={habit} />}
       {tab === "notes" && <NotesManager habit={habit} onUpdateNotes={(notes) => store.updateHabit(habit.id, { notes })} />}
+      {tab === "stack" && <StackTab habit={habit} habits={store.habits} onUpdateHabit={store.updateHabit} />}
 
       {showContract && (
         <ContractSheet habit={habit} onClose={() => setShowContract(false)} onSave={(patch) => store.updateHabit(habit.id, patch)} />
