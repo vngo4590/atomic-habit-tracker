@@ -97,7 +97,7 @@ function MLChip({ children, onClick }: { children: string; onClick: () => void }
 
 export default function NewHabitPage() {
   const router = useRouter();
-  const { habits, identity: profile, addHabit } = useStoreContext();
+  const { habits, addHabit } = useStoreContext();
   const [name, setName] = useState("");
   const [time, setTime] = useState("Morning");
   const [location, setLocation] = useState("in the kitchen");
@@ -106,9 +106,9 @@ export default function NewHabitPage() {
   const [customDays, setCustomDays] = useState<string[]>([]);
 
   const existingIdentities = useMemo(() => {
-    const values = new Set<string>([...profile.values, ...habits.map((habit) => habit.identity)].filter(Boolean));
+    const values = new Set<string>(habits.map((habit) => habit.identity).filter(Boolean));
     return Array.from(values);
-  }, [habits, profile.values]);
+  }, [habits]);
 
   const activeDays: readonly string[] = preset === "custom" ? customDays : PRESETS[preset].days;
   const schedule = preset === "custom"

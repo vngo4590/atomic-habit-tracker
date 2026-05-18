@@ -55,4 +55,25 @@ describe("NewHabitPage", () => {
     expect((screen.getByPlaceholderText("Morning") as HTMLInputElement).value).toBe("Evening");
     expect(timeSelect.value).toBe("Evening");
   });
+
+  it("shows habit-derived identities as chips but excludes core values from the Identity page", () => {
+    // Given: a profile with core values and habits with their own identities
+    storeMock.identity = { statement: "I am disciplined.", values: ["Discipline", "Health"] };
+    storeMock.habits = [
+      { id: "h1", name: "Read", identity: "a reader" },
+      { id: "h2", name: "Run", identity: "a runner" },
+    ] as Habit[];
+
+    // When: the new habit page renders
+    render(<NewHabitPage />);
+
+    // Then: habit-derived identity chips are visible
+    const chips = Array.from(document.querySelectorAll(".chip")).map((el) => el.textContent);
+    expect(chips).toContain("a reader");
+    expect(chips).toContain("a runner");
+
+    // And: core values from the Identity page are NOT shown as chips
+    expect(chips).not.toContain("Discipline");
+    expect(chips).not.toContain("Health");
+  });
 });
