@@ -346,7 +346,7 @@ describe("JournalPage custom mood picker", () => {
     fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
 
     // Then: the picker panel is visible with step labels, emoji grid, and label input
-    expect(screen.getByText("1. Pick an emoji")).toBeTruthy();
+    expect(screen.getByText("1. Pick an emoji (or type your own)")).toBeTruthy();
     expect(screen.getByText("2. Name your mood")).toBeTruthy();
     expect(screen.getByPlaceholderText("e.g. Energized, Calm, Grateful")).toBeTruthy();
     expect(screen.getByText("😊")).toBeTruthy();
@@ -493,6 +493,63 @@ describe("JournalPage custom mood picker", () => {
 
     // Then: the picker closes
     expect(screen.queryByPlaceholderText("e.g. Energized, Calm, Grateful")).toBeNull();
+  });
+
+});
+
+// ---------------------------------------------------------------------------
+// Custom mood — keyboard emoji input
+// ---------------------------------------------------------------------------
+describe("JournalPage custom emoji keyboard input", () => {
+  it("allows typing a custom emoji that is not in the preset grid", () => {
+    // Given: the picker is open
+    const addJournal = vi.fn();
+    storeCtx = makeStore({ journal: [], addJournal });
+    render(<JournalPage />);
+    fireEvent.click(screen.getByRole("button", { name: "New entry" }));
+    fireEvent.change(screen.getByPlaceholderText("What happened today?"), {
+      target: { value: "Party time" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
+
+    // When: the user types a custom emoji and a label
+    fireEvent.change(screen.getByLabelText("Custom emoji"), {
+      target: { value: "🎉" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("e.g. Energized, Calm, Grateful"), {
+      target: { value: "Celebratory" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Use" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save entry" }));
+
+    // Then: the custom emoji and label are stored together
+    expect(addJournal).toHaveBeenCalledWith(
+      expect.objectContaining({ mood: "🎉 Celebratory" }),
+    );
+  });
+
+  it("allows a keyboard-typed emoji without any label", () => {
+    // Given: the picker is open
+    const addJournal = vi.fn();
+    storeCtx = makeStore({ journal: [], addJournal });
+    render(<JournalPage />);
+    fireEvent.click(screen.getByRole("button", { name: "New entry" }));
+    fireEvent.change(screen.getByPlaceholderText("What happened today?"), {
+      target: { value: "Big win" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Custom/ }));
+
+    // When: the user types only a custom emoji and clicks Use
+    fireEvent.change(screen.getByLabelText("Custom emoji"), {
+      target: { value: "🏆" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Use" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save entry" }));
+
+    // Then: just the typed emoji is stored as the mood
+    expect(addJournal).toHaveBeenCalledWith(
+      expect.objectContaining({ mood: "🏆" }),
+    );
   });
 });
 
