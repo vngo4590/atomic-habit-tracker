@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   createHabitAction,
@@ -211,6 +211,83 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
   const updateJournalVersion = useRef(0);
   const pendingJournalPatches = useRef(new Map<string, Partial<JournalEntry>>());
   const identityVersion = useRef(0);
+
+  // Sync local state when the server sends a fresh snapshot (e.g. after
+  // revalidatePath invalidates the layout cache and the user navigates back).
+  // We bump version counters so any in-flight server responses that were
+  // initiated before the snapshot are ignored — the snapshot already has the
+  // latest data from the database.
+  // Track the last synced snapshot data so we only update state when the
+  // server actually sends different data. This avoids infinite loops in tests
+  // where renderHook creates a new snapshot object on every render.
+  const lastHabitsJson = useRef(JSON.stringify(backendSnapshot.habits));
+  const lastJournalJson = useRef(JSON.stringify(backendSnapshot.journal));
+  const lastIdentityJson = useRef(JSON.stringify(backendSnapshot.identity));
+  const lastWeeklyReviewJson = useRef(JSON.stringify(backendSnapshot.weeklyReview));
+  const lastWeeklyReviewsJson = useRef(JSON.stringify(backendSnapshot.weeklyReviews ?? []));
+  const lastCompletedJson = useRef(JSON.stringify([...backendSnapshot.completedLessons].sort()));
+  const lastLessonMode = useRef(backendSnapshot.preferences.lessonMode);
+  const lastFormationJson = useRef(JSON.stringify(backendSnapshot.formationVerdicts));
+  const lastPreferencesJson = useRef(JSON.stringify(backendSnapshot.preferences));
+
+  useEffect(() => {
+    const habitsJson = JSON.stringify(backendSnapshot.habits);
+    if (lastHabitsJson.current !== habitsJson) {
+      lastHabitsJson.current = habitsJson;
+      setHabits(backendSnapshot.habits);
+    }
+
+    const journalJson = JSON.stringify(backendSnapshot.journal);
+    if (lastJournalJson.current !== journalJson) {
+      lastJournalJson.current = journalJson;
+      setJournal(backendSnapshot.journal);
+    }
+
+    const identityJson = JSON.stringify(backendSnapshot.identity);
+    if (lastIdentityJson.current !== identityJson) {
+      lastIdentityJson.current = identityJson;
+      setIdentityState(backendSnapshot.identity);
+    }
+
+    const weeklyReviewJson = JSON.stringify(backendSnapshot.weeklyReview);
+    if (lastWeeklyReviewJson.current !== weeklyReviewJson) {
+      lastWeeklyReviewJson.current = weeklyReviewJson;
+      setWeeklyReviewState(backendSnapshot.weeklyReview);
+    }
+
+    const weeklyReviewsJson = JSON.stringify(backendSnapshot.weeklyReviews ?? []);
+    if (lastWeeklyReviewsJson.current !== weeklyReviewsJson) {
+      lastWeeklyReviewsJson.current = weeklyReviewsJson;
+      setWeeklyReviews(backendSnapshot.weeklyReviews ?? []);
+    }
+
+    const completedJson = JSON.stringify([...backendSnapshot.completedLessons].sort());
+    if (lastCompletedJson.current !== completedJson) {
+      lastCompletedJson.current = completedJson;
+      setCompletedLessons(new Set(backendSnapshot.completedLessons));
+    }
+
+    if (lastLessonMode.current !== backendSnapshot.preferences.lessonMode) {
+      lastLessonMode.current = backendSnapshot.preferences.lessonMode;
+      setLessonModeState(backendSnapshot.preferences.lessonMode);
+    }
+
+    const formationJson = JSON.stringify(backendSnapshot.formationVerdicts);
+    if (lastFormationJson.current !== formationJson) {
+      lastFormationJson.current = formationJson;
+      setFormationVerdicts(backendSnapshot.formationVerdicts);
+    }
+
+    const preferencesJson = JSON.stringify(backendSnapshot.preferences);
+    if (lastPreferencesJson.current !== preferencesJson) {
+      lastPreferencesJson.current = preferencesJson;
+      setPreferencesState(backendSnapshot.preferences);
+    }
+
+    updateHabitVersion.current++;
+    updateJournalVersion.current++;
+    identityVersion.current++;
+  }, [backendSnapshot]);
 
   const showToast = useCallback((msg: string, sub?: string) => {
     const id = Date.now();
