@@ -12,6 +12,7 @@ import {
   stackRemovePatches,
   getVisibleStackHabit,
   groupHabitsByStack,
+  validateStackPatches,
 } from "@/lib/stack";
 
 function makeHabit(id: string, stackAfterId: string | null = null, history: Habit["history"] = {}): Habit {
@@ -179,6 +180,38 @@ describe("Stack helpers", () => {
       const patches = stackInsertPatches("A", "A", "before", habits);
       expect(patches.size).toBe(0);
     });
+
+    it("removes the habit from its old stack before inserting elsewhere", () => {
+      // A -> B -> C and D -> E. Move B before E.
+      const habits = [
+        makeHabit("A"),
+        makeHabit("B", "A"),
+        makeHabit("C", "B"),
+        makeHabit("D"),
+        makeHabit("E", "D"),
+      ];
+      const patches = stackInsertPatches("B", "E", "before", habits);
+
+      // B should be removed from A -> C first, then inserted before E
+      expect(patches.get("C")).toEqual({ stackAfterId: "A" });
+      expect(patches.get("B")).toEqual({ stackAfterId: "D" });
+      expect(patches.get("E")).toEqual({ stackAfterId: "B" });
+    });
+
+    it("removes the habit from its old stack when inserting after another habit", () => {
+      // A -> B -> C and D -> E. Move B after E.
+      const habits = [
+        makeHabit("A"),
+        makeHabit("B", "A"),
+        makeHabit("C", "B"),
+        makeHabit("D"),
+        makeHabit("E", "D"),
+      ];
+      const patches = stackInsertPatches("B", "E", "after", habits);
+
+      expect(patches.get("C")).toEqual({ stackAfterId: "A" });
+      expect(patches.get("B")).toEqual({ stackAfterId: "E" });
+    });
   });
 
   describe("stackRemovePatches", () => {
@@ -236,6 +269,69 @@ describe("Stack helpers", () => {
         makeHabit("C", "B", { "2030-01-15": true }),
       ];
       expect(getVisibleStackHabit("A", habits, "2030-01-15")).toBeUndefined();
+    });
+  });
+
+  describe("validateStackPatches", () => {
+    it("passes through valid patches unchanged", () => {
+      const habits = [makeHabit("A"), makeHabit("B"), makeHabit("C")];
+      const patches = new Map<string, Partial<Habit>>([
+        ["B", { stackAfterId: "A" }],
+      ]);
+
+      const result = validateStackPatches(habits, patches);
+
+      expect(result.patches.get("B")).toEqual({ stackAfterId: "A" });
+      expect(result.messages).toEqual([]);
+    });
+
+    it("auto-corrects when a habit would get two successors", () => {
+      // Both B and C point to A. Proposed patch keeps B -> A and breaks C -> A.
+      const habits = [makeHabit("A"), makeHabit("B", "A"), makeHabit("C", "A")];
+      const patches = new Map<string, Partial<Habit>>([
+        ["B", { stackAfterId: "A" }],
+      ]);
+
+      const result = validateStackPatches(habits, patches);
+
+      expect(result.patches.get("C")).toEqual({ stackAfterId: null });
+      expect(result.messages.length).toBe(1);
+      expect(result.messages[0]).toContain("C");
+      expect(result.messages[0]).toContain("A");
+    });
+
+    it("prefers the intended patch link when resolving conflicts", () => {
+      // D already points to A. New patch explicitly sets C -> A.
+      const habits = [makeHabit("A"), makeHabit("C"), makeHabit("D", "A")];
+      const patches = new Map<string, Partial<Habit>>([
+        ["C", { stackAfterId: "A" }],
+      ]);
+
+      const result = validateStackPatches(habits, patches);
+
+      // C is the intended link (in patches), so D should be broken
+      expect(result.patches.get("D")).toEqual({ stackAfterId: null });
+      expect(result.patches.get("C")).toEqual({ stackAfterId: "A" });
+      expect(result.messages[0]).toContain("D");
+    });
+
+    it("handles multiple conflicts in one batch", () => {
+      const habits = [
+        makeHabit("A"),
+        makeHabit("B", "A"),
+        makeHabit("C", "A"),
+        makeHabit("D", "A"),
+      ];
+      const patches = new Map<string, Partial<Habit>>([
+        ["B", { stackAfterId: "A" }],
+      ]);
+
+      const result = validateStackPatches(habits, patches);
+
+      // B is kept; C and D are detached
+      expect(result.patches.get("C")).toEqual({ stackAfterId: null });
+      expect(result.patches.get("D")).toEqual({ stackAfterId: null });
+      expect(result.messages.length).toBe(2);
     });
   });
 

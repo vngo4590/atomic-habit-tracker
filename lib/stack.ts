@@ -121,6 +121,10 @@ export function wouldCreateCycle(habitId: string, targetId: string | null, habit
  * Position "after" target: the habit will come immediately after target.
  *   Example: A -> B -> C, insert D after B   =>  A -> B -> D -> C
  *
+ * If the habit is already part of a stack, it is first removed from that
+ * stack so its old successor does not end up dangling or creating a
+ * multi-successor conflict.
+ *
  * Returns a map of habitId -> patch. The caller is responsible for applying
  * each patch through updateHabit().
  */
@@ -139,13 +143,29 @@ export function stackInsertPatches(
   // Safety: inserting before/after yourself is a no-op
   if (habitId === targetId) return patches;
 
+  // First remove the habit from its current position so we do not leave
+  // its old successor pointing to it (which would give the habit two
+  // successors after insertion).
+  const removePatches = stackRemovePatches(habitId, habits);
+  for (const [id, patch] of removePatches) {
+    patches.set(id, patch);
+  }
+
+  // Re-compute the target on the "already-removed" state so successor
+  // lookups are accurate.
+  const updatedHabits = habits.map((h) => {
+    const patch = patches.get(h.id);
+    return patch ? ({ ...h, ...patch } as Habit) : h;
+  });
+
   if (position === "before") {
+    const updatedTarget = updatedHabits.find((h) => h.id === targetId)!;
     // H takes target's former predecessor; target now comes after H
-    patches.set(habitId, { stackAfterId: target.stackAfterId });
+    patches.set(habitId, { stackAfterId: updatedTarget.stackAfterId });
     patches.set(targetId, { stackAfterId: habitId });
   } else {
     // H comes after target
-    const oldSuccessor = getSuccessor(targetId, habits);
+    const oldSuccessor = getSuccessor(targetId, updatedHabits);
     patches.set(habitId, { stackAfterId: targetId });
 
     if (oldSuccessor && oldSuccessor.id !== habitId) {
@@ -207,6 +227,71 @@ export function getVisibleStackHabit(
 }
 
 /**
+ * Validate a set of proposed stack patches and auto-correct any that would
+ * violate the linear-stack invariant: each habit can have at most one
+ * successor (at most one other habit whose stackAfterId points to it).
+ *
+ * When a habit would end up with multiple successors, we detach the extra
+ * ones by setting their stackAfterId to null. We prefer to keep links that
+ * are explicitly created by the proposed patches; existing links are broken.
+ *
+ * Returns the corrected patches and human-readable messages explaining what
+ * changed, so the UI can notify the user.
+ */
+export function validateStackPatches(
+  habits: Habit[],
+  patches: Map<string, Partial<Habit>>,
+): { patches: Map<string, Partial<Habit>>; messages: string[] } {
+  const corrected = new Map<string, Partial<Habit>>(patches);
+  const messages: string[] = [];
+
+  // Build a simulated state with the proposed patches applied.
+  const simulated = new Map<string, Habit>();
+  for (const h of habits) {
+    const patch = patches.get(h.id);
+    simulated.set(h.id, patch ? ({ ...h, ...patch } as Habit) : h);
+  }
+
+  // Map each target to the list of habits that stack after it.
+  const successors = new Map<string, string[]>();
+  for (const h of simulated.values()) {
+    if (h.stackAfterId) {
+      const list = successors.get(h.stackAfterId) ?? [];
+      list.push(h.id);
+      successors.set(h.stackAfterId, list);
+    }
+  }
+
+  for (const [targetId, succs] of successors) {
+    if (succs.length <= 1) continue;
+
+    // A successor is "intended" if the proposed patches explicitly set
+    // its stackAfterId to this target. We keep the first intended link and
+    // break everything else.
+    const intended = succs.filter(
+      (id) => patches.has(id) && patches.get(id)!.stackAfterId === targetId,
+    );
+
+    const keepId = intended[0] ?? succs[0];
+    const breakIds = succs.filter((id) => id !== keepId);
+
+    for (const breakId of breakIds) {
+      corrected.set(breakId, { stackAfterId: null });
+      const h = simulated.get(breakId)!;
+      simulated.set(breakId, { ...h, stackAfterId: null });
+
+      const breakName = habits.find((h) => h.id === breakId)?.name ?? breakId;
+      const targetName = habits.find((h) => h.id === targetId)?.name ?? targetId;
+      messages.push(
+        `${breakName} was removed from the stack after ${targetName} to keep the chain linear.`,
+      );
+    }
+  }
+
+  return { patches: corrected, messages };
+}
+
+/**
  * Group habits by their stack roots. Each habit that is part of a stack is
  * grouped under its root habit's ID. Standalone habits (not in any stack)
  * are grouped under their own ID.
@@ -214,7 +299,7 @@ export function getVisibleStackHabit(
  * Returns a Map where keys are root habit IDs and values are arrays of
  * habits in that stack (including the root), ordered from root to tail.
  */
-export function groupHabitsByStack(habits: Habit[]): Map<string, Habit[]> {
+export function groupHabitsByStack(habits: Habit[]) {
   const groups = new Map<string, Habit[]>();
   const processed = new Set<string>();
 
