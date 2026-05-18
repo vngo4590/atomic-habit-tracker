@@ -12,6 +12,7 @@ import { useStoreContext } from "@/components/StoreProvider";
 import { dateAdd, fmt, todayKey } from "@/lib/helpers";
 import { useMotionReduced } from "@/lib/hooks/useMotionReduced";
 import { isScheduledForDate } from "@/lib/schedule";
+import { getStackChain } from "@/lib/stack";
 import { completionRate } from "@/lib/store";
 import type { Habit } from "@/lib/types";
 
@@ -24,7 +25,52 @@ export default function TodayPage() {
   const [moodHabit, setMoodHabit] = useState<Habit | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const scheduledToday = habits.filter((habit) => isScheduledForDate(today, habit.schedule));
-  const scheduledUndone = scheduledToday.filter((habit) => !habit.history[today]);
+
+  // For stacked habits, only the first undone habit in each chain is shown.
+  // A stack appears on the Today page if any undone habit in the chain is
+  // scheduled for today. Within the stack, habits are revealed sequentially
+  // regardless of their individual schedules.
+  const visibleHabits = useMemo(() => {
+    const result: Habit[] = [];
+    const processed = new Set<string>();
+
+    for (const habit of habits) {
+      if (processed.has(habit.id)) continue;
+
+      const chainIds = getStackChain(habit.id, habits);
+
+      if (chainIds.length > 1) {
+        // Check if any undone habit in this chain is scheduled for today.
+        const hasScheduledUndone = chainIds.some((id) => {
+          const h = habits.find((h) => h.id === id);
+          return h && !h.history[today] && isScheduledForDate(today, h.schedule);
+        });
+
+        if (hasScheduledUndone) {
+          // Show the first undone habit in the chain.
+          for (const id of chainIds) {
+            const h = habits.find((h) => h.id === id);
+            if (h && !h.history[today]) {
+              result.push(h);
+              break;
+            }
+          }
+        }
+
+        for (const id of chainIds) {
+          processed.add(id);
+        }
+      } else {
+        // Standalone habit: must be scheduled and not done.
+        if (isScheduledForDate(today, habit.schedule) && !habit.history[today]) {
+          result.push(habit);
+        }
+        processed.add(habit.id);
+      }
+    }
+
+    return result;
+  }, [habits, today]);
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
@@ -408,7 +454,7 @@ export default function TodayPage() {
         </motion.div>
       )}
 
-      {!searchQuery && scheduledUndone.length > 0 && (
+      {!searchQuery && visibleHabits.length > 0 && (
         <motion.section
           style={{ marginBottom: 24 }}
           initial={{ opacity: 0, y: 16 }}
@@ -428,12 +474,12 @@ export default function TodayPage() {
               className="muted mono"
               style={{ fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase" }}
             >
-              {scheduledUndone.length} remaining
+              {visibleHabits.length} remaining
             </span>
           </div>
           <div className="habit-list">
             <StaggerContainer staggerDelay={0.04}>
-              {scheduledUndone.map((habit) => {
+              {visibleHabits.map((habit) => {
                 const activeStreak = streak(habit);
                 const rate = Math.round(completionRate(habit) * 100);
                 return (
@@ -534,7 +580,7 @@ export default function TodayPage() {
         </motion.section>
       )}
 
-      {!searchQuery && habits.length > 0 && scheduledUndone.length === 0 && (
+      {!searchQuery && habits.length > 0 && visibleHabits.length === 0 && (
         <motion.div
           className="card card-pad"
           style={{ textAlign: "center", padding: "42px 20px", marginBottom: 24 }}
