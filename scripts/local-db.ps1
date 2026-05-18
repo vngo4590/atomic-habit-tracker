@@ -493,6 +493,7 @@ async function main() {
           schedule: habitIndex % 2 === 0 ? "Daily" : "Weekdays",
           time: habitIndex % 3 === 0 ? "Evening" : "Morning",
           sortOrder: habitIndex,
+          stackAfterId: habitIndex > 0 && habitIndex <= 2 ? habits[habitIndex - 1].id : null,
           archivedAt,
           createdAt: dateAt(createdDaysAgo),
           contract: {

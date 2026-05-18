@@ -6,12 +6,13 @@ The app is implemented with Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, 
 
 ## Features
 
-- Today dashboard showing only undone habits scheduled for today, with completion stats, streaks, 30-day progress, mood check-in, toast feedback, and habit search.
+- Today dashboard showing only undone habits scheduled for today, with completion stats, streaks, 30-day progress, mood check-in, toast feedback, and habit search. Stacked habits are revealed sequentially — once the first habit in a chain is done, the next appears.
 - Habit library with All / Done / Upcoming tabs, check/undo circles, streaks, 30-day progress, and habit search.
-- Habit detail pages with history wall, notes, contracts, editable habit-loop fields, and back-button navigation.
+- Habit detail pages with history wall, notes, contracts, editable habit-loop fields, a Stack tab for linking habits into chains, and back-button navigation.
 - New habit builder using an inline Mad-Libs implementation intention sentence with schedule presets and time-block selection.
 - Analytics with schedule-aware adherence stats, completion trend chart, weekday bars, and leaderboard. Metrics evaluate progress against scheduled days only, and bonus completions on unscheduled days are counted positively.
 - Journal, weekly review, identity ledger, settings, onboarding, lessons, and Hall of Fame flows.
+- Habit stacking: link habits into linear chains (A -> B -> C) so they appear sequentially on the Today page. Circular dependencies are prevented with clear feedback.
 - Backend persistence for habits, journal entries, identity, completed lessons, formation verdicts, and user preferences, with local mirroring only for immediate appearance/onboarding UI.
 
 ## Routes
