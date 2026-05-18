@@ -8,7 +8,7 @@ import {
   getSuccessor,
   getPredecessor,
   wouldCreateCycle,
-  stackInsertPatches,
+  linkStackAfter,
   stackRemovePatches,
   getVisibleStackHabit,
   groupHabitsByStack,
@@ -146,37 +146,55 @@ describe("Stack helpers", () => {
     });
   });
 
-  describe("stackInsertPatches", () => {
-    it("inserts before target", () => {
-      // A -> B -> C, insert D before C
-      const habits = [makeHabit("A"), makeHabit("B", "A"), makeHabit("C", "B"), makeHabit("D")];
-      const patches = stackInsertPatches("D", "C", "before", habits);
+  describe("linkStackAfter", () => {
+    it("links a standalone habit after another standalone habit", () => {
+      // A, B — link B after A => A -> B
+      const habits = [makeHabit("A"), makeHabit("B")];
+      const patches = linkStackAfter("B", "A", habits);
 
-      expect(patches.get("D")).toEqual({ stackAfterId: "B" });
-      expect(patches.get("C")).toEqual({ stackAfterId: "D" });
+      expect(patches.get("B")).toEqual({ stackAfterId: "A" });
+      expect(patches.size).toBe(1);
     });
 
-    it("inserts after target", () => {
-      // A -> B -> C, insert D after B
-      const habits = [makeHabit("A"), makeHabit("B", "A"), makeHabit("C", "B"), makeHabit("D")];
-      const patches = stackInsertPatches("D", "B", "after", habits);
-
-      expect(patches.get("D")).toEqual({ stackAfterId: "B" });
-      expect(patches.get("C")).toEqual({ stackAfterId: "D" });
-    });
-
-    it("inserts after tail", () => {
-      // A -> B, insert C after B
+    it("inserts after a habit that already has a successor", () => {
+      // A -> B, link C after A => A -> C -> B
       const habits = [makeHabit("A"), makeHabit("B", "A"), makeHabit("C")];
-      const patches = stackInsertPatches("C", "B", "after", habits);
+      const patches = linkStackAfter("C", "A", habits);
 
-      expect(patches.get("C")).toEqual({ stackAfterId: "B" });
-      expect(patches.has("A")).toBe(false);
+      expect(patches.get("C")).toEqual({ stackAfterId: "A" });
+      expect(patches.get("B")).toEqual({ stackAfterId: "C" });
+    });
+
+    it("re-links a habit that already has a predecessor (moves it)", () => {
+      // X -> B, link B after A => X (orphaned), A -> B
+      const habits = [makeHabit("X"), makeHabit("B", "X"), makeHabit("A")];
+      const patches = linkStackAfter("B", "A", habits);
+
+      expect(patches.get("B")).toEqual({ stackAfterId: "A" });
+      expect(patches.has("X")).toBe(false); // X becomes standalone, no patch needed
+    });
+
+    it("re-links a habit with both predecessor and successor (mid-chain move)", () => {
+      // X -> B -> C, link B after A => X -> C, A -> B
+      const habits = [makeHabit("X"), makeHabit("B", "X"), makeHabit("C", "B"), makeHabit("A")];
+      const patches = linkStackAfter("B", "A", habits);
+
+      expect(patches.get("B")).toEqual({ stackAfterId: "A" });
+      expect(patches.get("C")).toEqual({ stackAfterId: "X" });
+    });
+
+    it("is a no-op when already stacked after the target", () => {
+      // A -> B, link B after A => no-op
+      const habits = [makeHabit("A"), makeHabit("B", "A")];
+      const patches = linkStackAfter("B", "A", habits);
+
+      expect(patches.size).toBe(0);
     });
 
     it("is a no-op when habit and target are the same", () => {
-      const habits = [makeHabit("A"), makeHabit("B", "A")];
-      const patches = stackInsertPatches("A", "A", "before", habits);
+      const habits = [makeHabit("A"), makeHabit("B")];
+      const patches = linkStackAfter("A", "A", habits);
+
       expect(patches.size).toBe(0);
     });
   });

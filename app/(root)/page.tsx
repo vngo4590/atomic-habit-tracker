@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { CompletionRing } from "@/components/CompletionRing";
+import { TodayHabitCard } from "@/components/TodayHabitCard";
 import { IconCheck, IconClose, IconPlus, IconSearch } from "@/components/Icons";
 import { MoodCheckSheet } from "@/components/MoodCheckSheet";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
@@ -13,6 +14,7 @@ import { dateAdd, fmt, todayKey } from "@/lib/helpers";
 import { useMotionReduced } from "@/lib/hooks/useMotionReduced";
 import { isScheduledForDate } from "@/lib/schedule";
 import { getStackChain } from "@/lib/stack";
+import { HabitStack } from "@/components/HabitStack";
 import { completionRate } from "@/lib/store";
 import type { Habit } from "@/lib/types";
 
@@ -26,12 +28,13 @@ export default function TodayPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const scheduledToday = habits.filter((habit) => isScheduledForDate(today, habit.schedule));
 
-  // For stacked habits, only the first undone habit in each chain is shown.
-  // A stack appears on the Today page if any undone habit in the chain is
-  // scheduled for today. Within the stack, habits are revealed sequentially
-  // regardless of their individual schedules.
-  const visibleHabits = useMemo(() => {
-    const result: Habit[] = [];
+  // Group visible habits into standalone habits and stack groups.
+  // A stack group appears on the Today page if any undone habit in the chain
+  // is scheduled for today. When expanded, all undone habits in the stack are
+  // shown; when collapsed, only the first undone habit is visible.
+  const { standaloneHabits, stackGroups, totalVisibleCount } = useMemo(() => {
+    const standalone: Habit[] = [];
+    const stacks = new Map<string, Habit[]>();
     const processed = new Set<string>();
 
     for (const habit of habits) {
@@ -40,21 +43,17 @@ export default function TodayPage() {
       const chainIds = getStackChain(habit.id, habits);
 
       if (chainIds.length > 1) {
-        // Check if any undone habit in this chain is scheduled for today.
-        const hasScheduledUndone = chainIds.some((id) => {
+        // Collect all undone habits in this chain that are scheduled for today.
+        const stackHabits: Habit[] = [];
+        for (const id of chainIds) {
           const h = habits.find((h) => h.id === id);
-          return h && !h.history[today] && isScheduledForDate(today, h.schedule);
-        });
-
-        if (hasScheduledUndone) {
-          // Show the first undone habit in the chain.
-          for (const id of chainIds) {
-            const h = habits.find((h) => h.id === id);
-            if (h && !h.history[today]) {
-              result.push(h);
-              break;
-            }
+          if (h && !h.history[today] && isScheduledForDate(today, h.schedule)) {
+            stackHabits.push(h);
           }
+        }
+
+        if (stackHabits.length > 0) {
+          stacks.set(chainIds[0]!, stackHabits);
         }
 
         for (const id of chainIds) {
@@ -63,13 +62,15 @@ export default function TodayPage() {
       } else {
         // Standalone habit: must be scheduled and not done.
         if (isScheduledForDate(today, habit.schedule) && !habit.history[today]) {
-          result.push(habit);
+          standalone.push(habit);
         }
         processed.add(habit.id);
       }
     }
 
-    return result;
+    const totalVisibleCount = standalone.length + Array.from(stacks.values()).reduce((sum, group) => sum + group.length, 0);
+
+    return { standaloneHabits: standalone, stackGroups: stacks, totalVisibleCount };
   }, [habits, today]);
 
   const searchResults = useMemo(() => {
@@ -454,7 +455,7 @@ export default function TodayPage() {
         </motion.div>
       )}
 
-      {!searchQuery && visibleHabits.length > 0 && (
+      {!searchQuery && totalVisibleCount > 0 && (
         <motion.section
           style={{ marginBottom: 24 }}
           initial={{ opacity: 0, y: 16 }}
@@ -474,113 +475,46 @@ export default function TodayPage() {
               className="muted mono"
               style={{ fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase" }}
             >
-              {visibleHabits.length} remaining
+              {totalVisibleCount} remaining
             </span>
           </div>
           <div className="habit-list">
             <StaggerContainer staggerDelay={0.04}>
-              {visibleHabits.map((habit) => {
-                const activeStreak = streak(habit);
-                const rate = Math.round(completionRate(habit) * 100);
-                return (
-                  <StaggerItem key={habit.id}>
-                    <motion.div
-                      className="click-row habit-list-row"
-                      style={{
-                        gridTemplateColumns: "44px minmax(0, 1fr) 80px 140px",
-                        alignItems: "center",
-                      }}
-                      onClick={() => router.push(`/habits/${habit.id}`)}
-                      whileHover={reduced ? undefined : { y: -2, boxShadow: "var(--shadow-md)" }}
-                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                    >
-                      <div className="habit-list-field" style={{ alignItems: "center" }}>
-                        <motion.button
-                          className="check"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setMoodHabit(habit);
-                            toggleHabit(habit.id);
-                          }}
-                          aria-label="Check"
-                          whileTap={{ scale: 0.85 }}
-                          transition={{ type: "spring", stiffness: 500, damping: 20 }}
-                        >
-                          <IconCheck />
-                        </motion.button>
-                      </div>
+              {/* Stack groups — rendered with wallet-style stacking */}
+              {Array.from(stackGroups.entries()).map(([rootId, stackHabits]) => (
+                <StaggerItem key={rootId}>
+                  <HabitStack
+                    habits={stackHabits}
+                    onCheck={(habit) => {
+                      setMoodHabit(habit);
+                      toggleHabit(habit.id);
+                    }}
+                    onNavigate={(id) => router.push(`/habits/${id}`)}
+                    reduced={reduced}
+                  />
+                </StaggerItem>
+              ))}
 
-                      <div className="habit-list-field">
-                        <div style={{ minWidth: 0 }}>
-                          <div className="habit-name">{habit.name}</div>
-                          <div
-                            className="mono muted"
-                            style={{
-                              fontSize: 10.5,
-                              marginTop: 3,
-                              letterSpacing: "0.04em",
-                              textTransform: "uppercase",
-                            }}
-                          >
-                            {habit.identity}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="habit-list-field">
-                        <div
-                          className="mono"
-                          style={{
-                            fontSize: 16,
-                            fontWeight: 500,
-                            color: activeStreak > 0 ? "var(--ink)" : "var(--ink-3)",
-                          }}
-                        >
-                          {activeStreak}d
-                        </div>
-                      </div>
-
-                      <div className="habit-list-field">
-                        <div className="habit-list-progress">
-                          <div
-                            style={{
-                              flex: 1,
-                              height: 4,
-                              background: "var(--bg-sunk)",
-                              borderRadius: 99,
-                              overflow: "hidden",
-                            }}
-                          >
-                            <motion.div
-                              style={{ height: "100%", background: "var(--accent)" }}
-                              initial={{ width: 0 }}
-                              animate={{ width: `${rate}%` }}
-                              transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
-                            />
-                          </div>
-                          <span
-                            className="mono"
-                            style={{
-                              fontSize: 11,
-                              color: "var(--ink-3)",
-                              minWidth: 28,
-                              textAlign: "right",
-                            }}
-                          >
-                            {rate}%
-                          </span>
-                        </div>
-                      </div>
-                    </motion.div>
-                  </StaggerItem>
-                );
-              })}
+              {/* Standalone habits */}
+              {standaloneHabits.map((habit) => (
+                <StaggerItem key={habit.id}>
+                  <TodayHabitCard
+                    habit={habit}
+                    onCheck={() => {
+                      setMoodHabit(habit);
+                      toggleHabit(habit.id);
+                    }}
+                    onNavigate={() => router.push(`/habits/${habit.id}`)}
+                    reduced={reduced}
+                  />
+                </StaggerItem>
+              ))}
             </StaggerContainer>
           </div>
         </motion.section>
       )}
 
-      {!searchQuery && habits.length > 0 && visibleHabits.length === 0 && (
+      {!searchQuery && habits.length > 0 && totalVisibleCount === 0 && (
         <motion.div
           className="card card-pad"
           style={{ textAlign: "center", padding: "42px 20px", marginBottom: 24 }}

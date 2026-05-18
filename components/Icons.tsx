@@ -2,8 +2,10 @@ import type { LucideProps } from "lucide-react";
 import {
   CalendarCheck,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Flame,
   LayoutList,
   LineChart,
@@ -90,6 +92,14 @@ export function IconArrow(props: IconProps) {
 
 export function IconBack(props: IconProps) {
   return <ChevronLeft {...iconDefaults} {...props} />;
+}
+
+export function IconChevronDown(props: IconProps) {
+  return <ChevronDown {...iconDefaults} {...props} />;
+}
+
+export function IconChevronUp(props: IconProps) {
+  return <ChevronUp {...iconDefaults} {...props} />;
 }
 
 export function IconEdit(props: IconProps) {

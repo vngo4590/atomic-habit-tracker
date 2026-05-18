@@ -4,21 +4,23 @@ import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 
 import {
+  getPredecessor,
   getStackHabits,
-  stackInsertPatches,
+  getSuccessor,
+  linkStackAfter,
   stackRemovePatches,
   wouldCreateCycle,
 } from "@/lib/stack";
 import type { Habit } from "@/lib/types";
 
 /**
- * The Stack tab lets the user link the current habit before or after another
- * existing habit, forming a linear chain. Habits in a chain are revealed
- * sequentially on the Today page — once the first is done, the next appears.
+ * The Stack tab lets the user link the current habit after another existing
+ * habit, forming a linear chain. Habits in a chain are revealed sequentially
+ * on the Today page — once the first is done, the next appears.
  *
  * The UI shows:
  * - The current stack chain as a visual diagram (if any)
- * - A habit selector + Before/After toggle to add the current habit to a chain
+ * - A habit selector to choose which habit this one should stack after
  * - Circular-dependency prevention with a clear error message
  * - A Remove button to detach the habit from its stack
  */
@@ -33,7 +35,6 @@ export function StackTab({
   onUpdateHabit: (id: string, patch: Partial<Habit>) => void;
 }) {
   const [selectedId, setSelectedId] = useState<string>("");
-  const [position, setPosition] = useState<"before" | "after">("after");
 
   // Other habits that can be linked (exclude the current habit)
   const linkableHabits = useMemo(
@@ -45,23 +46,37 @@ export function StackTab({
   const chain = useMemo(() => getStackHabits(habit.id, habits), [habit.id, habits]);
   const isInStack = chain.length > 1;
 
-  // Check if the proposed link would create a cycle
-  const cycleError = useMemo(() => {
-    if (!selectedId) return null;
+  // Determine what message to show for the current selection
+  const validation = useMemo(() => {
+    if (!selectedId) return { canLink: false, message: null, type: null as "error" | "info" | null };
+
     const target = habits.find((h) => h.id === selectedId);
-    if (!target) return null;
+    if (!target) return { canLink: false, message: null, type: null };
 
-    if (wouldCreateCycle(habit.id, selectedId, habits)) {
-      return `Linking would create a loop. ${target.name} is already part of this habit's chain.`;
+    // Already stacked directly after this target
+    if (habit.stackAfterId === selectedId) {
+      return {
+        canLink: false,
+        message: `This habit is already stacked after ${target.name}.`,
+        type: "info" as const,
+      };
     }
-    return null;
-  }, [selectedId, habit.id, habits]);
 
-  const canLink = selectedId && !cycleError;
+    // Would create a cycle
+    if (wouldCreateCycle(habit.id, selectedId, habits)) {
+      return {
+        canLink: false,
+        message: `Linking would create a loop. ${target.name} is already part of this habit's chain.`,
+        type: "error" as const,
+      };
+    }
+
+    return { canLink: true, message: null, type: null };
+  }, [selectedId, habit.id, habit.stackAfterId, habits]);
 
   const handleLink = () => {
-    if (!canLink) return;
-    const patches = stackInsertPatches(habit.id, selectedId, position, habits);
+    if (!validation.canLink || !selectedId) return;
+    const patches = linkStackAfter(habit.id, selectedId, habits);
     patches.forEach((patch, id) => {
       onUpdateHabit(id, patch);
     });
@@ -75,6 +90,10 @@ export function StackTab({
     });
   };
 
+  // Show who this habit currently stacks after (if anyone)
+  const currentPredecessor = useMemo(() => getPredecessor(habit.id, habits), [habit.id, habits]);
+  const currentSuccessor = useMemo(() => getSuccessor(habit.id, habits), [habit.id, habits]);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       {/* Current stack diagram */}
@@ -82,6 +101,11 @@ export function StackTab({
         <div className="card card-pad">
           <div className="eyebrow" style={{ marginBottom: 12 }}>Current stack</div>
           <StackDiagram chain={chain} highlightId={habit.id} />
+          <div style={{ marginTop: 12, fontSize: 13, color: "var(--ink-3)", fontFamily: "var(--serif)", fontStyle: "italic" }}>
+            {currentPredecessor && `Stacks after: ${currentPredecessor.emoji} ${currentPredecessor.name}`}
+            {currentPredecessor && currentSuccessor && " · "}
+            {currentSuccessor && `Followed by: ${currentSuccessor.emoji} ${currentSuccessor.name}`}
+          </div>
           <div style={{ marginTop: 16 }}>
             <motion.button className="btn btn-sm btn-ghost btn-danger-ghost" onClick={handleRemove} whileTap={{ scale: 0.97 }}>
               Remove from stack
@@ -93,7 +117,7 @@ export function StackTab({
       {/* Link to another habit */}
       <div className="card card-pad">
         <div className="eyebrow" style={{ marginBottom: 12 }}>
-          {isInStack ? "Change stack position" : "Link to another habit"}
+          {isInStack ? "Change stack position" : "Stack after another habit"}
         </div>
 
         {linkableHabits.length === 0 ? (
@@ -102,7 +126,7 @@ export function StackTab({
           </p>
         ) : (
           <>
-            <label className="field-label">Select a habit</label>
+            <label className="field-label">Select a habit to stack after</label>
             <select
               className="input"
               value={selectedId}
@@ -117,46 +141,28 @@ export function StackTab({
               ))}
             </select>
 
-            <label className="field-label">Position</label>
-            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-              <button
-                className={`chip ${position === "before" ? "active" : ""}`}
-                onClick={() => setPosition("before")}
-                type="button"
-              >
-                Before
-              </button>
-              <button
-                className={`chip ${position === "after" ? "active" : ""}`}
-                onClick={() => setPosition("after")}
-                type="button"
-              >
-                After
-              </button>
-            </div>
-
-            {cycleError && (
+            {validation.message && (
               <div
                 style={{
                   padding: "10px 14px",
                   borderRadius: 8,
-                  background: "var(--bg-sunk)",
-                  color: "var(--danger)",
+                  background: validation.type === "error" ? "var(--bg-sunk)" : "var(--bg-sunk)",
+                  color: validation.type === "error" ? "var(--danger)" : "var(--ink-3)",
                   fontSize: 13,
                   marginBottom: 12,
                 }}
               >
-                {cycleError}
+                {validation.message}
               </div>
             )}
 
             <motion.button
               className="btn btn-primary btn-sm"
               onClick={handleLink}
-              disabled={!canLink}
+              disabled={!validation.canLink}
               whileTap={{ scale: 0.97 }}
             >
-              {isInStack ? "Update stack" : "Link habits"}
+              {isInStack ? "Update stack" : "Stack habits"}
             </motion.button>
           </>
         )}
