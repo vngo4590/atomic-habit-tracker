@@ -169,6 +169,9 @@ textarea.input { resize: vertical; min-height: 80px; line-height: 1.55; }
 /* Emoji grid used in the journal custom-mood picker. Kept as a class (not inline style)
    so the mobile override that forces single-column grids does not flatten it. */
 .emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+/* Day-of-week grid on the create-habit page. Class-based so mobile does not
+   squash it into a single column like it does for inline grid styles. */
+.day-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
 .chip.active { background: var(--bg-elev); color: var(--ink); border-color: var(--rule-strong); box-shadow: var(--shadow); }
 .chip.accent { background: var(--accent-soft); color: oklch(35% 0.10 60); border-color: transparent; }
 .chip.done { background: var(--done-soft); color: oklch(38% 0.08 145); border-color: transparent; }

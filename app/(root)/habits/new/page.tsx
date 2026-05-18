@@ -187,7 +187,9 @@ export default function NewHabitPage() {
               </motion.button>
             ))}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6, marginTop: 16 }}>
+          {/* Day-of-week toggles. Uses a CSS class instead of inline grid styles so
+              the mobile layout override does not force each day onto its own row. */}
+          <div className="day-grid" style={{ marginTop: 16 }}>
             {DAYS.map((day) => (
               <motion.button
                 key={day}
