@@ -113,22 +113,21 @@ export function wouldCreateCycle(habitId: string, targetId: string | null, habit
 }
 
 /**
- * Compute the patch objects needed to link a habit after another habit.
+ * Compute the patch objects needed to insert a habit into a stack.
  *
- * This performs an atomic "detach then attach":
- * 1. The habit is removed from its current position (successor is re-linked to predecessor)
- * 2. The habit is inserted immediately after the target
+ * Position "before" target: the habit will come immediately before target.
+ *   Example: A -> B -> C, insert D before C  =>  A -> B -> D -> C
  *
- * Example: chain X -> A -> B -> C, link B after D (D -> E):
- *   Step 1 (detach B):  X -> A -> C, D -> E
- *   Step 2 (attach B):  X -> A -> C, D -> B -> E
+ * Position "after" target: the habit will come immediately after target.
+ *   Example: A -> B -> C, insert D after B   =>  A -> B -> D -> C
  *
  * Returns a map of habitId -> patch. The caller is responsible for applying
  * each patch through updateHabit().
  */
-export function linkStackAfter(
+export function stackInsertPatches(
   habitId: string,
   targetId: string,
+  position: "before" | "after",
   habits: Habit[],
 ): Map<string, Partial<Habit>> {
   const patches = new Map<string, Partial<Habit>>();
@@ -137,26 +136,22 @@ export function linkStackAfter(
 
   if (!habit || !target) return patches;
 
-  // Safety: linking to yourself is a no-op
+  // Safety: inserting before/after yourself is a no-op
   if (habitId === targetId) return patches;
 
-  // Already stacked after target — no-op
-  if (habit.stackAfterId === targetId) return patches;
+  if (position === "before") {
+    // H takes target's former predecessor; target now comes after H
+    patches.set(habitId, { stackAfterId: target.stackAfterId });
+    patches.set(targetId, { stackAfterId: habitId });
+  } else {
+    // H comes after target
+    const oldSuccessor = getSuccessor(targetId, habits);
+    patches.set(habitId, { stackAfterId: targetId });
 
-  // Step 1: Detach habit from its current position.
-  // If something was stacked after this habit, bypass it.
-  const oldSuccessor = getSuccessor(habitId, habits);
-  if (oldSuccessor) {
-    patches.set(oldSuccessor.id, { stackAfterId: habit.stackAfterId });
-  }
-
-  // Step 2: Insert habit after target.
-  const targetSuccessor = getSuccessor(targetId, habits);
-  patches.set(habitId, { stackAfterId: targetId });
-
-  if (targetSuccessor && targetSuccessor.id !== habitId) {
-    // Target's old successor now stacks after the habit
-    patches.set(targetSuccessor.id, { stackAfterId: habitId });
+    if (oldSuccessor && oldSuccessor.id !== habitId) {
+      // Old successor now comes after H
+      patches.set(oldSuccessor.id, { stackAfterId: habitId });
+    }
   }
 
   return patches;

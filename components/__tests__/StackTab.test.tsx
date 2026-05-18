@@ -74,50 +74,34 @@ describe("StackTab", () => {
     ).toBeTruthy();
   });
 
-  it("links the habit after the selected habit", () => {
+  it("allows linking the habit after another habit", () => {
     const habits = [makeHabit("A"), makeHabit("B")];
     const onUpdate = vi.fn();
 
     render(<StackTab habit={habits[1]} habits={habits} onUpdateHabit={onUpdate} />);
 
-    // When: the user selects habit A and clicks Stack habits
+    // When: the user selects habit A and clicks Link habits
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "A" } });
-    fireEvent.click(screen.getByText("Stack habits"));
+    fireEvent.click(screen.getByText("Link habits"));
 
     // Then: B is updated to stack after A
     expect(onUpdate).toHaveBeenCalledWith("B", { stackAfterId: "A" });
   });
 
-  it("re-links a habit when changing stack position", () => {
-    // X -> B, user on B's page selects A
-    const habits = [makeHabit("X"), makeHabit("B", "X"), makeHabit("A")];
+  it("allows linking the habit before another habit", () => {
+    const habits = [makeHabit("A"), makeHabit("B", "A"), makeHabit("C")];
     const onUpdate = vi.fn();
 
-    render(<StackTab habit={habits[1]} habits={habits} onUpdateHabit={onUpdate} />);
+    render(<StackTab habit={habits[2]} habits={habits} onUpdateHabit={onUpdate} />);
 
-    // When: the user selects A and clicks Update stack
-    fireEvent.change(screen.getByRole("combobox"), { target: { value: "A" } });
-    fireEvent.click(screen.getByText("Update stack"));
+    // When: the user selects habit B, chooses Before, and clicks Link
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "B" } });
+    fireEvent.click(screen.getByText("Before"));
+    fireEvent.click(screen.getByText("Link habits"));
 
-    // Then: B now stacks after A
-    expect(onUpdate).toHaveBeenCalledWith("B", { stackAfterId: "A" });
-  });
-
-  it("shows an info message when already stacked after the selected habit", () => {
-    // A -> B, user on B's page selects A
-    const habits = [makeHabit("A"), makeHabit("B", "A")];
-    const onUpdate = vi.fn();
-
-    render(<StackTab habit={habits[1]} habits={habits} onUpdateHabit={onUpdate} />);
-
-    // When: the user selects A
-    fireEvent.change(screen.getByRole("combobox"), { target: { value: "A" } });
-
-    // Then: an info message appears and the button is disabled
-    expect(screen.getByText(/already stacked after/i)).toBeTruthy();
-
-    const button = screen.getByRole("button", { name: "Update stack" });
-    expect(button).toBeDisabled();
+    // Then: C stacks after A (B's former predecessor), and B stacks after C
+    expect(onUpdate).toHaveBeenCalledWith("C", { stackAfterId: "A" });
+    expect(onUpdate).toHaveBeenCalledWith("B", { stackAfterId: "C" });
   });
 
   it("prevents linking when it would create a circular dependency", () => {

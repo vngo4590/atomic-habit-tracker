@@ -299,7 +299,7 @@ describe("Schedule-aware Today counts", () => {
     vi.useRealTimers();
   });
 
-  it("Today page shows all undone habits in a collapsed stack", () => {
+  it("Today page shows only the first undone habit in a stack", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-18T12:00:00Z")); // Monday
 
@@ -311,17 +311,15 @@ describe("Schedule-aware Today counts", () => {
 
     render(<TodayPage />);
 
-    // Then: all three habits are rendered (stack is collapsed by default)
+    // Then: only the root habit A is visible
     expect(screen.getByText("Read")).toBeTruthy();
-    expect(screen.getByText("Meditate")).toBeTruthy();
-    expect(screen.getByText("Journal")).toBeTruthy();
-    // And: a "+2 more" badge indicates the stack is collapsed
-    expect(screen.getByText("+2 more")).toBeTruthy();
+    expect(screen.queryByText("Meditate")).toBeNull();
+    expect(screen.queryByText("Journal")).toBeNull();
 
     vi.useRealTimers();
   });
 
-  it("Today page shows remaining undone habits in a stack after one is done", () => {
+  it("Today page reveals the next stacked habit after the previous is done", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-18T12:00:00Z")); // Monday
 
@@ -334,34 +332,10 @@ describe("Schedule-aware Today counts", () => {
 
     render(<TodayPage />);
 
-    // Then: Read is hidden (done), Meditate and Journal are in the stack
+    // Then: A is done so B appears next
     expect(screen.queryByText("Read")).toBeNull();
     expect(screen.getByText("Meditate")).toBeTruthy();
-    expect(screen.getByText("Journal")).toBeTruthy();
-    // And: a "+1 more" badge indicates the collapsed stack
-    expect(screen.getByText("+1 more")).toBeTruthy();
-
-    vi.useRealTimers();
-  });
-
-  it("Today page keeps the stack UI when only one undone habit remains after the root is done", () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-05-18T12:00:00Z")); // Monday
-
-    const today = "2026-05-18";
-    storeMock.habits = [
-      makeHabit({ id: "A", schedule: "Weekdays", history: { [today]: true }, name: "Read", stackAfterId: null }),
-      makeHabit({ id: "B", schedule: "Weekdays", history: {}, name: "Meditate", stackAfterId: "A" }),
-    ];
-
-    render(<TodayPage />);
-
-    // Then: Read is hidden (done), Meditate is the only visible habit in the stack
-    expect(screen.queryByText("Read")).toBeNull();
-    expect(screen.getByText("Meditate")).toBeTruthy();
-    // And: no "+N more" badge because there's only one visible habit,
-    // but the stack container is still present (accent left border)
-    expect(screen.queryByText(/more/)).toBeNull();
+    expect(screen.queryByText("Journal")).toBeNull();
 
     vi.useRealTimers();
   });

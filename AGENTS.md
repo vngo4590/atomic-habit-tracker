@@ -29,7 +29,7 @@ This project uses Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, and the Ap
 - All Habits (`/habits`): three tabs — All, Done Habits, Upcoming Habits. Each row has a check/undo circle. Supports habit search and sort by streak, rate, newest, or name.
 - Habit detail (`/habits/[id]`): includes Overview, Journal, History, Notes, and Stack tabs. The Stack tab lets users link the habit before or after another habit, forming a linear chain. Circular dependencies are blocked with a clear error message.
 - Schedule helpers (`lib/schedule.ts`): `isScheduledForDate(dateKey, schedule)`, `nextScheduledDateKey(fromDateKey, schedule)`, `formatNextDayLabel(dateKey)`.
-- Stack helpers (`lib/stack.ts`): `getStackChain()`, `getStackRoot()`, `getSuccessor()`, `wouldCreateCycle()`, `linkStackAfter()`, `stackRemovePatches()`, `getVisibleStackHabit()`, `groupHabitsByStack()`.
+- Stack helpers (`lib/stack.ts`): `getStackChain()`, `getStackRoot()`, `getSuccessor()`, `wouldCreateCycle()`, `stackInsertPatches()`, `stackRemovePatches()`, `getVisibleStackHabit()`, `groupHabitsByStack()`.
 - Schedule-aware metrics (`lib/store.ts`): `streak()`, `longestStreak()`, and `completionRate()` all respect `habit.schedule`. Unscheduled days do not break streaks; completion-rate denominator is scheduled days (bonus completions can exceed 100%).
 - Auth redirect: `/login` and `/register` server components check `auth()` and redirect authenticated users to `/` (or a validated `callbackUrl`).
 - UI shell: all app screens live under `app/(root)/` and share the sidebar layout in `app/(root)/layout.tsx`.
