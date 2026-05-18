@@ -298,6 +298,69 @@ describe("Schedule-aware Today counts", () => {
 
     vi.useRealTimers();
   });
+
+  it("Today page shows only the first undone habit in a stack", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-18T12:00:00Z")); // Monday
+
+    storeMock.habits = [
+      makeHabit({ id: "A", schedule: "Weekdays", history: {}, name: "Read", stackAfterId: null }),
+      makeHabit({ id: "B", schedule: "Weekdays", history: {}, name: "Meditate", stackAfterId: "A" }),
+      makeHabit({ id: "C", schedule: "Weekdays", history: {}, name: "Journal", stackAfterId: "B" }),
+    ];
+
+    render(<TodayPage />);
+
+    // Then: only the root habit A is visible
+    expect(screen.getByText("Read")).toBeTruthy();
+    expect(screen.queryByText("Meditate")).toBeNull();
+    expect(screen.queryByText("Journal")).toBeNull();
+
+    vi.useRealTimers();
+  });
+
+  it("Today page reveals the next stacked habit after the previous is done", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-18T12:00:00Z")); // Monday
+
+    const today = "2026-05-18";
+    storeMock.habits = [
+      makeHabit({ id: "A", schedule: "Weekdays", history: { [today]: true }, name: "Read", stackAfterId: null }),
+      makeHabit({ id: "B", schedule: "Weekdays", history: {}, name: "Meditate", stackAfterId: "A" }),
+      makeHabit({ id: "C", schedule: "Weekdays", history: {}, name: "Journal", stackAfterId: "B" }),
+    ];
+
+    render(<TodayPage />);
+
+    // Then: A is done so B appears next
+    expect(screen.queryByText("Read")).toBeNull();
+    expect(screen.getByText("Meditate")).toBeTruthy();
+    expect(screen.queryByText("Journal")).toBeNull();
+
+    vi.useRealTimers();
+  });
+
+  it("Today page hides a fully completed stack", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-18T12:00:00Z")); // Monday
+
+    const today = "2026-05-18";
+    storeMock.habits = [
+      makeHabit({ id: "A", schedule: "Weekdays", history: { [today]: true }, name: "Read", stackAfterId: null }),
+      makeHabit({ id: "B", schedule: "Weekdays", history: { [today]: true }, name: "Meditate", stackAfterId: "A" }),
+      makeHabit({ id: "C", schedule: "Weekdays", history: { [today]: true }, name: "Journal", stackAfterId: "B" }),
+    ];
+
+    render(<TodayPage />);
+
+    // Then: no habits from the stack are shown
+    expect(screen.queryByText("Read")).toBeNull();
+    expect(screen.queryByText("Meditate")).toBeNull();
+    expect(screen.queryByText("Journal")).toBeNull();
+    expect(screen.getByText("Every scheduled habit is complete.")).toBeTruthy();
+
+    vi.useRealTimers();
+  });
 });
 
 // ---------------------------------------------------------------------------
