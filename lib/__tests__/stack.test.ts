@@ -14,6 +14,7 @@ import {
   groupHabitsByStack,
   validateStackPatches,
   getTodayVisibleHabits,
+  getUpcomingStackHabits,
 } from "@/lib/stack";
 
 function makeHabit(id: string, stackAfterId: string | null = null, history: Habit["history"] = {}): Habit {
@@ -407,6 +408,60 @@ describe("Stack helpers", () => {
       const visible = getTodayVisibleHabits(habits, "2030-01-15");
       const ids = visible.map((h) => h.id);
       expect(ids.filter((id) => id === "A").length).toBe(1);
+    });
+  });
+
+  describe("getUpcomingStackHabits", () => {
+    it("returns subsequent undone habits in a stack", () => {
+      const habits = [
+        makeHabit("A"),
+        makeHabit("B", "A"),
+        makeHabit("C", "B"),
+      ];
+      const upcoming = getUpcomingStackHabits("A", habits, "2030-01-15");
+      expect(upcoming.map((h) => h.id)).toEqual(["B", "C"]);
+    });
+
+    it("returns empty array for a standalone habit", () => {
+      const habits = [makeHabit("A"), makeHabit("B")];
+      const upcoming = getUpcomingStackHabits("A", habits, "2030-01-15");
+      expect(upcoming).toEqual([]);
+    });
+
+    it("skips habits that are already done", () => {
+      const habits = [
+        makeHabit("A"),
+        makeHabit("B", "A", { "2030-01-15": true }),
+        makeHabit("C", "B"),
+      ];
+      const upcoming = getUpcomingStackHabits("A", habits, "2030-01-15");
+      expect(upcoming.map((h) => h.id)).toEqual(["C"]);
+    });
+
+    it("returns empty array when all subsequent habits are done", () => {
+      const habits = [
+        makeHabit("A"),
+        makeHabit("B", "A", { "2030-01-15": true }),
+        makeHabit("C", "B", { "2030-01-15": true }),
+      ];
+      const upcoming = getUpcomingStackHabits("A", habits, "2030-01-15");
+      expect(upcoming).toEqual([]);
+    });
+
+    it("returns empty array for the last habit in a stack", () => {
+      const habits = [
+        makeHabit("A"),
+        makeHabit("B", "A"),
+        makeHabit("C", "B"),
+      ];
+      const upcoming = getUpcomingStackHabits("C", habits, "2030-01-15");
+      expect(upcoming).toEqual([]);
+    });
+
+    it("returns empty array for an unknown habit id", () => {
+      const habits = [makeHabit("A")];
+      const upcoming = getUpcomingStackHabits("Z", habits, "2030-01-15");
+      expect(upcoming).toEqual([]);
     });
   });
 

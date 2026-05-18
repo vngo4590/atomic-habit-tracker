@@ -230,6 +230,69 @@ textarea.input { resize: vertical; min-height: 80px; line-height: 1.55; }
 .habit-list-row:hover { background: color-mix(in oklch, var(--bg-elev) 68%, var(--bg-sunk)); border-color: var(--rule-strong); transform: translateY(-1px); box-shadow: var(--shadow-md); }
 .habit-list-label { display: none; }
 
+/* ------------------------------------------------------------------
+   StackCard — peeking cards and count badge for habit stacks
+   ------------------------------------------------------------------ */
+.stack-count-badge {
+  position: absolute;
+  top: -5px;
+  right: 14px;
+  z-index: 20;
+  background: var(--accent);
+  color: var(--bg);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+  letter-spacing: 0.02em;
+}
+
+.stack-peek-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0;
+  background: var(--bg-elev);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.stack-peek-bar {
+  height: 3px;
+  background: var(--accent);
+  opacity: 0.4;
+  flex-shrink: 0;
+}
+
+.stack-peek-details {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  min-height: 0;
+}
+
+.stack-peek-emoji {
+  font-size: 14px;
+  opacity: 0.8;
+  flex-shrink: 0;
+}
+
+.stack-peek-name {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
 @keyframes principle-float {
   0%, 100% {
     transform: translate3d(0, 0, 0) scale(1);

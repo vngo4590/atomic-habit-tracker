@@ -361,6 +361,63 @@ describe("Schedule-aware Today counts", () => {
 
     vi.useRealTimers();
   });
+
+  it("Today page shows a stack count badge on the visible habit", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-18T12:00:00Z")); // Monday
+
+    storeMock.habits = [
+      makeHabit({ id: "A", schedule: "Weekdays", history: {}, name: "Read", stackAfterId: null }),
+      makeHabit({ id: "B", schedule: "Weekdays", history: {}, name: "Meditate", stackAfterId: "A" }),
+      makeHabit({ id: "C", schedule: "Weekdays", history: {}, name: "Journal", stackAfterId: "B" }),
+    ];
+
+    render(<TodayPage />);
+
+    // Then: the visible habit shows a badge with the remaining count
+    const badges = document.querySelectorAll(".stack-count-badge");
+    expect(badges.length).toBe(1);
+    expect(badges[0].textContent).toBe("+2");
+
+    vi.useRealTimers();
+  });
+
+  it("Today page does not show a stack count badge for standalone habits", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-18T12:00:00Z")); // Monday
+
+    storeMock.habits = [
+      makeHabit({ id: "A", schedule: "Weekdays", history: {}, name: "Read", stackAfterId: null }),
+    ];
+
+    render(<TodayPage />);
+
+    // Then: no badge is shown
+    expect(document.querySelector(".stack-count-badge")).toBeNull();
+
+    vi.useRealTimers();
+  });
+
+  it("Today page updates the stack count badge after the first habit is done", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-18T12:00:00Z")); // Monday
+
+    const today = "2026-05-18";
+    storeMock.habits = [
+      makeHabit({ id: "A", schedule: "Weekdays", history: { [today]: true }, name: "Read", stackAfterId: null }),
+      makeHabit({ id: "B", schedule: "Weekdays", history: {}, name: "Meditate", stackAfterId: "A" }),
+      makeHabit({ id: "C", schedule: "Weekdays", history: {}, name: "Journal", stackAfterId: "B" }),
+    ];
+
+    render(<TodayPage />);
+
+    // Then: the visible habit (B) shows a badge with 1 remaining
+    const badges = document.querySelectorAll(".stack-count-badge");
+    expect(badges.length).toBe(1);
+    expect(badges[0].textContent).toBe("+1");
+
+    vi.useRealTimers();
+  });
 });
 
 // ---------------------------------------------------------------------------
