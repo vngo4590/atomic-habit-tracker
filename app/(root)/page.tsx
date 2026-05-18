@@ -36,8 +36,9 @@ export default function TodayPage() {
         habit.cue.toLowerCase().includes(q)
     );
   }, [habits, searchQuery]);
-  const doneToday = habits.filter((habit) => habit.history[today]).length;
-  const pct = habits.length ? Math.round((doneToday / habits.length) * 100) : 0;
+  // Only count habits that are both scheduled for today AND completed.
+  const doneScheduledToday = scheduledToday.filter((habit) => habit.history[today]).length;
+  const pct = scheduledToday.length ? Math.round((doneScheduledToday / scheduledToday.length) * 100) : 0;
   const hour = new Date().getHours();
   const greet = hour < 5 ? "Late night" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
@@ -45,8 +46,9 @@ export default function TodayPage() {
     const days = [];
     for (let i = 13; i >= 0; i--) {
       const key = dateAdd(today, -i);
-      const done = habits.filter((habit) => habit.history[key]).length;
-      days.push({ key, done, total: habits.length });
+      const scheduled = habits.filter((habit) => isScheduledForDate(key, habit.schedule));
+      const done = scheduled.filter((habit) => habit.history[key]).length;
+      days.push({ key, done, total: scheduled.length });
     }
     return days;
   }, [habits, today]);
@@ -54,7 +56,8 @@ export default function TodayPage() {
   const votes = useMemo(() => {
     const tally = new Map<string, number>();
     habits.forEach((habit) => {
-      if (habit.history[today]) {
+      // Only count votes for habits that were actually scheduled today.
+      if (habit.history[today] && isScheduledForDate(today, habit.schedule)) {
         tally.set(habit.identity, (tally.get(habit.identity) ?? 0) + 1);
       }
     });
@@ -76,11 +79,11 @@ export default function TodayPage() {
             {greet} · {fmt.long(today)}
           </div>
           <h1 className="h1">
-            {doneToday === habits.length && habits.length > 0 ? (
+            {doneScheduledToday === scheduledToday.length && scheduledToday.length > 0 ? (
               <>
                 A clean sweep. <em>Vote cast.</em>
               </>
-            ) : doneToday === 0 ? (
+            ) : doneScheduledToday === 0 ? (
               <>
                 Start with <em>one small thing.</em>
               </>
@@ -138,15 +141,15 @@ export default function TodayPage() {
           <div>
             <div className="eyebrow">Today</div>
             <div style={{ fontFamily: "var(--serif)", fontSize: 32, lineHeight: 1, marginTop: 4 }}>
-              {doneToday}
-              <span style={{ color: "var(--ink-3)" }}>/{habits.length}</span>
+              {doneScheduledToday}
+              <span style={{ color: "var(--ink-3)" }}>/{scheduledToday.length}</span>
             </div>
             <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-              {doneToday === 0
+              {doneScheduledToday === 0
                 ? "Nothing checked yet"
-                : doneToday === habits.length
+                : doneScheduledToday === scheduledToday.length
                   ? "All done - well done."
-                  : `${habits.length - doneToday} habits remaining`}
+                  : `${scheduledToday.length - doneScheduledToday} habits remaining`}
             </div>
           </div>
         </motion.div>
