@@ -13,6 +13,7 @@ import {
   getVisibleStackHabit,
   groupHabitsByStack,
   validateStackPatches,
+  getTodayVisibleHabits,
 } from "@/lib/stack";
 
 function makeHabit(id: string, stackAfterId: string | null = null, history: Habit["history"] = {}): Habit {
@@ -332,6 +333,80 @@ describe("Stack helpers", () => {
       expect(result.patches.get("C")).toEqual({ stackAfterId: null });
       expect(result.patches.get("D")).toEqual({ stackAfterId: null });
       expect(result.messages.length).toBe(2);
+    });
+  });
+
+  describe("getTodayVisibleHabits", () => {
+    it("shows a standalone habit when scheduled and not done", () => {
+      const habits = [makeHabit("A")];
+      const visible = getTodayVisibleHabits(habits, "2030-01-15");
+      expect(visible.map((h) => h.id)).toEqual(["A"]);
+    });
+
+    it("hides a standalone habit that is already done", () => {
+      const habits = [makeHabit("A", null, { "2030-01-15": true })];
+      const visible = getTodayVisibleHabits(habits, "2030-01-15");
+      expect(visible.map((h) => h.id)).toEqual([]);
+    });
+
+    it("shows only the root of a stack when nothing is done", () => {
+      const habits = [makeHabit("A"), makeHabit("B", "A"), makeHabit("C", "B")];
+      const visible = getTodayVisibleHabits(habits, "2030-01-15");
+      expect(visible.map((h) => h.id)).toEqual(["A"]);
+    });
+
+    it("shows the next undone habit after the root is done", () => {
+      const habits = [
+        makeHabit("A", null, { "2030-01-15": true }),
+        makeHabit("B", "A"),
+        makeHabit("C", "B"),
+      ];
+      const visible = getTodayVisibleHabits(habits, "2030-01-15");
+      expect(visible.map((h) => h.id)).toEqual(["B"]);
+    });
+
+    it("shows nothing when the entire stack is done", () => {
+      const habits = [
+        makeHabit("A", null, { "2030-01-15": true }),
+        makeHabit("B", "A", { "2030-01-15": true }),
+        makeHabit("C", "B", { "2030-01-15": true }),
+      ];
+      const visible = getTodayVisibleHabits(habits, "2030-01-15");
+      expect(visible.map((h) => h.id)).toEqual([]);
+    });
+
+    it("reflects a reordered stack correctly", () => {
+      // Original A -> B -> C, reordered to C -> A -> B
+      const habits = [makeHabit("A", "C"), makeHabit("B", "A"), makeHabit("C")];
+      const visible = getTodayVisibleHabits(habits, "2030-01-15");
+      // C is now the root, so it should be shown first
+      expect(visible.map((h) => h.id)).toEqual(["C"]);
+    });
+
+    it("handles a habit moved out of a stack becoming standalone", () => {
+      // A -> C after removing B
+      const habits = [makeHabit("A"), makeHabit("B"), makeHabit("C", "A")];
+      const visible = getTodayVisibleHabits(habits, "2030-01-15");
+      expect(visible.map((h) => h.id)).toEqual(["A", "B"]);
+    });
+
+    it("shows two separate stacks independently", () => {
+      const habits = [
+        makeHabit("A"),
+        makeHabit("B", "A"),
+        makeHabit("C"),
+        makeHabit("D", "C"),
+      ];
+      const visible = getTodayVisibleHabits(habits, "2030-01-15");
+      expect(visible.map((h) => h.id)).toEqual(["A", "C"]);
+    });
+
+    it("does not duplicate habits when corrupted data has multiple successors", () => {
+      // Both B and C point to A — invalid state, but we should not show A twice
+      const habits = [makeHabit("A"), makeHabit("B", "A"), makeHabit("C", "A")];
+      const visible = getTodayVisibleHabits(habits, "2030-01-15");
+      const ids = visible.map((h) => h.id);
+      expect(ids.filter((id) => id === "A").length).toBe(1);
     });
   });
 

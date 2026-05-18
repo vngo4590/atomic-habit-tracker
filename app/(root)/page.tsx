@@ -12,7 +12,7 @@ import { useStoreContext } from "@/components/StoreProvider";
 import { dateAdd, fmt, todayKey } from "@/lib/helpers";
 import { useMotionReduced } from "@/lib/hooks/useMotionReduced";
 import { isScheduledForDate } from "@/lib/schedule";
-import { getStackChain } from "@/lib/stack";
+import { getTodayVisibleHabits } from "@/lib/stack";
 import { completionRate } from "@/lib/store";
 import type { Habit } from "@/lib/types";
 
@@ -30,47 +30,7 @@ export default function TodayPage() {
   // A stack appears on the Today page if any undone habit in the chain is
   // scheduled for today. Within the stack, habits are revealed sequentially
   // regardless of their individual schedules.
-  const visibleHabits = useMemo(() => {
-    const result: Habit[] = [];
-    const processed = new Set<string>();
-
-    for (const habit of habits) {
-      if (processed.has(habit.id)) continue;
-
-      const chainIds = getStackChain(habit.id, habits);
-
-      if (chainIds.length > 1) {
-        // Check if any undone habit in this chain is scheduled for today.
-        const hasScheduledUndone = chainIds.some((id) => {
-          const h = habits.find((h) => h.id === id);
-          return h && !h.history[today] && isScheduledForDate(today, h.schedule);
-        });
-
-        if (hasScheduledUndone) {
-          // Show the first undone habit in the chain.
-          for (const id of chainIds) {
-            const h = habits.find((h) => h.id === id);
-            if (h && !h.history[today]) {
-              result.push(h);
-              break;
-            }
-          }
-        }
-
-        for (const id of chainIds) {
-          processed.add(id);
-        }
-      } else {
-        // Standalone habit: must be scheduled and not done.
-        if (isScheduledForDate(today, habit.schedule) && !habit.history[today]) {
-          result.push(habit);
-        }
-        processed.add(habit.id);
-      }
-    }
-
-    return result;
-  }, [habits, today]);
+  const visibleHabits = useMemo(() => getTodayVisibleHabits(habits, today), [habits, today]);
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];

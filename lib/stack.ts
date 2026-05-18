@@ -9,6 +9,7 @@
  * simple and linear — no branching, no cycles.
  */
 
+import { isScheduledForDate } from "./schedule";
 import type { Habit } from "./types";
 
 /**
@@ -289,6 +290,65 @@ export function validateStackPatches(
   }
 
   return { patches: corrected, messages };
+}
+
+/**
+ * Determine which habits should appear on the Today page.
+ *
+ * For stacked habits, only the first undone habit in each chain is shown.
+ * A stack appears if any undone habit in the chain is scheduled for today.
+ * Within the stack, habits are revealed sequentially regardless of their
+ * individual schedules.
+ *
+ * Standalone habits appear if they are scheduled for today and not yet done.
+ */
+export function getTodayVisibleHabits(habits: Habit[], today: string): Habit[] {
+  const result: Habit[] = [];
+  const resultIds = new Set<string>();
+  const processed = new Set<string>();
+
+  for (const habit of habits) {
+    if (processed.has(habit.id)) continue;
+
+    const chainIds = getStackChain(habit.id, habits);
+
+    if (chainIds.length > 1) {
+      // Check if any undone habit in this chain is scheduled for today.
+      const hasScheduledUndone = chainIds.some((id) => {
+        const h = habits.find((h) => h.id === id);
+        return h && !h.history[today] && isScheduledForDate(today, h.schedule);
+      });
+
+      if (hasScheduledUndone) {
+        // Show the first undone habit in the chain that has not already been
+        // added (safety net for corrupted data with multiple successors).
+        for (const id of chainIds) {
+          const h = habits.find((h) => h.id === id);
+          if (h && !h.history[today] && !resultIds.has(h.id)) {
+            result.push(h);
+            resultIds.add(h.id);
+            break;
+          }
+        }
+      }
+
+      for (const id of chainIds) {
+        processed.add(id);
+      }
+      // Safety: mark the current habit processed even if getStackChain did
+      // not include it (can happen when data has multiple successors).
+      processed.add(habit.id);
+    } else {
+      // Standalone habit: must be scheduled and not done.
+      if (isScheduledForDate(today, habit.schedule) && !habit.history[today] && !resultIds.has(habit.id)) {
+        result.push(habit);
+        resultIds.add(habit.id);
+      }
+      processed.add(habit.id);
+    }
+  }
+
+  return result;
 }
 
 /**
