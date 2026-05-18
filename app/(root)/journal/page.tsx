@@ -61,6 +61,11 @@ export default function JournalPage() {
     setCustomLabel("");
   };
 
+  // Determine whether a short string looks like an emoji rather than plain text
+  // so we can pre-fill the custom emoji input when reopening the picker.
+  const isLikelyEmoji = (str: string): boolean =>
+    /^[^a-zA-Z0-9\s]{1,4}$/.test(str);
+
   const toggleEmojiPicker = () => {
     if (!showEmojiPicker && !isPreset(mood)) {
       // Pre-populate picker fields from the current custom mood
@@ -69,6 +74,15 @@ export default function JournalPage() {
       if (EMOJI_GRID.includes(potentialEmoji)) {
         setCustomEmoji(potentialEmoji);
         setCustomLabel(spaceIdx > 0 ? mood.slice(spaceIdx + 1) : "");
+      } else if (spaceIdx > 0) {
+        // First part is not in the preset grid but there is a space — treat the
+        // first token as a custom emoji (e.g. "🎉 Party") and the rest as label.
+        setCustomEmoji(potentialEmoji);
+        setCustomLabel(mood.slice(spaceIdx + 1));
+      } else if (isLikelyEmoji(mood)) {
+        // The entire mood is a single custom emoji not in the grid (e.g. "🎉").
+        setCustomEmoji(mood);
+        setCustomLabel("");
       } else {
         setCustomEmoji("");
         setCustomLabel(mood);
@@ -197,26 +211,42 @@ export default function JournalPage() {
               }}
             >
               <div style={{ fontSize: 12, color: "var(--fg-muted)", marginBottom: 8 }}>
-                1. Pick an emoji
+                1. Pick an emoji (or type your own)
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 4, marginBottom: 12 }}>
-                {EMOJI_GRID.map((emoji) => (
-                  <button
-                    key={emoji}
-                    onClick={() => setCustomEmoji((prev) => (prev === emoji ? "" : emoji))}
-                    style={{
-                      fontSize: 22,
-                      padding: 4,
-                      borderRadius: 6,
-                      border: customEmoji === emoji ? "2px solid var(--accent)" : "2px solid transparent",
-                      background: customEmoji === emoji ? "color-mix(in oklch, var(--accent) 12%, var(--bg-elev))" : "transparent",
-                      cursor: "pointer",
-                      lineHeight: 1,
-                    }}
-                  >
-                    {emoji}
-                  </button>
-                ))}
+              {/* Scrollable container so the picker stays compact on mobile. */}
+              <div style={{ maxHeight: 180, overflowY: "auto", marginBottom: 8 }}>
+                <div className="emoji-grid">
+                  {EMOJI_GRID.map((emoji) => (
+                    <button
+                      key={emoji}
+                      onClick={() => setCustomEmoji((prev) => (prev === emoji ? "" : emoji))}
+                      style={{
+                        fontSize: 22,
+                        padding: 4,
+                        borderRadius: 6,
+                        border: customEmoji === emoji ? "2px solid var(--accent)" : "2px solid transparent",
+                        background: customEmoji === emoji ? "color-mix(in oklch, var(--accent) 12%, var(--bg-elev))" : "transparent",
+                        cursor: "pointer",
+                        lineHeight: 1,
+                      }}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* Keyboard input for emojis that are not in the preset grid. */}
+              <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12 }}>
+                <span style={{ fontSize: 12, color: "var(--fg-muted)", flexShrink: 0 }}>Or type:</span>
+                <input
+                  aria-label="Custom emoji"
+                  className="input"
+                  style={{ width: 70, textAlign: "center", fontSize: 18, padding: "6px 8px" }}
+                  placeholder="✨"
+                  maxLength={4}
+                  value={customEmoji}
+                  onChange={(e) => setCustomEmoji(e.target.value.trim())}
+                />
               </div>
               <div style={{ fontSize: 12, color: "var(--fg-muted)", marginBottom: 8 }}>
                 2. Name your mood

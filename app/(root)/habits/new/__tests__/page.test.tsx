@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Habit } from "@/lib/types";
 
@@ -23,7 +23,24 @@ vi.mock("@/components/StoreProvider", () => ({
 
 import NewHabitPage from "@/app/(root)/habits/new/page";
 
+afterEach(() => {
+  cleanup();
+});
+
 describe("NewHabitPage", () => {
+  it("renders all seven day-of-week toggle buttons", () => {
+    render(<NewHabitPage />);
+
+    // Then: every day abbreviation is present as a toggle button
+    expect(screen.getByRole("button", { name: "Sun" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Mon" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Tue" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Wed" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Thu" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Fri" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sat" })).toBeTruthy();
+  });
+
   it("keeps custom sentence time blocks visible in the time block selector", () => {
     const { container } = render(<NewHabitPage />);
     const timeSelect = container.querySelector("select") as HTMLSelectElement;
