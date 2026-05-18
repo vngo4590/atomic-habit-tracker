@@ -228,32 +228,6 @@ export function getVisibleStackHabit(
 }
 
 /**
- * Given a habit, return all subsequent undone habits in its stack chain.
- * This is used by the Today page to show peeking cards behind a stack parent.
- *
- * Starting from the habit's position in the chain, we walk forward and
- * collect every habit that is NOT done today. Done habits are skipped.
- */
-export function getUpcomingStackHabits(
-  habitId: string,
-  habits: Habit[],
-  todayKey: string,
-): Habit[] {
-  const chain = getStackHabits(habitId, habits);
-  const visibleIndex = chain.findIndex((h) => h.id === habitId);
-  if (visibleIndex === -1) return [];
-
-  const upcoming: Habit[] = [];
-  for (let i = visibleIndex + 1; i < chain.length; i++) {
-    const habit = chain[i];
-    if (!habit.history[todayKey]) {
-      upcoming.push(habit);
-    }
-  }
-  return upcoming;
-}
-
-/**
  * Validate a set of proposed stack patches and auto-correct any that would
  * violate the linear-stack invariant: each habit can have at most one
  * successor (at most one other habit whose stackAfterId points to it).

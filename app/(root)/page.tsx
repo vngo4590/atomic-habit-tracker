@@ -7,7 +7,6 @@ import { useMemo, useState } from "react";
 import { CompletionRing } from "@/components/CompletionRing";
 import { IconCheck, IconClose, IconPlus, IconSearch } from "@/components/Icons";
 import { MoodCheckSheet } from "@/components/MoodCheckSheet";
-import { StackCard } from "@/components/StackCard";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { useStoreContext } from "@/components/StoreProvider";
 import { dateAdd, fmt, todayKey } from "@/lib/helpers";
@@ -302,17 +301,16 @@ export default function TodayPage() {
                 const isScheduled = isScheduledForDate(today, habit.schedule);
                 return (
                   <StaggerItem key={habit.id}>
-                    <StackCard habit={habit} habits={habits} today={today}>
-                      <motion.div
-                        className="click-row habit-list-row"
-                        style={{
-                          gridTemplateColumns: "44px minmax(0, 1fr) 80px 140px",
-                          alignItems: "center",
-                        }}
-                        onClick={() => router.push(`/habits/${habit.id}`)}
-                        whileHover={reduced ? undefined : { y: -2, boxShadow: "var(--shadow-md)" }}
-                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                      >
+                    <motion.div
+                      className="click-row habit-list-row"
+                      style={{
+                        gridTemplateColumns: "44px minmax(0, 1fr) 80px 140px",
+                        alignItems: "center",
+                      }}
+                      onClick={() => router.push(`/habits/${habit.id}`)}
+                      whileHover={reduced ? undefined : { y: -2, boxShadow: "var(--shadow-md)" }}
+                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    >
                       <div className="habit-list-field" style={{ alignItems: "center" }}>
                         <motion.button
                           className={`check ${isDone ? "done" : ""}`}
@@ -392,8 +390,7 @@ export default function TodayPage() {
                           </span>
                         </div>
                       </div>
-                      </motion.div>
-                    </StackCard>
+                    </motion.div>
                   </StaggerItem>
                 );
               })}
@@ -447,17 +444,16 @@ export default function TodayPage() {
                 const rate = Math.round(completionRate(habit) * 100);
                 return (
                   <StaggerItem key={habit.id}>
-                    <StackCard habit={habit} habits={habits} today={today}>
-                      <motion.div
-                        className="click-row habit-list-row"
-                        style={{
-                          gridTemplateColumns: "44px minmax(0, 1fr) 80px 140px",
-                          alignItems: "center",
-                        }}
-                        onClick={() => router.push(`/habits/${habit.id}`)}
-                        whileHover={reduced ? undefined : { y: -2, boxShadow: "var(--shadow-md)" }}
-                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                      >
+                    <motion.div
+                      className="click-row habit-list-row"
+                      style={{
+                        gridTemplateColumns: "44px minmax(0, 1fr) 80px 140px",
+                        alignItems: "center",
+                      }}
+                      onClick={() => router.push(`/habits/${habit.id}`)}
+                      whileHover={reduced ? undefined : { y: -2, boxShadow: "var(--shadow-md)" }}
+                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    >
                       <div className="habit-list-field" style={{ alignItems: "center" }}>
                         <motion.button
                           className="check"
@@ -535,8 +531,7 @@ export default function TodayPage() {
                           </span>
                         </div>
                       </div>
-                      </motion.div>
-                    </StackCard>
+                    </motion.div>
                   </StaggerItem>
                 );
               })}
