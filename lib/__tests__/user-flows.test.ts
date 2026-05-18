@@ -14,6 +14,11 @@ import {
 } from "@/lib/actions/domain";
 import { testHabit, testPreferences } from "@/lib/test/fixtures";
 import { useStore, streak, longestStreak } from "@/lib/store";
+import {
+  getStackChain,
+  getVisibleStackHabit,
+  wouldCreateCycle,
+} from "@/lib/stack";
 import { applyAppearance } from "@/lib/appearance";
 import { LESSONS } from "@/lib/lessons-data";
 import type { StoreSnapshot } from "@/lib/types";
@@ -32,7 +37,7 @@ vi.mock("@/lib/actions/domain", () => ({
   savePreferencesAction: vi.fn(),
   saveWeeklyReviewAction: vi.fn(),
   toggleHabitAction: vi.fn(async () => null),
-  updateHabitAction: vi.fn(async () => null),
+  updateHabitAction: vi.fn(async (id, patch) => ({ id, ...patch })),
   updateJournalEntryAction: vi.fn(async () => null),
 }));
 
@@ -77,14 +82,18 @@ beforeEach(() => {
   vi.stubGlobal("localStorage", localStorageMock);
   vi.useRealTimers();
 
-  vi.mocked(createHabitAction).mockImplementation(async (draft) => ({
-    ...testHabit(),
-    ...draft,
-    id: "server_habit",
-    history: {},
-    notes: [],
-    createdAt: todayKey(),
-  }));
+  let habitIdCounter = 0;
+  vi.mocked(createHabitAction).mockImplementation(async (draft) => {
+    habitIdCounter++;
+    return {
+      ...testHabit(),
+      ...draft,
+      id: `server_habit_${habitIdCounter}`,
+      history: {},
+      notes: [],
+      createdAt: todayKey(),
+    };
+  });
   vi.mocked(toggleHabitAction).mockImplementation(async () => null);
   vi.mocked(saveFormationVerdictAction).mockImplementation(async (verdict) => verdict);
   vi.mocked(savePreferencesAction).mockImplementation(async (preferences) => ({
@@ -540,5 +549,95 @@ describe("Flow 6: Settings & Appearance", () => {
 
     // Then: The preference is saved
     expect(result.current.preferences.remindersEnabled).toBe(false);
+  });
+});
+
+// ===========================================================================
+// Flow 6: Habit Stacking
+// ===========================================================================
+describe("Flow 6: Habit Stacking", () => {
+  it("chains habits into a stack and reveals them sequentially on the Today page", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2030-01-09T12:00:00Z"));
+    const today = "2030-01-09";
+
+    const { result } = renderHook(() => useStore(makeSnapshot()));
+
+    // Given: three habits — Read, Meditate, Journal
+    act(() => result.current.addHabit({ name: "Read", identity: "reader" }));
+    vi.advanceTimersByTime(1);
+    act(() => result.current.addHabit({ name: "Meditate", identity: "mindful" }));
+    vi.advanceTimersByTime(1);
+    act(() => result.current.addHabit({ name: "Journal", identity: "writer" }));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const [read, meditate, journal] = result.current.habits;
+
+    // When: the user stacks them Read -> Meditate -> Journal
+    act(() =>
+      result.current.updateHabit(meditate.id, { stackAfterId: read.id }),
+    );
+    act(() =>
+      result.current.updateHabit(journal.id, { stackAfterId: meditate.id }),
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // Then: the chain is correct
+    const chain = getStackChain(read.id, result.current.habits);
+    expect(chain).toEqual([read.id, meditate.id, journal.id]);
+
+    // And: Read is the visible habit because it is the first undone one
+    const visible = getVisibleStackHabit(read.id, result.current.habits, today);
+    expect(visible?.id).toBe(read.id);
+
+    // When: Read is checked off
+    act(() => result.current.toggleHabit(read.id, today));
+
+    // Then: Meditate becomes the visible habit
+    const visibleAfterRead = getVisibleStackHabit(read.id, result.current.habits, today);
+    expect(visibleAfterRead?.id).toBe(meditate.id);
+
+    // When: Meditate is checked off
+    act(() => result.current.toggleHabit(meditate.id, today));
+
+    // Then: Journal becomes the visible habit
+    const visibleAfterMeditate = getVisibleStackHabit(read.id, result.current.habits, today);
+    expect(visibleAfterMeditate?.id).toBe(journal.id);
+
+    // When: Journal is checked off
+    act(() => result.current.toggleHabit(journal.id, today));
+
+    // Then: no habit is visible — the stack is complete
+    const visibleAfterJournal = getVisibleStackHabit(read.id, result.current.habits, today);
+    expect(visibleAfterJournal).toBeUndefined();
+
+    vi.useRealTimers();
+  });
+
+  it("prevents circular dependencies when stacking habits", () => {
+    // Given: three habits where B already stacks after A
+    const snapshot = makeSnapshot({
+      habits: [
+        { ...testHabit(), id: "hA", name: "Read", stackAfterId: null },
+        { ...testHabit(), id: "hB", name: "Meditate", stackAfterId: "hA" },
+        { ...testHabit(), id: "hC", name: "Journal", stackAfterId: null },
+      ],
+    });
+    const { result } = renderHook(() => useStore(snapshot));
+
+    // Then: trying to make A stack after B would create a cycle
+    expect(wouldCreateCycle("hA", "hB", result.current.habits)).toBe(true);
+
+    // And: safe stacking (C after B) is allowed
+    expect(wouldCreateCycle("hC", "hB", result.current.habits)).toBe(false);
+
+    // And: stacking a habit after itself is also a cycle
+    expect(wouldCreateCycle("hA", "hA", result.current.habits)).toBe(true);
   });
 });
