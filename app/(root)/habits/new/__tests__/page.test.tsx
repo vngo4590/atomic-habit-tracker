@@ -68,12 +68,75 @@ describe("NewHabitPage", () => {
     render(<NewHabitPage />);
 
     // Then: habit-derived identity chips are visible
-    const chips = Array.from(document.querySelectorAll(".chip")).map((el) => el.textContent);
+    const chips = Array.from(document.querySelectorAll(".identity-chip")).map((el) => el.textContent);
     expect(chips).toContain("a reader");
     expect(chips).toContain("a runner");
 
     // And: core values from the Identity page are NOT shown as chips
     expect(chips).not.toContain("Discipline");
     expect(chips).not.toContain("Health");
+  });
+
+  it("only shows the top 5 most-used identities by default", () => {
+    // Given: 6 habits with different identities, where "a reader" appears most
+    storeMock.habits = [
+      { id: "h1", name: "Read", identity: "a reader" },
+      { id: "h2", name: "Read 2", identity: "a reader" },
+      { id: "h3", name: "Run", identity: "a runner" },
+      { id: "h4", name: "Meditate", identity: "mindful" },
+      { id: "h5", name: "Write", identity: "writer" },
+      { id: "h6", name: "Lift", identity: "athlete" },
+      { id: "h7", name: "Sleep", identity: "rested" },
+    ] as Habit[];
+
+    render(<NewHabitPage />);
+
+    // Then: only 5 chips are shown (top 5 by frequency)
+    const chips = Array.from(document.querySelectorAll(".identity-chip")).map((el) => el.textContent);
+    expect(chips).toHaveLength(5);
+    // "a reader" appears twice so it should be first
+    expect(chips[0]).toBe("a reader");
+    // "rested" appears once and is last among the top 5
+    expect(chips).toContain("a runner");
+    expect(chips).toContain("mindful");
+    expect(chips).toContain("writer");
+    expect(chips).toContain("athlete");
+    expect(chips).not.toContain("rested");
+  });
+
+  it("filters identity chips when typing in the identity input", () => {
+    // Given: habits with various identities
+    storeMock.habits = [
+      { id: "h1", name: "Read", identity: "a reader" },
+      { id: "h2", name: "Run", identity: "a runner" },
+      { id: "h3", name: "Write", identity: "writer" },
+    ] as Habit[];
+
+    render(<NewHabitPage />);
+
+    // When: the user types "run" in the identity input
+    fireEvent.change(screen.getByPlaceholderText("a reader"), { target: { value: "run" } });
+
+    // Then: only matching chips are shown (case-insensitive)
+    const chips = Array.from(document.querySelectorAll(".identity-chip")).map((el) => el.textContent);
+    expect(chips).toContain("a runner");
+    expect(chips).not.toContain("a reader");
+    expect(chips).not.toContain("writer");
+  });
+
+  it("shows no chips when the typed identity does not match any existing one", () => {
+    storeMock.habits = [
+      { id: "h1", name: "Read", identity: "a reader" },
+      { id: "h2", name: "Run", identity: "a runner" },
+    ] as Habit[];
+
+    render(<NewHabitPage />);
+
+    // When: the user types a brand-new identity
+    fireEvent.change(screen.getByPlaceholderText("a reader"), { target: { value: "pilot" } });
+
+    // Then: the chip area is empty, implying a new identity
+    const chips = document.querySelectorAll(".identity-chip");
+    expect(chips.length).toBe(0);
   });
 });

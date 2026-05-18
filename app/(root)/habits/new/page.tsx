@@ -89,7 +89,7 @@ function MLInput({
 
 function MLChip({ children, onClick }: { children: string; onClick: () => void }) {
   return (
-    <button className="chip" type="button" onClick={onClick}>
+    <button className="chip identity-chip" type="button" onClick={onClick}>
       {children}
     </button>
   );
@@ -105,10 +105,27 @@ export default function NewHabitPage() {
   const [preset, setPreset] = useState<Preset>("daily");
   const [customDays, setCustomDays] = useState<string[]>([]);
 
-  const existingIdentities = useMemo(() => {
-    const values = new Set<string>(habits.map((habit) => habit.identity).filter(Boolean));
-    return Array.from(values);
+  // Compute all unique habit identities sorted by frequency (most-used first).
+  const allIdentities = useMemo(() => {
+    const counts = new Map<string, number>();
+    habits.forEach((habit) => {
+      if (habit.identity) {
+        counts.set(habit.identity, (counts.get(habit.identity) ?? 0) + 1);
+      }
+    });
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([id]) => id);
   }, [habits]);
+
+  // Show top 5 by default; when the user types in the identity input, filter
+  // the full list so they can quickly select an existing identity. Empty
+  // results imply this is a new identity.
+  const visibleIdentities = useMemo(() => {
+    const query = identity.trim().toLowerCase();
+    if (!query) return allIdentities.slice(0, 5);
+    return allIdentities.filter((id) => id.toLowerCase().includes(query));
+  }, [allIdentities, identity]);
 
   const activeDays: readonly string[] = preset === "custom" ? customDays : PRESETS[preset].days;
   const schedule = preset === "custom"
@@ -169,7 +186,7 @@ export default function NewHabitPage() {
           .
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 18 }}>
-          {existingIdentities.map((item) => (
+          {visibleIdentities.map((item) => (
             <MLChip key={item} onClick={() => setIdentity(item)}>
               {item}
             </MLChip>
