@@ -21,6 +21,7 @@ function makeHabit(): Habit {
     environment: "",
     schedule: "Mon, Tue, Wed, Thu, Fri",
     time: "Morning",
+    stackAfterId: null,
     contract: "",
     contractPartners: [],
     history: {},

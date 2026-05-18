@@ -11,6 +11,7 @@ function makeHabit(overrides: Partial<Habit> = {}): Habit {
     emoji: "📖",
     identity: "a reader",
     time: "Morning",
+    stackAfterId: null,
     schedule: "Every day",
     cue: "After I pour coffee",
     response: "Read 10 pages",

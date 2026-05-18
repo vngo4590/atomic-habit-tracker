@@ -64,6 +64,7 @@ export function testHabit(patch: Partial<Habit> = {}): Habit {
     environment: "Book on desk",
     schedule: "Daily",
     time: "Morning",
+    stackAfterId: null,
     contract: "",
     contractPartners: [],
     history: {},

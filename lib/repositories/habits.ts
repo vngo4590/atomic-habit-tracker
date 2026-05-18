@@ -30,6 +30,7 @@ type HabitRecord = {
   environment: string;
   schedule: string;
   time: string;
+  stackAfterId: string | null;
   createdAt: Date;
   checkIns?: Array<{
     dateKey: string;
@@ -82,6 +83,7 @@ function toHabit(record: HabitRecord): Habit {
     environment: record.environment,
     schedule: record.schedule,
     time: record.time,
+    stackAfterId: record.stackAfterId,
     contract: contract?.terms ?? "",
     contractPartners: contract?.partners ?? [],
     history,
@@ -139,6 +141,7 @@ export async function createHabit(userId: string, input: HabitCreateInput, db: D
       environment: data.environment,
       schedule: data.schedule,
       time: data.time,
+      stackAfterId: data.stackAfterId,
       contract: data.contract || data.contractPartners.length
         ? { create: { userId, terms: data.contract, partners: data.contractPartners } }
         : undefined,

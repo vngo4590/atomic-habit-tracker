@@ -21,6 +21,7 @@ function makeHabit(patch: Partial<Habit> = {}): Habit {
     environment: "",
     schedule: "Daily",
     time: "Morning",
+    stackAfterId: null,
     contract: "",
     contractPartners: [],
     history: {},

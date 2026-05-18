@@ -54,6 +54,7 @@ function makeHabit(history: Habit["history"]): Habit {
     environment: "",
     schedule: "Daily",
     time: "Morning",
+    stackAfterId: null,
     contract: "",
     contractPartners: [],
     history,

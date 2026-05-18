@@ -27,6 +27,7 @@ export const habitCreateSchema = z.object({
   environment: habitTextSchema.default(""),
   schedule: habitScheduleSchema.default("Daily"),
   time: habitTimeSchema.default("Morning"),
+  stackAfterId: z.string().nullable().optional(),
   contract: habitContractSchema.default(""),
   contractPartners: stringListSchema,
 });
@@ -47,6 +48,7 @@ export const habitUpdateSchema = z.object({
   environment: habitTextSchema.optional(),
   schedule: habitScheduleSchema.optional(),
   time: habitTimeSchema.optional(),
+  stackAfterId: z.string().nullable().optional(),
   contract: habitContractSchema.optional(),
   contractPartners: optionalStringListSchema.optional(),
   notes: z

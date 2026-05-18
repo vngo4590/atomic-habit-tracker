@@ -58,6 +58,7 @@ export async function createHabitAction(draft: HabitDraft) {
     environment: "",
     schedule: "Daily",
     time: "Morning",
+    stackAfterId: null,
     contract: "",
     contractPartners: [],
     ...draft,

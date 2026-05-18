@@ -131,6 +131,7 @@ model Habit {
   schedule     String    @default("Daily")
   time         String    @default("Morning")
   sortOrder    Int       @default(0)
+  stackAfterId String?
   archivedAt   DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt

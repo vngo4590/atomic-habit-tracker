@@ -58,6 +58,7 @@ function normalizeDraft(draft: HabitDraft): Omit<Habit, "id" | "history" | "note
     environment: draft.environment ?? "",
     schedule: draft.schedule ?? "Daily",
     time: draft.time ?? "Morning",
+    stackAfterId: draft.stackAfterId ?? null,
     contract: draft.contract ?? "",
     contractPartners: draft.contractPartners ?? [],
   };
