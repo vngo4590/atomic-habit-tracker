@@ -19,6 +19,18 @@ import {
 } from "@/lib/store";
 import type { Habit } from "@/lib/types";
 
+// Pin "today" to a Wednesday so schedule-aware streak tests are deterministic.
+vi.mock("@/lib/helpers", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/helpers")>("@/lib/helpers");
+  return {
+    ...actual,
+    todayKey: (...args: unknown[]) => {
+      if (args.length > 0) return actual.todayKey(args[0] as never);
+      return "2030-01-09";
+    },
+  };
+});
+
 let localStorageMock: Pick<Storage, "getItem" | "setItem" | "removeItem" | "clear">;
 
 vi.mock("@/lib/actions/domain", () => ({
