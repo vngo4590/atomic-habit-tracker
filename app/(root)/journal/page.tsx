@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 
+import { MarkdownText } from "@/components/MarkdownText";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { useStoreContext } from "@/components/StoreProvider";
 import { fmt } from "@/lib/helpers";
@@ -306,7 +307,11 @@ export default function JournalPage() {
                 <button className="btn btn-sm btn-ghost" onClick={() => startEdit(entry.id)}>Edit</button>
               </div>
             </div>
-            {entry.body && <p className="muted" style={{ marginTop: 12, lineHeight: 1.6 }}>{entry.body}</p>}
+            {entry.body && (
+              <div className="muted" style={{ marginTop: 12, lineHeight: 1.6 }}>
+                <MarkdownText>{entry.body}</MarkdownText>
+              </div>
+            )}
             </motion.article>
           </StaggerItem>
         ))}

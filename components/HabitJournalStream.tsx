@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { IconTrash } from "@/components/Icons";
+import { MarkdownText } from "@/components/MarkdownText";
 import { fmt } from "@/lib/helpers";
 import type { CheckIn, Habit } from "@/lib/types";
 
@@ -139,9 +140,11 @@ function HabitJournalCard({
         </div>
       </div>
       {entry.journal && (
-        <p style={{ margin: 0, fontFamily: "var(--serif)", fontSize: 15, lineHeight: 1.5, color: "var(--ink-2)" }}>
+        <MarkdownText
+          style={{ fontFamily: "var(--serif)", fontSize: 15, lineHeight: 1.5, color: "var(--ink-2)" }}
+        >
           {entry.journal}
-        </p>
+        </MarkdownText>
       )}
     </div>
   );
