@@ -3,9 +3,11 @@
 import { revalidatePath } from "next/cache";
 
 import { requireUserId } from "@/lib/auth/session";
+import { db } from "@/lib/db/client";
 import {
   createHabit,
   archiveHabit,
+  getHabit,
   updateHabit,
   upsertCheckIn,
 } from "@/lib/repositories/habits";
@@ -69,6 +71,42 @@ export async function createHabitAction(draft: HabitDraft) {
 
 export async function updateHabitAction(habitId: string, patch: Partial<Habit>) {
   const userId = await requireUserId();
+
+  if (patch.stackNextId !== undefined) {
+    if (patch.stackNextId === habitId) {
+      throw new Error("A habit cannot stack with itself.");
+    }
+    if (patch.stackNextId) {
+      const target = await getHabit(userId, patch.stackNextId);
+      if (!target) {
+        throw new Error("Target habit not found.");
+      }
+      // Exclusivity: a habit can only be the next step for one other habit
+      const currentOwner = await db.habit.findFirst({
+        where: { userId, stackNextId: patch.stackNextId, NOT: { id: habitId } },
+        select: { id: true },
+      });
+      if (currentOwner) {
+        throw new Error("Target habit is already part of another stack.");
+      }
+      // Cycle detection: walk forward from target to see if we reach habitId
+      let cursor: string | null = patch.stackNextId;
+      const visited = new Set<string>();
+      while (cursor) {
+        if (visited.has(cursor)) break;
+        visited.add(cursor);
+        if (cursor === habitId) {
+          throw new Error("This would create a circular stack.");
+        }
+        const nextHabit: { stackNextId: string | null } | null = await db.habit.findUnique({
+          where: { id: cursor },
+          select: { stackNextId: true },
+        });
+        cursor = nextHabit?.stackNextId ?? null;
+      }
+    }
+  }
+
   const habit = await updateHabit(userId, habitId, patch);
 
   revalidateApp();

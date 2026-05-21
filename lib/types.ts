@@ -27,6 +27,7 @@ export interface Habit {
   environment: string;
   schedule: string;
   time: string;
+  stackNextId?: string | null;
   contract: string;
   contractPartners: string[];
   history: Record<string, boolean | CheckIn>;

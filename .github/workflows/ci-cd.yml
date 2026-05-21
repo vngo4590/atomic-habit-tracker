@@ -58,6 +58,31 @@ jobs:
       - name: Build application
         run: npm run build
 
+  e2e:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+
   # -------------------------------------------------------------------------
   # DEPLOY — provision Azure infrastructure and release the container.
   # Only runs on the master branch after validation passes.

@@ -51,7 +51,7 @@ function toDateKey(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
-function toHabit(record: HabitRecord): Habit {
+function toHabit(record: HabitRecord & { stackNextId?: string | null }): Habit {
   const checkIns = record.checkIns ?? [];
   const notes = record.notes ?? [];
   const contract = record.contract;
@@ -82,6 +82,7 @@ function toHabit(record: HabitRecord): Habit {
     environment: record.environment,
     schedule: record.schedule,
     time: record.time,
+    stackNextId: record.stackNextId ?? null,
     contract: contract?.terms ?? "",
     contractPartners: contract?.partners ?? [],
     history,
@@ -139,6 +140,7 @@ export async function createHabit(userId: string, input: HabitCreateInput, db: D
       environment: data.environment,
       schedule: data.schedule,
       time: data.time,
+      stackNextId: data.stackNextId ?? null,
       contract: data.contract || data.contractPartners.length
         ? { create: { userId, terms: data.contract, partners: data.contractPartners } }
         : undefined,
@@ -160,9 +162,14 @@ export async function updateHabit(userId: string, habitId: string, input: HabitU
   const data = habitUpdateSchema.parse(input);
   const { contract, contractPartners, notes, ...habitPatch } = data;
 
+  const updateData: Record<string, unknown> = { ...habitPatch };
+  if (habitPatch.stackNextId !== undefined) {
+    updateData.stackNextId = habitPatch.stackNextId ?? null;
+  }
+
   await db.habit.update({
     where: { id: habitId },
-    data: habitPatch,
+    data: updateData,
   });
 
   if (contract !== undefined || contractPartners !== undefined) {

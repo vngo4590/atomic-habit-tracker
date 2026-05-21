@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   updateHabit: vi.fn(),
   archiveHabit: vi.fn(),
   upsertCheckIn: vi.fn(),
+  getHabit: vi.fn(),
   createJournalEntry: vi.fn(),
   updateJournalEntry: vi.fn(),
   saveWeeklyReview: vi.fn(),
@@ -17,6 +18,8 @@ const mocks = vi.hoisted(() => ({
   markLessonComplete: vi.fn(),
   saveFormationVerdictRecord: vi.fn(),
   savePreferences: vi.fn(),
+  dbHabitFindUnique: vi.fn(),
+  dbHabitFindFirst: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({
@@ -32,6 +35,16 @@ vi.mock("@/lib/repositories/habits", () => ({
   updateHabit: mocks.updateHabit,
   archiveHabit: mocks.archiveHabit,
   upsertCheckIn: mocks.upsertCheckIn,
+  getHabit: mocks.getHabit,
+}));
+
+vi.mock("@/lib/db/client", () => ({
+  db: {
+    habit: {
+      findUnique: mocks.dbHabitFindUnique,
+      findFirst: mocks.dbHabitFindFirst,
+    },
+  },
 }));
 
 vi.mock("@/lib/repositories/reflection", () => ({
@@ -155,5 +168,51 @@ describe("domain server actions", () => {
     expect(mocks.createHabit).not.toHaveBeenCalled();
     expect(mocks.markLessonComplete).not.toHaveBeenCalled();
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  describe("stack validation in updateHabitAction", () => {
+    beforeEach(() => {
+      mocks.getHabit.mockImplementation((_userId: string, habitId: string) =>
+        Promise.resolve(testHabit({ id: habitId })),
+      );
+      mocks.dbHabitFindFirst.mockResolvedValue(null);
+      mocks.dbHabitFindUnique.mockResolvedValue(null);
+    });
+
+    it("rejects linking a habit to itself", async () => {
+      const { updateHabitAction } = await import("@/lib/actions/domain");
+
+      await expect(updateHabitAction("habit_a", { stackNextId: "habit_a" })).rejects.toThrow("cannot stack with itself");
+      expect(mocks.updateHabit).not.toHaveBeenCalled();
+    });
+
+    it("rejects when target is already another habit's stackNextId", async () => {
+      mocks.dbHabitFindFirst.mockResolvedValue({ id: "habit_b" });
+      const { updateHabitAction } = await import("@/lib/actions/domain");
+
+      await expect(updateHabitAction("habit_a", { stackNextId: "habit_c" })).rejects.toThrow("already part of another stack");
+      expect(mocks.updateHabit).not.toHaveBeenCalled();
+    });
+
+    it("rejects when linking would create a cycle", async () => {
+      // A -> B -> C, trying to link C -> A
+      mocks.dbHabitFindUnique.mockImplementation(({ where: { id } }: { where: { id: string } }) => {
+        if (id === "habit_a") return Promise.resolve({ stackNextId: "habit_b" });
+        if (id === "habit_b") return Promise.resolve({ stackNextId: "habit_c" });
+        return Promise.resolve(null);
+      });
+      const { updateHabitAction } = await import("@/lib/actions/domain");
+
+      await expect(updateHabitAction("habit_c", { stackNextId: "habit_a" })).rejects.toThrow("circular stack");
+      expect(mocks.updateHabit).not.toHaveBeenCalled();
+    });
+
+    it("allows valid stack links after passing all validations", async () => {
+      mocks.updateHabit.mockResolvedValue(testHabit({ id: "habit_a" }));
+      const { updateHabitAction } = await import("@/lib/actions/domain");
+
+      await expect(updateHabitAction("habit_a", { stackNextId: "habit_b" })).resolves.toBeDefined();
+      expect(mocks.updateHabit).toHaveBeenCalledWith("user_1", "habit_a", expect.objectContaining({ stackNextId: "habit_b" }));
+    });
   });
 });

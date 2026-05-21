@@ -131,15 +131,18 @@ model Habit {
   schedule     String    @default("Daily")
   time         String    @default("Morning")
   sortOrder    Int       @default(0)
+  stackNextId  String?   @unique
   archivedAt   DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  checkIns HabitCheckIn[]
-  notes    HabitNote[]
-  contract HabitContract?
-  verdicts FormationVerdict[]
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stackNext Habit?             @relation("StackChain", fields: [stackNextId], references: [id], onDelete: SetNull)
+  stackPrev Habit?             @relation("StackChain")
+  checkIns  HabitCheckIn[]
+  notes     HabitNote[]
+  contract  HabitContract?
+  verdicts  FormationVerdict[]
 
   @@index([userId, createdAt])
   @@index([userId, archivedAt])

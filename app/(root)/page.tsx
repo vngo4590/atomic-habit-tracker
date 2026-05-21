@@ -7,11 +7,13 @@ import { useMemo, useState } from "react";
 import { CompletionRing } from "@/components/CompletionRing";
 import { IconCheck, IconClose, IconPlus, IconSearch } from "@/components/Icons";
 import { MoodCheckSheet } from "@/components/MoodCheckSheet";
+import { StackCardGroup } from "@/components/StackCardGroup";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { useStoreContext } from "@/components/StoreProvider";
 import { dateAdd, fmt, todayKey } from "@/lib/helpers";
 import { useMotionReduced } from "@/lib/hooks/useMotionReduced";
 import { isScheduledForDate } from "@/lib/schedule";
+import { getVisibleStackHabit, groupHabitsByStack } from "@/lib/stack";
 import { completionRate } from "@/lib/store";
 import type { Habit } from "@/lib/types";
 
@@ -25,6 +27,18 @@ export default function TodayPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const scheduledToday = habits.filter((habit) => isScheduledForDate(today, habit.schedule));
   const scheduledUndone = scheduledToday.filter((habit) => !habit.history[today]);
+
+  const stackGroups = groupHabitsByStack(scheduledUndone);
+  const visibleStackHabits = getVisibleStackHabit(scheduledUndone, today);
+  const displayedHabitIds = new Set<string>();
+  for (const h of visibleStackHabits) {
+    displayedHabitIds.add(h.id);
+  }
+  const soloHabits = scheduledUndone.filter((h) => !h.stackNextId && !displayedHabitIds.has(h.id));
+  const stackRoots = Array.from(stackGroups.keys()).filter((rootId) => {
+    const group = stackGroups.get(rootId) ?? [];
+    return group.some((h) => visibleStackHabits.some((v) => v.id === h.id));
+  });
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
@@ -433,7 +447,29 @@ export default function TodayPage() {
           </div>
           <div className="habit-list">
             <StaggerContainer staggerDelay={0.04}>
-              {scheduledUndone.map((habit) => {
+              {stackRoots.map((rootId) => {
+                const firstVisible = visibleStackHabits.find((h) => {
+                  const chain = getVisibleStackHabit([h], today);
+                  return chain.length > 0;
+                }) ?? visibleStackHabits[0];
+                if (!firstVisible) return null;
+                return (
+                  <StaggerItem key={rootId}>
+                    <StackCardGroup
+                      habit={firstVisible}
+                      habits={scheduledUndone}
+                      today={today}
+                      onCheck={(h) => {
+                        setMoodHabit(h);
+                        toggleHabit(h.id);
+                      }}
+                      onNavigate={(id) => router.push(`/habits/${id}`)}
+                      streak={streak}
+                    />
+                  </StaggerItem>
+                );
+              })}
+              {soloHabits.map((habit) => {
                 const activeStreak = streak(habit);
                 const rate = Math.round(completionRate(habit) * 100);
                 return (
