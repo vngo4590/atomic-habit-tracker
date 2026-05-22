@@ -355,4 +355,137 @@ describe("applyStackMutation (repository)", () => {
     expect(habits.find((h) => h.id === "p")?.stackNextId).toBe("t");
     expect(habits.find((h) => h.id === "h")?.stackNextId).toBeNull();
   });
+
+  describe("reorder", () => {
+    it("reorders a chain a -> b -> c into a -> c -> b in one transaction", async () => {
+      const { db, updates, habits } = makeFakeDb([
+        makeFakeHabit("a", "b"),
+        makeFakeHabit("b", "c"),
+        makeFakeHabit("c"),
+      ]);
+
+      await applyStackMutation(
+        "user_1",
+        { kind: "reorder", habitIds: ["a", "c", "b"] },
+        db as unknown as Parameters<typeof applyStackMutation>[2],
+      );
+
+      // Null-first ordering keeps the unique constraint safe at every step.
+      expect(updates).toEqual([
+        { id: "a", stackNextId: null },
+        { id: "c", stackNextId: null },
+        { id: "b", stackNextId: null },
+        { id: "a", stackNextId: "c" },
+        { id: "c", stackNextId: "b" },
+      ]);
+      expect(habits.find((h) => h.id === "a")?.stackNextId).toBe("c");
+      expect(habits.find((h) => h.id === "c")?.stackNextId).toBe("b");
+      expect(habits.find((h) => h.id === "b")?.stackNextId).toBeNull();
+    });
+
+    it("rejects a reorder with ids outside the chain set", async () => {
+      const { db, habits } = makeFakeDb([
+        makeFakeHabit("a", "b"),
+        makeFakeHabit("b", "c"),
+        makeFakeHabit("c"),
+        makeFakeHabit("solo"),
+      ]);
+
+      await expect(
+        applyStackMutation(
+          "user_1",
+          { kind: "reorder", habitIds: ["a", "b", "solo"] },
+          db as unknown as Parameters<typeof applyStackMutation>[2],
+        ),
+      ).rejects.toThrow(/Reorder must include exactly the habits in this stack/);
+
+      // No mutations applied.
+      expect(habits.find((h) => h.id === "a")?.stackNextId).toBe("b");
+      expect(habits.find((h) => h.id === "b")?.stackNextId).toBe("c");
+    });
+
+    it("rejects a reorder that omits a current chain member", async () => {
+      const { db } = makeFakeDb([
+        makeFakeHabit("a", "b"),
+        makeFakeHabit("b", "c"),
+        makeFakeHabit("c"),
+      ]);
+
+      // Omits 'c'.
+      await expect(
+        applyStackMutation(
+          "user_1",
+          { kind: "reorder", habitIds: ["a", "b"] },
+          db as unknown as Parameters<typeof applyStackMutation>[2],
+        ),
+      ).rejects.toThrow(/Reorder must include exactly the habits in this stack/);
+    });
+
+    it("rejects a reorder with duplicate ids", async () => {
+      const { db } = makeFakeDb([makeFakeHabit("a", "b"), makeFakeHabit("b")]);
+
+      await expect(
+        applyStackMutation(
+          "user_1",
+          { kind: "reorder", habitIds: ["a", "a"] },
+          db as unknown as Parameters<typeof applyStackMutation>[2],
+        ),
+      ).rejects.toThrow(/Reorder must include exactly the habits in this stack/);
+    });
+
+    it("rejects a reorder that tries to merge two separate chains", async () => {
+      const { db, habits } = makeFakeDb([
+        makeFakeHabit("a", "b"),
+        makeFakeHabit("b"),
+        makeFakeHabit("x", "y"),
+        makeFakeHabit("y"),
+      ]);
+
+      await expect(
+        applyStackMutation(
+          "user_1",
+          { kind: "reorder", habitIds: ["a", "b", "x", "y"] },
+          db as unknown as Parameters<typeof applyStackMutation>[2],
+        ),
+      ).rejects.toThrow(/Reorder must include exactly the habits in this stack/);
+
+      // No-op on rejection.
+      expect(habits.find((h) => h.id === "a")?.stackNextId).toBe("b");
+      expect(habits.find((h) => h.id === "x")?.stackNextId).toBe("y");
+    });
+
+    it("supports reordering a 4-chain so the tail becomes the new head", async () => {
+      const { db, habits } = makeFakeDb([
+        makeFakeHabit("a", "b"),
+        makeFakeHabit("b", "c"),
+        makeFakeHabit("c", "d"),
+        makeFakeHabit("d"),
+      ]);
+
+      await applyStackMutation(
+        "user_1",
+        { kind: "reorder", habitIds: ["d", "a", "b", "c"] },
+        db as unknown as Parameters<typeof applyStackMutation>[2],
+      );
+
+      expect(habits.find((h) => h.id === "d")?.stackNextId).toBe("a");
+      expect(habits.find((h) => h.id === "a")?.stackNextId).toBe("b");
+      expect(habits.find((h) => h.id === "b")?.stackNextId).toBe("c");
+      expect(habits.find((h) => h.id === "c")?.stackNextId).toBeNull();
+    });
+
+    it("returns a StackError for invalid reorders", async () => {
+      const { db } = makeFakeDb([makeFakeHabit("a", "b"), makeFakeHabit("b")]);
+      try {
+        await applyStackMutation(
+          "user_1",
+          { kind: "reorder", habitIds: ["a", "b", "ghost"] },
+          db as unknown as Parameters<typeof applyStackMutation>[2],
+        );
+        expect.fail("should have thrown");
+      } catch (error) {
+        expect(isStackError(error)).toBe(true);
+      }
+    });
+  });
 });

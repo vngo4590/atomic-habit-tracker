@@ -132,6 +132,10 @@ export const stackMutationSchema = z.discriminatedUnion("kind", [
     kind: z.literal("remove"),
     habitId: z.string().min(1),
   }),
+  z.object({
+    kind: z.literal("reorder"),
+    habitIds: z.array(z.string().min(1)).min(2),
+  }),
 ]);
 
 export type StackMutationInput = z.infer<typeof stackMutationSchema>;

@@ -1,9 +1,29 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { StackContextProvider } from "./_stack-test-utils";
 import { StackDiagram, STACK_PICKER_DEFAULT_LIMIT } from "@/components/StackDiagram";
 import type { Habit } from "@/lib/types";
+
+// Mock next/navigation so tests can render the client component without a
+// Next App Router context, and inspect navigation calls.
+const routerPush = vi.fn();
+const routerBack = vi.fn();
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: routerPush,
+    back: routerBack,
+    replace: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+}));
+
+beforeEach(() => {
+  routerPush.mockReset();
+  routerBack.mockReset();
+});
 
 function makeHabit(id: string, stackNextId?: string | null): Habit {
   return {
@@ -411,6 +431,120 @@ describe("StackDiagram", () => {
       // 12 solos remain (solo-12 in the test pool doesn't really get added without a real store,
       // but the expansion state itself must be reset regardless of the mock outcome).
       expect(screen.queryByTestId("stack-link-show-all")).toBeTruthy();
+    });
+  });
+
+  describe("chain chip interactions", () => {
+    it("navigates to a non-current chip's habit page via router.push when clicked", () => {
+      const habits = [makeHabit("a", "b"), makeHabit("b", "c"), makeHabit("c")];
+      render(
+        <StackContextProvider habits={habits}>
+          <StackDiagram habit={habits[0]} habits={habits} />
+        </StackContextProvider>,
+      );
+
+      fireEvent.click(screen.getByTestId("stack-chip-link-b"));
+      expect(routerPush).toHaveBeenCalledWith("/habits/b");
+    });
+
+    it("does not navigate when the current habit's own chip is clicked", () => {
+      const habits = [makeHabit("a", "b"), makeHabit("b")];
+      render(
+        <StackContextProvider habits={habits}>
+          <StackDiagram habit={habits[0]} habits={habits} />
+        </StackContextProvider>,
+      );
+
+      fireEvent.click(screen.getByTestId("stack-chip-link-a"));
+      expect(routerPush).not.toHaveBeenCalled();
+    });
+
+    it("calls applyStackMutation with { kind: 'remove' } when the chip's X is clicked", () => {
+      const applyStackMutation = vi.fn().mockResolvedValue(undefined);
+      const habits = [makeHabit("a", "b"), makeHabit("b", "c"), makeHabit("c")];
+      render(
+        <StackContextProvider habits={habits} applyStackMutation={applyStackMutation}>
+          <StackDiagram habit={habits[0]} habits={habits} />
+        </StackContextProvider>,
+      );
+
+      fireEvent.click(screen.getByTestId("stack-chip-remove-b"));
+      expect(applyStackMutation).toHaveBeenCalledWith({ kind: "remove", habitId: "b" });
+    });
+
+    it("X click does not also navigate (stopPropagation works)", () => {
+      const applyStackMutation = vi.fn().mockResolvedValue(undefined);
+      const habits = [makeHabit("a", "b"), makeHabit("b", "c"), makeHabit("c")];
+      render(
+        <StackContextProvider habits={habits} applyStackMutation={applyStackMutation}>
+          <StackDiagram habit={habits[0]} habits={habits} />
+        </StackContextProvider>,
+      );
+
+      fireEvent.click(screen.getByTestId("stack-chip-remove-b"));
+      expect(applyStackMutation).toHaveBeenCalledWith({ kind: "remove", habitId: "b" });
+      expect(routerPush).not.toHaveBeenCalled();
+    });
+
+    it("X click on the current habit's chip removes the current habit", () => {
+      const applyStackMutation = vi.fn().mockResolvedValue(undefined);
+      const habits = [makeHabit("a", "b"), makeHabit("b", "c"), makeHabit("c")];
+      render(
+        <StackContextProvider habits={habits} applyStackMutation={applyStackMutation}>
+          <StackDiagram habit={habits[1]} habits={habits} />
+        </StackContextProvider>,
+      );
+
+      fireEvent.click(screen.getByTestId("stack-chip-remove-b"));
+      expect(applyStackMutation).toHaveBeenCalledWith({ kind: "remove", habitId: "b" });
+    });
+
+    it("shows an error modal when X removal rejects", async () => {
+      const applyStackMutation = vi
+        .fn()
+        .mockRejectedValue(new Error("Server unreachable"));
+      const habits = [makeHabit("a", "b"), makeHabit("b", "c"), makeHabit("c")];
+      render(
+        <StackContextProvider habits={habits} applyStackMutation={applyStackMutation}>
+          <StackDiagram habit={habits[0]} habits={habits} />
+        </StackContextProvider>,
+      );
+
+      fireEvent.click(screen.getByTestId("stack-chip-remove-b"));
+      const modal = await screen.findByTestId("modal");
+      expect(within(modal).getByText(/Server unreachable/i)).toBeTruthy();
+    });
+  });
+
+  describe("drag reorder", () => {
+    it("renders chips inside a Reorder.Group list with stable item testids", () => {
+      const habits = [makeHabit("a", "b"), makeHabit("b", "c"), makeHabit("c")];
+      render(
+        <StackContextProvider habits={habits}>
+          <StackDiagram habit={habits[0]} habits={habits} />
+        </StackContextProvider>,
+      );
+
+      expect(screen.getByTestId("stack-chain-list")).toBeTruthy();
+      expect(screen.getByTestId("stack-chip-item-a")).toBeTruthy();
+      expect(screen.getByTestId("stack-chip-item-b")).toBeTruthy();
+      expect(screen.getByTestId("stack-chip-item-c")).toBeTruthy();
+    });
+
+    it("X removal on a mid-chain chip uses the right habitId so the chain heals around it", () => {
+      // Server-side stackRemovePatches handles re-linking; this test just
+      // verifies the UI emits the correct mutation argument.
+      const applyStackMutation = vi.fn().mockResolvedValue(undefined);
+      const habits = [makeHabit("a", "b"), makeHabit("b", "c"), makeHabit("c", "d"), makeHabit("d")];
+      render(
+        <StackContextProvider habits={habits} applyStackMutation={applyStackMutation}>
+          <StackDiagram habit={habits[0]} habits={habits} />
+        </StackContextProvider>,
+      );
+
+      fireEvent.click(screen.getByTestId("stack-chip-remove-c"));
+      expect(applyStackMutation).toHaveBeenCalledTimes(1);
+      expect(applyStackMutation).toHaveBeenCalledWith({ kind: "remove", habitId: "c" });
     });
   });
 });

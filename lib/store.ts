@@ -23,6 +23,7 @@ import { isScheduledForDate } from "@/lib/schedule";
 import {
   stackInsertPatches as stackInsertPatchesHelper,
   stackRemovePatches as stackRemovePatchesHelper,
+  stackReorderPatches as stackReorderPatchesHelper,
 } from "@/lib/stack";
 import type {
   CheckIn,
@@ -375,8 +376,17 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
             record.stackNextId = patch.stackNextId ?? null;
           }
         }
-      } else {
+      } else if (input.kind === "remove") {
         const patches = stackRemovePatchesHelper(input.habitId, list);
+        for (const { id, patch } of patches) {
+          const record = map.get(id);
+          if (record && patch.stackNextId !== undefined) {
+            record.stackNextId = patch.stackNextId ?? null;
+          }
+        }
+      } else {
+        // kind === "reorder"
+        const patches = stackReorderPatchesHelper(input.habitIds);
         for (const { id, patch } of patches) {
           const record = map.get(id);
           if (record && patch.stackNextId !== undefined) {

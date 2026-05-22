@@ -38,7 +38,7 @@ Local database helper:
 .\scripts\local-db.ps1 fake-history -CleanFirst -Force -Users 3 -HabitsPerUser 8 -Days 120
 ```
 
-The helper is guarded for the local Docker database URL on `localhost:55432`. Use it for local cleanup, migration deployment, and configurable demo data generation. `randomize`/`randomize-data` are aliases for `random-data`; `fake-history`/`history-data` create richer past habits, notes, check-ins, journals, weekly reviews, lesson progress, and formation verdicts. Pass `-CleanFirst -Force` when a fresh local test dataset is needed. Use the direct PowerShell helper, not `npm run`, when passing switch flags such as `-CleanFirst` or `-Force`.
+The helper is guarded for the local Docker database URL on `localhost:55432`. Use it for local cleanup, migration deployment, and configurable demo data generation. `randomize`/`randomize-data` are aliases for `random-data`; `fake-history`/`history-data` create richer past habits, notes, check-ins, journals, weekly reviews, lesson progress, and formation verdicts. Both seeders also randomly link a disjoint subset of each user's habits into 1-2 stack chains (length 2-4) so the Today wallet stack and the Stack tab have real data to render. Pass `-CleanFirst -Force` when a fresh local test dataset is needed. Use the direct PowerShell helper, not `npm run`, when passing switch flags such as `-CleanFirst` or `-Force`.
 
 Validation commands:
 
@@ -311,7 +311,7 @@ Habit stacks are modeled as a **linked list** of habits via a self-referencing `
 - **Exclusivity (`@unique`)**: at most one habit may link to any given habit. The DB enforces it as a unique constraint on `stackNextId`.
 - **No cycles**: validation in `lib/repositories/habits.ts::validateStackLink` (called by both `updateHabit` and `applyStackMutation`) rejects any link that would form a cycle (direct or indirect).
 - **Standalone-only picker, any-chain-position anchor**: the UI picker for "Link before / Link after" only ever offers **standalone** habits (not yet part of any stack) — those are the habits eligible to be added. The **anchor** is the habit whose Stack tab is open; it can live anywhere in an existing chain (root, middle, tail) or be solo. The picked standalone is then inserted before/after the anchor and the chain reorders accordingly. To move a chain member, first remove it from its stack to make it standalone again.
-- All stack-mutation errors are thrown as `StackError` (`lib/stack-errors.ts`) with a stable `code` (`self_reference` | `circular_stack` | `target_in_other_stack` | `source_in_other_stack` | `habit_not_found` | `target_not_found`) and a friendly message used directly in UI modals.
+- All stack-mutation errors are thrown as `StackError` (`lib/stack-errors.ts`) with a stable `code` (`self_reference` | `circular_stack` | `target_in_other_stack` | `source_in_other_stack` | `habit_not_found` | `target_not_found` | `invalid_reorder`) and a friendly message used directly in UI modals.
 
 ### Core helpers (`lib/stack.ts`)
 - `getStackRoot(habit, habits)` — iterative + visited-set so corrupted/cyclic data is safe; returns the chain head.
@@ -320,15 +320,15 @@ Habit stacks are modeled as a **linked list** of habits via a self-referencing `
 - `getSuccessor` / `getPredecessor` — neighbor lookups.
 - `isInStack(habit, habits)` — true if the habit has a successor *or* is the successor of another habit.
 - `wouldCreateCycle(sourceId, targetId, habits)` — projects a `source -> target` link and walks forward to detect closure.
-- `stackInsertPatches(habitId, position, targetId, habits)` / `stackRemovePatches(habitId, habits)` — return **ordered** `{ id, patch }` lists that never violate the `stackNextId @unique` constraint between intermediate states.
+- `stackInsertPatches(habitId, position, targetId, habits)` / `stackRemovePatches(habitId, habits)` / `stackReorderPatches(habitIds)` — return **ordered** `{ id, patch }` lists that never violate the `stackNextId @unique` constraint between intermediate states. `stackReorderPatches` uses a two-phase **null-then-link** pattern: it first nulls every chain member's pointer, then writes the new links in order, so the unique constraint is never under pressure mid-transaction.
 - `getVisibleStackHabit(habits, dateKey)` — first undone habit per chain for the Today screen.
 - `groupHabitsByStack(habits)` — root-keyed groups in chain order.
 
 ### Mutation API
-- **`applyStackMutationAction({ kind: "insert", habitId, position, targetId } | { kind: "remove", habitId })`** in `lib/actions/domain.ts` is the canonical entry point for any stack change.
+- **`applyStackMutationAction({ kind: "insert", habitId, position, targetId } | { kind: "remove", habitId } | { kind: "reorder", habitIds })`** in `lib/actions/domain.ts` is the canonical entry point for any stack change.
 - Internally calls `applyStackMutation` in `lib/repositories/habits.ts`, which runs inside `db.$transaction`:
   1. Loads the user's habit graph.
-  2. Validates source is solo (insert), target exists, no self-reference, no cycle in the projected post-mutation graph.
+  2. Validates per-kind: insert (source is solo, target exists, no self-reference, no cycle), remove (habit exists), reorder (`habitIds` set equals the current chain set rooted at any one of them — no merging chains, no add/drop members via reorder; duplicates rejected).
   3. Applies ordered patches via `tx.habit.update`.
   4. Returns the post-mutation affected habits.
 - The store exposes `store.applyStackMutation(input)` which optimistically applies the patches, awaits the server response, overlays the returned habits, and rolls back the optimistic state on rejection. UI callers (`StackDiagram`) read the rejected error message and surface it in a `Modal`.
@@ -341,9 +341,12 @@ Habit stacks are modeled as a **linked list** of habits via a self-referencing `
   - `getChainFrom(habit, habits)` walks forward from the passed habit (the first-undone in the chain), so a partially-checked chain shows from the correct sub-chain.
   - Already-done upcoming habits are filtered out so the wallet only surfaces habits still to be fulfilled today.
 - **Habit detail (`/habits/[id]`)**: the **Stack** tab renders `StackDiagram` (chain chips with arrows, current habit highlighted).
+  - **Clickable chips**: each chain chip is a navigation button — clicking a non-current chip calls `useRouter().push("/habits/<id>")`. Because we don't replace history, the habit detail back button (`router.back()`) walks back through visited chain habits in reverse order. The current habit's own chip is a no-op.
+  - **Per-chip × button**: an X next to each chip calls `store.applyStackMutation({ kind: "remove", habitId: <chipId> })` to unlink only that node. Server-side `stackRemovePatches` heals the chain by re-linking the predecessor to the former successor. The X stops click + pointerdown propagation so it never starts a drag or triggers navigation.
+  - **Drag-to-reorder**: chips are rendered inside a Framer Motion `Reorder.Group axis="x"` with a `Reorder.Item` per chip. On `onDragEnd` the local chain order is committed via `store.applyStackMutation({ kind: "reorder", habitIds: [...] })`. A `wasDraggedRef` suppresses chip-click navigation that would otherwise fire right after a drag.
   - **Standalone-only picker** for "Link before / Link after": only habits that are not yet part of any stack appear in the picker; the anchor (current habit) may be anywhere in a chain. The picker is capped at the first **10** results by default; for larger pools the user either refines the list via the **search input** (name / identity / cue) or clicks **"Show all N habits"** to expand. Searching always resets back to the focused capped view. The cap lives in `STACK_PICKER_DEFAULT_LIMIT` (exported from `components/StackDiagram.tsx`).
   - **Search input** filters the selector by name / identity / cue.
-  - Errors from the server (cycle, exclusivity, etc.) open a **`Modal`** with the server message and an OK button; the operation is cancelled and the optimistic patch is rolled back.
+  - Errors from the server (cycle, exclusivity, invalid reorder, etc.) open a **`Modal`** with the server message and an OK button; the operation is cancelled and the optimistic patch is rolled back.
 
 ### Modal vs Toast
 - Use `components/Modal.tsx` for stack-mutation errors and any other failure the user must acknowledge before continuing.

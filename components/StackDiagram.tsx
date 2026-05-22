@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { Reorder } from "framer-motion";
+import { useRouter } from "next/navigation";
 
 import { Modal } from "@/components/Modal";
 import { useStoreContext } from "@/components/StoreProvider";
@@ -21,20 +23,23 @@ export const STACK_PICKER_DEFAULT_LIMIT = 10;
  * Visual diagram + editor for a habit's stack chain. Rendered in the Stack tab
  * of the habit detail page.
  *
- * Selection semantics (relaxed):
- *   - The **current habit** (the one whose Stack tab is open) is the anchor —
- *     it can be solo OR anywhere in an existing chain (top, middle, bottom).
- *   - The **picker** lists only **standalone** habits — habits that are not
- *     yet part of any stack. They are the habits eligible to be added.
- *   - Tapping "Link before" or "Link after" then choosing a standalone habit
- *     inserts that standalone into the chain immediately before or after the
- *     current habit. The chain reorders accordingly.
- *   - The picker supports search filtering by name, identity, or cue.
+ * Chain chip interaction model:
+ *   - Each chip is **clickable** and navigates to that habit's detail page
+ *     via `router.push`. Because we don't replace history, the habit detail
+ *     back button (which uses `router.back()`) walks through visited chain
+ *     habits in reverse order.
+ *   - Each chip has an **× button** that removes only that habit from the
+ *     chain. Neighbors are re-linked automatically via `stackRemovePatches`.
+ *   - Chips are **draggable horizontally** via Framer Motion's
+ *     `Reorder.Group` / `Reorder.Item`. On drag-end we commit the new order
+ *     via `applyStackMutation({ kind: "reorder", habitIds })`. A
+ *     `wasDragged` ref suppresses the click handler when a real drag
+ *     occurred so users don't navigate away by accident.
  *
  * All mutations route through `store.applyStackMutation`, which is atomic on
- * the server (cycle / exclusivity validation + transactional patch
- * application). Any error opens a `Modal` so the user knows the operation
- * was cancelled and must acknowledge before continuing.
+ * the server (cycle / exclusivity / set-equality validation + transactional
+ * patch application). Any error opens a `Modal` so the user knows the
+ * operation was cancelled and must acknowledge before continuing.
  */
 export function StackDiagram({
   habit,
@@ -47,6 +52,7 @@ export function StackDiagram({
   onUpdate?: (id: string, patch: Partial<Habit>) => void;
 }) {
   const store = useStoreContext();
+  const router = useRouter();
   const [errorModal, setErrorModal] = useState<{ title: string; message: string } | null>(null);
   const [linkMode, setLinkMode] = useState<"before" | "after" | null>(null);
   const [query, setQuery] = useState("");
@@ -56,6 +62,25 @@ export function StackDiagram({
 
   const chain = useMemo(() => getStackChain(habit, habits), [habit, habits]);
   const position = useMemo(() => chain.findIndex((h) => h.id === habit.id) + 1, [chain, habit]);
+
+  // Local ordered chain state used by Reorder.Group during a drag. We re-sync
+  // it whenever the chain identity changes (server confirmation, navigation
+  // to a different habit, etc.) using React's "storing information from
+  // previous renders" pattern — a render-time conditional setState that
+  // compares against another piece of state. This avoids the
+  // cascading-renders pitfall of doing the sync inside useEffect.
+  const chainKey = chain.map((h) => h.id).join("|");
+  const [prevChainKey, setPrevChainKey] = useState(chainKey);
+  const [orderedChain, setOrderedChain] = useState<Habit[]>(chain);
+  if (prevChainKey !== chainKey) {
+    setPrevChainKey(chainKey);
+    setOrderedChain(chain);
+  }
+
+  // Tracks whether a real drag occurred between pointerdown and click. Used
+  // to suppress chip navigation right after a successful drag, so users
+  // don't accidentally jump to the dragged habit's detail page.
+  const wasDraggedRef = useRef(false);
 
   /**
    * The picker lists every habit that is **not** already in a stack and is
@@ -115,6 +140,54 @@ export function StackDiagram({
     }
   };
 
+  /**
+   * Per-chip remove. Calls applyStackMutation for that specific habit's id
+   * (NOT necessarily the current habit). The repository's stackRemovePatches
+   * handles re-linking neighbors so the rest of the chain stays intact.
+   */
+  const handleNodeRemove = async (nodeId: string) => {
+    try {
+      await store.applyStackMutation({ kind: "remove", habitId: nodeId });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Couldn't remove the habit from the stack.";
+      setErrorModal({ title: "Couldn't remove from stack", message });
+    }
+  };
+
+  /**
+   * Navigate to a chip's habit detail page. Skipped for the current habit
+   * (no-op) and when a real drag just occurred.
+   */
+  const handleChipClick = (nodeId: string) => {
+    if (wasDraggedRef.current) {
+      wasDraggedRef.current = false;
+      return;
+    }
+    if (nodeId === habit.id) return;
+    router.push(`/habits/${nodeId}`);
+  };
+
+  /**
+   * Commit a drag-reorder. Called when the user releases a dragged chip and
+   * the local order differs from the server's chain order. Falls back to the
+   * server-confirmed chain on rejection.
+   */
+  const commitReorder = async (nextChain: Habit[]) => {
+    const nextIds = nextChain.map((h) => h.id);
+    const currentIds = chain.map((h) => h.id);
+    const sameOrder = nextIds.length === currentIds.length && nextIds.every((id, i) => id === currentIds[i]);
+    if (sameOrder) return;
+
+    try {
+      await store.applyStackMutation({ kind: "reorder", habitIds: nextIds });
+    } catch (error: unknown) {
+      // Roll back local order on rejection.
+      setOrderedChain(chain);
+      const message = error instanceof Error ? error.message : "Couldn't reorder the stack.";
+      setErrorModal({ title: "Couldn't reorder the stack", message });
+    }
+  };
+
   // Legacy support: if a test still passes onUpdate, treat it as a no-op
   // alongside the real mutation. This keeps existing tests rendering without
   // throwing while the new tests target the store directly.
@@ -132,12 +205,45 @@ export function StackDiagram({
               Remove from stack
             </button>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
-            {chain.map((h, index) => (
-              <div key={h.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Reorder.Group
+            axis="x"
+            values={orderedChain}
+            onReorder={(next) => {
+              wasDraggedRef.current = true;
+              setOrderedChain(next);
+            }}
+            data-testid="stack-chain-list"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              flexWrap: "wrap",
+              marginBottom: 14,
+              padding: 0,
+              listStyle: "none",
+            }}
+          >
+            {orderedChain.map((h, index) => (
+              <Reorder.Item
+                key={h.id}
+                value={h}
+                data-testid={`stack-chip-item-${h.id}`}
+                onDragEnd={() => {
+                  // Commit after a drag — only fires when the user actually
+                  // grabbed and released this item.
+                  void commitReorder(orderedChain);
+                  // Clear the drag flag a tick later so the click handler
+                  // that fires next gets suppressed exactly once.
+                  setTimeout(() => {
+                    wasDraggedRef.current = false;
+                  }, 0);
+                }}
+                style={{ display: "flex", alignItems: "center", gap: 4, cursor: "grab" }}
+              >
                 <div
-                  className="chip"
                   data-testid="stack-chain-chip"
+                  data-chip-id={h.id}
+                  className="chip"
                   style={{
                     borderColor: h.id === habit.id ? "var(--accent)" : "var(--rule)",
                     background:
@@ -145,18 +251,70 @@ export function StackDiagram({
                         ? "color-mix(in oklch, var(--accent) 12%, var(--bg-elev))"
                         : "var(--bg-sunk)",
                     fontSize: 13,
-                    padding: "6px 12px",
+                    padding: "2px 4px 2px 8px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
                   }}
                 >
-                  <span>{h.emoji}</span>
-                  {h.name}
+                  <button
+                    type="button"
+                    data-testid={`stack-chip-link-${h.id}`}
+                    onClick={() => handleChipClick(h.id)}
+                    aria-label={
+                      h.id === habit.id ? `Current: ${h.name}` : `Open ${h.name}`
+                    }
+                    style={{
+                      all: "unset",
+                      cursor: h.id === habit.id ? "default" : "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      padding: "4px 0",
+                    }}
+                  >
+                    <span>{h.emoji}</span>
+                    <span>{h.name}</span>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${h.name} from stack`}
+                    data-testid={`stack-chip-remove-${h.id}`}
+                    onClick={(event) => {
+                      // Don't let the click bubble up; it's a sibling of the
+                      // navigation button anyway, but pointerdown propagation
+                      // could otherwise trigger a Reorder drag-start.
+                      event.stopPropagation();
+                      event.preventDefault();
+                      void handleNodeRemove(h.id);
+                    }}
+                    onPointerDown={(event) => {
+                      event.stopPropagation();
+                    }}
+                    style={{
+                      all: "unset",
+                      marginLeft: 2,
+                      width: 18,
+                      height: 18,
+                      borderRadius: 9,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 12,
+                      lineHeight: 1,
+                      color: "var(--ink-3)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    ×
+                  </button>
                 </div>
-                {index < chain.length - 1 && (
-                  <span style={{ color: "var(--ink-3)", fontSize: 14 }}>→</span>
+                {index < orderedChain.length - 1 && (
+                  <span style={{ color: "var(--ink-3)", fontSize: 14, marginLeft: 4 }}>→</span>
                 )}
-              </div>
+              </Reorder.Item>
             ))}
-          </div>
+          </Reorder.Group>
         </>
       ) : (
         <div style={{ textAlign: "center", padding: "24px 12px" }}>

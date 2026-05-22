@@ -11,6 +11,7 @@ import {
   isInStack,
   stackInsertPatches,
   stackRemovePatches,
+  stackReorderPatches,
   wouldCreateCycle,
 } from "@/lib/stack";
 import type { Habit } from "@/lib/types";
@@ -294,5 +295,78 @@ describe("cycle safety on corrupted data", () => {
     const ids = new Set(Array.from(groups.values()).flat().map((h) => h.id));
     expect(ids.has("a")).toBe(true);
     expect(ids.has("b")).toBe(true);
+  });
+});
+
+describe("stackReorderPatches", () => {
+  it("returns null-first-then-link patches for a 2-item swap", () => {
+    // Reorder [a, b] -> [b, a]. Two nulls, one link.
+    const patches = stackReorderPatches(["b", "a"]);
+    expect(patches).toEqual([
+      { id: "b", patch: { stackNextId: null } },
+      { id: "a", patch: { stackNextId: null } },
+      { id: "b", patch: { stackNextId: "a" } },
+    ]);
+  });
+
+  it("returns 3 nulls + 2 links for a 3-item chain", () => {
+    const patches = stackReorderPatches(["a", "c", "b"]);
+    expect(patches).toEqual([
+      { id: "a", patch: { stackNextId: null } },
+      { id: "c", patch: { stackNextId: null } },
+      { id: "b", patch: { stackNextId: null } },
+      { id: "a", patch: { stackNextId: "c" } },
+      { id: "c", patch: { stackNextId: "b" } },
+    ]);
+  });
+
+  it("returns 4 nulls + 3 links for a 4-item chain", () => {
+    const patches = stackReorderPatches(["d", "a", "b", "c"]);
+    expect(patches.length).toBe(7);
+    // First N are nulls.
+    expect(patches.slice(0, 4).every((p) => p.patch.stackNextId === null)).toBe(true);
+    expect(patches.slice(0, 4).map((p) => p.id)).toEqual(["d", "a", "b", "c"]);
+    // Last N-1 are links.
+    expect(patches.slice(4)).toEqual([
+      { id: "d", patch: { stackNextId: "a" } },
+      { id: "a", patch: { stackNextId: "b" } },
+      { id: "b", patch: { stackNextId: "c" } },
+    ]);
+  });
+
+  it("guarantees no intermediate patch step has two habits pointing at the same successor", () => {
+    // Simulate applying patches in order against an initial chain and verify
+    // the stackNextId @unique invariant holds after every step.
+    const habits = new Map<string, { id: string; stackNextId: string | null }>([
+      ["a", { id: "a", stackNextId: "b" }],
+      ["b", { id: "b", stackNextId: "c" }],
+      ["c", { id: "c", stackNextId: null }],
+    ]);
+    const patches = stackReorderPatches(["c", "a", "b"]);
+
+    for (const { id, patch } of patches) {
+      const target = habits.get(id);
+      if (!target) throw new Error(`missing habit ${id}`);
+      target.stackNextId = patch.stackNextId ?? null;
+
+      // Check no two habits share the same non-null stackNextId.
+      const seen = new Set<string>();
+      for (const h of habits.values()) {
+        if (h.stackNextId === null) continue;
+        expect(seen.has(h.stackNextId)).toBe(false);
+        seen.add(h.stackNextId);
+      }
+    }
+
+    expect(habits.get("c")?.stackNextId).toBe("a");
+    expect(habits.get("a")?.stackNextId).toBe("b");
+    expect(habits.get("b")?.stackNextId).toBeNull();
+  });
+
+  it("keeps the tail's stackNextId null", () => {
+    const patches = stackReorderPatches(["x", "y", "z"]);
+    const final = new Map<string, string | null>();
+    for (const { id, patch } of patches) final.set(id, patch.stackNextId ?? null);
+    expect(final.get("z")).toBeNull();
   });
 });

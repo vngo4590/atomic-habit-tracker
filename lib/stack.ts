@@ -184,6 +184,35 @@ export function stackRemovePatches(habitId: string, habits: Habit[]): StackPatch
 }
 
 /**
+ * Returns an ordered list of `{ id, patch }` updates that safely reorders a
+ * stack chain into the exact sequence in `habitIds`. The order matters:
+ * because `stackNextId` is `@unique` at the database layer, we first null
+ * every listed habit's pointer, then write the new links.
+ *
+ * Pre-condition: the caller (server) has already verified that `habitIds`
+ * is exactly the set of habits in the chain (no merges/splits via reorder).
+ * No outside habit (active or archived) may point into the chain — this is
+ * always true for a closed chain by construction.
+ */
+export function stackReorderPatches(habitIds: string[]): StackPatch[] {
+  const patches: StackPatch[] = [];
+
+  // Phase 1: null every chain member's pointer so the unique constraint has
+  // no chance of firing as we rewire.
+  for (const id of habitIds) {
+    patches.push({ id, patch: { stackNextId: null } });
+  }
+
+  // Phase 2: link each habit to the next one in the new order. The tail
+  // remains null (terminating the chain).
+  for (let i = 0; i < habitIds.length - 1; i += 1) {
+    patches.push({ id: habitIds[i], patch: { stackNextId: habitIds[i + 1] } });
+  }
+
+  return patches;
+}
+
+/**
  * For the Today page: return the first undone habit in each stack chain.
  * Returns one entry per chain that has at least one undone habit on the
  * given date.

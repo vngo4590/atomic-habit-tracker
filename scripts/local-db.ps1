@@ -224,6 +224,44 @@ async function main() {
       habits.push(habit);
     }
 
+    // Link a deterministic subset of habits into 1-2 chains so demo data
+    // includes habit stacks alongside solo habits. Subsets never overlap so
+    // we never violate the stackNextId @unique constraint.
+    {
+      const stackable = habits.slice();
+      const used = new Set<string>();
+      const chainCount = stackable.length >= 4 ? 2 : stackable.length >= 2 ? 1 : 0;
+      let cursor = userIndex;
+      for (let c = 0; c < chainCount; c += 1) {
+        const remaining = stackable.filter((h) => !used.has(h.id));
+        if (remaining.length < 2) break;
+        const maxLen = Math.min(4, remaining.length);
+        const chainLen = 2 + (cursor % Math.max(1, maxLen - 1));
+        const chain: typeof stackable = [];
+        for (let i = 0; i < chainLen; i += 1) {
+          const pickIndex = (cursor + i * 3) % remaining.length;
+          const candidate = remaining[pickIndex];
+          if (used.has(candidate.id) || chain.find((h) => h.id === candidate.id)) {
+            const fallback = remaining.find((h) => !used.has(h.id) && !chain.find((m) => m.id === h.id));
+            if (!fallback) break;
+            chain.push(fallback);
+          } else {
+            chain.push(candidate);
+          }
+        }
+        if (chain.length < 2) continue;
+        for (let i = 0; i < chain.length - 1; i += 1) {
+          await db.habit.update({
+            where: { id: chain[i].id },
+            data: { stackNextId: chain[i + 1].id },
+          });
+          used.add(chain[i].id);
+        }
+        used.add(chain[chain.length - 1].id);
+        cursor += chain.length + 1;
+      }
+    }
+
     for (let day = 0; day < days; day += 1) {
       const key = dateKey(day);
 
@@ -520,6 +558,36 @@ async function main() {
       }
 
       habits.push(habit);
+    }
+
+    // Link a random subset of non-archived habits into 1-2 chains so demo
+    // data includes habit stacks. Subsets never overlap (and exclude
+    // archived habits) so we never violate the stackNextId @unique
+    // constraint.
+    {
+      const stackable = habits.filter((h) => !h.archivedAt);
+      const used = new Set<string>();
+      const chainCount = stackable.length >= 4 ? randomInt(1, 2) : stackable.length >= 2 ? 1 : 0;
+      for (let c = 0; c < chainCount; c += 1) {
+        const remaining = stackable.filter((h) => !used.has(h.id));
+        if (remaining.length < 2) break;
+        const maxLen = Math.min(4, remaining.length);
+        const chainLen = randomInt(2, maxLen);
+        const shuffled = remaining.slice();
+        for (let i = shuffled.length - 1; i > 0; i -= 1) {
+          const j = randomInt(0, i);
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        const chain = shuffled.slice(0, chainLen);
+        for (let i = 0; i < chain.length - 1; i += 1) {
+          await db.habit.update({
+            where: { id: chain[i].id },
+            data: { stackNextId: chain[i + 1].id },
+          });
+          used.add(chain[i].id);
+        }
+        used.add(chain[chain.length - 1].id);
+      }
     }
 
     for (let day = days; day >= 0; day -= 1) {

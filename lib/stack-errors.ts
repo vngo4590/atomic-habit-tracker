@@ -10,7 +10,8 @@ export type StackErrorCode =
   | "target_in_other_stack"
   | "source_in_other_stack"
   | "habit_not_found"
-  | "target_not_found";
+  | "target_not_found"
+  | "invalid_reorder";
 
 export class StackError extends Error {
   readonly code: StackErrorCode;
@@ -29,6 +30,7 @@ export const STACK_ERROR_MESSAGES: Record<StackErrorCode, string> = {
   source_in_other_stack: "This habit is already in another stack. Remove it first.",
   habit_not_found: "Habit was not found.",
   target_not_found: "Target habit was not found.",
+  invalid_reorder: "Reorder must include exactly the habits in this stack.",
 };
 
 export function makeStackError(code: StackErrorCode) {

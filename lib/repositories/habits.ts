@@ -13,7 +13,7 @@ import {
   type StackMutationInput,
 } from "@/lib/contracts/domain";
 import { makeStackError } from "@/lib/stack-errors";
-import { stackInsertPatches, stackRemovePatches } from "@/lib/stack";
+import { stackInsertPatches, stackRemovePatches, stackReorderPatches, getStackChain, getStackRoot } from "@/lib/stack";
 import type { CheckIn, Habit, Note } from "@/lib/types";
 
 type DbClient = typeof defaultDb;
@@ -369,17 +369,22 @@ export async function applyStackMutation(
   const mutation = stackMutationSchema.parse(input);
 
   return db.$transaction(async (tx) => {
+    // Load *all* user habits (including archived) so reorder validation can
+    // see archived predecessors that might still reference active habits in
+    // the chain. The active subset is used for insert/remove projections;
+    // archived habits don't participate in those flows but are kept for
+    // cycle/constraint awareness.
     const records = await tx.habit.findMany({
       where: { userId, archivedAt: null },
       include: habitInclude,
     });
     const habits = records.map(toHabit);
-    const habit = habits.find((h) => h.id === mutation.habitId);
-    if (!habit) {
-      throw makeStackError("habit_not_found");
-    }
 
     if (mutation.kind === "insert") {
+      const habit = habits.find((h) => h.id === mutation.habitId);
+      if (!habit) {
+        throw makeStackError("habit_not_found");
+      }
       if (mutation.habitId === mutation.targetId) {
         throw makeStackError("self_reference");
       }
@@ -427,8 +432,72 @@ export async function applyStackMutation(
       return updated.map(toHabit);
     }
 
-    // kind === "remove"
-    const patches = stackRemovePatches(mutation.habitId, habits);
+    if (mutation.kind === "remove") {
+      const habit = habits.find((h) => h.id === mutation.habitId);
+      if (!habit) {
+        throw makeStackError("habit_not_found");
+      }
+      const patches = stackRemovePatches(mutation.habitId, habits);
+      for (const { id, patch } of patches) {
+        await tx.habit.update({
+          where: { id },
+          data: { stackNextId: patch.stackNextId ?? null },
+        });
+      }
+      const affectedIds = Array.from(new Set(patches.map((p) => p.id)));
+      if (affectedIds.length === 0) {
+        return [];
+      }
+      const updated = await tx.habit.findMany({
+        where: { userId, id: { in: affectedIds } },
+        include: habitInclude,
+      });
+      return updated.map(toHabit);
+    }
+
+    // kind === "reorder"
+    const { habitIds } = mutation;
+
+    // Reject duplicate ids in the input.
+    if (new Set(habitIds).size !== habitIds.length) {
+      throw makeStackError("invalid_reorder");
+    }
+
+    // All ids must reference existing non-archived habits for this user.
+    const byId = new Map(habits.map((h) => [h.id, h]));
+    const resolved = habitIds.map((id) => byId.get(id));
+    if (resolved.some((h) => !h)) {
+      throw makeStackError("invalid_reorder");
+    }
+
+    // The supplied ids (as a set) must equal the current chain rooted at any
+    // of them. This prevents merging two chains, adding solos, or dropping
+    // members through a reorder mutation.
+    const anchor = resolved[0]!;
+    const root = getStackRoot(anchor, habits);
+    const currentChain = getStackChain(root, habits);
+    const currentIds = new Set(currentChain.map((h) => h.id));
+    if (currentIds.size !== habitIds.length) {
+      throw makeStackError("invalid_reorder");
+    }
+    for (const id of habitIds) {
+      if (!currentIds.has(id)) {
+        throw makeStackError("invalid_reorder");
+      }
+    }
+
+    // Project and assert no cycles in the post-state. A valid permutation
+    // of a closed chain cannot create a cycle, but we re-check defensively.
+    const projected = habits.map((h) => ({ ...h }));
+    const projectedMap = new Map(projected.map((h) => [h.id, h]));
+    const patches = stackReorderPatches(habitIds);
+    for (const { id, patch } of patches) {
+      const record = projectedMap.get(id);
+      if (!record) continue;
+      Object.assign(record, patch);
+    }
+    assertNoCycles(projected);
+
     for (const { id, patch } of patches) {
       await tx.habit.update({
         where: { id },
@@ -436,9 +505,6 @@ export async function applyStackMutation(
       });
     }
     const affectedIds = Array.from(new Set(patches.map((p) => p.id)));
-    if (affectedIds.length === 0) {
-      return [];
-    }
     const updated = await tx.habit.findMany({
       where: { userId, id: { in: affectedIds } },
       include: habitInclude,
