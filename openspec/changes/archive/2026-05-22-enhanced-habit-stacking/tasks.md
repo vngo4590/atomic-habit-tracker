@@ -58,3 +58,18 @@
 - [x] 6.4 Run `npm run build` and verify production build succeeds
 - [x] 6.5 Run Playwright E2E suite and verify all pass
 - [x] 6.6 Update `AGENTS.md` if any conventions or patterns changed
+
+## 7. Post-spec Enhancements (implemented after initial spec completion)
+
+- [x] 7.1 Relaxed insert rules — solo habit can be added anywhere in any chain (left/right)
+- [x] 7.2 Picker cap at 10 with "Show all" expand + search-resets-expansion
+- [x] 7.3 Seed stacks in `scripts/local-db.ps1` random-data and fake-history generators
+- [x] 7.4 Clickable chain chips — navigate to habit detail on click
+- [x] 7.5 Per-chip × button — unlink any node without leaving the Stack tab
+- [x] 7.6 Drag-to-reorder via Framer Motion `Reorder.Group` + `reorder` mutation kind
+- [x] 7.7 `stackReorderPatches` two-phase null-then-link patch algorithm
+- [x] 7.8 Symmetric picker with chain-gravity — solo anchor offers all habits; picking a chain member inserts the solo into that chain
+- [x] 7.9 Stack diagram horizontal scroll fix (no line-wrap overlap during drag)
+- [x] 7.10 Full markdown rendering in journal entries (remark-gfm + `.markdown-body` CSS)
+- [x] 7.11 StackError class + codes + friendly messages shared across repo/action/API/UI
+- [x] 7.12 Modal for stack-mutation error acknowledgement (replaces toast)
