@@ -9,7 +9,7 @@ description: Complete orientation guide for the Atomicly habit tracker codebase.
 
 Atomicly is a backend-backed habit practice app inspired by *Atomic Habits*. Users design habits using the habit loop framework (cue -> craving -> response -> reward), check in daily, journal, reflect weekly, vote on their identity, and work through a 36-lesson curriculum. The app uses a PostgreSQL backend with Auth.js/NextAuth authentication; all authenticated habit domain data lives in the database.
 
-**Stack:** Next.js 16.2.4 (App Router), React 19.2.4, TypeScript, Tailwind CSS 4, Prisma 7.8 with `@prisma/adapter-pg`, Auth.js/NextAuth v5 beta, PostgreSQL, Docker (local dev), Vitest.
+**Stack:** Next.js 16.2.4 (App Router), React 19.2.4, TypeScript, Tailwind CSS 4, Framer Motion 12, Prisma 7.8 with `@prisma/adapter-pg`, Auth.js/NextAuth v5 beta, PostgreSQL, Docker (local dev), Vitest, Playwright (E2E).
 
 ---
 
@@ -43,12 +43,23 @@ The helper is guarded for the local Docker database URL on `localhost:55432`. Us
 Validation commands:
 
 ```bash
-npm run test:run             # unit/integration tests
+npm run test:run             # unit/integration tests (Vitest)
+npm run test:e2e             # end-to-end tests (Playwright)
 npm run typecheck            # TypeScript
 npm run lint:app             # scoped lint for app/components/lib/scripts
 npm run build                # production build
 npm run prisma:migrate:status # local migration status check
 npm run backend:validate     # Prisma, TypeScript, lint, tests, and build
+```
+
+Local Kubernetes (Docker Desktop) helper at `scripts/local-kube.ps1`:
+
+```bash
+npm run kube:deploy          # build images and apply k8s/local manifests
+npm run kube:update          # rebuild app image and roll the deployment
+npm run kube:restart         # restart the deployment pods
+npm run kube:stop            # scale the deployment to zero
+npm run kube:cleanup         # delete the local namespace and images
 ```
 
 ---
@@ -69,39 +80,55 @@ app/
     hall-of-fame/  # /hall-of-fame
     identity/      # /identity
     settings/      # /settings
-  api/v1/          # REST API for mobile/external clients
+  api/v1/          # REST API for mobile/external clients (habits, reflection, session)
   api/healthz/     # Public health endpoint for containers/Kubernetes probes
   api/auth/        # NextAuth handlers
 
 components/        # Reusable client UI components
+  motion/          # Framer Motion primitives (FadeIn, SlideIn, HoverLift, etc.)
+  StackCardGroup.tsx  # Apple Wallet-style stacked habit card group (Today page)
+  StackDiagram.tsx    # Horizontal stack chain diagram (habit detail Stack tab)
 lib/
   actions/         # Server actions (domain.ts, auth.ts)
   api/             # API response helpers
+  animations.ts    # Shared Framer Motion presets, easings, durations, variants
   auth/            # credentials, register, password, session helpers
   contracts/       # Zod validation contracts shared by server actions and API
-  db/              # Prisma client singleton
+  db/              # Prisma client singleton (client.ts, config.ts)
   generated/prisma/# Generated Prisma 7 client output
+  hooks/           # Shared React hooks (e.g., useMotionReduced)
   repositories/    # User-scoped DB queries (habits.ts, reflection.ts, users.ts)
   date-keys.ts     # UTC/local date-key conversion helpers
   types.ts         # All shared TypeScript types
   store.ts         # In-memory optimistic cache (StoreState)
+  stack.ts         # Habit-stack linked-list helpers and patches
+  schedule.ts      # Schedule parsing and date-checking utilities
   helpers.ts       # Date key utils, formatting
   lessons-data.ts  # Static 36-lesson curriculum
+  sample-data.ts   # Sample/demo data fixtures
+  test/            # Shared deterministic test fixtures and helpers
 
 prisma/
   schema.prisma    # All models (User, Habit, HabitCheckIn, JournalEntry, etc.)
   migrations/      # Committed migration SQL files
+  seed.ts          # Dev account + initial data seed
 scripts/
-  __tests__/local-db.test.ts
-  local-db.ps1     # Local Docker Postgres helper for setup, cleanup, migrations, demo data
-  README.md        # How to run local scripts and database helpers
+  __tests__/       # Regression tests for local-db and local-k8s helpers
+  local-db.ps1     # Local Docker Postgres helper (setup, cleanup, migrations, demo data)
+  local-kube.ps1   # Local Docker Desktop Kubernetes helper (deploy, update, restart, stop, cleanup)
   sync-agent-skills.ps1
+  README.md        # How to run local scripts and database helpers
+e2e/               # Playwright end-to-end specs and auth fixtures
 docs/
   architecture/backend-auth-mobile.md # Provider choices, Vercel notes, migration safety
+infra/             # Azure Bicep templates and deployment scripts (cloud target)
 k8s/
   local/           # Docker Desktop Kubernetes manifests for local testing
+docker-compose.yml # Local Postgres + app compose stack
 Dockerfile         # Multi-stage Next standalone runner and Prisma migrator image
 .dockerignore      # Docker build-context exclusions
+playwright.config.ts
+vitest.config.mts
 
 .agents/skills/    # Canonical project-local skills (edit here)
 .claude/skills/    # Auto-generated symlink — DO NOT edit directly
@@ -113,10 +140,10 @@ Dockerfile         # Multi-stage Next standalone runner and Prisma migrator imag
 
 | Route | Screen |
 |---|---|
-| `/` | Today dashboard — shows only undone habits scheduled for today; simplified cards with check circle, name+identity, streak, 30-day progress; habit search across all habits |
+| `/` | Today dashboard — shows only undone habits scheduled for today; stacked habits render as Apple Wallet-style `StackCardGroup` with expand/collapse; solo cards show check circle, name+identity, streak, 30-day progress; habit search across all habits |
 | `/habits` | Habit library — All / Done / Upcoming tabs; check/undo circles; search and sort by streak, rate, newest, or name |
 | `/habits/new` | New habit builder — inline Mad-Libs sentence with schedule presets and time-block selection |
-| `/habits/[id]` | Habit detail with Overview reveal panels for the 4 laws and habit loop, plus journal/history/notes tabs; back button uses `router.back()` |
+| `/habits/[id]` | Habit detail with Overview reveal panels for the 4 laws and habit loop, plus journal/history/notes/contracts/**Stack** tabs (Stack tab renders the `StackDiagram` chain visualization with link/unlink controls); back button uses `router.back()` |
 | `/analytics` | Adherence stats and charts |
 | `/journal` | Journal entries |
 | `/review` | Weekly review with current review display/edit, top-five past review summaries, and paged archive |
@@ -199,9 +226,15 @@ All habit-day references use local `YYYY-MM-DD` strings generated by helpers in 
 | `app/(auth)/register/page.tsx` | Registration route — redirects authenticated users to `/` or a validated `callbackUrl` |
 | `lib/auth/register.ts` | Account creation logic |
 | `lib/schedule.ts` | Schedule parsing and date-checking utilities (`isScheduledForDate`, `nextScheduledDateKey`, `formatNextDayLabel`, `formatScheduleLabel`) |
+| `lib/stack.ts` | Habit stack linked-list helpers: `getStackChain`, `getStackRoot`, `getSuccessor`, `wouldCreateCycle`, `stackInsertPatches`, `stackRemovePatches`, `getVisibleStackHabit`, `groupHabitsByStack` |
+| `lib/animations.ts` | Shared Framer Motion presets — spring configs, easing curves, durations, variants |
 | `lib/store.ts` | Schedule-aware metric calculations: `streak()`, `longestStreak()`, and `completionRate()` all respect `habit.schedule` via `isScheduledForDate` |
-| `lib/repositories/habits.ts` | Habit DB queries |
+| `lib/repositories/habits.ts` | Habit DB queries (including `stackNextId` linked-list links) |
 | `lib/repositories/reflection.ts` | Journal, weekly review, lessons DB queries |
+| `components/StackCardGroup.tsx` | Apple Wallet-style stacked habit card group on Today page (expand/collapse, "+N more" overflow) |
+| `components/StackDiagram.tsx` | Horizontal stack chain diagram with arrows and current-habit highlight |
+| `components/motion/` | Reusable Framer Motion primitives (`FadeIn`, `SlideIn`, `HoverLift`, `ScaleOnTap`, `StaggerContainer`, `PageTransition`, `AnimatedNumber`) |
+| `e2e/stack.spec.ts` | Playwright E2E test covering stack CRUD, exclusivity, and Today-page card stack interactions |
 | `docs/architecture/backend-auth-mobile.md` | Provider choices, Vercel setup, migration safety, smoke checklist |
 | `Dockerfile` | Multi-stage container build: `runner` for standalone Next.js, `migrator` for Prisma migrations |
 | `k8s/local/` | Local Docker Desktop Kubernetes overlay: namespace, app Deployment/Service, migration Job, and local-only secrets. PostgreSQL is provided by the host Docker Compose database at `host.docker.internal:55432`. |
@@ -223,11 +256,14 @@ The project uses OpenSpec to track planned changes. Before implementing any plan
 
 Current OpenSpec state:
 
-- `openspec/changes/settings-account-email-notifications/` is the active in-progress change.
-- `openspec/changes/archive/2026-04-29-port-reference-ui/` contains the archived reference UI port.
-- `openspec/changes/archive/2026-05-11-backend-auth-mobile-architecture/` contains the archived backend/auth/mobile architecture change.
-- `openspec/changes/archive/2026-05-12-add-unit-integration-tests/` contains the archived unit and integration test coverage change.
-- `openspec/specs/` now contains canonical specs synced from archived changes: `backend-data-model`, `deployment-architecture`, `habit-api`, `mobile-bridge-readiness`, `reflection-api`, `responsive-app-shell`, `test-coverage`, and `user-auth`.
+- Active in-progress changes:
+  - `openspec/changes/enhanced-habit-stacking/` — Habit-stack linked-list data model, Stack tab on habit detail, Apple Wallet-style stack cards on Today, and Playwright E2E setup. All `tasks.md` items are checked; ready to archive.
+  - `openspec/changes/settings-account-email-notifications/` — Real account data, email verification, email-change confirmation flow, and transactional notification emails.
+- Archived changes (`openspec/changes/archive/`):
+  - `2026-04-29-port-reference-ui/` — Reference UI port.
+  - `2026-05-11-backend-auth-mobile-architecture/` — Backend, auth, and mobile-API architecture.
+  - `2026-05-12-add-unit-integration-tests/` — Unit and integration test coverage.
+- Canonical specs in `openspec/specs/`: `analytics-screen`, `app-shell`, `backend-data-model`, `create-habit`, `deployment-architecture`, `design-tokens`, `habit-api`, `habit-detail`, `habit-store`, `habits-list`, `hall-of-fame`, `identity-screen`, `journal-screen`, `lessons-screen`, `mobile-bridge-readiness`, `onboarding`, `reflection-api`, `responsive-app-shell`, `settings-screen`, `test-coverage`, `today-screen`, `user-auth`, `weekly-review`.
 
 To propose a new change: `/openspec-propose <description>`.
 To implement: `/opsx:apply`.
@@ -262,6 +298,30 @@ All core habit metrics in `lib/store.ts` are **schedule-aware** — they evaluat
 
 ---
 
+## Habit Stacking
+
+Habit stacks are modeled as a **linked list** of habits via a self-referencing `stackNextId` field on `Habit`. Helpers live in `lib/stack.ts`.
+
+### Data model rules
+- `habit.stackNextId` is a nullable foreign key pointing to the next habit in the chain.
+- **Exclusivity**: at most one habit may link to any given habit (enforced as a unique constraint on `stackNextId`).
+- **No cycles**: server-side validation in habit update actions rejects any link that would form a cycle (direct or indirect). Use `wouldCreateCycle(habits, fromId, toId)` from `lib/stack.ts` before persisting a link.
+
+### Core helpers (`lib/stack.ts`)
+- `getStackRoot(habits, habitId)` — walk backward to find the chain head.
+- `getStackChain(habits, rootId)` — return the ordered chain starting from a root.
+- `getSuccessor(habits, habitId)` — return the habit that `habitId` links to.
+- `stackInsertPatches(habits, sourceId, targetId, position)` — produce the `{id, stackNextId}` patch list to insert `source` before/after `target` while keeping the chain consistent.
+- `stackRemovePatches(habits, habitId)` — produce patches to unlink a habit and reconnect its neighbors.
+- `getVisibleStackHabit(habits, todayKey)` — return the first undone habit per chain for the Today screen.
+- `groupHabitsByStack(habits)` — group habits by their root id for rendering.
+
+### UI surfaces
+- **Today (`/`)**: stacked chains render as `StackCardGroup` (Apple Wallet-style). Tapping expands to show the next up to 2 habits with a `+N more` overflow indicator. Solo habits continue to render as standalone cards.
+- **Habit detail (`/habits/[id]`)**: a **Stack** tab renders `StackDiagram` (horizontal chain with arrows, current habit highlighted) plus link/unlink controls and inline error messaging for exclusivity/cycle violations.
+
+---
+
 ## Testing
 
 - Unit and deterministic integration tests live alongside their modules in `__tests__/` subdirectories under `app/`, `components/`, `lib/`, and `scripts/`.
@@ -269,6 +329,7 @@ All core habit metrics in `lib/store.ts` are **schedule-aware** — they evaluat
 - Run a focused file with `npm exec vitest run path/to/file.test.ts`; run the full deterministic suite with `npm exec vitest run` (not `npm test -- --run`, which doesn't pass flags correctly).
 - The default Vitest suite must not require Docker, Kubernetes, network access, seeded data, or a live database; document those checks as optional smoke tests instead.
 - After changing server actions, repositories, or store logic, run the full test suite.
+- **End-to-end tests** use Playwright. Specs live in `e2e/`, auth fixtures in `e2e/auth.setup.ts`, and config in `playwright.config.ts`. Run with `npm run test:e2e`. E2E tests require the dev server and seeded local database.
 - Local Kubernetes manifests can be validated without applying them by running `kubectl kustomize k8s/local`; deterministic manifest assertions live in `scripts/__tests__/local-k8s.test.ts`.
 - Run `npm run build` before marking any broad change complete.
 - For broad backend/deployment changes, run `npm run backend:validate` when practical; it performs Prisma validation/generation, typecheck, scoped lint, tests, and build.
