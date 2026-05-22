@@ -30,6 +30,8 @@ jobs:
   # -------------------------------------------------------------------------
   validate:
     runs-on: ubuntu-latest
+    # Prevent the entire job from hanging if any step stalls.
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,21 +44,27 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+        timeout-minutes: 5
 
       - name: Generate Prisma client
         run: npm run prisma:generate
+        timeout-minutes: 2
 
       - name: TypeScript check
         run: npm run typecheck
+        timeout-minutes: 5
 
       - name: Lint
         run: npm run lint:app
+        timeout-minutes: 5
 
       - name: Run tests
         run: npm run test:run
+        timeout-minutes: 5
 
       - name: Build application
         run: npm run build
+        timeout-minutes: 10
 
   # e2e:
   #   needs: validate
