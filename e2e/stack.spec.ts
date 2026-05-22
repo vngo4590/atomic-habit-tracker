@@ -253,22 +253,41 @@ test.describe("Habit stacking", () => {
     await expect(page.locator('[data-testid="stack-link-show-less"]')).not.toBeVisible();
   });
 
-  test("only solo habits appear in the link selector", async ({ page }) => {
+  test("when current habit is in a chain, the link selector excludes chain members", async ({ page }) => {
+    // Build A → B so A and B are both in a chain. Open B's Stack tab (chain
+    // member) — picker must exclude A and B and only offer the solo C.
     const idA = await seedHabit(page, unique("Solo Filter A"), "soloer");
     const idB = await seedHabit(page, unique("Solo Filter B"), "soloer");
     const idC = await seedHabit(page, unique("Solo Filter C"), "soloer");
 
-    // Build A → B so A and B are both in a stack; C remains solo.
+    await setStackNextId(page, idA, idB);
+
+    // Anchor B is in a chain → picker is restricted to standalones only.
+    await openStackTab(page, idB);
+    await page.click('button:has-text("Link after…")');
+
+    await expect(page.locator(`[data-testid="stack-link-option-${idA}"]`)).toHaveCount(0);
+    await expect(page.locator(`[data-testid="stack-link-option-${idB}"]`)).toHaveCount(0);
+    await expect(page.locator(`[data-testid="stack-link-option-${idC}"]`)).toBeVisible();
+  });
+
+  test("when current habit is solo, the link selector includes chain members (symmetric picker)", async ({ page }) => {
+    // Same setup: A → B chain, C solo. Open C (solo) — picker now offers
+    // every other habit including chain members A and B so the solo can
+    // join the existing chain.
+    const idA = await seedHabit(page, unique("Sym Filter A"), "symmer");
+    const idB = await seedHabit(page, unique("Sym Filter B"), "symmer");
+    const idC = await seedHabit(page, unique("Sym Filter C"), "symmer");
+
     await setStackNextId(page, idA, idB);
 
     await openStackTab(page, idC);
     await page.click('button:has-text("Link after…")');
 
-    // A and B are not solo and must not be selectable.
-    await expect(page.locator('button.chip:has-text("Solo Filter A")')).not.toBeVisible();
-    await expect(page.locator('button.chip:has-text("Solo Filter B")')).not.toBeVisible();
-    // The picker has no other solo habits besides current — show empty state.
-    await expect(page.locator('[data-testid="stack-link-empty"]')).toBeVisible();
+    await expect(page.locator(`[data-testid="stack-link-option-${idA}"]`)).toBeVisible();
+    await expect(page.locator(`[data-testid="stack-link-option-${idB}"]`)).toBeVisible();
+    // Current habit (C) is never offered as a candidate.
+    await expect(page.locator(`[data-testid="stack-link-option-${idC}"]`)).toHaveCount(0);
   });
 
   test("client-side cycle prevention shows inline error", async ({ page }) => {
@@ -786,5 +805,77 @@ test.describe("Responsive layout", () => {
     // The chain should now show only A as solo.
     await expect(page.locator('text=This habit is not part of a stack.')).toBeVisible({ timeout: 5000 });
     expect(page.url()).toBe(urlBefore);
+  });
+
+  test("a standalone habit can join an existing chain by picking any chain member", async ({ page }) => {
+    // Build chain A → B → C, plus solo S. From S's Stack tab, the picker
+    // should include every other habit (chain members AND any other solos).
+    // Picking B with "Link after…" must produce A → B → S → C.
+    const idA = await seedHabit(page, unique("Solo Join A"), "joiner");
+    const idB = await seedHabit(page, unique("Solo Join B"), "joiner");
+    const idC = await seedHabit(page, unique("Solo Join C"), "joiner");
+    const idS = await seedHabit(page, unique("Solo Join S"), "joiner");
+    await setStackNextId(page, idA, idB);
+    await setStackNextId(page, idB, idC);
+
+    await openStackTab(page, idS);
+    // Empty-state for the solo habit.
+    await expect(page.locator('text=This habit is not part of a stack.')).toBeVisible();
+
+    await page.click('button:has-text("Link after…")');
+    // Picker must offer chain members A, B, C when the current habit is solo.
+    await expect(page.locator(`[data-testid="stack-link-option-${idA}"]`)).toBeVisible();
+    await expect(page.locator(`[data-testid="stack-link-option-${idB}"]`)).toBeVisible();
+    await expect(page.locator(`[data-testid="stack-link-option-${idC}"]`)).toBeVisible();
+
+    await page.click(`[data-testid="stack-link-option-${idB}"]`);
+
+    // Poll the API until the server commit lands. Expected chain:
+    //   A → B → S → C, and C is the tail (stackNextId === null).
+    await expect
+      .poll(
+        async () => {
+          const listRes = await page.request.get("/api/v1/habits");
+          const body = await listRes.json();
+          const habits = body.data?.habits as Array<{ id: string; stackNextId: string | null }>;
+          return {
+            a: habits.find((h) => h.id === idA)?.stackNextId ?? null,
+            b: habits.find((h) => h.id === idB)?.stackNextId ?? null,
+            s: habits.find((h) => h.id === idS)?.stackNextId ?? null,
+            c: habits.find((h) => h.id === idC)?.stackNextId ?? null,
+          };
+        },
+        { timeout: 5000 },
+      )
+      .toEqual({ a: idB, b: idS, s: idC, c: null });
+  });
+
+  test("a standalone habit can join the top of a chain via Link before…", async ({ page }) => {
+    // Chain A → B, solo S. From S's Stack tab pick A with "Link before…"
+    // → result: S → A → B (S is now the head).
+    const idA = await seedHabit(page, unique("Head Join A"), "topper");
+    const idB = await seedHabit(page, unique("Head Join B"), "topper");
+    const idS = await seedHabit(page, unique("Head Join S"), "topper");
+    await setStackNextId(page, idA, idB);
+
+    await openStackTab(page, idS);
+    await page.click('button:has-text("Link before…")');
+    await page.click(`[data-testid="stack-link-option-${idA}"]`);
+
+    await expect
+      .poll(
+        async () => {
+          const listRes = await page.request.get("/api/v1/habits");
+          const body = await listRes.json();
+          const habits = body.data?.habits as Array<{ id: string; stackNextId: string | null }>;
+          return {
+            s: habits.find((h) => h.id === idS)?.stackNextId ?? null,
+            a: habits.find((h) => h.id === idA)?.stackNextId ?? null,
+            b: habits.find((h) => h.id === idB)?.stackNextId ?? null,
+          };
+        },
+        { timeout: 5000 },
+      )
+      .toEqual({ s: idA, a: idB, b: null });
   });
 });

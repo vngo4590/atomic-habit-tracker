@@ -83,20 +83,44 @@ export function StackDiagram({
   const wasDraggedRef = useRef(false);
 
   /**
-   * The picker lists every habit that is **not** already in a stack and is
-   * not the current habit itself. Those are the standalone habits the user
-   * may insert before/after the current habit, which acts as the anchor.
+   * Whether the current habit is itself standalone (no successor, no
+   * predecessor). When true, the picker semantics flip — see
+   * `availableHabits` and `handleLink` below.
+   */
+  const currentIsSolo = useMemo(() => !isInStack(habit, habits), [habit, habits]);
+
+  /**
+   * Picker behaviour is **symmetric** based on the current habit's state:
+   *
+   *   - Current habit is in a chain: picker lists every other **standalone**
+   *     habit. Picking one inserts that standalone before/after the anchor
+   *     (current) inside the existing chain.
+   *
+   *   - Current habit is standalone: picker lists **every other habit** —
+   *     chain members and standalones alike. Picking one means the current
+   *     standalone joins that habit's chain (when picked is in a chain), or
+   *     forms a new 2-chain anchored on current (when picked is also solo).
+   *
+   * In both cases the *inserted* habit (the source of the mutation) is
+   * always a solo — the server enforces this.
    */
   const availableHabits = useMemo(() => {
     const trimmed = query.trim().toLowerCase();
     return habits
-      .filter((h) => h.id !== habit.id && !isInStack(h, habits))
+      .filter((h) => {
+        if (h.id === habit.id) return false;
+        // When the current habit is itself solo, the user can pick any
+        // other habit to anchor against — including chain members.
+        if (currentIsSolo) return true;
+        // Otherwise only standalone habits are valid picks.
+        return !isInStack(h, habits);
+      })
       .filter((h) => {
         if (!trimmed) return true;
         const haystack = `${h.name} ${h.identity} ${h.cue}`.toLowerCase();
         return haystack.includes(trimmed);
       });
-  }, [habits, habit, query]);
+  }, [habits, habit, query, currentIsSolo]);
 
   /**
    * Slice the filtered list to the default limit unless the user has expanded
@@ -111,20 +135,37 @@ export function StackDiagram({
 
   const closeError = () => setErrorModal(null);
 
-  const handleLink = async (selectedSoloId: string) => {
+  /**
+   * Insert mutation arguments depend on which side is in a chain (the
+   * server requires the inserted habit `habitId` to be solo):
+   *
+   *   - Picked habit is in a chain → current must be solo (per the picker
+   *     filter). Current joins the picked's chain at the chosen position.
+   *     `{ habitId: current, targetId: picked }`.
+   *
+   *   - Picked habit is solo → keep the natural reading: the picked solo
+   *     is inserted before/after the current anchor. This branch covers
+   *     both "current is in a chain + picks a solo" and the symmetric
+   *     "current solo + picks another solo" case (the user expects the
+   *     button label to mean "Link [picked] before/after [me]" in that
+   *     mirror-image scenario).
+   *     `{ habitId: picked, targetId: current }`.
+   */
+  const handleLink = async (selectedId: string) => {
     if (!linkMode) return;
     const mode = linkMode;
     setLinkMode(null);
     setQuery("");
     setExpanded(false);
 
+    const picked = habits.find((h) => h.id === selectedId);
+    const pickedIsInChain = picked ? isInStack(picked, habits) : false;
+    const insertArgs = pickedIsInChain
+      ? { kind: "insert" as const, habitId: habit.id, position: mode, targetId: selectedId }
+      : { kind: "insert" as const, habitId: selectedId, position: mode, targetId: habit.id };
+
     try {
-      await store.applyStackMutation({
-        kind: "insert",
-        habitId: selectedSoloId,
-        position: mode,
-        targetId: habit.id,
-      });
+      await store.applyStackMutation(insertArgs);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Couldn't update the stack.";
       setErrorModal({ title: "Couldn't update the stack", message });
@@ -217,10 +258,11 @@ export function StackDiagram({
               display: "flex",
               alignItems: "center",
               gap: 8,
-              flexWrap: "wrap",
               marginBottom: 14,
-              padding: 0,
+              padding: "4px 0",
               listStyle: "none",
+              overflowX: "auto",
+              overflowY: "hidden",
             }}
           >
             {orderedChain.map((h, index) => (
@@ -238,7 +280,7 @@ export function StackDiagram({
                     wasDraggedRef.current = false;
                   }, 0);
                 }}
-                style={{ display: "flex", alignItems: "center", gap: 4, cursor: "grab" }}
+                style={{ display: "flex", alignItems: "center", gap: 4, cursor: "grab", flexShrink: 0 }}
               >
                 <div
                   data-testid="stack-chain-chip"
@@ -355,8 +397,10 @@ export function StackDiagram({
               data-testid="stack-link-empty"
             >
               {query.trim()
-                ? "No standalone habits match your search."
-                : "No standalone habits available. Remove a habit from its stack to make it selectable."}
+                ? "No habits match your search."
+                : currentIsSolo
+                  ? "No other habits exist yet. Create another habit to start a stack."
+                  : "No standalone habits available. Remove a habit from its stack to make it selectable."}
             </div>
           ) : (
             <>
