@@ -8,6 +8,7 @@ import {
   archiveHabit,
   updateHabit,
   upsertCheckIn,
+  applyStackMutation,
 } from "@/lib/repositories/habits";
 import {
   createJournalEntry,
@@ -29,6 +30,7 @@ import type {
   UserPreferences,
   WeeklyReviewAnswers,
 } from "@/lib/types";
+import type { StackMutationInput } from "@/lib/contracts/domain";
 
 function revalidateApp() {
   revalidatePath("/");
@@ -69,10 +71,28 @@ export async function createHabitAction(draft: HabitDraft) {
 
 export async function updateHabitAction(habitId: string, patch: Partial<Habit>) {
   const userId = await requireUserId();
+  // Stack validation (cycle, exclusivity, self-reference) lives in the
+  // repository so that this server action and the /api/v1 PATCH route share
+  // exactly the same rules. Errors bubble up as `StackError` with a
+  // user-friendly message.
   const habit = await updateHabit(userId, habitId, patch);
 
   revalidateApp();
   return habit;
+}
+
+/**
+ * Apply an atomic stack mutation (insert or remove). All affected habits are
+ * updated inside a single database transaction; cycles and multi-stack
+ * membership are rejected with a `StackError` whose message is safe to show
+ * directly in a UI dialog.
+ */
+export async function applyStackMutationAction(input: StackMutationInput) {
+  const userId = await requireUserId();
+  const affected = await applyStackMutation(userId, input);
+
+  revalidateApp();
+  return affected;
 }
 
 export async function deleteHabitAction(habitId: string) {

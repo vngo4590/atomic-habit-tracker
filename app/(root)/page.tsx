@@ -7,11 +7,13 @@ import { useMemo, useState } from "react";
 import { CompletionRing } from "@/components/CompletionRing";
 import { IconCheck, IconClose, IconPlus, IconSearch } from "@/components/Icons";
 import { MoodCheckSheet } from "@/components/MoodCheckSheet";
+import { StackCardGroup } from "@/components/StackCardGroup";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { useStoreContext } from "@/components/StoreProvider";
 import { dateAdd, fmt, todayKey } from "@/lib/helpers";
 import { useMotionReduced } from "@/lib/hooks/useMotionReduced";
 import { isScheduledForDate } from "@/lib/schedule";
+import { getChainFrom, getStackRoot, isInStack } from "@/lib/stack";
 import { completionRate } from "@/lib/store";
 import type { Habit } from "@/lib/types";
 
@@ -25,6 +27,44 @@ export default function TodayPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const scheduledToday = habits.filter((habit) => isScheduledForDate(today, habit.schedule));
   const scheduledUndone = scheduledToday.filter((habit) => !habit.history[today]);
+
+  /**
+   * Build today's render list. Each scheduled-undone habit is either:
+   *   - The "visible top" of a stack chain — exactly one habit per chain
+   *     (the first undone habit reachable from the root via all habits,
+   *     not just undone habits). The card group then walks forward from
+   *     this habit using the full habit list so it can show upcoming
+   *     cards in the chain.
+   *   - A solo habit, rendered as a single row.
+   * Each chain renders at most once, even if multiple habits in the chain
+   * are undone today.
+   */
+  const todayItems = ((): Array<
+    { kind: "solo"; habit: Habit } | { kind: "stack"; rootId: string; visible: Habit }
+  > => {
+    const seenChains = new Set<string>();
+    const items: Array<
+      { kind: "solo"; habit: Habit } | { kind: "stack"; rootId: string; visible: Habit }
+    > = [];
+    for (const habit of scheduledUndone) {
+      if (!isInStack(habit, habits)) {
+        items.push({ kind: "solo", habit });
+        continue;
+      }
+      const root = getStackRoot(habit, habits);
+      if (seenChains.has(root.id)) continue;
+      seenChains.add(root.id);
+      const fullChain = getChainFrom(root, habits);
+      const firstVisible =
+        fullChain.find((h) => isScheduledForDate(today, h.schedule) && !h.history[today]) ??
+        fullChain.find((h) => !h.history[today]) ??
+        fullChain[0];
+      if (firstVisible) {
+        items.push({ kind: "stack", rootId: root.id, visible: firstVisible });
+      }
+    }
+    return items;
+  })();
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
@@ -433,7 +473,25 @@ export default function TodayPage() {
           </div>
           <div className="habit-list">
             <StaggerContainer staggerDelay={0.04}>
-              {scheduledUndone.map((habit) => {
+              {todayItems.map((item) => {
+                if (item.kind === "stack") {
+                  return (
+                    <StaggerItem key={`stack-${item.rootId}`}>
+                      <StackCardGroup
+                        habit={item.visible}
+                        habits={habits}
+                        today={today}
+                        onCheck={(h) => {
+                          setMoodHabit(h);
+                          toggleHabit(h.id);
+                        }}
+                        onNavigate={(id) => router.push(`/habits/${id}`)}
+                        streak={streak}
+                      />
+                    </StaggerItem>
+                  );
+                }
+                const habit = item.habit;
                 const activeStreak = streak(habit);
                 const rate = Math.round(completionRate(habit) * 100);
                 return (

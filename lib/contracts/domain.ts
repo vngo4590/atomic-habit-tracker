@@ -27,6 +27,7 @@ export const habitCreateSchema = z.object({
   environment: habitTextSchema.default(""),
   schedule: habitScheduleSchema.default("Daily"),
   time: habitTimeSchema.default("Morning"),
+  stackNextId: z.string().nullable().optional(),
   contract: habitContractSchema.default(""),
   contractPartners: stringListSchema,
 });
@@ -47,6 +48,7 @@ export const habitUpdateSchema = z.object({
   environment: habitTextSchema.optional(),
   schedule: habitScheduleSchema.optional(),
   time: habitTimeSchema.optional(),
+  stackNextId: z.string().nullable().optional(),
   contract: habitContractSchema.optional(),
   contractPartners: optionalStringListSchema.optional(),
   notes: z
@@ -118,6 +120,25 @@ export const formationVerdictSchema = z.object({
   formed: z.boolean(),
   reviewedAt: z.string().datetime().optional(),
 });
+
+export const stackMutationSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("insert"),
+    habitId: z.string().min(1),
+    position: z.enum(["before", "after"]),
+    targetId: z.string().min(1),
+  }),
+  z.object({
+    kind: z.literal("remove"),
+    habitId: z.string().min(1),
+  }),
+  z.object({
+    kind: z.literal("reorder"),
+    habitIds: z.array(z.string().min(1)).min(2),
+  }),
+]);
+
+export type StackMutationInput = z.infer<typeof stackMutationSchema>;
 
 export type HabitCreateInput = z.infer<typeof habitCreateSchema>;
 export type HabitUpdateInput = z.infer<typeof habitUpdateSchema>;

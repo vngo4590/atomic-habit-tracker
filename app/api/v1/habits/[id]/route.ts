@@ -1,6 +1,14 @@
 import { handleApiError, jsonError, jsonOk, readJson, withApiUser } from "@/lib/api/http";
 import { habitUpdateSchema } from "@/lib/contracts/domain";
 import { archiveHabit, getHabit, updateHabit } from "@/lib/repositories/habits";
+import { isStackError } from "@/lib/stack-errors";
+
+function handleHabitMutationError(error: unknown) {
+  if (isStackError(error)) {
+    return jsonError(error.code, error.message, 422);
+  }
+  return handleApiError(error);
+}
 
 export const runtime = "nodejs";
 
@@ -34,7 +42,7 @@ export async function PATCH(request: Request, context: HabitRouteContext) {
     }
 
     return jsonOk({ habit });
-  }, handleApiError);
+  }, handleHabitMutationError);
 }
 
 export async function DELETE(_request: Request, context: HabitRouteContext) {

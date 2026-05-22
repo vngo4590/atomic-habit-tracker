@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   updateHabit: vi.fn(),
   archiveHabit: vi.fn(),
   upsertCheckIn: vi.fn(),
+  getHabit: vi.fn(),
   createJournalEntry: vi.fn(),
   updateJournalEntry: vi.fn(),
   saveWeeklyReview: vi.fn(),
@@ -17,6 +18,8 @@ const mocks = vi.hoisted(() => ({
   markLessonComplete: vi.fn(),
   saveFormationVerdictRecord: vi.fn(),
   savePreferences: vi.fn(),
+  dbHabitFindUnique: vi.fn(),
+  dbHabitFindFirst: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({
@@ -32,6 +35,16 @@ vi.mock("@/lib/repositories/habits", () => ({
   updateHabit: mocks.updateHabit,
   archiveHabit: mocks.archiveHabit,
   upsertCheckIn: mocks.upsertCheckIn,
+  getHabit: mocks.getHabit,
+}));
+
+vi.mock("@/lib/db/client", () => ({
+  db: {
+    habit: {
+      findUnique: mocks.dbHabitFindUnique,
+      findFirst: mocks.dbHabitFindFirst,
+    },
+  },
 }));
 
 vi.mock("@/lib/repositories/reflection", () => ({
@@ -155,5 +168,61 @@ describe("domain server actions", () => {
     expect(mocks.createHabit).not.toHaveBeenCalled();
     expect(mocks.markLessonComplete).not.toHaveBeenCalled();
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  describe("stack validation in updateHabitAction", () => {
+    /**
+     * Stack validation now lives inside the repository's `updateHabit`. The
+     * server action's responsibility is just to forward the call and let
+     * StackError propagate. These tests cover the propagation contract —
+     * the actual validation logic is covered by the repository tests.
+     */
+    it("propagates a self-link rejection from the repository", async () => {
+      const { StackError } = await import("@/lib/stack-errors");
+      mocks.updateHabit.mockRejectedValue(
+        new StackError("self_reference", "A habit cannot stack with itself."),
+      );
+      const { updateHabitAction } = await import("@/lib/actions/domain");
+
+      await expect(updateHabitAction("habit_a", { stackNextId: "habit_a" })).rejects.toThrow(
+        /cannot stack with itself/i,
+      );
+    });
+
+    it("propagates an exclusivity rejection from the repository", async () => {
+      const { StackError } = await import("@/lib/stack-errors");
+      mocks.updateHabit.mockRejectedValue(
+        new StackError("target_in_other_stack", "That habit is already part of another stack."),
+      );
+      const { updateHabitAction } = await import("@/lib/actions/domain");
+
+      await expect(updateHabitAction("habit_a", { stackNextId: "habit_c" })).rejects.toThrow(
+        /already part of another stack/i,
+      );
+    });
+
+    it("propagates a cycle rejection from the repository", async () => {
+      const { StackError } = await import("@/lib/stack-errors");
+      mocks.updateHabit.mockRejectedValue(
+        new StackError("circular_stack", "Linking these habits would create a circular stack."),
+      );
+      const { updateHabitAction } = await import("@/lib/actions/domain");
+
+      await expect(updateHabitAction("habit_c", { stackNextId: "habit_a" })).rejects.toThrow(
+        /circular stack/i,
+      );
+    });
+
+    it("allows valid stack links to reach the repository", async () => {
+      mocks.updateHabit.mockResolvedValue(testHabit({ id: "habit_a" }));
+      const { updateHabitAction } = await import("@/lib/actions/domain");
+
+      await expect(updateHabitAction("habit_a", { stackNextId: "habit_b" })).resolves.toBeDefined();
+      expect(mocks.updateHabit).toHaveBeenCalledWith(
+        "user_1",
+        "habit_a",
+        expect.objectContaining({ stackNextId: "habit_b" }),
+      );
+    });
   });
 });

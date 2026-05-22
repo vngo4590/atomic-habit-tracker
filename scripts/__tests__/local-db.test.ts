@@ -73,5 +73,8 @@ describe("scripts/local-db.ps1", () => {
     expect(generatedScript).toContain("db.habitNote.create");
     expect(generatedScript).toContain("db.lessonProgress.create");
     expect(generatedScript).toContain("db.formationVerdict.create");
+    // The script should also seed at least one habit stack so demo data
+    // exercises the stack UI on Today and the Stack tab.
+    expect(generatedScript).toContain("stackNextId");
   });
 });

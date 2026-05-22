@@ -12,6 +12,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./lib/test/setup.ts'],
+    exclude: ['node_modules', 'e2e'],
     server: {
       deps: {
         inline: ['next-auth'],
