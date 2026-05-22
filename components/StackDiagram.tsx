@@ -8,6 +8,16 @@ import { getStackChain, isInStack } from "@/lib/stack";
 import type { Habit } from "@/lib/types";
 
 /**
+ * Maximum number of standalone habits the picker shows by default. When the
+ * filtered list exceeds this cap the user is offered two ways to find more:
+ *   1. Narrow the list with the search input, or
+ *   2. Expand the picker to reveal every remaining option.
+ *
+ * Exported so tests can reference the same constant.
+ */
+export const STACK_PICKER_DEFAULT_LIMIT = 10;
+
+/**
  * Visual diagram + editor for a habit's stack chain. Rendered in the Stack tab
  * of the habit detail page.
  *
@@ -40,6 +50,9 @@ export function StackDiagram({
   const [errorModal, setErrorModal] = useState<{ title: string; message: string } | null>(null);
   const [linkMode, setLinkMode] = useState<"before" | "after" | null>(null);
   const [query, setQuery] = useState("");
+  // When the filtered list exceeds the default limit the picker collapses to
+  // the first N entries; the user can expand to see the rest.
+  const [expanded, setExpanded] = useState(false);
 
   const chain = useMemo(() => getStackChain(habit, habits), [habit, habits]);
   const position = useMemo(() => chain.findIndex((h) => h.id === habit.id) + 1, [chain, habit]);
@@ -60,19 +73,25 @@ export function StackDiagram({
       });
   }, [habits, habit, query]);
 
+  /**
+   * Slice the filtered list to the default limit unless the user has expanded
+   * the picker. Searching narrows the list naturally and resets the expansion
+   * (handled in the search input's onChange).
+   */
+  const visibleHabits = useMemo(
+    () => (expanded ? availableHabits : availableHabits.slice(0, STACK_PICKER_DEFAULT_LIMIT)),
+    [availableHabits, expanded],
+  );
+  const hiddenCount = availableHabits.length - visibleHabits.length;
+
   const closeError = () => setErrorModal(null);
 
-  /**
-   * Insert the chosen standalone habit before or after the current (anchor)
-   * habit. The picker only offers standalone habits, so the source of the
-   * insert is guaranteed solo at click time. The anchor may live anywhere in
-   * an existing chain — `applyStackMutation` resolves neighbours and reorders.
-   */
   const handleLink = async (selectedSoloId: string) => {
     if (!linkMode) return;
     const mode = linkMode;
     setLinkMode(null);
     setQuery("");
+    setExpanded(false);
 
     try {
       await store.applyStackMutation({
@@ -160,7 +179,12 @@ export function StackDiagram({
             className="input"
             placeholder="Search habits..."
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              // A new search resets the expansion so the user always sees a
+              // focused result set first.
+              setExpanded(false);
+            }}
             data-testid="stack-link-search"
             style={{ width: "100%", marginBottom: 10 }}
             aria-label="Search habits to link"
@@ -177,22 +201,48 @@ export function StackDiagram({
                 : "No standalone habits available. Remove a habit from its stack to make it selectable."}
             </div>
           ) : (
-            <div
-              style={{ display: "flex", flexWrap: "wrap", gap: 8, maxHeight: 220, overflowY: "auto" }}
-              data-testid="stack-link-options"
-            >
-              {availableHabits.map((h) => (
+            <>
+              <div
+                style={{ display: "flex", flexWrap: "wrap", gap: 8, maxHeight: 220, overflowY: "auto" }}
+                data-testid="stack-link-options"
+              >
+                {visibleHabits.map((h) => (
+                  <button
+                    key={h.id}
+                    className="chip"
+                    data-testid={`stack-link-option-${h.id}`}
+                    onClick={() => handleLink(h.id)}
+                  >
+                    <span>{h.emoji}</span>
+                    {h.name}
+                  </button>
+                ))}
+              </div>
+              {hiddenCount > 0 && (
                 <button
-                  key={h.id}
-                  className="chip"
-                  data-testid={`stack-link-option-${h.id}`}
-                  onClick={() => handleLink(h.id)}
+                  type="button"
+                  className="btn btn-sm btn-ghost"
+                  style={{ marginTop: 8 }}
+                  data-testid="stack-link-show-all"
+                  onClick={() => setExpanded(true)}
+                  aria-expanded={false}
                 >
-                  <span>{h.emoji}</span>
-                  {h.name}
+                  Show all {availableHabits.length} habits ({hiddenCount} more) — or refine with search
                 </button>
-              ))}
-            </div>
+              )}
+              {expanded && availableHabits.length > STACK_PICKER_DEFAULT_LIMIT && (
+                <button
+                  type="button"
+                  className="btn btn-sm btn-ghost"
+                  style={{ marginTop: 8 }}
+                  data-testid="stack-link-show-less"
+                  onClick={() => setExpanded(false)}
+                  aria-expanded={true}
+                >
+                  Show less (first {STACK_PICKER_DEFAULT_LIMIT})
+                </button>
+              )}
+            </>
           )}
           <button
             className="btn btn-sm btn-ghost"
@@ -200,6 +250,7 @@ export function StackDiagram({
             onClick={() => {
               setLinkMode(null);
               setQuery("");
+              setExpanded(false);
             }}
           >
             Cancel

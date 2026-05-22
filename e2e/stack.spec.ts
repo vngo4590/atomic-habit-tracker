@@ -218,6 +218,41 @@ test.describe("Habit stacking", () => {
     await expect(page.locator('button.chip:has-text("Evening Read")')).not.toBeVisible();
   });
 
+  test("link selector caps the list at 10 with a Show-all expand", async ({ page }) => {
+    // Anchor + 12 standalone candidates → the picker must initially show 10
+    // plus a "Show all" button revealing the remaining 2.
+    const idAnchor = await seedHabit(page, unique("Limit Anchor"), "limiter");
+    const tag = unique("Pool");
+    for (let i = 0; i < 12; i += 1) {
+      await seedHabit(page, `${tag} ${String(i).padStart(2, "0")}`, "limiter");
+    }
+
+    await openStackTab(page, idAnchor);
+    await page.click('button:has-text("Link after…")');
+
+    // Default view: exactly 10 chips.
+    const options = page.locator('[data-testid="stack-link-options"] button');
+    await expect(options).toHaveCount(10);
+
+    // Show-all button announces the total (12) and overflow count (2).
+    const showAll = page.locator('[data-testid="stack-link-show-all"]');
+    await expect(showAll).toBeVisible();
+    await expect(showAll).toContainText("12");
+    await expect(showAll).toContainText("2 more");
+
+    // Expand → all 12 visible, Show-less available.
+    await showAll.click();
+    await expect(options).toHaveCount(12);
+    await expect(page.locator('[data-testid="stack-link-show-less"]')).toBeVisible();
+    await expect(page.locator('[data-testid="stack-link-show-all"]')).not.toBeVisible();
+
+    // Searching collapses back to a focused list.
+    await page.locator('[data-testid="stack-link-search"]').fill("11");
+    await expect(options).toHaveCount(1);
+    await expect(page.locator('[data-testid="stack-link-show-all"]')).not.toBeVisible();
+    await expect(page.locator('[data-testid="stack-link-show-less"]')).not.toBeVisible();
+  });
+
   test("only solo habits appear in the link selector", async ({ page }) => {
     const idA = await seedHabit(page, unique("Solo Filter A"), "soloer");
     const idB = await seedHabit(page, unique("Solo Filter B"), "soloer");

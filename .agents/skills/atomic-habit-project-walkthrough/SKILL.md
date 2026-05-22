@@ -341,7 +341,7 @@ Habit stacks are modeled as a **linked list** of habits via a self-referencing `
   - `getChainFrom(habit, habits)` walks forward from the passed habit (the first-undone in the chain), so a partially-checked chain shows from the correct sub-chain.
   - Already-done upcoming habits are filtered out so the wallet only surfaces habits still to be fulfilled today.
 - **Habit detail (`/habits/[id]`)**: the **Stack** tab renders `StackDiagram` (chain chips with arrows, current habit highlighted).
-  - **Standalone-only picker** for "Link before / Link after": only habits that are not yet part of any stack appear in the picker; the anchor (current habit) may be anywhere in a chain.
+  - **Standalone-only picker** for "Link before / Link after": only habits that are not yet part of any stack appear in the picker; the anchor (current habit) may be anywhere in a chain. The picker is capped at the first **10** results by default; for larger pools the user either refines the list via the **search input** (name / identity / cue) or clicks **"Show all N habits"** to expand. Searching always resets back to the focused capped view. The cap lives in `STACK_PICKER_DEFAULT_LIMIT` (exported from `components/StackDiagram.tsx`).
   - **Search input** filters the selector by name / identity / cue.
   - Errors from the server (cycle, exclusivity, etc.) open a **`Modal`** with the server message and an OK button; the operation is cancelled and the optimistic patch is rolled back.
 
