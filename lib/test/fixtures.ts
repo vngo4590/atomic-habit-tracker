@@ -146,6 +146,7 @@ export function testStoreContext(patch: Partial<StoreState> = {}): StoreState {
     toggleHabit: () => {},
     logCheckIn: () => {},
     updateHabit: () => {},
+    applyStackMutation: async () => {},
     deleteHabit: () => {},
     journal: snapshot.journal,
     addJournal: () => {},

@@ -171,48 +171,58 @@ describe("domain server actions", () => {
   });
 
   describe("stack validation in updateHabitAction", () => {
-    beforeEach(() => {
-      mocks.getHabit.mockImplementation((_userId: string, habitId: string) =>
-        Promise.resolve(testHabit({ id: habitId })),
+    /**
+     * Stack validation now lives inside the repository's `updateHabit`. The
+     * server action's responsibility is just to forward the call and let
+     * StackError propagate. These tests cover the propagation contract —
+     * the actual validation logic is covered by the repository tests.
+     */
+    it("propagates a self-link rejection from the repository", async () => {
+      const { StackError } = await import("@/lib/stack-errors");
+      mocks.updateHabit.mockRejectedValue(
+        new StackError("self_reference", "A habit cannot stack with itself."),
       );
-      mocks.dbHabitFindFirst.mockResolvedValue(null);
-      mocks.dbHabitFindUnique.mockResolvedValue(null);
-    });
-
-    it("rejects linking a habit to itself", async () => {
       const { updateHabitAction } = await import("@/lib/actions/domain");
 
-      await expect(updateHabitAction("habit_a", { stackNextId: "habit_a" })).rejects.toThrow("cannot stack with itself");
-      expect(mocks.updateHabit).not.toHaveBeenCalled();
+      await expect(updateHabitAction("habit_a", { stackNextId: "habit_a" })).rejects.toThrow(
+        /cannot stack with itself/i,
+      );
     });
 
-    it("rejects when target is already another habit's stackNextId", async () => {
-      mocks.dbHabitFindFirst.mockResolvedValue({ id: "habit_b" });
+    it("propagates an exclusivity rejection from the repository", async () => {
+      const { StackError } = await import("@/lib/stack-errors");
+      mocks.updateHabit.mockRejectedValue(
+        new StackError("target_in_other_stack", "That habit is already part of another stack."),
+      );
       const { updateHabitAction } = await import("@/lib/actions/domain");
 
-      await expect(updateHabitAction("habit_a", { stackNextId: "habit_c" })).rejects.toThrow("already part of another stack");
-      expect(mocks.updateHabit).not.toHaveBeenCalled();
+      await expect(updateHabitAction("habit_a", { stackNextId: "habit_c" })).rejects.toThrow(
+        /already part of another stack/i,
+      );
     });
 
-    it("rejects when linking would create a cycle", async () => {
-      // A -> B -> C, trying to link C -> A
-      mocks.dbHabitFindUnique.mockImplementation(({ where: { id } }: { where: { id: string } }) => {
-        if (id === "habit_a") return Promise.resolve({ stackNextId: "habit_b" });
-        if (id === "habit_b") return Promise.resolve({ stackNextId: "habit_c" });
-        return Promise.resolve(null);
-      });
+    it("propagates a cycle rejection from the repository", async () => {
+      const { StackError } = await import("@/lib/stack-errors");
+      mocks.updateHabit.mockRejectedValue(
+        new StackError("circular_stack", "Linking these habits would create a circular stack."),
+      );
       const { updateHabitAction } = await import("@/lib/actions/domain");
 
-      await expect(updateHabitAction("habit_c", { stackNextId: "habit_a" })).rejects.toThrow("circular stack");
-      expect(mocks.updateHabit).not.toHaveBeenCalled();
+      await expect(updateHabitAction("habit_c", { stackNextId: "habit_a" })).rejects.toThrow(
+        /circular stack/i,
+      );
     });
 
-    it("allows valid stack links after passing all validations", async () => {
+    it("allows valid stack links to reach the repository", async () => {
       mocks.updateHabit.mockResolvedValue(testHabit({ id: "habit_a" }));
       const { updateHabitAction } = await import("@/lib/actions/domain");
 
       await expect(updateHabitAction("habit_a", { stackNextId: "habit_b" })).resolves.toBeDefined();
-      expect(mocks.updateHabit).toHaveBeenCalledWith("user_1", "habit_a", expect.objectContaining({ stackNextId: "habit_b" }));
+      expect(mocks.updateHabit).toHaveBeenCalledWith(
+        "user_1",
+        "habit_a",
+        expect.objectContaining({ stackNextId: "habit_b" }),
+      );
     });
   });
 });

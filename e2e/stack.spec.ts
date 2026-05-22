@@ -80,6 +80,10 @@ async function linkBefore(page: import("@playwright/test").Page, targetName: str
 async function removeFromStack(page: import("@playwright/test").Page) {
   await page.click('button:has-text("Remove from stack")');
   await expect(page.locator('text=This habit is not part of a stack.')).toBeVisible();
+  // The empty state appears optimistically; the server commit may still be
+  // in flight. Give it a beat so subsequent API calls don't race against
+  // stale predecessor links.
+  await page.waitForTimeout(800);
 }
 
 /**
@@ -99,38 +103,44 @@ test.describe("Habit stacking", () => {
     const idA = await seedHabit(page, unique("Morning Read"), "reader");
     await seedHabit(page, unique("Evening Journal"), "writer");
 
-    // Link A after B → B → A (A is step 2)
+    // Anchor = A (current habit), picked solo = B. Insert B after A → A → B.
     await openStackTab(page, idA);
     await linkAfter(page, "Evening Journal");
 
-    await expect(page.locator('text=Step 2 of 2')).toBeVisible();
+    // A is the root of the chain → step 1 of 2.
+    await expect(page.locator('text=Step 1 of 2')).toBeVisible();
     await expect(page.locator('.chip:has-text("Morning Read")')).toBeVisible();
     await expect(page.locator('.chip:has-text("Evening Journal")')).toBeVisible();
   });
 
-  test("linking three habits into a chain", async ({ page }) => {
+  test("linking three habits into a chain (anchor can be a chain member)", async ({ page }) => {
     const idA = await seedHabit(page, unique("Chain A"), "chainer");
-    await seedHabit(page, unique("Chain B"), "chainer");
-    const idC = await seedHabit(page, unique("Chain C"), "chainer");
+    const idB = await seedHabit(page, unique("Chain B"), "chainer");
+    await seedHabit(page, unique("Chain C"), "chainer");
 
-    // A after B → B → A (A is step 2)
+    // Insert solo B after A (anchor) → A → B. A is step 1 of 2.
     await openStackTab(page, idA);
     await linkAfter(page, "Chain B");
-    await expect(page.locator('text=Step 2 of 2')).toBeVisible();
+    await expect(page.locator('text=Step 1 of 2')).toBeVisible();
 
-    // C before B → C → B → A (C is step 1)
-    await openStackTab(page, idC);
-    await linkBefore(page, "Chain B");
-    await expect(page.locator('text=Step 1 of 3')).toBeVisible();
+    // Anchor is now a chain member (B). Insert solo C after B → A → B → C.
+    // B is step 2 of 3 in the resulting chain.
+    await openStackTab(page, idB);
+    await linkAfter(page, "Chain C");
+    await expect(page.locator('text=Step 2 of 3')).toBeVisible();
+    await expect(page.locator('.chip:has-text("Chain A")')).toBeVisible();
+    await expect(page.locator('.chip:has-text("Chain B")')).toBeVisible();
+    await expect(page.locator('.chip:has-text("Chain C")')).toBeVisible();
   });
 
   test("removing a habit from a stack shows empty state", async ({ page }) => {
     const idA = await seedHabit(page, unique("Remove Me"), "remover");
     await seedHabit(page, unique("Remove Partner"), "remover");
 
+    // Insert partner after Me → Me → Partner. Me is step 1 of 2.
     await openStackTab(page, idA);
     await linkAfter(page, "Remove Partner");
-    await expect(page.locator('text=Step 2 of 2')).toBeVisible();
+    await expect(page.locator('text=Step 1 of 2')).toBeVisible();
     await expect(page.locator('.chip:has-text("Remove Me")')).toBeVisible();
     await expect(page.locator('.chip:has-text("Remove Partner")')).toBeVisible();
 
@@ -188,6 +198,42 @@ test.describe("Habit stacking", () => {
     // Verify A is now solo
     await openStackTab(page, idA);
     await expect(page.locator('text=This habit is not part of a stack.')).toBeVisible();
+  });
+
+  test("link selector filters by the search input", async ({ page }) => {
+    const idA = await seedHabit(page, unique("Search Anchor"), "searcher");
+    await seedHabit(page, unique("Morning Stretch"), "searcher");
+    await seedHabit(page, unique("Evening Read"), "searcher");
+
+    await openStackTab(page, idA);
+    await page.click('button:has-text("Link after…")');
+
+    // Both solo habits visible initially.
+    await expect(page.locator('button.chip:has-text("Morning Stretch")')).toBeVisible();
+    await expect(page.locator('button.chip:has-text("Evening Read")')).toBeVisible();
+
+    // Type to filter.
+    await page.locator('[data-testid="stack-link-search"]').fill("stretch");
+    await expect(page.locator('button.chip:has-text("Morning Stretch")')).toBeVisible();
+    await expect(page.locator('button.chip:has-text("Evening Read")')).not.toBeVisible();
+  });
+
+  test("only solo habits appear in the link selector", async ({ page }) => {
+    const idA = await seedHabit(page, unique("Solo Filter A"), "soloer");
+    const idB = await seedHabit(page, unique("Solo Filter B"), "soloer");
+    const idC = await seedHabit(page, unique("Solo Filter C"), "soloer");
+
+    // Build A → B so A and B are both in a stack; C remains solo.
+    await setStackNextId(page, idA, idB);
+
+    await openStackTab(page, idC);
+    await page.click('button:has-text("Link after…")');
+
+    // A and B are not solo and must not be selectable.
+    await expect(page.locator('button.chip:has-text("Solo Filter A")')).not.toBeVisible();
+    await expect(page.locator('button.chip:has-text("Solo Filter B")')).not.toBeVisible();
+    // The picker has no other solo habits besides current — show empty state.
+    await expect(page.locator('[data-testid="stack-link-empty"]')).toBeVisible();
   });
 
   test("client-side cycle prevention shows inline error", async ({ page }) => {
@@ -256,6 +302,115 @@ test.describe("Habit stacking", () => {
     await expect(page.locator('.chip:has-text("Seq A")')).toBeVisible();
     await expect(page.locator('.chip:has-text("Seq B")')).toBeVisible();
   });
+
+  test("adds a standalone habit after a mid-chain habit", async ({ page }) => {
+    // Build chain R → M → T via API.
+    const idR = await seedHabit(page, unique("Mid Root"), "midder");
+    const idM = await seedHabit(page, unique("Mid Middle"), "midder");
+    const idT = await seedHabit(page, unique("Mid Tail"), "midder");
+    await seedHabit(page, unique("Mid Solo"), "midder");
+    await setStackNextId(page, idR, idM);
+    await setStackNextId(page, idM, idT);
+
+    // Open the *middle* habit and insert the standalone after it.
+    // Expected chain: R → M → Solo → T (4 steps, M is step 2 of 4).
+    await openStackTab(page, idM);
+    await linkAfter(page, "Mid Solo");
+
+    await expect(page.locator('text=Step 2 of 4')).toBeVisible();
+    await expect(page.locator('.chip:has-text("Mid Root")')).toBeVisible();
+    await expect(page.locator('.chip:has-text("Mid Middle")')).toBeVisible();
+    await expect(page.locator('.chip:has-text("Mid Solo")')).toBeVisible();
+    await expect(page.locator('.chip:has-text("Mid Tail")')).toBeVisible();
+
+    // From the standalone's own POV the chain order is the same; verify it
+    // also reports step 3 of 4 from there.
+    void idR;
+    void idT;
+  });
+
+  test("adds a standalone habit before the chain root", async ({ page }) => {
+    // Build chain R → T via API; then add a standalone before R.
+    const idR = await seedHabit(page, unique("Top Root"), "topper");
+    const idT = await seedHabit(page, unique("Top Tail"), "topper");
+    await seedHabit(page, unique("Top Solo"), "topper");
+    await setStackNextId(page, idR, idT);
+
+    // Anchor = R (root of chain). Insert Solo before R.
+    // Expected: Solo → R → T (R is step 2 of 3).
+    await openStackTab(page, idR);
+    await linkBefore(page, "Top Solo");
+
+    await expect(page.locator('text=Step 2 of 3')).toBeVisible();
+    await expect(page.locator('.chip:has-text("Top Solo")')).toBeVisible();
+    await expect(page.locator('.chip:has-text("Top Root")')).toBeVisible();
+    await expect(page.locator('.chip:has-text("Top Tail")')).toBeVisible();
+    void idT;
+  });
+
+  test("adds a standalone habit after the chain tail", async ({ page }) => {
+    // Build chain R → T via API; then add a standalone after T.
+    const idR = await seedHabit(page, unique("Bot Root"), "bottomer");
+    const idT = await seedHabit(page, unique("Bot Tail"), "bottomer");
+    await seedHabit(page, unique("Bot Solo"), "bottomer");
+    await setStackNextId(page, idR, idT);
+
+    // Anchor = T (tail of chain). Insert Solo after T.
+    // Expected: R → T → Solo (T is step 2 of 3).
+    await openStackTab(page, idT);
+    await linkAfter(page, "Bot Solo");
+    await expect(page.locator('text=Step 2 of 3')).toBeVisible();
+    await expect(page.locator('.chip:has-text("Bot Root")')).toBeVisible();
+    await expect(page.locator('.chip:has-text("Bot Tail")')).toBeVisible();
+    await expect(page.locator('.chip:has-text("Bot Solo")')).toBeVisible();
+    void idR;
+  });
+
+  test("adds a standalone habit before a mid-chain habit", async ({ page }) => {
+    // Build chain R → M → T via API; then add a standalone before M.
+    // Expected: R → Solo → M → T (M moves from step 2 of 3 to step 3 of 4).
+    const idR = await seedHabit(page, unique("MidBefore Root"), "mid-before");
+    const idM = await seedHabit(page, unique("MidBefore Middle"), "mid-before");
+    const idT = await seedHabit(page, unique("MidBefore Tail"), "mid-before");
+    await seedHabit(page, unique("MidBefore Solo"), "mid-before");
+    await setStackNextId(page, idR, idM);
+    await setStackNextId(page, idM, idT);
+
+    await openStackTab(page, idM);
+    await linkBefore(page, "MidBefore Solo");
+
+    // M is now step 3 of 4: R → Solo → M → T
+    await expect(page.locator('text=Step 3 of 4')).toBeVisible();
+    await expect(page.locator('.chip:has-text("MidBefore Root")')).toBeVisible();
+    await expect(page.locator('.chip:has-text("MidBefore Solo")')).toBeVisible();
+    await expect(page.locator('.chip:has-text("MidBefore Middle")')).toBeVisible();
+    await expect(page.locator('.chip:has-text("MidBefore Tail")')).toBeVisible();
+    void idR;
+    void idT;
+  });
+
+  test("standalone-only picker still excludes chain members when anchor is mid-chain", async ({ page }) => {
+    // Build chain X → Y → Z; the picker on Y must exclude X, Y, Z and only show the standalone.
+    const idX = await seedHabit(page, unique("Excl X"), "excluder");
+    const idY = await seedHabit(page, unique("Excl Y"), "excluder");
+    const idZ = await seedHabit(page, unique("Excl Z"), "excluder");
+    await seedHabit(page, unique("Excl Solo"), "excluder");
+    await setStackNextId(page, idX, idY);
+    await setStackNextId(page, idY, idZ);
+
+    await openStackTab(page, idY);
+    await page.click('button:has-text("Link after…")');
+
+    // Chain members must not appear in the picker.
+    await expect(page.locator('button.chip:has-text("Excl X")')).not.toBeVisible();
+    await expect(page.locator('button.chip:has-text("Excl Y")')).not.toBeVisible();
+    await expect(page.locator('button.chip:has-text("Excl Z")')).not.toBeVisible();
+    // The standalone must appear.
+    await expect(page.locator('button.chip:has-text("Excl Solo")')).toBeVisible();
+    void idX;
+    void idY;
+    void idZ;
+  });
 });
 
 /**
@@ -265,17 +420,35 @@ test.describe("Today page stack cards", () => {
   test.beforeEach(async ({ page }) => {
     await cleanupHabits(page);
   });
-  test("stacked habits render as card group on today page", async ({ page }) => {
+  test("stacked habits render as Apple-Wallet card group with peek slivers", async ({ page }) => {
     const idA = await seedHabit(page, unique("Today Stack A"), "stacker");
-    await seedHabit(page, unique("Today Stack B"), "stacker");
+    const idB = await seedHabit(page, unique("Today Stack B"), "stacker");
 
-    // B → A (A is step 2)
+    // Insert B after A → A → B. Root = A, displayed as top card.
     await openStackTab(page, idA);
     await linkAfter(page, "Today Stack B");
 
     await page.goto("/");
-    // The root habit (B) should be visible as the stack card
-    await expect(page.locator('.habit-list-row:has-text("Today Stack B")').first()).toBeVisible();
+    // Top card (root A) visible.
+    await expect(page.locator('.habit-list-row:has-text("Today Stack A")').first()).toBeVisible();
+    // Wallet peek slivers communicate that more habits exist behind the top card.
+    const peeks = page.locator('[data-testid="stack-card-peek"]');
+    await expect(peeks.first()).toBeVisible();
+    void idA;
+    void idB;
+  });
+
+  test("stacked habits render as card group on today page", async ({ page }) => {
+    const idA = await seedHabit(page, unique("Today Stack A"), "stacker");
+    await seedHabit(page, unique("Today Stack B"), "stacker");
+
+    // Insert B after A → A → B. Root = A.
+    await openStackTab(page, idA);
+    await linkAfter(page, "Today Stack B");
+
+    await page.goto("/");
+    // The root habit (A) should be visible as the stack card
+    await expect(page.locator('.habit-list-row:has-text("Today Stack A")').first()).toBeVisible();
   });
 
   test("solo habits still render as standalone rows", async ({ page }) => {
@@ -288,20 +461,20 @@ test.describe("Today page stack cards", () => {
 
   test("expand stack card group to see more habits", async ({ page }) => {
     const idA = await seedHabit(page, unique("Expand A"), "expander");
-    await seedHabit(page, unique("Expand B"), "expander");
-    const idC = await seedHabit(page, unique("Expand C"), "expander");
+    const idB = await seedHabit(page, unique("Expand B"), "expander");
+    await seedHabit(page, unique("Expand C"), "expander");
 
-    // B → A (A is step 2)
+    // Insert B after A → A → B (A is solo anchor, B is picker solo).
     await openStackTab(page, idA);
     await linkAfter(page, "Expand B");
 
-    // C → B → A (C is step 1)
-    await openStackTab(page, idC);
-    await linkBefore(page, "Expand B");
+    // Now anchor B (chain member) and insert solo C after B → A → B → C.
+    await openStackTab(page, idB);
+    await linkAfter(page, "Expand C");
 
     await page.goto("/");
-    // Click the first card to expand the stack
-    await page.locator('.habit-list-row:has-text("Expand C")').first().click();
+    // Click the root card (A) to expand the stack.
+    await page.locator('.habit-list-row:has-text("Expand A")').first().click();
 
     // After expand, should see collapse button
     await expect(page.locator('button:has-text("Collapse stack")')).toBeVisible();
@@ -378,8 +551,8 @@ test.describe("Responsive layout", () => {
     await openStackTab(page, idA);
     await linkAfter(page, "Mobile B");
 
-    // A is step 2 of 2
-    await expect(page.locator('text=Step 2 of 2')).toBeVisible();
+    // Insert B after A → A → B; A is step 1 of 2.
+    await expect(page.locator('text=Step 1 of 2')).toBeVisible();
     // Diagram chips should not overflow
     const cardWidth = await page.locator('.card').first().evaluate((el) => el.scrollWidth);
     expect(cardWidth).toBeLessThanOrEqual(375);

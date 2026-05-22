@@ -341,7 +341,7 @@ export default function HabitDetailPage() {
       {tab === "history" && <HistoryWall habit={habit} />}
       {tab === "notes" && <NotesManager habit={habit} onUpdateNotes={(notes) => store.updateHabit(habit.id, { notes })} />}
       {tab === "stack" && (
-        <StackDiagram habit={habit} habits={store.habits} onUpdate={(id, patch) => store.updateHabit(id, patch)} />
+        <StackDiagram habit={habit} habits={store.habits} />
       )}
 
       {showContract && (

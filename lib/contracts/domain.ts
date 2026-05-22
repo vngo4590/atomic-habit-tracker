@@ -121,6 +121,21 @@ export const formationVerdictSchema = z.object({
   reviewedAt: z.string().datetime().optional(),
 });
 
+export const stackMutationSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("insert"),
+    habitId: z.string().min(1),
+    position: z.enum(["before", "after"]),
+    targetId: z.string().min(1),
+  }),
+  z.object({
+    kind: z.literal("remove"),
+    habitId: z.string().min(1),
+  }),
+]);
+
+export type StackMutationInput = z.infer<typeof stackMutationSchema>;
+
 export type HabitCreateInput = z.infer<typeof habitCreateSchema>;
 export type HabitUpdateInput = z.infer<typeof habitUpdateSchema>;
 export type CheckInInput = z.infer<typeof checkInSchema>;

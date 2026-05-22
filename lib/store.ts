@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 
 import {
+  applyStackMutationAction,
   createHabitAction,
   createJournalEntryAction,
   deleteHabitAction,
@@ -16,8 +17,13 @@ import {
   updateHabitAction,
   updateJournalEntryAction,
 } from "@/lib/actions/domain";
+import type { StackMutationInput } from "@/lib/contracts/domain";
 import { dateAdd, todayKey } from "@/lib/helpers";
 import { isScheduledForDate } from "@/lib/schedule";
+import {
+  stackInsertPatches as stackInsertPatchesHelper,
+  stackRemovePatches as stackRemovePatchesHelper,
+} from "@/lib/stack";
 import type {
   CheckIn,
   FormationVerdict,
@@ -320,17 +326,82 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
 
   const updateHabit = useCallback((id: string, patch: Partial<Habit>) => {
     const version = ++updateHabitVersion.current;
-    setHabits((currentHabits) =>
-      currentHabits.map((habit) => (habit.id === id ? { ...habit, ...patch } : habit)),
-    );
-    void updateHabitAction(id, patch).then((saved) => {
-      if (!saved || version !== updateHabitVersion.current) {
-        return;
-      }
-      setHabits((currentHabits) =>
-        currentHabits.map((habit) => (habit.id === id ? { ...habit, ...saved, ...patch } : habit)),
-      );
+    let preSnapshot: Habit | null = null;
+    setHabits((currentHabits) => {
+      preSnapshot = currentHabits.find((habit) => habit.id === id) ?? null;
+      return currentHabits.map((habit) => (habit.id === id ? { ...habit, ...patch } : habit));
     });
+    void updateHabitAction(id, patch)
+      .then((saved) => {
+        if (!saved || version !== updateHabitVersion.current) {
+          return;
+        }
+        setHabits((currentHabits) =>
+          currentHabits.map((habit) => (habit.id === id ? { ...habit, ...saved, ...patch } : habit)),
+        );
+      })
+      .catch((error: unknown) => {
+        // Roll back the optimistic patch so the UI matches the server.
+        if (version === updateHabitVersion.current && preSnapshot) {
+          const snapshot = preSnapshot;
+          setHabits((currentHabits) =>
+            currentHabits.map((habit) => (habit.id === id ? snapshot : habit)),
+          );
+        }
+        const message = error instanceof Error ? error.message : "Update failed.";
+        showToast("Couldn't update habit", message);
+      });
+  }, [showToast]);
+
+  /**
+   * Apply an atomic stack mutation (insert or remove). Optimistically applies
+   * the patches locally and reconciles with the server response, or rolls
+   * back to the pre-mutation snapshot on failure. Rejected promises throw a
+   * thin error with the server-supplied message so callers can surface a
+   * modal dialog.
+   */
+  const applyStackMutation = useCallback(async (input: StackMutationInput) => {
+    let snapshot: Habit[] = [];
+    setHabits((currentHabits) => {
+      snapshot = currentHabits;
+      const map = new Map(currentHabits.map((h) => [h.id, { ...h }]));
+      const list = Array.from(map.values());
+
+      if (input.kind === "insert") {
+        const patches = stackInsertPatchesHelper(input.habitId, input.position, input.targetId, list);
+        for (const { id, patch } of patches) {
+          const record = map.get(id);
+          if (record && patch.stackNextId !== undefined) {
+            record.stackNextId = patch.stackNextId ?? null;
+          }
+        }
+      } else {
+        const patches = stackRemovePatchesHelper(input.habitId, list);
+        for (const { id, patch } of patches) {
+          const record = map.get(id);
+          if (record && patch.stackNextId !== undefined) {
+            record.stackNextId = patch.stackNextId ?? null;
+          }
+        }
+      }
+      return Array.from(map.values());
+    });
+
+    try {
+      const updated = await applyStackMutationAction(input);
+      setHabits((currentHabits) => {
+        const byId = new Map(currentHabits.map((h) => [h.id, h] as const));
+        for (const habit of updated) {
+          byId.set(habit.id, habit);
+        }
+        return Array.from(byId.values());
+      });
+    } catch (error: unknown) {
+      // Roll back optimistic state and rethrow so the caller can show a modal.
+      setHabits(snapshot);
+      const message = error instanceof Error ? error.message : "Couldn't update stack.";
+      throw new Error(message);
+    }
   }, []);
 
   const deleteHabit = useCallback((id: string) => {
@@ -486,6 +557,7 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
       logCheckIn,
       addHabit,
       updateHabit,
+      applyStackMutation,
       deleteHabit,
       journal,
       addJournal,
@@ -512,6 +584,7 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
     [
       addHabit,
       addJournal,
+      applyStackMutation,
       deleteHabit,
       habits,
       identity,

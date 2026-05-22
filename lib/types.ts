@@ -1,3 +1,5 @@
+import type { StackMutationInput } from "@/lib/contracts/domain";
+
 export interface CheckIn {
   done: boolean;
   mood?: number | null;
@@ -69,6 +71,7 @@ export interface StoreState {
   logCheckIn: (id: string, payload: Partial<CheckIn>, dateKey?: string) => void;
   addHabit: (draft: HabitDraft) => void;
   updateHabit: (id: string, patch: Partial<Habit>) => void;
+  applyStackMutation: (input: StackMutationInput) => Promise<void>;
   deleteHabit: (id: string) => void;
   journal: JournalEntry[];
   addJournal: (entry: Partial<JournalEntry>) => void;

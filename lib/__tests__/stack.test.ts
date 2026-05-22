@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  getChainFrom,
+  getPredecessor,
   getStackChain,
   getStackRoot,
   getSuccessor,
   getVisibleStackHabit,
   groupHabitsByStack,
+  isInStack,
   stackInsertPatches,
   stackRemovePatches,
   wouldCreateCycle,
@@ -153,5 +156,143 @@ describe("groupHabitsByStack", () => {
     const groups = groupHabitsByStack(habits);
     expect(groups.get("root")?.map((h) => h.id)).toEqual(["root", "a"]);
     expect(groups.get("solo")?.map((h) => h.id)).toEqual(["solo"]);
+  });
+});
+
+describe("getChainFrom", () => {
+  it("returns the sub-chain starting at the given habit, not the root", () => {
+    const habits = [makeHabit("a", "b"), makeHabit("b", "c"), makeHabit("c")];
+    expect(getChainFrom(habits[1], habits).map((h) => h.id)).toEqual(["b", "c"]);
+  });
+
+  it("is cycle-safe with corrupted data", () => {
+    // Cycle: a -> b -> a. getChainFrom must not infinite-loop.
+    const habits = [makeHabit("a", "b"), makeHabit("b", "a")];
+    const chain = getChainFrom(habits[0], habits);
+    expect(chain.map((h) => h.id)).toEqual(["a", "b"]);
+  });
+});
+
+describe("getPredecessor", () => {
+  it("returns the habit pointing to this one", () => {
+    const habits = [makeHabit("a", "b"), makeHabit("b")];
+    expect(getPredecessor(habits[1], habits)?.id).toBe("a");
+  });
+
+  it("returns null for chain heads and solo habits", () => {
+    const habits = [makeHabit("a", "b"), makeHabit("b"), makeHabit("solo")];
+    expect(getPredecessor(habits[0], habits)).toBeNull();
+    expect(getPredecessor(habits[2], habits)).toBeNull();
+  });
+});
+
+describe("isInStack", () => {
+  it("flags habits with a successor", () => {
+    const habits = [makeHabit("a", "b"), makeHabit("b")];
+    expect(isInStack(habits[0], habits)).toBe(true);
+  });
+
+  it("flags habits with a predecessor (tail)", () => {
+    const habits = [makeHabit("a", "b"), makeHabit("b")];
+    expect(isInStack(habits[1], habits)).toBe(true);
+  });
+
+  it("returns false for solo habits", () => {
+    const habits = [makeHabit("solo"), makeHabit("a", "b"), makeHabit("b")];
+    expect(isInStack(habits[0], habits)).toBe(false);
+  });
+});
+
+describe("wouldCreateCycle (additional)", () => {
+  it("rejects extending a 3-chain into a cycle", () => {
+    // a -> b -> c, attempting b -> a.
+    const habits = [makeHabit("a", "b"), makeHabit("b", "c"), makeHabit("c")];
+    expect(wouldCreateCycle("b", "a", habits)).toBe(true);
+  });
+
+  it("permits linking onto a long chain when no cycle results", () => {
+    const habits = [makeHabit("a", "b"), makeHabit("b", "c"), makeHabit("c"), makeHabit("d")];
+    expect(wouldCreateCycle("c", "d", habits)).toBe(false);
+  });
+});
+
+describe("stackInsertPatches (ordering)", () => {
+  it("for insert-before with a predecessor: rewires predecessor BEFORE habit -> target", () => {
+    // Existing: p -> t (target). Insert h before t. Want: p -> h, then h -> t.
+    const habits = [makeHabit("p", "t"), makeHabit("t"), makeHabit("h")];
+    const patches = stackInsertPatches("h", "before", "t", habits);
+    expect(patches).toEqual([
+      { id: "p", patch: { stackNextId: "h" } },
+      { id: "h", patch: { stackNextId: "t" } },
+    ]);
+  });
+
+  it("for insert-after with a successor: frees target's pointer BEFORE re-pointing habit", () => {
+    // Existing: t -> n (target's successor). Insert h after t. Want: t -> h, then h -> n.
+    const habits = [makeHabit("t", "n"), makeHabit("n"), makeHabit("h")];
+    const patches = stackInsertPatches("h", "after", "t", habits);
+    expect(patches).toEqual([
+      { id: "t", patch: { stackNextId: "h" } },
+      { id: "h", patch: { stackNextId: "n" } },
+    ]);
+  });
+
+  it("for insert-before with no predecessor: only sets habit -> target", () => {
+    const habits = [makeHabit("t"), makeHabit("h")];
+    const patches = stackInsertPatches("h", "before", "t", habits);
+    expect(patches).toEqual([{ id: "h", patch: { stackNextId: "t" } }]);
+  });
+
+  it("for insert-after at tail: only sets target -> habit", () => {
+    const habits = [makeHabit("t"), makeHabit("h")];
+    const patches = stackInsertPatches("h", "after", "t", habits);
+    expect(patches).toEqual([{ id: "t", patch: { stackNextId: "h" } }]);
+  });
+});
+
+describe("stackRemovePatches (ordering)", () => {
+  it("frees the removed habit BEFORE rewiring the predecessor", () => {
+    const habits = [makeHabit("a", "b"), makeHabit("b", "c"), makeHabit("c")];
+    const patches = stackRemovePatches("b", habits);
+    expect(patches).toEqual([
+      { id: "b", patch: { stackNextId: null } },
+      { id: "a", patch: { stackNextId: "c" } },
+    ]);
+  });
+
+  it("removes a root with a successor by only freeing the removed habit", () => {
+    const habits = [makeHabit("a", "b"), makeHabit("b")];
+    const patches = stackRemovePatches("a", habits);
+    expect(patches).toEqual([{ id: "a", patch: { stackNextId: null } }]);
+  });
+
+  it("returns an empty patch list for a solo habit", () => {
+    const habits = [makeHabit("solo")];
+    expect(stackRemovePatches("solo", habits)).toEqual([]);
+  });
+});
+
+describe("cycle safety on corrupted data", () => {
+  it("getStackRoot terminates on a circular chain", () => {
+    const habits = [makeHabit("a", "b"), makeHabit("b", "a")];
+    const root = getStackRoot(habits[0], habits);
+    expect(["a", "b"]).toContain(root.id);
+  });
+
+  it("getStackChain terminates on a circular chain without duplicates", () => {
+    const habits = [makeHabit("a", "b"), makeHabit("b", "a")];
+    const chain = getStackChain(habits[0], habits);
+    expect(chain.map((h) => h.id).sort()).toEqual(["a", "b"]);
+  });
+
+  it("groupHabitsByStack terminates on a circular chain", () => {
+    const habits = [makeHabit("a", "b"), makeHabit("b", "a")];
+    const groups = groupHabitsByStack(habits);
+    // One group per discovered root; defensive behaviour may treat both as
+    // roots, so we just assert that the traversal terminates and that every
+    // habit id appears at least once.
+    const ids = new Set(Array.from(groups.values()).flat().map((h) => h.id));
+    expect(ids.has("a")).toBe(true);
+    expect(ids.has("b")).toBe(true);
   });
 });

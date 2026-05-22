@@ -3,13 +3,12 @@
 import { revalidatePath } from "next/cache";
 
 import { requireUserId } from "@/lib/auth/session";
-import { db } from "@/lib/db/client";
 import {
   createHabit,
   archiveHabit,
-  getHabit,
   updateHabit,
   upsertCheckIn,
+  applyStackMutation,
 } from "@/lib/repositories/habits";
 import {
   createJournalEntry,
@@ -31,6 +30,7 @@ import type {
   UserPreferences,
   WeeklyReviewAnswers,
 } from "@/lib/types";
+import type { StackMutationInput } from "@/lib/contracts/domain";
 
 function revalidateApp() {
   revalidatePath("/");
@@ -71,46 +71,28 @@ export async function createHabitAction(draft: HabitDraft) {
 
 export async function updateHabitAction(habitId: string, patch: Partial<Habit>) {
   const userId = await requireUserId();
-
-  if (patch.stackNextId !== undefined) {
-    if (patch.stackNextId === habitId) {
-      throw new Error("A habit cannot stack with itself.");
-    }
-    if (patch.stackNextId) {
-      const target = await getHabit(userId, patch.stackNextId);
-      if (!target) {
-        throw new Error("Target habit not found.");
-      }
-      // Exclusivity: a habit can only be the next step for one other habit
-      const currentOwner = await db.habit.findFirst({
-        where: { userId, stackNextId: patch.stackNextId, NOT: { id: habitId } },
-        select: { id: true },
-      });
-      if (currentOwner) {
-        throw new Error("Target habit is already part of another stack.");
-      }
-      // Cycle detection: walk forward from target to see if we reach habitId
-      let cursor: string | null = patch.stackNextId;
-      const visited = new Set<string>();
-      while (cursor) {
-        if (visited.has(cursor)) break;
-        visited.add(cursor);
-        if (cursor === habitId) {
-          throw new Error("This would create a circular stack.");
-        }
-        const nextHabit: { stackNextId: string | null } | null = await db.habit.findUnique({
-          where: { id: cursor },
-          select: { stackNextId: true },
-        });
-        cursor = nextHabit?.stackNextId ?? null;
-      }
-    }
-  }
-
+  // Stack validation (cycle, exclusivity, self-reference) lives in the
+  // repository so that this server action and the /api/v1 PATCH route share
+  // exactly the same rules. Errors bubble up as `StackError` with a
+  // user-friendly message.
   const habit = await updateHabit(userId, habitId, patch);
 
   revalidateApp();
   return habit;
+}
+
+/**
+ * Apply an atomic stack mutation (insert or remove). All affected habits are
+ * updated inside a single database transaction; cycles and multi-stack
+ * membership are rejected with a `StackError` whose message is safe to show
+ * directly in a UI dialog.
+ */
+export async function applyStackMutationAction(input: StackMutationInput) {
+  const userId = await requireUserId();
+  const affected = await applyStackMutation(userId, input);
+
+  revalidateApp();
+  return affected;
 }
 
 export async function deleteHabitAction(habitId: string) {
