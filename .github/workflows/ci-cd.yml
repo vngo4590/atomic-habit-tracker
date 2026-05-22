@@ -85,7 +85,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U test"
+          --health-cmd "pg_isready -U test -d atomicly_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 5
@@ -124,6 +124,13 @@ jobs:
       - name: Build application
         run: npm run build
         timeout-minutes: 10
+
+      - name: Prepare standalone server
+        run: |
+          # The standalone output needs static assets and public folder
+          # copied alongside it (same structure as the Dockerfile runner stage).
+          cp -r .next/static .next/standalone/.next/static
+          cp -r public .next/standalone/public
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
