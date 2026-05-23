@@ -1,0 +1,102 @@
+/* Module styles shared by EditableLine and EditableLaw — two closely related
+   "click-to-edit" line inputs that appear on habit detail / journal pages.
+
+   The two components share an editor pane (textarea + Cancel/Save) and a
+   read-only display button that switches the user into editing mode. */
+
+/* Cancel/Save button row beneath the textarea. */
+.editorActions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  justify-content: flex-end;
+}
+
+/* Read-only display button — looks like text but is clickable. Common
+   shape: full-width, transparent, serif. Font-size/style/color vary by
+   component and by whether the value is empty (see modifier classes
+   below). */
+.display {
+  display: block;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 4px 0;
+  margin: 0;
+  font-family: var(--serif);
+  line-height: 1.45;
+}
+
+/* EditableLine — filled (has a value). */
+.displayLineFilled {
+  font-style: normal;
+  font-size: 16px;
+  color: var(--ink-2);
+}
+
+/* EditableLine — empty (placeholder). */
+.displayLineEmpty {
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink-3);
+}
+
+/* EditableLaw — filled. */
+.displayLawFilled {
+  font-size: 14.5px;
+  color: var(--ink-2);
+  line-height: 1.5;
+  font-style: normal;
+}
+
+/* EditableLaw — empty. */
+.displayLawEmpty {
+  font-size: 13.5px;
+  color: var(--ink-3);
+  line-height: 1.5;
+  font-style: italic;
+}
+
+/* Small "NOT SET YET" caption above the placeholder text when empty. */
+.notSetCaption {
+  display: block;
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+/* ---- EditableLaw-specific ---------------------------------------------- */
+
+/* Section wrapper for one law (cue/craving/response/reward). */
+.lawRow {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--rule);
+}
+/* The last law in the loop has no bottom border. */
+.lawRowLast {
+  padding: 14px 0;
+  border-bottom: none;
+}
+
+/* Header row: label on the left, hint on the right. */
+.lawHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+
+/* Tiny .h3 used inside .lawHeader (size override). */
+.lawLabel {
+  font-size: 11.5px;
+}
+
+/* Right-side mono hint (e.g. "OBVIOUS / ATTRACTIVE / EASY / SATISFYING"). */
+.lawHint {
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}

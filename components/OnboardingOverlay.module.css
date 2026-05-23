@@ -1,0 +1,50 @@
+/* Module styles for OnboardingOverlay — the multi-step welcome card. */
+
+/* Card width override — overlay-card defaults to 540px; onboarding bumps
+   to 560px with a 92vw cap so it fits comfortably on tablet portrait. */
+.card {
+  width: 560px;
+  max-width: 92vw;
+}
+
+/* Progress dots row at the top of the card. */
+.progress {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+/* A single progress capsule — base style. */
+.progressDot {
+  width: 34px;
+  height: 4px;
+  border-radius: 99px;
+}
+
+/* Completed/active progress dot (steps the user has reached). */
+.progressDotActive {
+  background: var(--accent);
+}
+
+/* Upcoming progress dot. */
+.progressDotInactive {
+  background: var(--rule-strong);
+}
+
+/* Spacing above the step title. */
+.title {
+  margin-top: 8px;
+}
+
+/* Slightly loosened line-height for the body lede on onboarding. */
+.body {
+  line-height: 1.6;
+}
+
+/* Footer row with the Skip + primary action buttons. */
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 22px;
+}

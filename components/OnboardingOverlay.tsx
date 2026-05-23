@@ -5,6 +5,10 @@ import { useState } from "react";
 
 import { slideUpVariants } from "@/lib/animations";
 
+import styles from "./OnboardingOverlay.module.css";
+
+/** Ordered onboarding steps. Each step has its own eyebrow/title/body and
+    the button label at the bottom of the card. The body is shown once. */
 const STEPS = [
   {
     eyebrow: "Welcome",
@@ -32,23 +36,35 @@ const STEPS = [
   },
 ];
 
-export function OnboardingOverlay({ onComplete, initialName }: { onComplete: (name?: string) => void; initialName?: string }) {
+/**
+ * OnboardingOverlay — first-run multi-step intro shown on top of the
+ * Today page. Users can either step through it (Begin → Continue → …) or
+ * Skip at any time. The "name" step is skipped automatically when the
+ * user already registered with a name.
+ */
+export function OnboardingOverlay({
+  onComplete,
+  initialName,
+}: {
+  onComplete: (name?: string) => void;
+  initialName?: string;
+}) {
   // If the user already provided a name during registration, skip the name step.
   const hasName = Boolean(initialName?.trim());
-  const [step, setStep] = useState(hasName ? 0 : 0);
+  const [step, setStep] = useState(0);
   const [name, setName] = useState(initialName ?? "");
   const current = STEPS[step];
+  // Block "Continue" on the name step until the user enters a name.
   const blocked = step === 1 && !name.trim();
 
+  // Advance to the next step, completing onboarding at the end. Honours the
+  // hasName shortcut by skipping past the name step on step 0.
   const next = () => {
-    if (blocked) {
-      return;
-    }
+    if (blocked) return;
     if (step === STEPS.length - 1) {
       onComplete(name.trim() || undefined);
       return;
     }
-    // Skip the name step (index 1) when the user already has a name.
     if (step === 0 && hasName) {
       setStep(2);
       return;
@@ -67,23 +83,22 @@ export function OnboardingOverlay({ onComplete, initialName }: { onComplete: (na
       <AnimatePresence mode="wait">
         <motion.div
           key={step}
-          className="overlay-card"
-          style={{ width: 560, maxWidth: "92vw" }}
+          className={`overlay-card ${styles.card}`}
           variants={slideUpVariants}
           initial="hidden"
           animate="visible"
           exit="exit"
         >
-          <div style={{ display: "flex", gap: 6, marginBottom: 18 }}>
+          {/* Progress dots — one capsule per step, accent-coloured up to
+              the current step, rule-coloured beyond it. */}
+          <div className={styles.progress}>
             {STEPS.map((item, index) => (
               <motion.span
                 key={item.eyebrow}
-                style={{
-                  width: 34,
-                  height: 4,
-                  borderRadius: 99,
-                  background: index <= step ? "var(--accent)" : "var(--rule-strong)",
-                }}
+                data-testid="onboarding-progress-dot"
+                className={`${styles.progressDot} ${
+                  index <= step ? styles.progressDotActive : styles.progressDotInactive
+                }`}
                 initial={index === step ? { scaleX: 0 } : {}}
                 animate={{ scaleX: 1 }}
                 transition={{ duration: 0.3, delay: index === step ? 0.1 : 0 }}
@@ -91,12 +106,8 @@ export function OnboardingOverlay({ onComplete, initialName }: { onComplete: (na
             ))}
           </div>
           <div className="eyebrow">{current.eyebrow}</div>
-          <h2 className="h1" style={{ marginTop: 8 }}>
-            {current.title}
-          </h2>
-          <p className="lede" style={{ lineHeight: 1.6 }}>
-            {current.body}
-          </p>
+          <h2 className={`h1 ${styles.title}`}>{current.title}</h2>
+          <p className={`lede ${styles.body}`}>{current.body}</p>
           {step === 1 && (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
@@ -112,15 +123,12 @@ export function OnboardingOverlay({ onComplete, initialName }: { onComplete: (na
               />
             </motion.div>
           )}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginTop: 22,
-            }}
-          >
-            <motion.button className="btn" onClick={() => onComplete(name.trim() || undefined)} whileTap={{ scale: 0.97 }}>
+          <div className={styles.footer}>
+            <motion.button
+              className="btn"
+              onClick={() => onComplete(name.trim() || undefined)}
+              whileTap={{ scale: 0.97 }}
+            >
               Skip
             </motion.button>
             <motion.button

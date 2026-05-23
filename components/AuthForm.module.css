@@ -1,0 +1,46 @@
+/* Module styles for AuthForm — the centred sign-in / register card. */
+
+/* Full-viewport background with a centred card. */
+.shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--bg);
+}
+
+/* Card width — narrow but not fixed: stays under 440px on desktop and
+   stretches to 100% on mobile. */
+.card {
+  width: min(440px, 100%);
+}
+
+/* Title spacing — between the eyebrow and the form. */
+.title {
+  margin-top: 8px;
+  margin-bottom: 22px;
+}
+
+/* The form layout — single vertical column with 14px gutters. */
+.form {
+  display: grid;
+  gap: 14px;
+}
+
+/* Validation error text shown beneath each input. */
+.fieldError {
+  color: oklch(52% 0.18 25);
+  font-size: 12px;
+}
+
+/* Submission-level error/info banner. */
+.formMessage {
+  color: oklch(52% 0.18 25);
+  font-size: 13px;
+}
+
+/* Footer paragraph beneath the form (e.g. "Need an account? Register"). */
+.footer {
+  margin-top: 18px;
+  font-size: 13px;
+}
