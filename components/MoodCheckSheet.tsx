@@ -8,6 +8,9 @@ import { overlayCardVariants, overlayVariants } from "@/lib/animations";
 import { fmt } from "@/lib/helpers";
 import type { CheckIn, Habit } from "@/lib/types";
 
+import styles from "./MoodCheckSheet.module.css";
+
+/** Mood metadata — value → emoji + label + colour. Index = value-1. */
 const MOODS = [
   { value: 1, face: "😢", label: "Awful", color: "oklch(60% 0.12 30)" },
   { value: 2, face: "😕", label: "Meh", color: "oklch(65% 0.10 60)" },
@@ -16,10 +19,16 @@ const MOODS = [
   { value: 5, face: "😄", label: "Great", color: "oklch(68% 0.13 145)" },
 ];
 
+/** Safe extraction of a structured check-in payload. */
 function checkIn(value: Habit["history"][string]): CheckIn | null {
   return typeof value === "object" && value !== null ? value : null;
 }
 
+/**
+ * MoodCheckSheet — slide-up sheet shown when a user marks a habit done.
+ * Lets them rate mood (1–5) and add an optional journal note. Both
+ * fields are optional; "Skip" closes without saving structured data.
+ */
 export function MoodCheckSheet({
   habit,
   dateKey,
@@ -48,8 +57,7 @@ export function MoodCheckSheet({
         exit="exit"
       >
         <motion.div
-          className="overlay-card"
-          style={{ width: 560, position: "relative" }}
+          className={`overlay-card ${styles.card}`}
           onClick={(event) => event.stopPropagation()}
           variants={overlayCardVariants}
           initial="hidden"
@@ -57,53 +65,28 @@ export function MoodCheckSheet({
           exit="exit"
         >
           <motion.button
-            className="btn btn-ghost btn-sm"
+            className={`btn btn-ghost btn-sm ${styles.closeBtn}`}
             onClick={onClose}
             aria-label="Close"
-            style={{ position: "absolute", top: 18, right: 18 }}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
           >
-            <IconClose style={{ width: 13, height: 13 }} />
+            <IconClose className={styles.closeIcon} />
           </motion.button>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              gap: 24,
-              alignItems: "start",
-            }}
-          >
+
+          <div className={styles.headerRow}>
             <div>
               <div className="eyebrow">Check-in · {fmt.short(dateKey)}</div>
-              <h1
-                className="h1"
-                style={{ fontSize: 30, marginTop: 8, marginBottom: 8, lineHeight: 1.15 }}
-              >
+              <h1 className={`h1 ${styles.title}`}>
                 How did <em>{habit.name.toLowerCase()}</em> feel?
               </h1>
-              <p
-                style={{
-                  margin: "0 0 24px",
-                  fontFamily: "var(--serif)",
-                  fontSize: 15,
-                  fontStyle: "italic",
-                  color: "var(--ink-3)",
-                  lineHeight: 1.5,
-                }}
-              >
+              <p className={styles.intro}>
                 Optional, but tracking how habits make you feel reveals which ones are working.
               </p>
             </div>
           </div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              gap: 8,
-              marginBottom: 24,
-            }}
-          >
+
+          <div className={styles.moodRow}>
             {MOODS.map((item) => {
               const active = mood === item.value;
               return (
@@ -114,45 +97,27 @@ export function MoodCheckSheet({
                   whileTap={{ scale: 0.95 }}
                   animate={
                     active
-                      ? { y: -2, boxShadow: "0 8px 20px -6px color-mix(in oklch, var(--ink) 15%, transparent)" }
+                      ? {
+                          y: -2,
+                          boxShadow: "0 8px 20px -6px color-mix(in oklch, var(--ink) 15%, transparent)",
+                        }
                       : { y: 0, boxShadow: "none" }
                   }
                   transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                  style={{
-                    flex: 1,
-                    padding: "18px 8px 12px",
-                    borderRadius: 12,
-                    border: `1px solid ${active ? item.color : "var(--rule-strong)"}`,
-                    background: active
-                      ? `color-mix(in oklch, ${item.color} 12%, var(--bg-elev))`
-                      : "var(--bg-elev)",
-                    cursor: "pointer",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 6,
-                  }}
+                  className={`${styles.moodTile} ${active ? styles.moodTileActive : ""}`}
+                  // Pass the mood colour through as a CSS variable so the
+                  // module class can theme border + tint generically.
+                  style={{ ["--mood-color" as string]: item.color }}
                 >
                   <motion.span
-                    style={{
-                      fontSize: 32,
-                      lineHeight: 1,
-                      filter: active ? "none" : "saturate(0.4) opacity(0.65)",
-                    }}
+                    className={`${styles.moodFace} ${active ? "" : styles.moodFaceInactive}`}
                     animate={active ? { scale: [1, 1.2, 1] } : {}}
                     transition={{ duration: 0.3 }}
                   >
                     {item.face}
                   </motion.span>
                   <span
-                    className="mono"
-                    style={{
-                      fontSize: 10,
-                      letterSpacing: "0.06em",
-                      textTransform: "uppercase",
-                      color: active ? item.color : "var(--ink-3)",
-                      fontWeight: active ? 600 : 400,
-                    }}
+                    className={`mono ${styles.moodLabel} ${active ? styles.moodLabelActive : ""}`}
                   >
                     {item.label}
                   </span>
@@ -160,7 +125,8 @@ export function MoodCheckSheet({
               );
             })}
           </div>
-          <div style={{ marginTop: 20 }}>
+
+          <div className={styles.journalSection}>
             <label className="field-label" htmlFor="mood-journal">
               Journal note
             </label>
@@ -178,7 +144,8 @@ export function MoodCheckSheet({
               }
             />
           </div>
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 24 }}>
+
+          <div className={styles.actions}>
             <motion.button className="btn btn-ghost" onClick={onClose} whileTap={{ scale: 0.97 }}>
               Skip - just mark it done
             </motion.button>
