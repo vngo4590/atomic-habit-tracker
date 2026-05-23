@@ -124,13 +124,10 @@ jobs:
       - name: Build application
         run: npm run build
         timeout-minutes: 10
-
-      - name: Prepare standalone server
-        run: |
-          # The standalone output needs static assets and public folder
-          # copied alongside it (same structure as the Dockerfile runner stage).
-          cp -r .next/static .next/standalone/.next/static
-          cp -r public .next/standalone/public
+        env:
+          # Skip standalone output so `next start` works for E2E testing.
+          # Standalone mode is only needed for Docker container deployments.
+          NEXT_OUTPUT_STANDALONE: "false"
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium

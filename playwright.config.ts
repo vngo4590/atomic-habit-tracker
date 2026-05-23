@@ -1,14 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
 
 /**
- * In CI we run against a production build (standalone server.js) which serves
- * pages instantly. Locally we use the dev server which JIT-compiles on request.
+ * In CI we build WITHOUT standalone mode (NEXT_OUTPUT_STANDALONE=false) so
+ * `next start` works normally. Locally we use the dev server for hot-reload.
  *
- * Using `npm run dev` in CI caused tests to timeout because each page request
- * triggered slow on-demand compilation on the CI runner.
- *
- * Using `next start` doesn't work with `output: "standalone"` — we must use
- * `node .next/standalone/server.js` with the static assets pre-copied.
+ * Standalone mode (for Docker) doesn't support `next start` and requires
+ * `node .next/standalone/server.js`. However, the standalone server has
+ * reliability issues with API route handling in CI, so we skip it for E2E.
  */
 const isCI = !!process.env.CI;
 
@@ -39,13 +37,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    // CI: use standalone server.js (requires static assets copied first).
+    // CI: use `next start` against a non-standalone production build.
     // Local: use dev server with hot-reload for better DX.
-    command: isCI ? "node .next/standalone/server.js" : "npm run dev",
+    command: isCI ? "npx next start -p 3000" : "npm run dev",
     url: "http://localhost:3000",
     reuseExistingServer: !isCI,
     timeout: 120_000,
-    // Pass environment so the standalone server knows where to listen.
-    env: isCI ? { PORT: "3000", HOSTNAME: "0.0.0.0" } : undefined,
   },
 });
