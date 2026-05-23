@@ -1,0 +1,7 @@
+/* Module styles for CompletionRing — keeps the single inline style off the JSX. */
+
+.ring {
+  /* Prevent the SVG from shrinking when placed inside a flex row alongside
+     text content (e.g., on the Today page hero card). */
+  flex-shrink: 0;
+}

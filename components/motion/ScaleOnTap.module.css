@@ -1,0 +1,6 @@
+/* Module styles for ScaleOnTap — the wrapper renders inline-flex so it does
+   not insert a line break around its children. */
+
+.root {
+  display: inline-flex;
+}
