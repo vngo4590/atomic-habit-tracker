@@ -148,7 +148,7 @@ jobs:
           echo "=== Healthz ==="
           curl -s -w "\nHTTP %{http_code}\n" http://localhost:3000/api/healthz
 
-          # Test API route (should return 401 without auth)
+          # Test API route (should return 307 redirect to login without auth)
           echo "=== API habits (no auth) ==="
           curl -s -w "\nHTTP %{http_code}\n" --max-time 10 http://localhost:3000/api/v1/habits || echo "CURL FAILED"
 
@@ -156,8 +156,18 @@ jobs:
           echo "=== Login page ==="
           curl -s -o /dev/null -w "HTTP %{http_code}\n" --max-time 10 http://localhost:3000/login || echo "CURL FAILED"
 
+          # Kill the server process and all children, then wait for port to be freed
           kill $SERVER_PID 2>/dev/null || true
           wait $SERVER_PID 2>/dev/null || true
+          # Ensure port 3000 is fully released before Playwright starts its own server
+          for i in $(seq 1 10); do
+            if ! ss -tlnp | grep -q ':3000 '; then
+              echo "Port 3000 is free"
+              break
+            fi
+            echo "Waiting for port 3000 to be freed..."
+            sleep 1
+          done
         timeout-minutes: 2
 
       - name: Install Playwright browsers
