@@ -187,7 +187,33 @@ textarea.input { resize: vertical; min-height: 80px; line-height: 1.55; }
 
 /* Stack diagram — horizontal chain list. Explicit class so the global mobile
    flex-wrap override does not break the drag-to-reorder interaction. */
-.stack-chain-list { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; padding: 4px 0; list-style: none; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
+.stack-chain-list { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; padding: 4px 0 10px; list-style: none; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
+
+/* Visible scrollbar so users know the list is scrollable */
+.stack-chain-list::-webkit-scrollbar { height: 8px; }
+.stack-chain-list::-webkit-scrollbar-track { background: var(--bg-sunk); border-radius: 4px; }
+.stack-chain-list::-webkit-scrollbar-thumb { background: var(--ink-3); border-radius: 4px; min-width: 40px; }
+.stack-chain-list::-webkit-scrollbar-thumb:hover { background: var(--ink-2); }
+/* Firefox scrollbar */
+.stack-chain-list { scrollbar-width: auto; scrollbar-color: var(--ink-3) var(--bg-sunk); }
+
+/* Drag handle for stack chips — prevents accidental reorder when scrolling */
+.stack-drag-handle {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 28px;
+  cursor: grab;
+  color: var(--ink-3);
+  border-radius: 4px;
+  transition: color 0.15s ease, background 0.15s ease;
+  touch-action: none;
+  flex-shrink: 0;
+}
+.stack-drag-handle:hover { color: var(--ink-2); background: var(--bg-sunk); }
+.stack-drag-handle:active { cursor: grabbing; color: var(--ink); }
 
 .chip.active { background: var(--bg-elev); color: var(--ink); border-color: var(--rule-strong); box-shadow: var(--shadow); }
 .chip.accent { background: var(--accent-soft); color: oklch(35% 0.10 60); border-color: transparent; }

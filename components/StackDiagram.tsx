@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { Reorder } from "framer-motion";
+import { Reorder, useDragControls } from "framer-motion";
 import { useRouter } from "next/navigation";
 
 import { Modal } from "@/components/Modal";
@@ -18,6 +18,139 @@ import type { Habit } from "@/lib/types";
  * Exported so tests can reference the same constant.
  */
 export const STACK_PICKER_DEFAULT_LIMIT = 10;
+
+/* -------------------------------------------------------------------------- */
+/* StackChipItem — extracted child so useDragControls() is safe per-item.     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A single draggable chip in the stack chain. Uses a dedicated drag handle
+ * (grip icon) so that horizontal scrolling on the container doesn't
+ * accidentally trigger reorder. The handle is the only element that starts a
+ * drag via Framer Motion's `dragControls`.
+ */
+function StackChipItem({
+  h,
+  isCurrent,
+  isLast,
+  onChipClick,
+  onNodeRemove,
+  onDragEnd,
+}: {
+  h: Habit;
+  isCurrent: boolean;
+  isLast: boolean;
+  onChipClick: (id: string) => void;
+  onNodeRemove: (id: string) => void;
+  onDragEnd: () => void;
+}) {
+  const dragControls = useDragControls();
+
+  return (
+    <Reorder.Item
+      key={h.id}
+      value={h}
+      data-testid={`stack-chip-item-${h.id}`}
+      dragListener={false}
+      dragControls={dragControls}
+      onDragEnd={onDragEnd}
+      style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}
+    >
+      {/* Drag handle — the only element that triggers reorder drag */}
+      <button
+        type="button"
+        className="stack-drag-handle"
+        aria-label={`Drag ${h.name} to reorder`}
+        onPointerDown={(event) => {
+          event.preventDefault();
+          dragControls.start(event);
+        }}
+        data-testid={`stack-chip-drag-${h.id}`}
+      >
+        <svg
+          width="10"
+          height="16"
+          viewBox="0 0 10 16"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <circle cx="3" cy="3" r="1.5" />
+          <circle cx="7" cy="3" r="1.5" />
+          <circle cx="3" cy="8" r="1.5" />
+          <circle cx="7" cy="8" r="1.5" />
+          <circle cx="3" cy="13" r="1.5" />
+          <circle cx="7" cy="13" r="1.5" />
+        </svg>
+      </button>
+      <div
+        data-testid="stack-chain-chip"
+        data-chip-id={h.id}
+        className="chip"
+        style={{
+          borderColor: isCurrent ? "var(--accent)" : "var(--rule)",
+          background: isCurrent
+            ? "color-mix(in oklch, var(--accent) 12%, var(--bg-elev))"
+            : "var(--bg-sunk)",
+          fontSize: 13,
+          padding: "2px 4px 2px 8px",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+        }}
+      >
+        <button
+          type="button"
+          data-testid={`stack-chip-link-${h.id}`}
+          onClick={() => onChipClick(h.id)}
+          aria-label={isCurrent ? `Current: ${h.name}` : `Open ${h.name}`}
+          style={{
+            all: "unset",
+            cursor: isCurrent ? "default" : "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "4px 0",
+          }}
+        >
+          <span>{h.emoji}</span>
+          <span>{h.name}</span>
+        </button>
+        <button
+          type="button"
+          aria-label={`Remove ${h.name} from stack`}
+          data-testid={`stack-chip-remove-${h.id}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            event.preventDefault();
+            void onNodeRemove(h.id);
+          }}
+          onPointerDown={(event) => {
+            event.stopPropagation();
+          }}
+          style={{
+            all: "unset",
+            marginLeft: 2,
+            width: 18,
+            height: 18,
+            borderRadius: 9,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 12,
+            lineHeight: 1,
+            color: "var(--ink-3)",
+            cursor: "pointer",
+          }}
+        >
+          ×
+        </button>
+      </div>
+      {!isLast && (
+        <span style={{ color: "var(--ink-3)", fontSize: 14, marginLeft: 4 }}>→</span>
+      )}
+    </Reorder.Item>
+  );
+}
 
 /**
  * Visual diagram + editor for a habit's stack chain. Rendered in the Stack tab
@@ -257,95 +390,20 @@ export function StackDiagram({
             className="stack-chain-list"
           >
             {orderedChain.map((h, index) => (
-              <Reorder.Item
+              <StackChipItem
                 key={h.id}
-                value={h}
-                data-testid={`stack-chip-item-${h.id}`}
+                h={h}
+                isCurrent={h.id === habit.id}
+                isLast={index === orderedChain.length - 1}
+                onChipClick={handleChipClick}
+                onNodeRemove={handleNodeRemove}
                 onDragEnd={() => {
-                  // Commit after a drag — only fires when the user actually
-                  // grabbed and released this item.
                   void commitReorder(orderedChain);
-                  // Clear the drag flag a tick later so the click handler
-                  // that fires next gets suppressed exactly once.
                   setTimeout(() => {
                     wasDraggedRef.current = false;
                   }, 0);
                 }}
-                style={{ display: "flex", alignItems: "center", gap: 4, cursor: "grab", flexShrink: 0 }}
-              >
-                <div
-                  data-testid="stack-chain-chip"
-                  data-chip-id={h.id}
-                  className="chip"
-                  style={{
-                    borderColor: h.id === habit.id ? "var(--accent)" : "var(--rule)",
-                    background:
-                      h.id === habit.id
-                        ? "color-mix(in oklch, var(--accent) 12%, var(--bg-elev))"
-                        : "var(--bg-sunk)",
-                    fontSize: 13,
-                    padding: "2px 4px 2px 8px",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                  }}
-                >
-                  <button
-                    type="button"
-                    data-testid={`stack-chip-link-${h.id}`}
-                    onClick={() => handleChipClick(h.id)}
-                    aria-label={
-                      h.id === habit.id ? `Current: ${h.name}` : `Open ${h.name}`
-                    }
-                    style={{
-                      all: "unset",
-                      cursor: h.id === habit.id ? "default" : "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 6,
-                      padding: "4px 0",
-                    }}
-                  >
-                    <span>{h.emoji}</span>
-                    <span>{h.name}</span>
-                  </button>
-                  <button
-                    type="button"
-                    aria-label={`Remove ${h.name} from stack`}
-                    data-testid={`stack-chip-remove-${h.id}`}
-                    onClick={(event) => {
-                      // Don't let the click bubble up; it's a sibling of the
-                      // navigation button anyway, but pointerdown propagation
-                      // could otherwise trigger a Reorder drag-start.
-                      event.stopPropagation();
-                      event.preventDefault();
-                      void handleNodeRemove(h.id);
-                    }}
-                    onPointerDown={(event) => {
-                      event.stopPropagation();
-                    }}
-                    style={{
-                      all: "unset",
-                      marginLeft: 2,
-                      width: 18,
-                      height: 18,
-                      borderRadius: 9,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 12,
-                      lineHeight: 1,
-                      color: "var(--ink-3)",
-                      cursor: "pointer",
-                    }}
-                  >
-                    ×
-                  </button>
-                </div>
-                {index < orderedChain.length - 1 && (
-                  <span style={{ color: "var(--ink-3)", fontSize: 14, marginLeft: 4 }}>→</span>
-                )}
-              </Reorder.Item>
+              />
             ))}
           </Reorder.Group>
         </>
