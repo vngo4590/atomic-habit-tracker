@@ -30,6 +30,8 @@ jobs:
   # -------------------------------------------------------------------------
   validate:
     runs-on: ubuntu-latest
+    # Prevent the entire job from hanging if any step stalls.
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,77 +44,34 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+        timeout-minutes: 5
 
       - name: Generate Prisma client
         run: npm run prisma:generate
+        timeout-minutes: 2
 
       - name: TypeScript check
         run: npm run typecheck
+        timeout-minutes: 5
 
       - name: Lint
         run: npm run lint:app
+        timeout-minutes: 5
 
       - name: Run tests
         run: npm run test:run
+        timeout-minutes: 5
 
       - name: Build application
         run: npm run build
-
-  # e2e:
-  #   needs: validate
-  #   runs-on: ubuntu-latest
-  #   services:
-  #     postgres:
-  #       image: postgres:16
-  #       env:
-  #         POSTGRES_USER: test
-  #         POSTGRES_PASSWORD: test
-  #         POSTGRES_DB: atomicly_test
-  #       ports:
-  #         - 5432:5432
-  #       options: >-
-  #         --health-cmd "pg_isready -U test"
-  #         --health-interval 5s
-  #         --health-timeout 5s
-  #         --health-retries 5
-  #   env:
-  #     DATABASE_URL: postgresql://test:test@localhost:5432/atomicly_test?schema=public
-  #     AUTH_SECRET: ci-e2e-test-secret-not-for-production
-  #     AUTH_TRUST_HOST: "true"
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v4
-  #
-  #     - name: Setup Node.js
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '24'
-  #         cache: 'npm'
-  #
-  #     - name: Install dependencies
-  #       run: npm ci
-  #
-  #     - name: Generate Prisma client
-  #       run: npm run prisma:generate
-  #
-  #     - name: Run database migrations
-  #       run: npx prisma migrate deploy
-  #
-  #     - name: Seed test account
-  #       run: npx tsx prisma/seed.ts
-  #
-  #     - name: Install Playwright browsers
-  #       run: npx playwright install chromium
-  #
-  #     - name: Run E2E tests
-  #       run: npm run test:e2e
+        timeout-minutes: 10
 
   # -------------------------------------------------------------------------
   # DEPLOY — provision Azure infrastructure and release the container.
   # Only runs on the master branch after validation passes.
   # -------------------------------------------------------------------------
   deploy:
-    needs: validate
+    needs: [validate]
     if: github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     environment: dev

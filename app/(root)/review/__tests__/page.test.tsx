@@ -15,6 +15,33 @@ function makeReview(weekStartKey: string, patch: Partial<WeeklyReview> = {}): We
   };
 }
 
+function makeHabit(id: string, history: Record<string, boolean> = {}): Habit {
+  return {
+    id,
+    name: `Habit ${id}`,
+    identity: "test identity",
+    emoji: "🎯",
+    cue: "test cue",
+    craving: "test craving",
+    response: "test response",
+    reward: "test reward",
+    loopCue: "",
+    loopCraving: "",
+    loopResponse: "",
+    loopReward: "",
+    twoMin: "",
+    environment: "",
+    schedule: "Daily",
+    time: "morning",
+    contract: "",
+    contractPartners: [],
+    history,
+    notes: [],
+    stackNextId: null,
+    createdAt: "2024-01-01T00:00:00.000Z",
+  };
+}
+
 const storeMock = vi.hoisted(() => ({
   habits: [] as Habit[],
   completionRate: vi.fn(() => 0.75),
@@ -97,6 +124,82 @@ describe("ReviewPage", () => {
       wentWell: pastReview.wentWell,
       smallestFix: pastReview.smallestFix,
       identityVote: "Patient teammate",
+    });
+  });
+
+  describe("mobile-friendly layout classes", () => {
+    // Given: the review page renders the 7-day progress grid
+    // When: we inspect the rendered DOM
+    // Then: it uses the review-week-grid class for responsive control
+    it("renders the 7-day grid with the review-week-grid class", () => {
+      render(<ReviewPage />);
+      const weekGrid = document.querySelector(".review-week-grid");
+      expect(weekGrid).toBeTruthy();
+    });
+
+    // Given: the review page renders individual day cards
+    // When: we inspect the rendered DOM
+    // Then: each card uses the review-day-card class for compact mobile sizing
+    it("renders exactly 7 day cards with the review-day-card class", () => {
+      render(<ReviewPage />);
+      const dayCards = document.querySelectorAll(".review-day-card");
+      expect(dayCards.length).toBe(7);
+    });
+
+    // Given: the review page renders wins and slips sections
+    // When: we inspect the rendered DOM
+    // Then: they are wrapped in the review-insights-grid for responsive stacking
+    it("renders wins/slips in the review-insights-grid container", () => {
+      render(<ReviewPage />);
+      const insightsGrid = document.querySelector(".review-insights-grid");
+      expect(insightsGrid).toBeTruthy();
+      // Should contain both the Wins and Slips sections
+      const sections = insightsGrid?.querySelectorAll(".card");
+      expect(sections?.length).toBe(2);
+    });
+
+    // Given: the review page has past reviews
+    // When: we inspect the rendered DOM
+    // Then: each row uses the review-past-row class for mobile collapse
+    it("renders past review rows with the review-past-row class", () => {
+      const weekStartKey = dateAdd(todayKey(), -6);
+      storeMock.weeklyReviews = [
+        makeReview(dateAdd(weekStartKey, -7)),
+        makeReview(dateAdd(weekStartKey, -14)),
+      ];
+
+      render(<ReviewPage />);
+      const pastRows = document.querySelectorAll(".review-past-row");
+      expect(pastRows.length).toBe(2);
+    });
+
+    // Given: the review page renders the bar chart within day cards
+    // When: we inspect the rendered DOM
+    // Then: bar containers use the review-day-bar-container class
+    it("renders progress bars with the review-day-bar-container class", () => {
+      render(<ReviewPage />);
+      const barContainers = document.querySelectorAll(".review-day-bar-container");
+      expect(barContainers.length).toBe(7);
+    });
+  });
+
+  describe("habit completion display", () => {
+    // Given: user has habits with history on some review days
+    // When: the review page renders
+    // Then: completion stats reflect the real data
+    it("displays correct completion percentage in the header", () => {
+      const today = todayKey();
+      const days = Array.from({ length: 7 }, (_, i) => dateAdd(today, i - 6));
+      const history: Record<string, boolean> = {};
+      // Mark habit as done on 4 of the 7 days
+      days.slice(0, 4).forEach((day) => { history[day] = true; });
+
+      storeMock.habits = [makeHabit("h1", history)];
+
+      render(<ReviewPage />);
+      // 4 done out of 7 possible = 57%
+      expect(screen.getByText(/4 \/ 7 check-ins/)).toBeTruthy();
+      expect(screen.getByText(/57%/)).toBeTruthy();
     });
   });
 });

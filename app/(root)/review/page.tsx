@@ -153,18 +153,19 @@ export default function ReviewPage() {
             {totals.done} / {totals.possible} check-ins · {totals.pct}%
           </div>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 10 }}>
+        {/* Horizontally scrollable on mobile, 7-column grid on desktop */}
+        <div className="review-week-grid">
           {days.map((day) => {
             const count = habits.filter((habit) => habit.history[day]).length;
             const pct = habits.length ? Math.round((count / habits.length) * 100) : 0;
             return (
-              <motion.div key={day} style={{ minHeight: 132, background: "var(--bg-sunk)", border: "1px solid var(--rule)", borderRadius: 8, padding: 12, display: "grid", alignContent: "space-between" }} whileHover={{ y: -2, borderColor: "var(--rule-strong)" }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
+              <motion.div key={day} className="review-day-card" whileHover={{ y: -2, borderColor: "var(--rule-strong)" }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
                 <div>
                   <div className="mono muted" style={{ fontSize: 10 }}>{fmt.weekday(day)}</div>
                   <div style={{ fontFamily: "var(--serif)", fontSize: 24 }}>{day.slice(-2)}</div>
                 </div>
                 <div>
-                  <div style={{ height: 72, display: "flex", alignItems: "end" }}>
+                  <div className="review-day-bar-container">
                     <motion.div
                       style={{ width: "100%", background: "var(--accent)", borderRadius: 4 }}
                       initial={{ height: 0 }}
@@ -180,7 +181,8 @@ export default function ReviewPage() {
         </div>
       </section>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginBottom: 18 }}>
+      {/* Wins and slips — stacks vertically on mobile */}
+      <div className="review-insights-grid">
         <section className="card card-pad">
           <div className="eyebrow">Wins</div>
           <StaggerContainer style={{ display: "grid", gap: 12, marginTop: 14 }} staggerDelay={0.05}>
@@ -249,7 +251,7 @@ export default function ReviewPage() {
         </div>
         <div style={{ display: "grid", gap: 12 }}>
           {visiblePastReviews.length ? visiblePastReviews.map((review) => (
-            <div key={review.weekStartKey} style={{ display: "grid", gridTemplateColumns: "120px 1fr auto", gap: 14, alignItems: "center", padding: "12px 0", borderTop: "1px solid var(--rule)" }}>
+            <div key={review.weekStartKey} className="review-past-row">
               <div className="mono muted" style={{ fontSize: 11 }}>{fmt.short(review.weekStartKey)}</div>
               <div>
                 <div style={{ fontFamily: "var(--serif)", fontSize: 17, fontStyle: "italic", color: "var(--ink)" }}>{reviewSummary(review).slice(0, 120)}{reviewSummary(review).length > 120 ? "..." : ""}</div>

@@ -254,16 +254,7 @@ export function StackDiagram({
               setOrderedChain(next);
             }}
             data-testid="stack-chain-list"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: 14,
-              padding: "4px 0",
-              listStyle: "none",
-              overflowX: "auto",
-              overflowY: "hidden",
-            }}
+            className="stack-chain-list"
           >
             {orderedChain.map((h, index) => (
               <Reorder.Item

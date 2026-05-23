@@ -172,6 +172,23 @@ textarea.input { resize: vertical; min-height: 80px; line-height: 1.55; }
 /* Day-of-week grid on the create-habit page. Class-based so mobile does not
    squash it into a single column like it does for inline grid styles. */
 .day-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+
+/* Weekly review — 7-day progress grid. Class-based to control mobile layout
+   independently of the broad inline-style override. */
+.review-week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+.review-day-card { min-height: 132px; background: var(--bg-sunk); border: 1px solid var(--rule); border-radius: 8px; padding: 12px; display: grid; align-content: space-between; }
+.review-day-bar-container { height: 72px; display: flex; align-items: end; }
+
+/* Weekly review — wins / slips two-column grid on desktop, stacked on mobile. */
+.review-insights-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+
+/* Weekly review — past review row with date, summary, and action button. */
+.review-past-row { display: grid; grid-template-columns: 120px 1fr auto; gap: 14px; align-items: center; padding: 12px 0; border-top: 1px solid var(--rule); }
+
+/* Stack diagram — horizontal chain list. Explicit class so the global mobile
+   flex-wrap override does not break the drag-to-reorder interaction. */
+.stack-chain-list { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; padding: 4px 0; list-style: none; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
+
 .chip.active { background: var(--bg-elev); color: var(--ink); border-color: var(--rule-strong); box-shadow: var(--shadow); }
 .chip.accent { background: var(--accent-soft); color: oklch(35% 0.10 60); border-color: transparent; }
 .chip.done { background: var(--done-soft); color: oklch(38% 0.08 145); border-color: transparent; }
@@ -693,6 +710,61 @@ textarea.input { resize: vertical; min-height: 80px; line-height: 1.55; }
     transform: none;
     justify-content: center;
     border-radius: var(--r-md);
+  }
+
+  /* -- Weekly review mobile overrides --
+     Horizontal scroll for 7-day cards so they fit on screen without stacking
+     into a 900px+ tall column. Cards are compact with a fixed width. */
+  .review-week-grid {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px;
+    scroll-snap-type: x proximity;
+  }
+
+  .review-day-card {
+    flex: 0 0 90px;
+    min-height: 100px;
+    padding: 10px;
+    scroll-snap-align: start;
+  }
+
+  .review-day-bar-container {
+    height: 48px;
+  }
+
+  /* Wins / Slips stack vertically on mobile */
+  .review-insights-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* Past review rows collapse to a stacked layout on mobile */
+  .review-past-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 14px 0;
+  }
+
+  .review-past-row > button {
+    justify-self: start;
+  }
+
+  /* -- Stack diagram mobile overrides --
+     Prevent the global flex-wrap: wrap rule from breaking horizontal drag
+     reordering. The chain must stay single-line and scroll horizontally. */
+  .stack-chain-list {
+    flex-wrap: nowrap !important;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    /* Allow horizontal scroll to work within the clipped parent. */
+    overflow-clip-margin: 0;
+    touch-action: pan-x;
   }
 
   .main-inner [style*="grid-template-columns"] {
