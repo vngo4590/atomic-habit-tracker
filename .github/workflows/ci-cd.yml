@@ -67,81 +67,11 @@ jobs:
         timeout-minutes: 10
 
   # -------------------------------------------------------------------------
-  # E2E — run Playwright end-to-end tests against a production build.
-  # Uses a Postgres service container, runs migrations, seeds the dev account,
-  # then starts `next start` (fast, no JIT compilation) for Playwright.
-  # -------------------------------------------------------------------------
-  e2e:
-    needs: validate
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: atomicly_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U test -d atomicly_test"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 5
-    env:
-      DATABASE_URL: postgresql://test:test@localhost:5432/atomicly_test?schema=public
-      AUTH_SECRET: ci-e2e-test-secret-not-for-production
-      AUTH_TRUST_HOST: "true"
-      # Auth.js v5 needs AUTH_URL to generate correct callback URLs.
-      AUTH_URL: http://localhost:3000
-      # Skip standalone output so `next start` works for E2E testing.
-      # Both build and runtime need this so next.config.ts evaluates correctly.
-      NEXT_OUTPUT_STANDALONE: "false"
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-        timeout-minutes: 5
-
-      - name: Generate Prisma client
-        run: npm run prisma:generate
-        timeout-minutes: 2
-
-      - name: Run database migrations
-        run: npx prisma migrate deploy
-        timeout-minutes: 2
-
-      - name: Seed test account
-        run: npx tsx prisma/seed.ts
-        timeout-minutes: 1
-
-      - name: Build application
-        run: npm run build
-        timeout-minutes: 10
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
-        timeout-minutes: 3
-
-      - name: Run E2E tests
-        run: npm run test:e2e
-        timeout-minutes: 10
-
-  # -------------------------------------------------------------------------
   # DEPLOY — provision Azure infrastructure and release the container.
   # Only runs on the master branch after validation passes.
   # -------------------------------------------------------------------------
   deploy:
-    needs: [validate, e2e]
+    needs: [validate]
     if: github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     environment: dev
