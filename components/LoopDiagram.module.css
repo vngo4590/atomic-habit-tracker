@@ -1,0 +1,67 @@
+/* Module styles for LoopDiagram — the 4-step habit-loop diagram. */
+
+/* Intro lede above the loop grid. */
+.intro {
+  margin-bottom: 24px;
+  font-style: italic;
+}
+
+/* "The loop in a sentence" recap card beneath the four cells. */
+.recap {
+  margin-top: 24px;
+  background: var(--bg-sunk);
+}
+.recapTitle {
+  margin-bottom: 8px;
+}
+.recapSentence {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 20px;
+  font-style: italic;
+  color: var(--ink-2);
+  line-height: 1.4;
+}
+/* The filled-in cue/craving/response value spans inside the sentence. */
+.recapValue {
+  color: var(--ink);
+}
+/* The reward value uses the accent colour. */
+.recapReward {
+  color: var(--accent);
+}
+
+/* ---- LoopEditableValue (inline edit) ---------------------------------- */
+
+/* Cancel/Save button row beneath the textarea. */
+.editorActions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  justify-content: flex-end;
+}
+
+/* Click-to-edit button styled as text inside .loop-cell. */
+.value {
+  appearance: none;
+  width: 100%;
+  min-height: 48px;
+  border: 1px dashed transparent;
+  border-radius: var(--r-md);
+  background: transparent;
+  padding: 4px 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* Value variant — filled. */
+.valueFilled {
+  color: var(--ink);
+  font-style: normal;
+}
+
+/* Value variant — empty / placeholder. */
+.valueEmpty {
+  color: var(--ink-3);
+  font-style: italic;
+}

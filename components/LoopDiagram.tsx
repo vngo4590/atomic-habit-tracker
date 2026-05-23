@@ -4,6 +4,8 @@ import { useState } from "react";
 
 import type { Habit } from "@/lib/types";
 
+import styles from "./LoopDiagram.module.css";
+
 type LoopField = "loopCue" | "loopCraving" | "loopResponse" | "loopReward";
 
 type LoopCell = {
@@ -14,6 +16,8 @@ type LoopCell = {
   placeholder: string;
 };
 
+/** The four habit-loop steps. Each cell renders as one column in the
+    .loop grid (see app/styles/components.css). */
 const CELLS: LoopCell[] = [
   { number: "01", step: "Cue", lead: "When", field: "loopCue", placeholder: "When 7am, after I pour coffee..." },
   { number: "02", step: "Craving", lead: "I want", field: "loopCraving", placeholder: "To feel curious, calm, strong..." },
@@ -21,6 +25,11 @@ const CELLS: LoopCell[] = [
   { number: "04", step: "Reward", lead: "And I get", field: "loopReward", placeholder: "One visible win." },
 ];
 
+/**
+ * LoopEditableValue — single cell value with click-to-edit support.
+ * Local-only because the editor styling is tied to the .loop-cell layout
+ * and is not reused elsewhere.
+ */
 function LoopEditableValue({
   value,
   placeholder,
@@ -37,10 +46,33 @@ function LoopEditableValue({
   if (editing) {
     return (
       <div>
-        <textarea className="input" rows={2} autoFocus value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={placeholder} />
-        <div style={{ display: "flex", gap: 6, marginTop: 6, justifyContent: "flex-end" }}>
-          <button className="btn btn-sm" onClick={() => { setDraft(value); setEditing(false); }}>Cancel</button>
-          <button className="btn btn-sm btn-primary" onClick={() => { onSave(draft); setEditing(false); }}>Save</button>
+        <textarea
+          className="input"
+          rows={2}
+          autoFocus
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder={placeholder}
+        />
+        <div className={styles.editorActions}>
+          <button
+            className="btn btn-sm"
+            onClick={() => {
+              setDraft(value);
+              setEditing(false);
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            className="btn btn-sm btn-primary"
+            onClick={() => {
+              onSave(draft);
+              setEditing(false);
+            }}
+          >
+            Save
+          </button>
         </div>
       </div>
     );
@@ -48,23 +80,10 @@ function LoopEditableValue({
 
   return (
     <button
-      className="loop-value"
+      className={`loop-value ${styles.value} ${empty ? styles.valueEmpty : styles.valueFilled}`}
       onClick={() => {
         setDraft(value);
         setEditing(true);
-      }}
-      style={{
-        appearance: "none",
-        width: "100%",
-        minHeight: 48,
-        border: "1px dashed transparent",
-        borderRadius: "var(--r-md)",
-        background: "transparent",
-        padding: "4px 0",
-        textAlign: "left",
-        cursor: "pointer",
-        color: empty ? "var(--ink-3)" : "var(--ink)",
-        fontStyle: empty ? "italic" : "normal",
       }}
     >
       {empty ? placeholder : value}
@@ -72,6 +91,12 @@ function LoopEditableValue({
   );
 }
 
+/**
+ * LoopDiagram — visualises a habit as the four-step Atomic Habits loop
+ * (cue → craving → response → reward). Each step is editable inline.
+ * Beneath the grid, the same values are recapped as a single sentence
+ * for a quick scan.
+ */
 export function LoopDiagram({
   habit,
   onUpdate,
@@ -79,6 +104,9 @@ export function LoopDiagram({
   habit: Habit;
   onUpdate: (patch: Partial<Pick<Habit, LoopField>>) => void;
 }) {
+  // Sentence-form recap below the grid. Falls back to placeholder copy
+  // so the sentence reads grammatically even before the user fills the
+  // four fields.
   const loopSentence = {
     cue: habit.loopCue.toLowerCase() || "the cue appears",
     craving: habit.loopCraving.toLowerCase() || "the reward",
@@ -88,7 +116,7 @@ export function LoopDiagram({
 
   return (
     <div>
-      <p className="lede" style={{ marginBottom: 24, fontStyle: "italic" }}>
+      <p className={`lede ${styles.intro}`}>
         Every habit follows the same four steps. Here&apos;s yours, laid out as a sentence diagram.
       </p>
       <div className="loop">
@@ -96,18 +124,22 @@ export function LoopDiagram({
           <div key={number} className="loop-cell">
             <div className="loop-step">{number} · {step}</div>
             <div className="loop-label">{lead}</div>
-            <LoopEditableValue value={habit[field]} placeholder={placeholder} onSave={(value) => onUpdate({ [field]: value })} />
+            <LoopEditableValue
+              value={habit[field]}
+              placeholder={placeholder}
+              onSave={(value) => onUpdate({ [field]: value })}
+            />
             <div className="loop-arrow" />
           </div>
         ))}
       </div>
-      <div className="card card-pad" style={{ marginTop: 24, background: "var(--bg-sunk)" }}>
-        <h3 className="h3" style={{ marginBottom: 8 }}>The loop in a sentence</h3>
-        <p style={{ margin: 0, fontFamily: "var(--serif)", fontSize: 20, fontStyle: "italic", color: "var(--ink-2)", lineHeight: 1.4 }}>
-          When <span style={{ color: "var(--ink)" }}>{loopSentence.cue}</span>, I crave{" "}
-          <span style={{ color: "var(--ink)" }}>{loopSentence.craving}</span>, so I{" "}
-          <span style={{ color: "var(--ink)" }}>{loopSentence.response}</span>, and the reward is{" "}
-          <span style={{ color: "var(--accent)" }}>{loopSentence.reward}</span>.
+      <div className={`card card-pad ${styles.recap}`}>
+        <h3 className={`h3 ${styles.recapTitle}`}>The loop in a sentence</h3>
+        <p className={styles.recapSentence}>
+          When <span className={styles.recapValue}>{loopSentence.cue}</span>, I crave{" "}
+          <span className={styles.recapValue}>{loopSentence.craving}</span>, so I{" "}
+          <span className={styles.recapValue}>{loopSentence.response}</span>, and the reward is{" "}
+          <span className={styles.recapReward}>{loopSentence.reward}</span>.
         </p>
       </div>
     </div>
