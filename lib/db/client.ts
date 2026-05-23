@@ -24,14 +24,19 @@ function stripPrismaParams(url: string): string {
 }
 
 function createPrismaClient() {
-  // Create an explicit pg Pool with timeouts to prevent hanging connections.
-  // The default PrismaPg(string) approach doesn't set connection timeouts,
-  // which can cause requests to hang indefinitely in production.
+  // The @prisma/adapter-pg sends concurrent queries within implicit
+  // transactions (for relation includes). In pg@8.20+ this triggers a
+  // deprecation warning and can leave the connection in an inconsistent
+  // state. Setting maxUses: 1 ensures each connection is destroyed after
+  // a single checkout-release cycle, preventing corrupted connections from
+  // being reused and causing subsequent requests to hang.
   const pool = new Pool({
     connectionString: stripPrismaParams(getDatabaseUrl()),
-    max: 10,
+    max: 20,
     connectionTimeoutMillis: 5000,
-    idleTimeoutMillis: 30000,
+    idleTimeoutMillis: 10000,
+    maxUses: 1,
+    allowExitOnIdle: true,
   });
 
   const adapter = new PrismaPg(pool);
