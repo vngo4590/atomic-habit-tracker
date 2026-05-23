@@ -5,6 +5,22 @@ import { motion } from "framer-motion";
 import { IconArrow, IconCheck, IconFlame } from "@/components/Icons";
 import type { Habit } from "@/lib/types";
 
+import styles from "./HabitRow.module.css";
+
+/**
+ * HabitRow — one habit row as it appears on Today and All Habits.
+ *
+ * Structure (3 grid columns, see .habit-row in components.css):
+ *   [ check button ]  [ name + meta ]  [ vote chip + streak + arrow ]
+ *
+ * Interaction:
+ *  - Clicking the check button toggles completion (stops propagation so
+ *    the row does not also navigate).
+ *  - Clicking anywhere else on the row opens the habit detail page.
+ *  - When `done` is true the row applies the global .done modifier which
+ *    line-throughs the name; this component also swaps the vote chip
+ *    variant from `pending` to `done`.
+ */
 export function HabitRow({
   habit,
   done,
@@ -45,31 +61,15 @@ export function HabitRow({
           <span>{habit.identity}</span>
         </div>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div className={styles.meta}>
+        {/* Vote chip — pulses briefly when the row transitions to done. */}
         <motion.span
-          className="chip"
-          style={{
-            background: done ? "var(--accent-soft)" : "rgba(0,0,0,0)",
-            borderColor: done ? "transparent" : "var(--rule)",
-            color: done ? "oklch(35% 0.10 60)" : "var(--ink-3)",
-            fontStyle: "normal",
-            fontSize: 10,
-          }}
+          className={`chip ${styles.voteChip} ${done ? styles.voteChipDone : styles.voteChipPending}`}
           animate={done ? { scale: [1, 1.15, 1] } : { scale: 1 }}
           transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
         >
           {done ? "+1" : "."}{" "}
-          <span
-            style={{
-              fontStyle: "italic",
-              fontFamily: "var(--serif)",
-              textTransform: "none",
-              letterSpacing: 0,
-              fontSize: 12,
-            }}
-          >
-            {habit.identity}
-          </span>
+          <span className={styles.identityLabel}>{habit.identity}</span>
         </motion.span>
         {streak > 0 && (
           <motion.div
@@ -82,7 +82,7 @@ export function HabitRow({
             <IconFlame /> {streak}
           </motion.div>
         )}
-        <IconArrow style={{ width: 14, height: 14, color: "var(--ink-4)" }} />
+        <IconArrow className={styles.arrow} />
       </div>
     </motion.div>
   );

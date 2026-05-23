@@ -1,0 +1,47 @@
+/* Module styles for HabitRow — the row used on Today and All Habits pages.
+   The .habit-row, .check, .chip, and .streak-pill classes are global (see
+   app/styles/components.css). This module only carries the bits specific
+   to the row's right-hand "vote chip + streak + arrow" cluster. */
+
+/* Right-hand container: vote chip + streak pill + arrow icon. */
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Vote chip base — overrides chip font-size to 10px and resets italic. */
+.voteChip {
+  font-style: normal;
+  font-size: 10px;
+}
+
+/* Vote chip — done variant tints with accent-soft. */
+.voteChipDone {
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: oklch(35% 0.10 60);
+}
+
+/* Vote chip — pending variant uses a transparent background. */
+.voteChipPending {
+  background: rgba(0, 0, 0, 0);
+  border-color: var(--rule);
+  color: var(--ink-3);
+}
+
+/* Identity label inside the vote chip — italic serif (e.g. "a writer"). */
+.identityLabel {
+  font-style: italic;
+  font-family: var(--serif);
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 12px;
+}
+
+/* The chevron-right arrow on the far right of the row. */
+.arrow {
+  width: 14px;
+  height: 14px;
+  color: var(--ink-4);
+}
