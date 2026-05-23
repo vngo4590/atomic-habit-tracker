@@ -90,6 +90,17 @@ async function removeFromStack(page: import("@playwright/test").Page) {
  * Stack CRUD & edge cases
  */
 test.describe("Habit stacking", () => {
+  // Diagnostic: verify API is reachable before running stacking tests.
+  // This helps isolate whether the server hangs on authenticated API calls.
+  test("API responds to authenticated requests", async ({ page }) => {
+    const healthRes = await page.request.get("/api/healthz", { timeout: 5000 });
+    expect(healthRes.status()).toBe(200);
+
+    const habitsRes = await page.request.get("/api/v1/habits", { timeout: 10000 });
+    // Should be 200 if cookies are sent, or 307 redirect if not
+    expect([200, 307]).toContain(habitsRes.status());
+  });
+
   test.beforeEach(async ({ page }) => {
     await cleanupHabits(page);
   });

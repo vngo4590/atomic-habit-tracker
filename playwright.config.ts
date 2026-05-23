@@ -39,7 +39,8 @@ export default defineConfig({
   webServer: {
     // CI: use `next start` against a non-standalone production build.
     // Local: use dev server with hot-reload for better DX.
-    command: isCI ? "npx next start -p 3000" : "npm run dev",
+    // --trace-deprecation helps diagnose pg connection warnings in CI logs.
+    command: isCI ? "node --trace-deprecation node_modules/.bin/next start -p 3000" : "npm run dev",
     url: "http://localhost:3000",
     reuseExistingServer: !isCI,
     timeout: 120_000,
