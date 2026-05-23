@@ -1,0 +1,63 @@
+/* ============================================================================
+ * base.css — element-level reset and root document styles.
+ *
+ * Contains:
+ *   • Universal box-sizing reset.
+ *   • <html>/<body> sizing and base typography.
+ *   • Default <button> reset (so .btn doesn't inherit user-agent styles).
+ *   • Sidebar/main scrollbar styling (cosmetic, shared by all routes).
+ *
+ * Tailwind v4 ships its own preflight reset via the `@import "tailwindcss"`
+ * call in globals.css. These rules go *after* preflight to set Atomicly's
+ * baseline (font-size, smoothing, body background).
+ * ============================================================================ */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+/* Base body — sets the editorial baseline: warm cream background, near-black
+   ink colour, 14px sans-serif at 1.5 line-height. Subpixel hints make the
+   serif headings render crisply. */
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.5;
+  letter-spacing: 0;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* User-agent stylesheets give <button> a default font and color which clash
+   with our design system. We strip that here so .btn (in components.css)
+   has a clean starting point. */
+button {
+  font-family: inherit;
+  color: inherit;
+}
+
+/* Thin, warm-grey scrollbars on the main scroll containers (desktop only —
+   mobile defers to the platform's native scrollbar). */
+.main::-webkit-scrollbar,
+.sidebar::-webkit-scrollbar {
+  width: 10px;
+}
+.main::-webkit-scrollbar-track,
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.main::-webkit-scrollbar-thumb,
+.sidebar::-webkit-scrollbar-thumb {
+  background: var(--rule-strong);
+  border-radius: 5px;
+  border: 2px solid var(--bg);
+  background-clip: content-box;
+}
