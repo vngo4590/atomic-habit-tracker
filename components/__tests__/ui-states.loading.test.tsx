@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HabitRow } from "@/components/HabitRow";
 import { MoodCheckSheet } from "@/components/MoodCheckSheet";
 import { Nav } from "@/components/Nav";
-import { OnboardingOverlay } from "@/components/OnboardingOverlay";
 import {
   makeHabit,
   paramsMock,
@@ -84,27 +83,6 @@ describe("Loading / Transition States", () => {
     // And: saving preserves the existing mood
     fireEvent.click(screen.getByText("Save check-in"));
     expect(onSave).toHaveBeenCalledWith({ mood: 3, journal: "Felt okay" });
-  });
-
-  it.skip("OnboardingOverlay step 2 blocks progression until a name is entered", () => {
-    // Bug: AnimatePresence mode="wait" prevents step advancement in JSDOM
-    // because exit animations never complete, so the new step never mounts.
-    // Given: the onboarding overlay is open at step 0
-    const onComplete = vi.fn();
-    render(<OnboardingOverlay onComplete={onComplete} />);
-
-    // When: the user clicks Begin to reach the Name step
-    fireEvent.click(screen.getByText("Begin"));
-
-    // Then: the Continue button is disabled because the name field is empty
-    const continueBtn = screen.getByText("Continue");
-    expect(continueBtn).toBeDisabled();
-
-    // When: the user types their name
-    fireEvent.change(screen.getByPlaceholderText("Your name"), { target: { value: "Ada" } });
-
-    // Then: the Continue button is now enabled
-    expect(continueBtn).not.toBeDisabled();
   });
 });
 
