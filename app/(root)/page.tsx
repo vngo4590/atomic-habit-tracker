@@ -250,6 +250,46 @@ export default function TodayPage() {
         </div>
       </motion.div>
 
+      {/* Search results appear immediately after the header so that on mobile
+          (where stats and the identity banner each take the full viewport
+          width) the user can see hits without scrolling past them. */}
+      {searchQuery && searchResults.length > 0 && (
+        <motion.section
+          className={styles.section}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.05, ease: [0.4, 0, 0.2, 1] }}
+        >
+          <div className={styles.sectionHeader}>
+            <h2 className="h3">Search results</h2>
+            <span className={`muted mono ${styles.sectionCounter}`}>{searchResults.length} found</span>
+          </div>
+          <div className="habit-list">
+            <StaggerContainer staggerDelay={0.04}>
+              {searchResults.map((habit) => (
+                <StaggerItem key={habit.id}>
+                  {renderHabitRow(habit, { showBadges: true, alwaysSetMoodOnCheck: false })}
+                </StaggerItem>
+              ))}
+            </StaggerContainer>
+          </div>
+        </motion.section>
+      )}
+
+      {searchQuery && searchResults.length === 0 && (
+        <motion.div
+          className={`card card-pad ${styles.emptyCard}`}
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+        >
+          <div className="eyebrow">No results</div>
+          <h2 className={`h2 ${styles.emptyTitle}`}>
+            No habits match &quot;{searchQuery}&quot;.
+          </h2>
+        </motion.div>
+      )}
+
       <motion.div
         className={styles.statsRow}
         initial={{ opacity: 0, y: 16 }}
@@ -370,44 +410,12 @@ export default function TodayPage() {
         </div>
       </motion.div>
 
-      {searchQuery && searchResults.length > 0 && (
-        <motion.section
-          className={styles.section}
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.2, ease: [0.4, 0, 0.2, 1] }}
-        >
-          <div className={styles.sectionHeader}>
-            <h2 className="h3">Search results</h2>
-            <span className={`muted mono ${styles.sectionCounter}`}>{searchResults.length} found</span>
-          </div>
-          <div className="habit-list">
-            <StaggerContainer staggerDelay={0.04}>
-              {searchResults.map((habit) => (
-                <StaggerItem key={habit.id}>
-                  {renderHabitRow(habit, { showBadges: true, alwaysSetMoodOnCheck: false })}
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
-          </div>
-        </motion.section>
-      )}
-
-      {searchQuery && searchResults.length === 0 && (
-        <motion.div
-          className={`card card-pad ${styles.emptyCard}`}
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-        >
-          <div className="eyebrow">No results</div>
-          <h2 className={`h2 ${styles.emptyTitle}`}>
-            No habits match &quot;{searchQuery}&quot;.
-          </h2>
-        </motion.div>
-      )}
-
-      {!searchQuery && scheduledUndone.length > 0 && (
+      {/* Today's habit list always renders when there is something undone
+          today, even while the user is searching. The search-results section
+          renders above this; keeping the today list visible means the user
+          never loses access to today's check-ins while typing in the search
+          box. */}
+      {scheduledUndone.length > 0 && (
         <motion.section
           className={styles.section}
           initial={{ opacity: 0, y: 16 }}

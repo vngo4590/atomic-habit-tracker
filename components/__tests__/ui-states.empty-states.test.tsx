@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AnalyticsPage from "@/app/(root)/analytics/page";
@@ -10,6 +10,7 @@ import ReviewPage from "@/app/(root)/review/page";
 import TodayPage from "@/app/(root)/page";
 
 import {
+  makeHabit,
   paramsMock,
   resetUiStateMocks,
   routerMock,
@@ -131,5 +132,88 @@ describe("Empty States", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Schedule-aware Today counts
+// Today page search ordering (mobile visibility regression)
 
+describe("Today page search ordering", () => {
+  // Given: the user has at least one habit so search can return results
+  // When: they type a query into the search input
+  // Then: the "Search results" section appears in the DOM before the stats
+  //       row, so on mobile (where each card stacks full-width) the results
+  //       are visible without scrolling past stats + identity banner.
+  it("renders the search results section before the stats row when searching", () => {
+    storeMock.habits = [makeHabit({ id: "h1", name: "Read", identity: "reader" })];
+
+    render(<TodayPage />);
+
+    fireEvent.change(screen.getByPlaceholderText("Search habits..."), {
+      target: { value: "Read" },
+    });
+
+    const resultsHeading = screen.getByRole("heading", { name: "Search results" });
+    // The Today completion stat card uses the "Today" eyebrow label as its
+    // identifying header. Locate the card itself by walking up from there.
+    const todayEyebrow = screen.getAllByText("Today").find((node) => node.className.includes("eyebrow"));
+    expect(todayEyebrow).toBeTruthy();
+    const statsCard = todayEyebrow!.closest(".card");
+    expect(statsCard).toBeTruthy();
+
+    // DOCUMENT_POSITION_FOLLOWING means statsCard follows resultsHeading.
+    const relation = resultsHeading.compareDocumentPosition(statsCard!);
+    expect(relation & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  // Given: a user with habits but the search query matches nothing
+  // When: they type a non-matching query
+  // Then: the "No results" empty state appears before the stats row so it is
+  //       visible on mobile.
+  it("renders the no-results empty state before the stats row when search has no matches", () => {
+    storeMock.habits = [makeHabit({ id: "h1", name: "Read" })];
+
+    render(<TodayPage />);
+
+    fireEvent.change(screen.getByPlaceholderText("Search habits..."), {
+      target: { value: "xyz-no-match" },
+    });
+
+    const emptyHeading = screen.getByText(/No habits match/);
+    const todayEyebrow = screen.getAllByText("Today").find((node) => node.className.includes("eyebrow"));
+    expect(todayEyebrow).toBeTruthy();
+    const statsCard = todayEyebrow!.closest(".card");
+    expect(statsCard).toBeTruthy();
+
+    const relation = emptyHeading.compareDocumentPosition(statsCard!);
+    expect(relation & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  // Given: a user has habits scheduled for today and uses the search bar
+  // When: they type a query (matching or not)
+  // Then: the today "Habits" list section remains visible so they can still
+  //       check off today's habits without clearing the search.
+  it("keeps today's habit list visible while searching", () => {
+    storeMock.habits = [
+      makeHabit({ id: "h1", name: "Read", schedule: "Daily" }),
+      makeHabit({ id: "h2", name: "Run", schedule: "Daily" }),
+    ];
+
+    render(<TodayPage />);
+
+    // Sanity: today's list is visible before any search.
+    expect(screen.getByRole("heading", { name: "Habits" })).toBeTruthy();
+
+    fireEvent.change(screen.getByPlaceholderText("Search habits..."), {
+      target: { value: "Read" },
+    });
+
+    // Today's "Habits" heading is still present alongside the "Search
+    // results" section.
+    expect(screen.getByRole("heading", { name: "Habits" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Search results" })).toBeTruthy();
+
+    // Even a query that matches nothing must not hide today's list.
+    fireEvent.change(screen.getByPlaceholderText("Search habits..."), {
+      target: { value: "xyz-no-match" },
+    });
+    expect(screen.getByRole("heading", { name: "Habits" })).toBeTruthy();
+    expect(screen.getByText(/No habits match/)).toBeTruthy();
+  });
+});
