@@ -1,0 +1,162 @@
+/* Module styles for the Habit Detail page (/habits/[id]). */
+
+/* Tiny mono caption used inside the Stat component. */
+.statCaption {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.statValue {
+  font-family: var(--serif);
+  font-size: 30px;
+  line-height: 1.1;
+  margin-top: 4px;
+}
+
+/* The "Habit not found" empty card shown when the URL id is invalid. */
+.notFoundCard {
+  margin-top: 24px;
+}
+
+/* Back button at the top of the page. */
+.backBtn {
+  margin-bottom: 18px;
+}
+
+/* Page header overrides — the habit detail page stacks the header
+   contents vertically rather than the default horizontal layout. */
+.header {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Title row: identity + name on the left, action buttons on the right. */
+.headerTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+}
+
+/* Large editorial habit name. */
+.headerName {
+  font-size: 52px;
+}
+
+/* Lede paragraph beneath the name ("I am X. Each check-in is a vote..."). */
+.headerLede {
+  margin-top: 14px;
+  font-style: italic;
+}
+.identityEm {
+  color: var(--accent);
+  font-style: normal;
+}
+
+/* Right-side action cluster (mark done / edit / delete). */
+.headerActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* Icon size inside action buttons. */
+.actionIcon {
+  width: 14px;
+  height: 14px;
+}
+
+/* The 4-column stats row beneath the header. */
+.statsRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  width: 100%;
+  border-top: 1px solid var(--rule);
+  padding-top: 18px;
+}
+
+/* Overview tab columns. */
+.overviewColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Laws header (title + edit caption + Clear button). */
+.lawsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 14px;
+}
+.lawsHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lawsEditCaption {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+/* Right-aligned row for the Clear loop button above LoopDiagram. */
+.clearLoopRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+/* Section title spacing inside cards on the overview column. */
+.cardTitle {
+  margin-bottom: 8px;
+}
+
+/* The accountability-contract card gets a dashed accent border when
+   the user has saved a contract. */
+.contractCardActive {
+  border-color: var(--accent);
+  border-style: dashed;
+}
+
+/* Header row inside the contract card. */
+.contractHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+/* The contract text rendered as a clickable button (click to edit). */
+.contractText {
+  display: block;
+  width: 100%;
+  margin: 0 0 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font-size: 13.5px;
+  color: var(--ink-2);
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+/* Wrap-row of partner chips beneath the contract text. */
+.partnersRow {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Placeholder paragraph when there is no contract. */
+.contractEmpty {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 14px;
+  font-style: italic;
+  color: var(--ink-3);
+  line-height: 1.5;
+}
