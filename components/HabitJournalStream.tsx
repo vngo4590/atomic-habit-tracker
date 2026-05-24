@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { ExpandableText } from "@/components/ExpandableText";
 import { IconTrash } from "@/components/Icons";
 import { MarkdownText } from "@/components/MarkdownText";
 import { fmt } from "@/lib/helpers";
@@ -193,7 +194,15 @@ function HabitJournalCard({
         </div>
       </div>
       {entry.journal && (
-        <MarkdownText className={styles.journalBody}>{entry.journal}</MarkdownText>
+        /* Long check-in notes get a Read more / Read less toggle so the
+           habit's journal stream stays scannable when entries get wordy. */
+        <ExpandableText
+          source={entry.journal}
+          previewLines={4}
+          collapsedThreshold={200}
+        >
+          <MarkdownText className={styles.journalBody}>{entry.journal}</MarkdownText>
+        </ExpandableText>
       )}
     </div>
   );
