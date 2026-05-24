@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 
+import { ExpandableText } from "@/components/ExpandableText";
 import { IconCheck, IconEdit, IconTrash } from "@/components/Icons";
+import { MarkdownText } from "@/components/MarkdownText";
 import { fmt, todayKey } from "@/lib/helpers";
 import type { Habit } from "@/lib/types";
 
@@ -190,7 +192,20 @@ export function NotesManager({
                       </div>
                     </div>
                   ) : (
-                    <p className={styles.noteText}>{note.body}</p>
+                    /* Render saved notes as markdown so users get the same
+                       formatting affordances (bold, lists, links, code) they
+                       have in the journal and weekly review. Long notes are
+                       clamped behind ExpandableText so the notes list stays
+                       scannable when individual entries get wordy. The
+                       composer is still a plain textarea — markdown shines
+                       on read. */
+                    <ExpandableText
+                      source={note.body}
+                      previewLines={4}
+                      collapsedThreshold={200}
+                    >
+                      <MarkdownText className={styles.noteText}>{note.body}</MarkdownText>
+                    </ExpandableText>
                   )}
                 </div>
                 {!bulkMode && (
