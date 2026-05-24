@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 
 import { fmt, dateAdd, todayKey } from "@/lib/helpers";
 import type { Habit } from "@/lib/types";
@@ -146,7 +146,21 @@ export function HistoryWall({ habit }: { habit: Habit }) {
 
       <div className="card card-pad">
         <div className="history-wall-scroll">
-          <div className={styles.grid}>
+          <div
+            className={styles.grid}
+            style={
+              {
+                // Per-view sizing passed as CSS variables so a single grid
+                // rule handles both the 7-column week view and the 26-column
+                // wall. --max-cell caps how big each dot can grow on wide
+                // screens, so a 7-column wall does not stretch into giant
+                // tiles on desktop, while still letting cells shrink to fit
+                // narrow phones (overflow-free).
+                "--cols": view === "week" ? 7 : TOTAL_WEEKS,
+                "--max-cell": view === "week" ? "20px" : "12px",
+              } as CSSProperties
+            }
+          >
             {displayCols.map((col, index) => (
               <div key={index} className={styles.column}>
                 {col.map((day) => (

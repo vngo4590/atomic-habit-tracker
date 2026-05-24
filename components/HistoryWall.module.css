@@ -47,24 +47,37 @@
   gap: 4px;
 }
 
-/* The grid of week columns. min-width: max-content lets the grid stretch
-   beyond the card width on small viewports so horizontal scroll works. */
+/* The grid of week columns. We render as CSS grid so the columns auto-fit
+   the container width — each track shrinks down to nothing if needed via
+   minmax(0, --max-cell), which makes the whole wall fit the card on any
+   viewport instead of overflowing horizontally on small phones. --cols and
+   --max-cell are set inline by HistoryWall.tsx based on the current view
+   (week vs 26 weeks). */
 .grid {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 26), minmax(0, var(--max-cell, 12px)));
   gap: 3px;
-  min-width: max-content;
+  width: 100%;
 }
 
-/* Each week is a vertical stack of 7 dots. */
+/* Each week is a vertical stack of N dots. min-width: 0 lets the column
+   shrink below its intrinsic content width inside the grid track. */
 .column {
   display: flex;
   flex-direction: column;
   gap: 3px;
+  min-width: 0;
 }
 
-/* Individual day cell — block so the dots line up cleanly within the column. */
-.cell {
+/* Individual day cell. We bump specificity with .cell.cell so this beats the
+   global `.dot { width: 10px; height: 10px }` rule. width:100% lets the cell
+   fill its grid track, and aspect-ratio:1 keeps it square as it shrinks. */
+.cell.cell {
   display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  min-width: 0;
 }
 
 /* Footer row beneath the wall with "26 WEEKS AGO" and "TODAY" markers. */

@@ -172,6 +172,38 @@ describe("UI regressions", () => {
     expect(legend.textContent).not.toContain("MORE");
   });
 
+  it("sizes the wall grid so it fits the container instead of overflowing horizontally", () => {
+    // Given: the wall in its default 26-week view
+    const { container } = render(<HistoryWall habit={makeHabit()} />);
+
+    // When: we look at the inline style of the grid element
+    // The component renders one grid <div> inside .history-wall-scroll. We
+    // can locate it as the parent of the first column (the first child of
+    // a column is a `.dot` cell, so the grid is the cell's grandparent).
+    const firstCell = container.querySelector('[aria-label$="missed"], [aria-label$="done"]');
+    expect(firstCell).toBeTruthy();
+    const grid = firstCell!.parentElement!.parentElement!;
+
+    // Then: the grid declares the number of columns and a max cell size via
+    //       CSS variables so it can shrink to fit narrow phones without
+    //       overflowing under the main container (bug reported in mobile).
+    //       The default 26-week view passes --cols=26 and --max-cell=12px.
+    const style = grid.getAttribute("style") ?? "";
+    expect(style).toContain("--cols");
+    expect(style).toContain("26");
+    expect(style).toContain("--max-cell");
+    expect(style).toContain("12px");
+
+    // And: switching to the week view bumps --cols to 7 and grows the max
+    //      cell size to 20px so the few dots are still readable on desktop.
+    fireEvent.click(screen.getByRole("button", { name: "This week" }));
+    const newCell = container.querySelector('[aria-label$="missed"], [aria-label$="done"]')!;
+    const newGrid = newCell.parentElement!.parentElement!;
+    const newStyle = newGrid.getAttribute("style") ?? "";
+    expect(newStyle).toContain("7");
+    expect(newStyle).toContain("20px");
+  });
+
   it("lets the habit loop response be edited independently", () => {
     const onUpdate = vi.fn();
     render(<LoopDiagram habit={makeHabit()} onUpdate={onUpdate} />);
