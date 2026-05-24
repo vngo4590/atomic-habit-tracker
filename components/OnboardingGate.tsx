@@ -1,39 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
 import { OnboardingOverlay } from "@/components/OnboardingOverlay";
 import { useStoreContext } from "@/components/StoreProvider";
 
-/** localStorage key used as a same-browser mirror so we don't flash the
-    overlay before the server-side `onboardingSeen` preference loads. */
-const SEEN_KEY = "atomicly:onboarding-seen";
-
 /**
  * OnboardingGate — decides whether to render the first-run onboarding
- * overlay on top of the app shell. It checks both the server-backed
- * `preferences.onboardingSeen` flag and a localStorage mirror so the
- * overlay never reappears after a user has dismissed or completed it.
+ * overlay on top of the app shell.
  *
- * The overlay no longer collects a name (registration already does), so
- * the gate just persists "seen" and hides itself when `onComplete` fires.
+ * Source of truth is the server-side `preferences.onboardingSeen` flag,
+ * which is per-user and loaded synchronously into the store from the
+ * SSR'd snapshot in `app/(root)/layout.tsx`. Because the value is on the
+ * very first client render, we do not need a localStorage mirror — and
+ * keeping one would be a bug, because localStorage is shared by every
+ * account that signs in on the same browser, so a previous user's
+ * "seen" flag would suppress the overlay for a brand-new account.
+ *
+ * When the user finishes or skips the overlay, `setPreferences` flips
+ * the flag optimistically (and persists it server-side), which causes
+ * this gate to re-render with `visible` false.
  */
 export function OnboardingGate() {
   const { preferences, setPreferences } = useStoreContext();
-  const [visible, setVisible] = useState(false);
+  const visible = !preferences.onboardingSeen;
 
-  useEffect(() => {
-    window.queueMicrotask(() => {
-      const seen = Boolean(window.localStorage.getItem(SEEN_KEY));
-      setVisible(!preferences.onboardingSeen && !seen);
-    });
-  }, [preferences.onboardingSeen]);
-
-  // Persist "seen" both client- and server-side, then close the overlay.
+  // Persist "seen" so the overlay never appears again for this user.
+  // The optimistic update inside setPreferences flips the local flag
+  // immediately, which hides the overlay without waiting on the server.
   const complete = () => {
-    window.localStorage.setItem(SEEN_KEY, "true");
     setPreferences({ onboardingSeen: true });
-    setVisible(false);
   };
 
   return visible ? <OnboardingOverlay onComplete={complete} /> : null;
