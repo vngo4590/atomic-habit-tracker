@@ -34,25 +34,26 @@ describe("Nav business logic", () => {
     cleanup();
   });
 
-  it("renders all nav groups (Practice, Reflect, Learn, Become)", () => {
+  it("renders all nav groups (Practice, Reflect, Become)", () => {
     // Given the navigation sidebar
     // When it is rendered
     render(<Nav user={{ name: "Alice", email: "alice@example.com" }} />);
 
-    // Then all four group labels are visible
+    // Then all three group labels are visible (the legacy "Learn" group was
+    // removed when the Atomic-Habits-derived lessons feature was retired)
     expect(screen.getByText("Practice")).toBeTruthy();
     expect(screen.getByText("Reflect")).toBeTruthy();
-    expect(screen.getByText("Learn")).toBeTruthy();
     expect(screen.getByText("Become")).toBeTruthy();
+    expect(screen.queryByText("Learn")).toBeNull();
 
-    // And all nav items are present
+    // And all remaining nav items are present
     expect(screen.getByText("Today")).toBeTruthy();
     expect(screen.getByText("All habits")).toBeTruthy();
     expect(screen.getByText("New habit")).toBeTruthy();
     expect(screen.getByText("Analytics")).toBeTruthy();
     expect(screen.getByText("Journal")).toBeTruthy();
     expect(screen.getByText("Weekly review")).toBeTruthy();
-    expect(screen.getByText("Daily lessons")).toBeTruthy();
+    expect(screen.queryByText("Daily lessons")).toBeNull();
     expect(screen.getByText("Hall of Fame")).toBeTruthy();
     expect(screen.getByText("Identity")).toBeTruthy();
     expect(screen.getByText("Settings")).toBeTruthy();
@@ -246,11 +247,13 @@ describe("Nav business logic", () => {
     expect(routerPushMock).not.toHaveBeenCalled();
   });
 
-  it("covers all navigation shortcuts (T, H, N, A, J, W, L, F, I, comma)", () => {
+  it("covers all remaining navigation shortcuts (T, H, N, A, J, W, F, I, comma)", () => {
     // Given the nav is rendered
     render(<Nav user={{ name: "Alice", email: "alice@example.com" }} />);
 
-    // When each shortcut key is pressed
+    // When each shortcut key is pressed (note: the legacy "L" shortcut for
+    // /lessons was removed when the Atomic-Habits-derived Learn section was
+    // retired)
     const shortcuts: [string, string][] = [
       ["t", "/"],
       ["h", "/habits"],
@@ -258,7 +261,6 @@ describe("Nav business logic", () => {
       ["a", "/analytics"],
       ["j", "/journal"],
       ["w", "/review"],
-      ["l", "/lessons"],
       ["f", "/hall-of-fame"],
       ["i", "/identity"],
       [",", "/settings"],
@@ -269,8 +271,19 @@ describe("Nav business logic", () => {
       expect(routerPushMock).toHaveBeenCalledWith(href);
     }
 
-    // Then all 10 shortcuts resulted in navigation
-    expect(routerPushMock).toHaveBeenCalledTimes(10);
+    // Then all 9 shortcuts resulted in navigation
+    expect(routerPushMock).toHaveBeenCalledTimes(9);
+  });
+
+  it("does not navigate when the legacy 'L' lessons shortcut is pressed", () => {
+    // Given the nav is rendered (the lessons shortcut has been removed)
+    render(<Nav user={{ name: "Alice", email: "alice@example.com" }} />);
+
+    // When the user presses the legacy "L" key
+    fireEvent.keyDown(window, { key: "l" });
+
+    // Then the router is not invoked because /lessons is no longer in the nav
+    expect(routerPushMock).not.toHaveBeenCalled();
   });
 });
 
@@ -363,12 +376,12 @@ describe("Mobile drawer navigation", () => {
       expect(screen.getByRole("dialog")).toBeTruthy();
     });
 
-    // Then all nav groups are visible inside the drawer (same UI as desktop)
+    // Then all remaining nav groups are visible inside the drawer (same UI as desktop)
     const drawer = screen.getByRole("dialog");
     expect(drawer.textContent).toContain("Practice");
     expect(drawer.textContent).toContain("Reflect");
-    expect(drawer.textContent).toContain("Learn");
     expect(drawer.textContent).toContain("Become");
+    expect(drawer.textContent).not.toContain("Learn");
 
     // And the brand and user footer are also present
     expect(drawer.textContent).toContain("Atomicly");
