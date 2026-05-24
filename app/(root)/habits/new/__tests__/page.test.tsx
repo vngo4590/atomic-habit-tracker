@@ -41,6 +41,7 @@ describe("NewHabitPage", () => {
     expect(screen.getByRole("button", { name: "Sat" })).toBeTruthy();
   });
 
+  
   it("renders a legend explaining scheduled vs off day pills", () => {
     // Given: the create-habit page mounted
     render(<NewHabitPage />);
@@ -51,19 +52,16 @@ describe("NewHabitPage", () => {
     expect(screen.getByText("Off")).toBeTruthy();
   });
 
-  it("keeps custom sentence time blocks visible in the time block selector", () => {
+  it("does not render a time-block selector under the Schedule section", () => {
+    // Given: the new habit page (Time block control was removed in PR1)
     const { container } = render(<NewHabitPage />);
-    const timeSelect = container.querySelector("select") as HTMLSelectElement;
 
-    fireEvent.change(screen.getByPlaceholderText("Morning"), { target: { value: "Lunch break" } });
+    // When: looking for a <select> in the page
+    const timeSelect = container.querySelector("select");
 
-    expect(timeSelect.value).toBe("Custom");
-    expect(screen.getAllByDisplayValue("Lunch break")).toHaveLength(2);
-
-    fireEvent.change(timeSelect, { target: { value: "Evening" } });
-
-    expect((screen.getByPlaceholderText("Morning") as HTMLInputElement).value).toBe("Evening");
-    expect(timeSelect.value).toBe("Evening");
+    // Then: there is none — time-of-day still comes from the inline sentence input
+    expect(timeSelect).toBeNull();
+    expect(screen.queryByText("Time block")).toBeNull();
   });
 
   it("shows habit-derived identities as chips but excludes core values from the Identity page", () => {
