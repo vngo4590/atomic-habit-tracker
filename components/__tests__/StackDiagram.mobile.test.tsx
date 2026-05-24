@@ -1,7 +1,7 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { StackDiagram, STACK_PICKER_DEFAULT_LIMIT } from "@/components/StackDiagram";
+import { StackDiagram } from "@/components/StackDiagram";
 
 import {
   StackContextProvider,

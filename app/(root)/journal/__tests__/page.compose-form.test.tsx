@@ -2,8 +2,6 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import JournalPage from "@/app/(root)/journal/page";
-import { testJournalEntry } from "@/lib/test/fixtures";
-
 import { makeStore, setStore, storeRef } from "./helpers";
 
 // Install the StoreProvider mock for this test file. The factory reads

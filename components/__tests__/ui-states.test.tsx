@@ -452,13 +452,16 @@ describe("Visual States", () => {
     // When: the Hall of Fame page renders
     render(<HallOfFamePage />);
 
-    // Then: the in-progress section contains progress bars with the expected widths
-    const bars = document.querySelectorAll("[style*='width']");
+    // Then: the in-progress section contains progress bars whose width is
+    // driven by the inline --pct CSS variable. The CSS module class
+    // (.progressFill) reads `width: var(--pct)` so we assert on the
+    // --pct value rather than on a literal `width: ...` declaration.
+    const bars = document.querySelectorAll("[style*='--pct']");
     const zeroBar = Array.from(bars).find((el) =>
-      el.getAttribute("style")?.includes("width: 0%"),
+      el.getAttribute("style")?.includes("--pct: 0%"),
     );
     const fiftyBar = Array.from(bars).find((el) =>
-      el.getAttribute("style")?.includes("width: 50%"),
+      el.getAttribute("style")?.includes("--pct: 50%"),
     );
     expect(zeroBar).toBeTruthy();
     expect(fiftyBar).toBeTruthy();
