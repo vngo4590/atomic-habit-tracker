@@ -18,9 +18,6 @@ const PRESETS = {
   three: { label: "3x a week", days: ["Mon", "Wed", "Fri"] },
   custom: { label: "Custom", days: [] },
 } as const;
-const TIME_BLOCKS = ["Morning", "Afternoon", "Evening"] as const;
-const CUSTOM_TIME_BLOCK = "Custom";
-
 type Preset = keyof typeof PRESETS;
 
 /**
@@ -131,7 +128,6 @@ export default function NewHabitPage() {
     preset === "custom"
       ? formatScheduleLabel(customDays.join(", ") || "Custom")
       : formatScheduleLabel(PRESETS[preset].label);
-  const selectedTimeBlock = TIME_BLOCKS.some((item) => item === time) ? time : CUSTOM_TIME_BLOCK;
 
   const toggleDay = (day: string) => {
     setPreset("custom");
@@ -229,28 +225,20 @@ export default function NewHabitPage() {
               </motion.button>
             ))}
           </div>
-          <label className={`field-label ${styles.timeLabel}`}>Time block</label>
-          <select
-            className="input"
-            value={selectedTimeBlock}
-            onChange={(event) => {
-              const next = event.target.value;
-              setTime(next === CUSTOM_TIME_BLOCK ? "" : next);
-            }}
-          >
-            {TIME_BLOCKS.map((block) => (
-              <option key={block}>{block}</option>
-            ))}
-            <option>{CUSTOM_TIME_BLOCK}</option>
-          </select>
-          {selectedTimeBlock === CUSTOM_TIME_BLOCK && (
-            <input
-              className={`input ${styles.customTime}`}
-              value={time}
-              onChange={(event) => setTime(event.target.value)}
-              placeholder="After school, lunch break, commute..."
-            />
-          )}
+          {/* Legend so the meaning of the selected vs. unselected day pills
+              is explicit. We render miniature pills styled the same way as
+              the day buttons so the legend stays correct in both light and
+              dark themes (no colour names baked into copy). */}
+          <div className={styles.dayLegend} aria-label="Day selector legend">
+            <span className={styles.dayLegendItem}>
+              <span className={`btn btn-sm btn-primary ${styles.dayLegendSwatch}`} aria-hidden="true" />
+              <span className={styles.dayLegendLabel}>Scheduled</span>
+            </span>
+            <span className={styles.dayLegendItem}>
+              <span className={`btn btn-sm ${styles.dayLegendSwatch}`} aria-hidden="true" />
+              <span className={styles.dayLegendLabel}>Off</span>
+            </span>
+          </div>
         </section>
       </div>
 

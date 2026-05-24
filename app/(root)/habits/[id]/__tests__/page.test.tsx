@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { todayKey } from "@/lib/helpers";
 import type { Habit } from "@/lib/types";
 
 function makeHabit(patch: Partial<Habit> = {}): Habit {
@@ -110,5 +111,29 @@ describe("HabitDetailPage", () => {
     expect(storeMock.updateHabit).toHaveBeenCalledWith("habit_1", { loopCue: "", loopCraving: "", loopResponse: "", loopReward: "" });
     rerender(<HabitDetailPage />);
     expect(screen.getByRole("button", { name: "Define the loop" })).toBeTruthy();
+  });
+
+  it("labels the post-completion primary button 'Done today · tap to unmark'", () => {
+    // Given: a habit marked done for today
+    const today = todayKey();
+    storeMock.habits = [makeHabit({ history: { [today]: true } })];
+
+    // When: the detail page renders
+    render(<HabitDetailPage />);
+
+    // Then: the primary button reads the clarified copy, not the old "undo"
+    expect(screen.getByRole("button", { name: /Done today · tap to unmark/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Done today · undo$/ })).toBeNull();
+  });
+
+  it("labels the primary button 'Mark done' when the habit is not done today", () => {
+    // Given: a habit with no check-in for today
+    storeMock.habits = [makeHabit({ history: {} })];
+
+    // When: the detail page renders
+    render(<HabitDetailPage />);
+
+    // Then: the primary button reads "Mark done"
+    expect(screen.getByRole("button", { name: "Mark done" })).toBeTruthy();
   });
 });
