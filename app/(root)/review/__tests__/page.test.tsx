@@ -230,6 +230,54 @@ describe("ReviewPage", () => {
       expect(em.tagName).toBe("EM");
     });
 
+    // Given: the current week's review has a very long answer (>220 chars)
+    // When: the review page renders the read-only display
+    // Then: an ExpandableText toggle wraps that answer so the user can
+    //       collapse/expand it on demand; clicking switches the label.
+    it("wraps long current-week answers in a Read more / Read less toggle", () => {
+      const weekStartKey = dateAdd(todayKey(), -6);
+      const longAnswer = "A really long reflection. ".repeat(15); // ~375 chars
+      storeMock.weeklyReview = {
+        wentWell: longAnswer,
+        smallestFix: "short fix",
+        identityVote: "short vote",
+      };
+      storeMock.weeklyReviews = [makeReview(weekStartKey, storeMock.weeklyReview)];
+
+      render(<ReviewPage />);
+
+      // The long answer triggers ExpandableText; the short ones do not, so
+      // there is exactly one "Read more" button on the page at this point.
+      const toggles = screen.getAllByRole("button", { name: /read more/i });
+      expect(toggles.length).toBe(1);
+      fireEvent.click(toggles[0]);
+      expect(screen.getByRole("button", { name: /read less/i })).toBeTruthy();
+    });
+
+    // Given: the past-review archive shows a summary preview
+    // When: a past review has a long wentWell summary
+    // Then: the archive row renders the FULL source through MarkdownText (no
+    //       mid-token slicing) and offers a Read more / Read less toggle.
+    it("renders full summary source for long past reviews with a toggle", () => {
+      const weekStartKey = dateAdd(todayKey(), -6);
+      const longSummary = "**bold lead** and then a much longer reflection ".repeat(8); // ~390 chars
+      const pastReview = makeReview(dateAdd(weekStartKey, -7), {
+        wentWell: longSummary,
+        smallestFix: "",
+        identityVote: "",
+      });
+      storeMock.weeklyReviews = [pastReview];
+
+      render(<ReviewPage />);
+
+      // Markdown formatting from the FULL summary survives (no 120-char slice).
+      const strongs = screen.getAllByText("bold lead");
+      expect(strongs.length).toBeGreaterThan(0);
+      expect(strongs[0].tagName).toBe("STRONG");
+      // A Read more toggle is rendered for the long preview.
+      expect(screen.getByRole("button", { name: /read more/i })).toBeTruthy();
+    });
+
     // Given: a past review with markdown in smallestFix and identityVote
     // When: the user expands the archive to read full entries
     // Then: the expanded "Fix:" and "Vote:" detail values also render markdown
