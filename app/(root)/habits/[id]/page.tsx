@@ -216,7 +216,7 @@ export default function HabitDetailPage() {
             >
               {doneToday ? (
                 <>
-                  <IconCheck className={styles.actionIcon} /> Done today · undo
+                  <IconCheck className={styles.actionIcon} /> Done today · tap to unmark
                 </>
               ) : (
                 "Mark done"
