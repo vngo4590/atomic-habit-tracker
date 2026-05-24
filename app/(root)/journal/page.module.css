@@ -1,0 +1,169 @@
+/* Module styles for the Journal page. Mood colours flow through inline
+   --mood-color CSS variables; this keeps the chip and entry-card classes
+   generic across the three preset moods + the custom mood family. */
+
+/* Compose section card. */
+.composer {
+  margin-bottom: 22px;
+}
+
+/* "Mood" label spacing. */
+.moodLabel {
+  margin-top: 14px;
+}
+
+/* Wrap-row of mood chips. */
+.moodRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Mood chip — base. Uses --mood-color to theme the active state. */
+.moodChip {
+  border-color: var(--rule);
+  background: var(--bg-sunk);
+}
+.moodChipActive {
+  border-color: var(--mood-color);
+  background: color-mix(in oklch, var(--mood-color) 14%, var(--bg-elev));
+}
+
+/* Emoji-grid picker panel. */
+.pickerPanel {
+  margin-top: 10px;
+  padding: 12px;
+  background: var(--bg-sunk);
+  border-radius: 10px;
+  border: 1px solid var(--rule);
+}
+.pickerInstruction {
+  font-size: 12px;
+  color: var(--fg-muted);
+  margin-bottom: 8px;
+}
+.pickerScroll {
+  max-height: 180px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+
+/* Emoji grid button. */
+.emojiBtn {
+  font-size: 22px;
+  padding: 4px;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  line-height: 1;
+}
+.emojiBtnActive {
+  border-color: var(--accent);
+  background: color-mix(in oklch, var(--accent) 12%, var(--bg-elev));
+}
+
+/* Keyboard input row beneath the emoji grid. */
+.typeRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.typeLabel {
+  font-size: 12px;
+  color: var(--fg-muted);
+  flex-shrink: 0;
+}
+.typeInput {
+  width: 70px;
+  text-align: center;
+  font-size: 18px;
+  padding: 6px 8px;
+}
+
+/* "Name your mood" row. */
+.nameRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.namePreview {
+  font-size: 20px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.nameInput {
+  flex: 1;
+}
+
+/* Reflection label + textarea. */
+.reflectionLabel {
+  margin-top: 14px;
+}
+
+/* Footer actions for the compose form. */
+.composerActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+/* Prompt-shortcut grid (3-up). */
+.promptGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+/* Prompt card button — left-aligned text. */
+.promptCard {
+  text-align: left;
+}
+.promptText {
+  font-family: var(--serif);
+  font-size: 20px;
+  line-height: 1.25;
+  margin-top: 8px;
+}
+
+/* Entry list. */
+.entryList {
+  display: grid;
+  gap: 14px;
+}
+
+/* Entry card — coloured border driven by --mood-color. */
+.entryCard {
+  border-color: var(--mood-color);
+}
+
+/* Entry header (date+title on the left, mood chip + edit on the right). */
+.entryHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+.entryTitle {
+  margin-top: 6px;
+}
+.entryActions {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+/* Body paragraph. */
+.entryBody {
+  margin-top: 12px;
+  line-height: 1.6;
+}
+
+/* Mobile: collapse the 3-up prompt grid. */
+@media (max-width: 900px) {
+  .promptGrid {
+    grid-template-columns: 1fr;
+  }
+}
