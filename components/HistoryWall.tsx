@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 
 import { fmt, dateAdd, todayKey } from "@/lib/helpers";
 import type { Habit } from "@/lib/types";
@@ -145,8 +145,29 @@ export function HistoryWall({ habit }: { habit: Habit }) {
       </div>
 
       <div className="card card-pad">
-        <div className="history-wall-scroll">
-          <div className={styles.grid}>
+        {/*
+          The wallBox wrapper deliberately uses overflow: visible and a small
+          inner pad so the bottom row's `today` dot outline is never clipped
+          on mobile. (The legacy `.history-wall-scroll` class implicitly forced
+          overflow-y: clip via the spec when overflow-x was auto, which was
+          the real cause of the "blocks look cut off" bug.)
+        */}
+        <div className={styles.wallBox}>
+          <div
+            className={styles.grid}
+            style={
+              {
+                // Per-view sizing passed as CSS variables so a single grid
+                // rule handles both the 7-column week view and the 26-column
+                // wall. --max-cell caps how big each dot can grow on wide
+                // screens, so a 7-column wall does not stretch into giant
+                // tiles on desktop, while still letting cells shrink to fit
+                // narrow phones (overflow-free).
+                "--cols": view === "week" ? 7 : TOTAL_WEEKS,
+                "--max-cell": view === "week" ? "20px" : "12px",
+              } as CSSProperties
+            }
+          >
             {displayCols.map((col, index) => (
               <div key={index} className={styles.column}>
                 {col.map((day) => (
