@@ -1,0 +1,146 @@
+/* Module styles for the Identity page — statement editor + vote ledger. */
+
+/* Two-column grid: statement on the left, ledger on the right. */
+.layout {
+  display: grid;
+  grid-template-columns: 0.95fr 1.05fr;
+  gap: 18px;
+}
+
+/* Statement editor textarea — serif, large, loose line-height. */
+.statementTextarea {
+  margin-top: 12px;
+  font-family: var(--serif);
+  font-size: 22px;
+  line-height: 1.45;
+}
+
+/* Action row beneath the textarea (Cancel / Save). */
+.statementActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* Display-mode button shaped as text (the user clicks the statement to edit). */
+.statementDisplay {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* "Click to edit" hint above the statement text. */
+.statementHint {
+  margin-bottom: 8px;
+  font-family: var(--serif);
+  font-size: 13px;
+  font-style: italic;
+  color: var(--ink-3);
+}
+
+/* The statement text itself — serif italic, large. */
+.statement {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 28px;
+  font-style: italic;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+/* Placeholder shown when there is no statement yet. */
+.statementPlaceholder {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 22px;
+  font-style: italic;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+
+/* "Core values" eyebrow spacing. */
+.valuesHeader {
+  margin-top: 22px;
+}
+
+/* Wrap-row of value chips. */
+.valuesRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* Close icon inside a value chip. */
+.chipClose {
+  width: 11px;
+  height: 11px;
+}
+
+/* The dashed "+ Add value" input. */
+.addValueInput {
+  width: 140px;
+  height: 32px;
+  border-style: dashed;
+}
+
+/* Right column header. */
+.ledgerHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.ledgerTitle {
+  margin-top: 6px;
+}
+.ledgerTotal {
+  font-size: 11px;
+}
+
+/* Ledger list. */
+.ledgerList {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+/* One ledger row — "I am X" + vote count, with a bar below. */
+.ledgerRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+.ledgerLabel {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 18px;
+}
+.ledgerVotes {
+  font-size: 12px;
+}
+
+/* Progress bar for the vote count (width passed via --pct variable). */
+.ledgerBar {
+  height: 7px;
+  border-radius: 99px;
+  overflow: hidden;
+  background: var(--bg-sunk);
+  margin-top: 7px;
+}
+.ledgerBarFill {
+  height: 100%;
+  background: var(--accent);
+}
+
+/* Mobile: stack the two columns. */
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
