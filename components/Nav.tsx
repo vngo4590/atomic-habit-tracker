@@ -6,7 +6,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import {
-  IconBook,
   IconChart,
   IconIdentity,
   IconJournal,
@@ -31,7 +30,6 @@ const NAV = [
   { href: "/analytics", label: "Analytics", icon: IconChart, key: "A", group: "Reflect" },
   { href: "/journal", label: "Journal", icon: IconJournal, key: "J", group: "Reflect" },
   { href: "/review", label: "Weekly review", icon: IconReview, key: "W", group: "Reflect" },
-  { href: "/lessons", label: "Daily lessons", icon: IconBook, key: "L", group: "Learn" },
   { href: "/hall-of-fame", label: "Hall of Fame", icon: IconStar, key: "F", group: "Become" },
   { href: "/identity", label: "Identity", icon: IconIdentity, key: "I", group: "Become" },
   { href: "/settings", label: "Settings", icon: IconSettings, key: ",", group: "Become" },
@@ -123,7 +121,7 @@ function SidebarContent({
 
       {/* Grouped nav with stagger animations — same layout on desktop and mobile drawer */}
       <div className="desktop-nav">
-        {(["Practice", "Reflect", "Learn", "Become"] as const).map((group) => (
+        {(["Practice", "Reflect", "Become"] as const).map((group) => (
           <div key={group}>
             <div className="nav-group">{group}</div>
             <motion.div variants={sidebarStagger} initial="hidden" animate="visible">

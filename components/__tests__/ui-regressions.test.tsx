@@ -110,6 +110,68 @@ describe("UI regressions", () => {
     expect(screen.queryByRole("button", { name: /toggle/i })).toBeNull();
   });
 
+  it("defaults to the 26-week view with oldest-first ordering", () => {
+    // Given: a habit with no history
+    const habit = makeHabit();
+
+    // When: the wall renders
+    render(<HistoryWall habit={habit} />);
+
+    // Then: the 26-week heading and view controls are shown, and the default
+    //       order labels read "26 WEEKS AGO" on the left and "TODAY" on the right
+    expect(screen.getByRole("heading", { name: "26-week wall" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "26 weeks" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "Oldest first" }).getAttribute("aria-pressed")).toBe("true");
+    const footer = screen.getByText("26 WEEKS AGO").parentElement!;
+    expect(Array.from(footer.children).map((c) => c.textContent)).toEqual(["26 WEEKS AGO", "TODAY"]);
+  });
+
+  it("switches to the This week view when the user clicks the toggle", () => {
+    // Given: a habit detail page showing the default wall
+    const habit = makeHabit();
+    render(<HistoryWall habit={habit} />);
+
+    // When: the user clicks the "This week" range button
+    fireEvent.click(screen.getByRole("button", { name: "This week" }));
+
+    // Then: the heading switches to "This week" and the older footer label
+    //       updates to "6 DAYS AGO"
+    expect(screen.getByRole("heading", { name: "This week" })).toBeTruthy();
+    expect(screen.getByText("6 DAYS AGO")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "This week" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("flips the wall ordering when the user clicks Newest first", () => {
+    // Given: the wall in its default oldest-first ordering
+    const habit = makeHabit();
+    render(<HistoryWall habit={habit} />);
+    const footer = screen.getByText("26 WEEKS AGO").parentElement!;
+    const orderedBefore = Array.from(footer.children).map((c) => c.textContent);
+
+    // When: the user clicks Newest first
+    fireEvent.click(screen.getByRole("button", { name: "Newest first" }));
+
+    // Then: TODAY now appears on the left and 26 WEEKS AGO on the right
+    const orderedAfter = Array.from(footer.children).map((c) => c.textContent);
+    expect(orderedBefore).toEqual(["26 WEEKS AGO", "TODAY"]);
+    expect(orderedAfter).toEqual(["TODAY", "26 WEEKS AGO"]);
+  });
+
+  it("renders a simple binary legend rather than a multi-step gradient", () => {
+    // Given: the wall mounted with the user-friendly legend
+    render(<HistoryWall habit={makeHabit()} />);
+
+    // Then: only DONE, MISSED, and TODAY swatches appear; no confusing
+    //       intermediate shades (the user reported these were misleading
+    //       since one habit can only be done once per day)
+    const legend = screen.getByLabelText("Wall legend");
+    expect(legend.textContent).toContain("DONE");
+    expect(legend.textContent).toContain("MISSED");
+    expect(legend.textContent).toContain("TODAY");
+    expect(legend.textContent).not.toContain("LESS");
+    expect(legend.textContent).not.toContain("MORE");
+  });
+
   it("lets the habit loop response be edited independently", () => {
     const onUpdate = vi.fn();
     render(<LoopDiagram habit={makeHabit()} onUpdate={onUpdate} />);

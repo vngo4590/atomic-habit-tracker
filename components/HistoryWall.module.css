@@ -16,7 +16,7 @@
   margin-top: 4px;
 }
 
-/* The "LESS … MORE" legend row. */
+/* The "DONE / MISSED / TODAY" legend row. */
 .legend {
   display: flex;
   gap: 14px;
@@ -25,9 +25,26 @@
 .legendLabel {
   font-size: 10px;
 }
-.legendDots {
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.legendDot {
+  display: inline-block;
+}
+
+/* Toggle controls sit between the header and the wall. Two button groups
+   sit side by side; on narrow screens they wrap onto separate lines. */
+.controls {
   display: flex;
-  gap: 3px;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.controlGroup {
+  display: inline-flex;
+  gap: 4px;
 }
 
 /* The grid of week columns. min-width: max-content lets the grid stretch
