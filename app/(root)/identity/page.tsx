@@ -7,12 +7,21 @@ import { IconClose } from "@/components/Icons";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { useStoreContext } from "@/components/StoreProvider";
 
+import styles from "./page.module.css";
+
+/**
+ * Identity — lets the user write a long-form identity statement, manage
+ * core values as chips, and see a vote ledger that tallies habit
+ * check-ins by identity label. Each habit check-in counts as one vote
+ * for its associated identity.
+ */
 export default function IdentityPage() {
   const { habits, identity, setIdentity } = useStoreContext();
   const [editingStatement, setEditingStatement] = useState(false);
   const [statementDraft, setStatementDraft] = useState(identity.statement);
   const [newValue, setNewValue] = useState("");
 
+  // Aggregate habit check-ins grouped by identity label, sorted descending.
   const ledger = useMemo(() => {
     const tally = new Map<string, number>();
     habits.forEach((habit) => {
@@ -27,9 +36,7 @@ export default function IdentityPage() {
 
   const addValue = () => {
     const value = newValue.trim();
-    if (!value || identity.values.includes(value)) {
-      return;
-    }
+    if (!value || identity.values.includes(value)) return;
     setIdentity({ ...identity, values: [...identity.values, value] });
     setNewValue("");
   };
@@ -46,7 +53,11 @@ export default function IdentityPage() {
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}>
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+    >
       <div className="page-header">
         <div>
           <div className="eyebrow">Become</div>
@@ -54,21 +65,26 @@ export default function IdentityPage() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "0.95fr 1.05fr", gap: 18 }}>
+      <div className={styles.layout}>
         <section className="card card-pad">
           <div className="eyebrow">Statement</div>
           {editingStatement ? (
             <>
               <textarea
-                className="input"
+                className={`input ${styles.statementTextarea}`}
                 rows={6}
                 value={statementDraft}
                 onChange={(event) => setStatementDraft(event.target.value)}
-                style={{ marginTop: 12, fontFamily: "var(--serif)", fontSize: 22, lineHeight: 1.45 }}
                 autoFocus
               />
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 10 }}>
-                <button className="btn btn-sm" onClick={() => { setStatementDraft(identity.statement); setEditingStatement(false); }}>
+              <div className={styles.statementActions}>
+                <button
+                  className="btn btn-sm"
+                  onClick={() => {
+                    setStatementDraft(identity.statement);
+                    setEditingStatement(false);
+                  }}
+                >
                   Cancel
                 </button>
                 <button className="btn btn-sm btn-primary" onClick={saveStatement}>
@@ -82,72 +98,72 @@ export default function IdentityPage() {
                 setStatementDraft(identity.statement);
                 setEditingStatement(true);
               }}
-              style={{
-                display: "block",
-                width: "100%",
-                marginTop: 12,
-                padding: 0,
-                border: 0,
-                background: "transparent",
-                textAlign: "left",
-                cursor: "pointer",
-              }}
+              className={styles.statementDisplay}
             >
               {identity.statement.trim() ? (
                 <>
-                  <div style={{ marginBottom: 8, fontFamily: "var(--serif)", fontSize: 13, fontStyle: "italic", color: "var(--ink-3)" }}>
-                    Click the statement to edit it.
-                  </div>
-                  <p style={{ margin: 0, fontFamily: "var(--serif)", fontSize: 28, fontStyle: "italic", lineHeight: 1.35, color: "var(--ink)" }}>
-                    {identity.statement}
-                  </p>
+                  <div className={styles.statementHint}>Click the statement to edit it.</div>
+                  <p className={styles.statement}>{identity.statement}</p>
                 </>
               ) : (
-                <p style={{ margin: 0, fontFamily: "var(--serif)", fontSize: 22, fontStyle: "italic", lineHeight: 1.45, color: "var(--ink-3)" }}>
+                <p className={styles.statementPlaceholder}>
                   No identity statement yet. Click this section to write one.
                 </p>
               )}
             </button>
           )}
-          <div className="eyebrow" style={{ marginTop: 22 }}>Core values</div>
-          <StaggerContainer style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }} staggerDelay={0.03}>
+          <div className={`eyebrow ${styles.valuesHeader}`}>Core values</div>
+          <StaggerContainer className={styles.valuesRow} staggerDelay={0.03}>
             {identity.values.map((value) => (
               <StaggerItem key={value}>
-                <motion.button className="chip active" aria-label={`Remove core value ${value}`} onClick={() => removeValue(value)} whileTap={{ scale: 0.95 }}>
+                <motion.button
+                  className="chip active"
+                  aria-label={`Remove core value ${value}`}
+                  onClick={() => removeValue(value)}
+                  whileTap={{ scale: 0.95 }}
+                >
                   <span>{value}</span>
-                  <IconClose style={{ width: 11, height: 11 }} />
+                  <IconClose className={styles.chipClose} />
                 </motion.button>
               </StaggerItem>
             ))}
-            <input className="input" value={newValue} onChange={(event) => setNewValue(event.target.value)} placeholder="+ Add value" style={{ width: 140, height: 32, borderStyle: "dashed" }} onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                addValue();
-              }
-            }} />
-            <motion.button className="chip" onClick={addValue} whileTap={{ scale: 0.95 }}>+ Add</motion.button>
+            <input
+              className={`input ${styles.addValueInput}`}
+              value={newValue}
+              onChange={(event) => setNewValue(event.target.value)}
+              placeholder="+ Add value"
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  addValue();
+                }
+              }}
+            />
+            <motion.button className="chip" onClick={addValue} whileTap={{ scale: 0.95 }}>
+              + Add
+            </motion.button>
           </StaggerContainer>
         </section>
 
         <section className="card card-pad">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+          <div className={styles.ledgerHeader}>
             <div>
               <div className="eyebrow">Vote ledger</div>
-              <h2 className="h3" style={{ marginTop: 6 }}>Evidence by identity</h2>
+              <h2 className={`h3 ${styles.ledgerTitle}`}>Evidence by identity</h2>
             </div>
-            <div className="mono muted" style={{ fontSize: 11 }}>{total} TOTAL</div>
+            <div className={`mono muted ${styles.ledgerTotal}`}>{total} TOTAL</div>
           </div>
-          <StaggerContainer style={{ display: "grid", gap: 16, marginTop: 18 }} staggerDelay={0.05}>
+          <StaggerContainer className={styles.ledgerList} staggerDelay={0.05}>
             {ledger.map(([label, votes]) => (
               <StaggerItem key={label}>
                 <motion.div whileHover={{ x: 2 }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 14 }}>
-                    <div style={{ fontFamily: "var(--serif)", fontStyle: "italic", fontSize: 18 }}>I am {label}</div>
-                    <div className="mono" style={{ fontSize: 12 }}>{votes}</div>
+                  <div className={styles.ledgerRow}>
+                    <div className={styles.ledgerLabel}>I am {label}</div>
+                    <div className={`mono ${styles.ledgerVotes}`}>{votes}</div>
                   </div>
-                  <div style={{ height: 7, borderRadius: 99, overflow: "hidden", background: "var(--bg-sunk)", marginTop: 7 }}>
+                  <div className={styles.ledgerBar}>
                     <motion.div
-                      style={{ height: "100%", background: "var(--accent)" }}
+                      className={styles.ledgerBarFill}
                       initial={{ width: 0 }}
                       animate={{ width: `${Math.round((votes / max) * 100)}%` }}
                       transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}

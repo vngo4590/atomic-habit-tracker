@@ -1,0 +1,105 @@
+/* Module styles for MoodCheckSheet — the mood + journal prompt that
+   appears after marking a habit done. Mood colours flow in as a
+   --mood-color CSS variable per-button. */
+
+/* Card width on top of .overlay-card. */
+.card {
+  width: 560px;
+  position: relative;
+}
+
+/* Close button — anchored top-right inside the card. */
+.closeBtn {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+}
+.closeIcon {
+  width: 13px;
+  height: 13px;
+}
+
+/* Title row (eyebrow + heading + intro paragraph). */
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: start;
+}
+.title {
+  font-size: 30px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+  line-height: 1.15;
+}
+.intro {
+  margin: 0 0 24px;
+  font-family: var(--serif);
+  font-size: 15px;
+  font-style: italic;
+  color: var(--ink-3);
+  line-height: 1.5;
+}
+
+/* 5-up mood picker. */
+.moodRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+/* A single mood tile — base shape, dark border, white background. */
+.moodTile {
+  flex: 1;
+  padding: 18px 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--rule-strong);
+  background: var(--bg-elev);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Active mood tile — coloured border + tinted background using the
+   --mood-color CSS variable set by the parent. */
+.moodTileActive {
+  border-color: var(--mood-color);
+  background: color-mix(in oklch, var(--mood-color) 12%, var(--bg-elev));
+}
+
+/* The big emoji face inside the tile. */
+.moodFace {
+  font-size: 32px;
+  line-height: 1;
+}
+/* Desaturated face when the tile is not selected. */
+.moodFaceInactive {
+  filter: saturate(0.4) opacity(0.65);
+}
+
+/* Mono label beneath the face. */
+.moodLabel {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 400;
+}
+.moodLabelActive {
+  color: var(--mood-color);
+  font-weight: 600;
+}
+
+/* Journal note section + footer actions. */
+.journalSection {
+  margin-top: 20px;
+}
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}

@@ -1,0 +1,131 @@
+/* Module styles for the All Habits page. */
+
+/* Icon size inside the "New habit" button. */
+.iconBtn {
+  width: 13px;
+  height: 13px;
+}
+
+/* Right cluster of the toolbar: search input + sort row. */
+.searchCluster {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Wrapper around the search input so the icon can position-absolute on top. */
+.searchWrap {
+  position: relative;
+}
+
+/* Magnifying-glass icon inside the search input. */
+.searchIcon {
+  width: 13px;
+  height: 13px;
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ink-3);
+  pointer-events: none;
+}
+
+/* Search input — narrow until the user types, grows when active. The
+   width is driven by the --search-w CSS variable set inline. */
+.searchInput {
+  padding-left: 30px;
+  height: 34px;
+  font-size: 13px;
+  width: var(--search-w);
+}
+
+/* Close button (X) on the right side of the search input. */
+.searchClear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  color: var(--ink-3);
+}
+.searchClearIcon {
+  width: 12px;
+  height: 12px;
+}
+
+/* Habit list row layout. */
+.row {
+  grid-template-columns: 44px minmax(0, 1fr) 80px 140px;
+  align-items: center;
+}
+
+/* Wrapper around the name + identity column. */
+.nameInner {
+  min-width: 0;
+}
+
+/* "IDENTITY · NEXT" caption beneath habit name. */
+.captionMono {
+  font-size: 10.5px;
+  margin-top: 3px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.nextLabel {
+  margin-left: 8px;
+  color: var(--ink-3);
+}
+
+/* Streak counter on the row. */
+.streak {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+.streakActive {
+  color: var(--ink);
+}
+
+/* Progress bar track + fill. */
+.progressTrack {
+  flex: 1;
+  height: 4px;
+  background: var(--bg-sunk);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.progressFill {
+  height: 100%;
+  background: var(--accent);
+}
+
+/* Right-aligned percentage label after the progress bar. */
+.progressLabel {
+  font-size: 11px;
+  color: var(--ink-3);
+  min-width: 28px;
+  text-align: right;
+}
+
+/* Empty state when the user has zero habits. */
+.empty {
+  padding: 42px 22px;
+  text-align: center;
+}
+.emptyTitle {
+  margin-top: 8px;
+}
+.emptyBody {
+  margin: 10px auto 18px;
+  max-width: 420px;
+  line-height: 1.5;
+}
+
+/* No-results message when a filter or search matches nothing. */
+.noResults {
+  padding: 28px 22px;
+  text-align: center;
+}

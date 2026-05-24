@@ -1,0 +1,33 @@
+/* Module styles for ContractSheet — the accountability contract overlay. */
+
+/* Header row inside the overlay card (eyebrow + close button). */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 24px;
+}
+
+/* The close-button icon size (small chevron). */
+.closeIcon {
+  width: 13px;
+  height: 13px;
+}
+
+/* Spacing for the terms textarea section. */
+.termsSection {
+  margin-top: 22px;
+}
+
+/* Spacing for the partners input section. */
+.partnersSection {
+  margin-top: 16px;
+}
+
+/* Right-aligned action row at the bottom of the card. */
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}

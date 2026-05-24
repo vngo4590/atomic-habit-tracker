@@ -1,0 +1,69 @@
+/* ============================================================================
+ * Modal.module.css — styles for the <Modal /> component.
+ *
+ * Each class corresponds to a structural part of the modal:
+ *   .root        – the fixed-position wrapper that holds the backdrop + card.
+ *   .backdrop    – the dimmed, blurred overlay behind the card.
+ *   .card        – the centred dialog card itself (max-width 420, padded).
+ *   .title       – default-coloured title; .titleError tints it red.
+ *   .message     – the body paragraph.
+ *   .actions     – the right-aligned button row.
+ *
+ * The CSS Module keeps these styles co-located with the component while
+ * still allowing the global .card / .card-pad / .btn classes to layer on
+ * top via `className="..."` composition.
+ * ============================================================================ */
+
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+}
+
+.card {
+  position: relative;
+  max-width: 420px;
+  width: 100%;
+  background: var(--bg-elev);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  padding: 22px 22px 18px;
+}
+
+/* Title — inherits .h3 typography from globals. Reset margin so the
+   card's own padding controls vertical rhythm. */
+.title {
+  margin: 0;
+  color: var(--ink);
+}
+
+/* Error-toned title — a desaturated red used when surfacing failed
+   mutations the user must acknowledge. */
+.titleError {
+  color: oklch(60% 0.12 30);
+}
+
+.message {
+  margin-top: 8px;
+  margin-bottom: 18px;
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

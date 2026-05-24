@@ -1,0 +1,58 @@
+/* Module styles for FormationQuestionnaire — the 5-question induction
+   modal shown when a habit is ready for Hall-of-Fame consideration. */
+
+/* Card width override on top of .overlay-card. */
+.card {
+  width: 640px;
+  max-width: 92vw;
+}
+
+/* Header row (eyebrow+title on the left, close button on the right). */
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+/* Title tightening below the eyebrow. */
+.title {
+  margin-top: 6px;
+}
+
+/* The five-question grid. */
+.questions {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+/* Rating button row (1–5) for one question. */
+.ratingRow {
+  display: flex;
+  gap: 6px;
+}
+
+/* Spacing for the "Reflection" label above the textarea. */
+.reflectionLabel {
+  margin-top: 16px;
+}
+
+/* The "average score" recommendation card. */
+.recommendation {
+  background: var(--bg-sunk);
+  margin-top: 14px;
+}
+.recommendationScore {
+  font-size: 11px;
+}
+.recommendationText {
+  margin-top: 6px;
+}
+
+/* Footer with Keep/Induct buttons. */
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}

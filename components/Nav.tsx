@@ -22,6 +22,8 @@ import { useStoreContext } from "@/components/StoreProvider";
 import { logoutAction } from "@/lib/actions/auth";
 import { navItemVariants, sidebarStagger } from "@/lib/animations";
 
+import styles from "./Nav.module.css";
+
 const NAV = [
   { href: "/", label: "Today", icon: IconToday, key: "T", group: "Practice" },
   { href: "/habits", label: "All habits", icon: IconList, key: "H", group: "Practice" },
@@ -148,7 +150,7 @@ function SidebarContent({
         >
           {initials(user.name, user.email)}
         </motion.div>
-        <div style={{ minWidth: 0, flex: 1 }}>
+        <div className={styles.userText}>
           <div className="who-name">{user.name ?? user.email ?? "Atomicly user"}</div>
           <div className="who-id">{totalVotes} votes cast</div>
         </div>

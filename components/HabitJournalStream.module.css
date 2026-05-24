@@ -1,0 +1,103 @@
+/* Module styles for HabitJournalStream — the chronological list of
+   mood + journal entries on a habit detail page.
+
+   Mood colour is data, not style: it lives on the entry as
+   --mood-color (set via inline style) so this CSS can read it
+   regardless of which of the 5 moods the row represents. */
+
+/* Empty state when no journal entries exist yet. */
+.emptyCard {
+  text-align: center;
+  padding: 40px 20px;
+}
+.emptyTitle {
+  font-family: var(--serif);
+  font-size: 18px;
+  font-style: italic;
+  color: var(--ink-3);
+  margin-bottom: 8px;
+}
+.emptyBody {
+  font-size: 12.5px;
+}
+
+/* Stream container — vertical list of cards. */
+.stream {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ---- HabitJournalCard ------------------------------------------------- */
+
+/* Mono date label above the entry. */
+.dateLabel {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* In editing mode: the row of mood chips. */
+.editMoodRow {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+/* Active mood chip — uses the per-entry --mood-color variable. */
+.editMoodChipActive {
+  border-color: var(--mood-color);
+  background: color-mix(in oklch, var(--mood-color) 14%, var(--bg-elev));
+}
+.editMoodChipInactive {
+  border-color: var(--rule);
+  background: var(--bg-sunk);
+}
+
+/* Editing mode action row. */
+.editActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* Display mode — top row with date+mood (left) and actions (right). */
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.cardHeaderSpaced {
+  margin-bottom: 8px;
+}
+
+/* Mood label beneath the date — coloured by --mood-color. */
+.moodLine {
+  font-size: 13px;
+  color: var(--mood-color);
+  margin-top: 2px;
+}
+.moodFace {
+  margin-right: 6px;
+}
+
+/* Top-right actions cluster. */
+.cardActions {
+  display: flex;
+  gap: 6px;
+}
+
+/* Tiny trash/edit icons inside the action buttons. */
+.iconTiny {
+  width: 12px;
+  height: 12px;
+}
+
+/* Markdown body styling for the journal text. */
+.journalBody {
+  font-family: var(--serif);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}

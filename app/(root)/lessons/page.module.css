@@ -1,0 +1,121 @@
+/* Module styles for the Lessons page. */
+
+/* Header tabs row (sits in the page-header on the right). */
+.headerTabs {
+  border-bottom: none;
+  margin: 0;
+}
+
+/* Today's lesson hero card. */
+.heroCard {
+  margin-bottom: 18px;
+}
+
+/* Top row of the hero (title block on the left, mode toggle on the right). */
+.heroRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+}
+.heroTitle {
+  margin-top: 8px;
+}
+.heroLede {
+  max-width: 680px;
+}
+
+/* Progress caption beneath the curriculum map. */
+.progressCaption {
+  margin-top: 12px;
+  font-size: 11px;
+}
+
+/* Reader view: section spacing. */
+.readerEyebrow {
+  margin-top: 18px;
+}
+.readerTitle {
+  margin-top: 8px;
+}
+.readerQuote {
+  font-family: var(--serif);
+  font-size: 24px;
+  font-style: italic;
+  color: var(--accent);
+  line-height: 1.35;
+}
+.readerBody {
+  line-height: 1.65;
+}
+.practiceCard {
+  background: var(--bg-sunk);
+  margin-top: 16px;
+}
+.practiceBody {
+  margin: 8px 0 0;
+}
+.readerCta {
+  margin-top: 18px;
+}
+
+/* Library view: tab bar spacing. */
+.libraryTabs {
+  margin-bottom: 18px;
+}
+
+/* Library grid of lesson cards (3-up). */
+.libraryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+/* Lesson card override — left-align text contents. */
+.lessonCard {
+  text-align: left;
+}
+.lessonCardTitle {
+  margin-top: 8px;
+}
+.lessonCardLede {
+  line-height: 1.45;
+}
+
+/* Curriculum map list. */
+.curriculumList {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+/* One chapter row: label | dots strip. */
+.chapterRow {
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  align-items: center;
+  gap: 14px;
+}
+.chapterLabel {
+  font-size: 12px;
+}
+.chapterDots {
+  display: flex;
+  gap: 6px;
+}
+
+/* One lesson dot. Filled when read, outlined when today. Colours flow
+   from the inline --dot-bg / --dot-border CSS variables. */
+.lessonDot {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: var(--dot-bg);
+  border: var(--dot-border);
+}
+
+/* Mobile: collapse the 3-up library grid to a single column. */
+@media (max-width: 900px) {
+  .libraryGrid {
+    grid-template-columns: 1fr;
+  }
+}

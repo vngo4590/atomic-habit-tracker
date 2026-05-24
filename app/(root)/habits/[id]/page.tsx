@@ -24,6 +24,8 @@ import { useStoreContext } from "@/components/StoreProvider";
 import { todayKey } from "@/lib/helpers";
 import { formatScheduleLabel } from "@/lib/schedule";
 
+import styles from "./page.module.css";
+
 type Tab = "overview" | "journal" | "history" | "notes" | "stack";
 
 const TABS: Tab[] = ["overview", "journal", "history", "notes", "stack"];
@@ -35,15 +37,18 @@ type BubbleItem = {
 
 type RevealState = Record<string, { laws?: boolean; loop?: boolean }>;
 
+/** Compact stat tile used inside the page header stat strip. */
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
     <div>
-      <div className="muted mono" style={{ fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase" }}>{label}</div>
-      <div style={{ fontFamily: "var(--serif)", fontSize: 30, lineHeight: 1.1, marginTop: 4 }}>{value}</div>
+      <div className={`muted mono ${styles.statCaption}`}>{label}</div>
+      <div className={styles.statValue}>{value}</div>
     </div>
   );
 }
 
+/** Intro panel for laws/loop sections — shown until the user clicks
+ *  through to the actual editable surface. */
 function PrincipleIntro({
   title,
   eyebrow,
@@ -65,11 +70,22 @@ function PrincipleIntro({
         <div className="eyebrow">{eyebrow}</div>
         <h3 className="h3">{title}</h3>
         <p>{body}</p>
-        <motion.button className="btn btn-primary btn-sm" onClick={onStart} whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>{action}</motion.button>
+        <motion.button
+          className="btn btn-primary btn-sm"
+          onClick={onStart}
+          whileHover={{ y: -1 }}
+          whileTap={{ scale: 0.97 }}
+        >
+          {action}
+        </motion.button>
       </div>
       <div className="principle-bubbles" aria-hidden="true">
         {bubbles.map((bubble, index) => (
-          <span key={bubble.label} className={`principle-bubble ${bubble.tone}`} style={{ "--bubble-index": index } as CSSProperties}>
+          <span
+            key={bubble.label}
+            className={`principle-bubble ${bubble.tone}`}
+            style={{ "--bubble-index": index } as CSSProperties}
+          >
             {bubble.label}
           </span>
         ))}
@@ -78,6 +94,14 @@ function PrincipleIntro({
   );
 }
 
+/**
+ * HabitDetailPage — five-tab detail view for one habit:
+ *  - overview: 4 laws + habit loop + environment + contract + mood chart.
+ *  - journal: chronological mood/journal entries.
+ *  - history: 26-week dot wall.
+ *  - notes: standalone notes list.
+ *  - stack: stack chain editor.
+ */
 export default function HabitDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -91,10 +115,10 @@ export default function HabitDetailPage() {
   const habitId = params.id;
   const habit = store.habits.find((item) => item.id === habitId);
 
+  // Derive the four header stats. Returns null when the habit is missing
+  // so the page can render a "Habit not found" card instead.
   const stats = useMemo(() => {
-    if (!habit) {
-      return null;
-    }
+    if (!habit) return null;
     return {
       active: store.streak(habit),
       best: store.longestStreak(habit),
@@ -105,11 +129,19 @@ export default function HabitDetailPage() {
 
   if (!habit || !stats) {
     return (
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}>
-        <motion.button className="btn btn-ghost btn-sm btn-back" onClick={() => router.back()} whileTap={{ scale: 0.97 }}>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+      >
+        <motion.button
+          className="btn btn-ghost btn-sm btn-back"
+          onClick={() => router.back()}
+          whileTap={{ scale: 0.97 }}
+        >
           <IconBack /> Back
         </motion.button>
-        <div className="card card-pad" style={{ marginTop: 24 }}>Habit not found.</div>
+        <div className={`card card-pad ${styles.notFoundCard}`}>Habit not found.</div>
       </motion.div>
     );
   }
@@ -143,24 +175,35 @@ export default function HabitDetailPage() {
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}>
-      <motion.button className="btn btn-ghost btn-sm btn-back" onClick={() => router.back()} style={{ marginBottom: 18 }} whileTap={{ scale: 0.97 }}>
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+    >
+      <motion.button
+        className={`btn btn-ghost btn-sm btn-back ${styles.backBtn}`}
+        onClick={() => router.back()}
+        whileTap={{ scale: 0.97 }}
+      >
         <IconBack /> Back
       </motion.button>
 
-      <div className="page-header" style={{ alignItems: "flex-start", flexDirection: "column", gap: 18 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%" }}>
+      <div className={`page-header ${styles.header}`}>
+        <div className={styles.headerTop}>
           <div>
             <div className="eyebrow">{formatScheduleLabel(habit.schedule)} · {habit.time}</div>
-            <h1 className="h1" style={{ fontSize: 52 }}>{habit.name}</h1>
-            <p className="lede" style={{ marginTop: 14, fontStyle: "italic" }}>
-              I am <em style={{ color: "var(--accent)", fontStyle: "normal" }}>{habit.identity}</em>. Each check-in is a vote for that.
+            <h1 className={`h1 ${styles.headerName}`}>{habit.name}</h1>
+            <p className={`lede ${styles.headerLede}`}>
+              I am <em className={styles.identityEm}>{habit.identity}</em>. Each check-in is a vote for that.
             </p>
           </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <div className={styles.headerActions}>
             <motion.button
               className={`btn btn-lg ${doneToday ? "btn-accent" : "btn-primary"}`}
               onClick={() => {
+                // Clicking the primary button always toggles the day. If the
+                // user just marked it done, also open the mood sheet so they
+                // can capture mood + a quick note.
                 if (doneToday) {
                   store.toggleHabit(habit.id);
                 } else {
@@ -171,7 +214,13 @@ export default function HabitDetailPage() {
               whileHover={{ y: -1 }}
               whileTap={{ scale: 0.97 }}
             >
-              {doneToday ? <><IconCheck style={{ width: 14, height: 14 }} /> Done today · undo</> : "Mark done"}
+              {doneToday ? (
+                <>
+                  <IconCheck className={styles.actionIcon} /> Done today · undo
+                </>
+              ) : (
+                "Mark done"
+              )}
             </motion.button>
             {doneToday && (
               <motion.button
@@ -186,19 +235,29 @@ export default function HabitDetailPage() {
             {confirmDelete ? (
               <>
                 <motion.button className="btn btn-lg btn-danger" onClick={deleteHabit} whileTap={{ scale: 0.97 }}>
-                  <IconTrash style={{ width: 14, height: 14 }} /> Confirm delete
+                  <IconTrash className={styles.actionIcon} /> Confirm delete
                 </motion.button>
-                <motion.button className="btn btn-lg btn-ghost" onClick={() => setConfirmDelete(false)} whileTap={{ scale: 0.97 }}>Cancel</motion.button>
+                <motion.button
+                  className="btn btn-lg btn-ghost"
+                  onClick={() => setConfirmDelete(false)}
+                  whileTap={{ scale: 0.97 }}
+                >
+                  Cancel
+                </motion.button>
               </>
             ) : (
-              <motion.button className="btn btn-lg btn-ghost btn-danger-ghost" onClick={() => setConfirmDelete(true)} whileTap={{ scale: 0.97 }}>
-                <IconTrash style={{ width: 14, height: 14 }} /> Delete habit
+              <motion.button
+                className="btn btn-lg btn-ghost btn-danger-ghost"
+                onClick={() => setConfirmDelete(true)}
+                whileTap={{ scale: 0.97 }}
+              >
+                <IconTrash className={styles.actionIcon} /> Delete habit
               </motion.button>
             )}
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 0, width: "100%", borderTop: "1px solid var(--rule)", paddingTop: 18 }}>
+        <div className={styles.statsRow}>
           <Stat label="Active streak" value={`${stats.active}d`} />
           <Stat label="Best streak" value={`${stats.best}d`} />
           <Stat label="30-day rate" value={`${stats.rate}%`} />
@@ -208,7 +267,12 @@ export default function HabitDetailPage() {
 
       <div className="tabs">
         {TABS.map((item) => (
-          <motion.button key={item} className={`tab ${tab === item ? "active" : ""}`} onClick={() => setTab(item)} whileTap={{ scale: 0.97 }}>
+          <motion.button
+            key={item}
+            className={`tab ${tab === item ? "active" : ""}`}
+            onClick={() => setTab(item)}
+            whileTap={{ scale: 0.97 }}
+          >
             {item[0].toUpperCase() + item.slice(1)}
           </motion.button>
         ))}
@@ -216,13 +280,13 @@ export default function HabitDetailPage() {
 
       {tab === "overview" && (
         <div className="habit-overview-grid">
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div className={styles.overviewColumn}>
             {showLaws ? (
               <div className="card card-pad">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14 }}>
+                <div className={styles.lawsHeader}>
                   <h3 className="h3">The 4 laws</h3>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span className="muted mono" style={{ fontSize: 10, letterSpacing: "0.08em" }}>EDIT INLINE</span>
+                  <div className={styles.lawsHeaderRight}>
+                    <span className={`muted mono ${styles.lawsEditCaption}`}>EDIT INLINE</span>
                     <button
                       className="btn btn-sm btn-ghost"
                       onClick={() => {
@@ -234,10 +298,35 @@ export default function HabitDetailPage() {
                     </button>
                   </div>
                 </div>
-                <EditableLaw label="1. Make it obvious" hint="Cue" value={habit.cue} placeholder="When 7am, after I pour coffee..." onSave={(value) => store.updateHabit(habit.id, { cue: value })} />
-                <EditableLaw label="2. Make it attractive" hint="Craving" value={habit.craving} placeholder="To feel curious, calm, strong..." onSave={(value) => store.updateHabit(habit.id, { craving: value })} />
-                <EditableLaw label="3. Make it easy" hint="2-minute version" value={habit.twoMin} placeholder="Just open the book. Just put on the shoes." onSave={(value) => store.updateHabit(habit.id, { twoMin: value })} />
-                <EditableLaw label="4. Make it satisfying" hint="Reward" value={habit.reward} placeholder="One visible win." onSave={(value) => store.updateHabit(habit.id, { reward: value })} last />
+                <EditableLaw
+                  label="1. Make it obvious"
+                  hint="Cue"
+                  value={habit.cue}
+                  placeholder="When 7am, after I pour coffee..."
+                  onSave={(value) => store.updateHabit(habit.id, { cue: value })}
+                />
+                <EditableLaw
+                  label="2. Make it attractive"
+                  hint="Craving"
+                  value={habit.craving}
+                  placeholder="To feel curious, calm, strong..."
+                  onSave={(value) => store.updateHabit(habit.id, { craving: value })}
+                />
+                <EditableLaw
+                  label="3. Make it easy"
+                  hint="2-minute version"
+                  value={habit.twoMin}
+                  placeholder="Just open the book. Just put on the shoes."
+                  onSave={(value) => store.updateHabit(habit.id, { twoMin: value })}
+                />
+                <EditableLaw
+                  label="4. Make it satisfying"
+                  hint="Reward"
+                  value={habit.reward}
+                  placeholder="One visible win."
+                  onSave={(value) => store.updateHabit(habit.id, { reward: value })}
+                  last
+                />
               </div>
             ) : (
               <PrincipleIntro
@@ -257,11 +346,16 @@ export default function HabitDetailPage() {
 
             {showLoop ? (
               <div>
-                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+                <div className={styles.clearLoopRow}>
                   <button
                     className="btn btn-sm btn-ghost"
                     onClick={() => {
-                      store.updateHabit(habit.id, { loopCue: "", loopCraving: "", loopResponse: "", loopReward: "" });
+                      store.updateHabit(habit.id, {
+                        loopCue: "",
+                        loopCraving: "",
+                        loopResponse: "",
+                        loopReward: "",
+                      });
                       hidePanel("loop");
                     }}
                   >
@@ -286,42 +380,35 @@ export default function HabitDetailPage() {
               />
             )}
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div className={styles.overviewColumn}>
             <div className="card card-pad">
-              <h3 className="h3" style={{ marginBottom: 8 }}>Environment</h3>
-              <EditableLine value={habit.environment} placeholder="Stage your space..." onSave={(value) => store.updateHabit(habit.id, { environment: value })} />
+              <h3 className={`h3 ${styles.cardTitle}`}>Environment</h3>
+              <EditableLine
+                value={habit.environment}
+                placeholder="Stage your space..."
+                onSave={(value) => store.updateHabit(habit.id, { environment: value })}
+              />
             </div>
-            <div className="card card-pad" style={habit.contract ? { borderColor: "var(--accent)", borderStyle: "dashed" } : {}}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <div className={`card card-pad ${habit.contract ? styles.contractCardActive : ""}`}>
+              <div className={styles.contractHeader}>
                 <h3 className="h3">Accountability contract</h3>
-                <button className="btn btn-sm btn-ghost" onClick={() => setShowContract(true)}>{habit.contract ? "Edit" : "+ Add"}</button>
+                <button className="btn btn-sm btn-ghost" onClick={() => setShowContract(true)}>
+                  {habit.contract ? "Edit" : "+ Add"}
+                </button>
               </div>
               {habit.contract ? (
                 <>
-                  <button
-                    onClick={() => setShowContract(true)}
-                    style={{
-                      display: "block",
-                      width: "100%",
-                      margin: "0 0 10px",
-                      padding: 0,
-                      border: 0,
-                      background: "transparent",
-                      textAlign: "left",
-                      fontSize: 13.5,
-                      color: "var(--ink-2)",
-                      lineHeight: 1.5,
-                      cursor: "pointer",
-                    }}
-                  >
+                  <button onClick={() => setShowContract(true)} className={styles.contractText}>
                     {habit.contract}
                   </button>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {habit.contractPartners.map((partner) => <span key={partner} className="chip">{partner}</span>)}
+                  <div className={styles.partnersRow}>
+                    {habit.contractPartners.map((partner) => (
+                      <span key={partner} className="chip">{partner}</span>
+                    ))}
                   </div>
                 </>
               ) : (
-                <p style={{ margin: 0, fontFamily: "var(--serif)", fontSize: 14, fontStyle: "italic", color: "var(--ink-3)", lineHeight: 1.5 }}>
+                <p className={styles.contractEmpty}>
                   Add a real cost to skipping. Invite a witness or write the terms.
                 </p>
               )}
@@ -335,20 +422,31 @@ export default function HabitDetailPage() {
         <HabitJournalStream
           habit={habit}
           onSaveEntry={(dateKey, payload) => store.logCheckIn(habit.id, payload, dateKey)}
-          onClearEntry={(dateKey) => store.logCheckIn(habit.id, { mood: undefined, journal: undefined }, dateKey)}
+          onClearEntry={(dateKey) =>
+            store.logCheckIn(habit.id, { mood: undefined, journal: undefined }, dateKey)
+          }
         />
       )}
       {tab === "history" && <HistoryWall habit={habit} />}
-      {tab === "notes" && <NotesManager habit={habit} onUpdateNotes={(notes) => store.updateHabit(habit.id, { notes })} />}
-      {tab === "stack" && (
-        <StackDiagram habit={habit} habits={store.habits} />
+      {tab === "notes" && (
+        <NotesManager habit={habit} onUpdateNotes={(notes) => store.updateHabit(habit.id, { notes })} />
       )}
+      {tab === "stack" && <StackDiagram habit={habit} habits={store.habits} />}
 
       {showContract && (
-        <ContractSheet habit={habit} onClose={() => setShowContract(false)} onSave={(patch) => store.updateHabit(habit.id, patch)} />
+        <ContractSheet
+          habit={habit}
+          onClose={() => setShowContract(false)}
+          onSave={(patch) => store.updateHabit(habit.id, patch)}
+        />
       )}
       {showMood && (
-        <MoodCheckSheet habit={habit} dateKey={today} onClose={() => setShowMood(false)} onSave={(payload) => store.logCheckIn(habit.id, payload)} />
+        <MoodCheckSheet
+          habit={habit}
+          dateKey={today}
+          onClose={() => setShowMood(false)}
+          onSave={(payload) => store.logCheckIn(habit.id, payload)}
+        />
       )}
     </motion.div>
   );

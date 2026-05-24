@@ -1,0 +1,116 @@
+/* ============================================================================
+ * tokens.css — Design tokens for Atomicly.
+ *
+ * What lives here:
+ *   • Light-mode CSS custom properties on :root  (colors, radii, fonts,
+ *     shadows, transitions).
+ *   • Dark-mode overrides on [data-theme="dark"].
+ *   • Tailwind v4 @theme inline declaration mapping our --font-* vars into
+ *     Tailwind so utility classes like `font-serif` resolve to the same
+ *     stack that next/font injects.
+ *
+ * Why it lives in its own file:
+ *   • Single source of truth for the design system. If a designer asks
+ *     "change the accent colour", every other partial reads from
+ *     var(--accent) — only this file changes.
+ *   • Keeps non-token CSS readable. The 800-line globals.css mixed tokens
+ *     with components and made the design system invisible.
+ * ============================================================================ */
+
+:root {
+  /* Surfaces — backgrounds for the page, raised cards, and sunken wells. */
+  --bg: oklch(97.5% 0.008 80);
+  --bg-elev: oklch(99% 0.005 80);
+  --bg-sunk: oklch(95.5% 0.01 80);
+
+  /* Ink — text colour ramp from strongest (ink) to faintest (ink-4). */
+  --ink: oklch(22% 0.012 60);
+  --ink-2: oklch(38% 0.012 60);
+  --ink-3: oklch(55% 0.012 60);
+  --ink-4: oklch(72% 0.01 60);
+
+  /* Rules — dividers, borders, and stronger separators. */
+  --rule: oklch(89% 0.012 75);
+  --rule-strong: oklch(82% 0.014 75);
+
+  /* Brand accent + semantic colours (done, warn). */
+  --accent: oklch(62% 0.13 60);
+  --accent-2: oklch(72% 0.10 60);
+  --accent-soft: oklch(92% 0.04 60);
+  --done: oklch(58% 0.08 145);
+  --done-soft: oklch(92% 0.035 145);
+  --warn: oklch(60% 0.13 35);
+
+  /* Decorative bubbles used on the "principle-intro" panels. */
+  --bubble-warm-bg: color-mix(in oklch, var(--bg-elev) 72%, var(--accent) 28%);
+  --bubble-warm-border: color-mix(in oklch, var(--rule-strong) 55%, var(--accent) 45%);
+  --bubble-green-bg: color-mix(in oklch, var(--bg-elev) 74%, var(--done) 26%);
+  --bubble-green-border: color-mix(in oklch, var(--rule-strong) 55%, var(--done) 45%);
+  --bubble-blue-bg: color-mix(in oklch, var(--bg-elev) 72%, var(--accent-2) 28%);
+  --bubble-blue-border: color-mix(in oklch, var(--rule-strong) 55%, var(--accent-2) 45%);
+  --bubble-text: oklch(18% 0.018 60);
+  --bubble-inverse-bg: oklch(22% 0.018 60);
+  --bubble-inverse-text: oklch(98% 0.004 80);
+
+  /* Radii — small / medium / large corner rounding. */
+  --r-sm: 4px;
+  --r-md: 8px;
+  --r-lg: 14px;
+
+  /* Font stacks. The --font-serif/sans/mono vars are populated by next/font
+     in app/layout.tsx; we layer system fallbacks behind them so SSR HTML is
+     legible before the web fonts have loaded. */
+  --serif: var(--font-serif), Georgia, serif;
+  --sans: var(--font-sans), -apple-system, system-ui, sans-serif;
+  --mono: var(--font-mono), ui-monospace, monospace;
+
+  /* Shadow ramp — layered shadows soft enough for the editorial aesthetic. */
+  --shadow: 0 1px 0 rgba(0, 0, 0, 0.02), 0 1px 2px rgba(40, 30, 10, 0.04), 0 8px 24px -12px rgba(40, 30, 10, 0.08);
+  --shadow-sm: 0 1px 2px rgba(40, 30, 10, 0.04), 0 1px 3px rgba(40, 30, 10, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(40, 30, 10, 0.05), 0 2px 4px -2px rgba(40, 30, 10, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(40, 30, 10, 0.06), 0 4px 6px -4px rgba(40, 30, 10, 0.04);
+  --shadow-xl: 0 20px 25px -5px rgba(40, 30, 10, 0.08), 0 8px 10px -6px rgba(40, 30, 10, 0.04);
+
+  /* Standard easing/duration tokens for tactile micro-interactions. */
+  --transition-fast: 120ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Dark theme — same token names, recoloured.
+   Activated by toggling data-theme="dark" on <html>; see lib/theme.ts. */
+[data-theme="dark"] {
+  --bg: oklch(18% 0.008 60);
+  --bg-elev: oklch(22% 0.008 60);
+  --bg-sunk: oklch(15% 0.008 60);
+  --ink: oklch(94% 0.008 80);
+  --ink-2: oklch(80% 0.01 70);
+  --ink-3: oklch(62% 0.01 70);
+  --ink-4: oklch(45% 0.01 70);
+  --rule: oklch(28% 0.01 60);
+  --rule-strong: oklch(35% 0.012 60);
+  --accent-soft: oklch(28% 0.05 60);
+  --done-soft: oklch(28% 0.04 145);
+  --bubble-warm-bg: color-mix(in oklch, var(--bg-sunk) 58%, var(--accent) 42%);
+  --bubble-warm-border: color-mix(in oklch, var(--rule-strong) 45%, var(--accent) 55%);
+  --bubble-green-bg: color-mix(in oklch, var(--bg-sunk) 58%, var(--done) 42%);
+  --bubble-green-border: color-mix(in oklch, var(--rule-strong) 45%, var(--done) 55%);
+  --bubble-blue-bg: color-mix(in oklch, var(--bg-sunk) 55%, var(--accent-2) 45%);
+  --bubble-blue-border: color-mix(in oklch, var(--rule-strong) 45%, var(--accent-2) 55%);
+  --bubble-text: oklch(98% 0.004 80);
+  --bubble-inverse-bg: oklch(94% 0.008 80);
+  --bubble-inverse-text: oklch(18% 0.018 60);
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.02), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.25), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.35), 0 8px 10px -6px rgba(0, 0, 0, 0.25);
+}
+
+/* Bridge our --font-* CSS variables into Tailwind v4's theme so Tailwind
+   utility classes (e.g. `font-serif`) use the same fonts as our raw vars. */
+@theme inline {
+  --font-serif: var(--font-serif);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}

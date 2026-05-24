@@ -29,8 +29,10 @@ describe("OnboardingOverlay business logic", () => {
     const { container } = render(<OnboardingOverlay onComplete={onComplete} />);
 
     // When on step 1 (index 0)
-    // Then there are 4 progress indicator bars
-    const bars = container.querySelectorAll("span[style*='border-radius: 99px']");
+    // Then there are 4 progress indicator bars (one per onboarding step).
+    // We query by the data-testid the component exposes so the test stays
+    // stable across styling refactors.
+    const bars = container.querySelectorAll('[data-testid="onboarding-progress-dot"]');
     expect(bars.length).toBe(4);
   });
 

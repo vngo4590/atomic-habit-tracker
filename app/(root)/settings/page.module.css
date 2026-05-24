@@ -1,0 +1,118 @@
+/* Module styles for the Settings page. */
+
+/* Vertical stack of setting groups. */
+.layout {
+  display: grid;
+  gap: 18px;
+}
+
+/* Standard row inside a setting group: label | value | action. */
+.row {
+  display: grid;
+  grid-template-columns: 1fr 180px auto;
+  gap: 18px;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--rule);
+}
+
+/* Caption (the "value" column) inside .row. */
+.rowValue {
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+/* Header strip at the top of a setting group. */
+.groupHeader {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--bg-sunk);
+}
+
+/* Profile name edit form container. */
+.editFormShell {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--bg-sunk);
+}
+
+/* Form layouts inside the Account section. */
+.nameForm {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.passwordForm {
+  display: grid;
+  gap: 10px;
+  max-width: 400px;
+}
+
+/* Form inputs sized for compact admin UI. */
+.smallInput {
+  height: 34px;
+  font-size: 13px;
+}
+.smallInputFlex {
+  flex: 1;
+  height: 34px;
+  font-size: 13px;
+}
+
+/* Submit row beneath the password form. */
+.formActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+/* Success state inside an edit form (green text + Done button). */
+.successRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.successText {
+  color: var(--accent);
+  font-size: 13px;
+}
+
+/* Inline error text under a form. */
+.formError {
+  color: oklch(52% 0.18 25);
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+/* Tiny icon inside the theme toggle buttons. */
+.iconSm {
+  width: 13px;
+  height: 13px;
+}
+
+/* Theme + accent button rows. */
+.optionRow {
+  display: flex;
+  gap: 8px;
+}
+
+/* Colour swatch inside an accent button. */
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 99px;
+  display: inline-block;
+  /* Hue flows in as a CSS variable so the button can theme generically. */
+  background: oklch(62% 0.13 var(--hue));
+}
+
+/* Mobile: drop the fixed middle column so values wrap. */
+@media (max-width: 900px) {
+  .row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .nameForm {
+    flex-direction: column;
+  }
+}

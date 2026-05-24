@@ -1,0 +1,129 @@
+/* Module styles for NotesManager — the standalone notes list on the
+   habit detail page. Supports inline edit and bulk-select/delete. */
+
+/* Composer card (textarea + Save button) at the top. */
+.composer {
+  margin-bottom: 16px;
+}
+.composerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+.composerHint {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+/* Header bar above the notes list (count + select/done buttons). */
+.headerBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 0 4px;
+}
+.headerCount {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+.headerActions {
+  display: flex;
+  gap: 6px;
+}
+
+/* Empty state. */
+.empty {
+  text-align: center;
+  color: var(--ink-3);
+  font-style: italic;
+  font-family: var(--serif);
+  font-size: 16px;
+  padding: 40px 20px;
+}
+
+/* Notes list (gap between cards). */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Note card layout. */
+.noteCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+/* Cursor when in bulk-select mode. */
+.noteCardSelectable {
+  cursor: pointer;
+}
+/* Selection styling — applied when bulk mode is active and this note is
+   in the selected set. */
+.noteCardSelected {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+/* Selection checkbox (visible only in bulk-select mode). */
+.checkbox {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  display: grid;
+  place-items: center;
+  color: var(--bg);
+}
+.checkboxUnchecked {
+  border: 1.5px solid var(--rule-strong);
+  background: transparent;
+}
+.checkboxChecked {
+  border: 1.5px solid var(--accent);
+  background: var(--accent);
+}
+
+/* Body column of a note. */
+.noteBody {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Date label above the note text. */
+.noteDate {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+/* The actual note paragraph. */
+.noteText {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Right-side action buttons cluster (edit + delete). */
+.noteActions {
+  display: flex;
+  gap: 4px;
+}
+
+/* Tiny icon size used by all small action buttons. */
+.iconTiny {
+  width: 12px;
+  height: 12px;
+}
+
+/* Inline-edit action row. */
+.editActions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}

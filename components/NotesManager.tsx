@@ -6,6 +6,13 @@ import { IconCheck, IconEdit, IconTrash } from "@/components/Icons";
 import { fmt, todayKey } from "@/lib/helpers";
 import type { Habit } from "@/lib/types";
 
+import styles from "./NotesManager.module.css";
+
+/**
+ * NotesManager — standalone notes attached to a habit (independent of
+ * day-by-day journal entries). Supports add, inline-edit, single-delete,
+ * and a bulk select/delete mode.
+ */
 export function NotesManager({
   habit,
   onUpdateNotes,
@@ -13,6 +20,9 @@ export function NotesManager({
   habit: Habit;
   onUpdateNotes: (notes: Habit["notes"]) => void;
 }) {
+  // Composer + bulk + inline-edit state. We keep three small state slots
+  // rather than a single reducer because the transitions between them
+  // are direct (each interaction owns its own state).
   const [draft, setDraft] = useState("");
   const [bulkMode, setBulkMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -20,10 +30,11 @@ export function NotesManager({
   const [editDraft, setEditDraft] = useState("");
 
   const addNote = () => {
-    if (!draft.trim()) {
-      return;
-    }
-    onUpdateNotes([{ id: `pending-${Date.now()}`, createdAt: todayKey(), body: draft.trim() }, ...habit.notes]);
+    if (!draft.trim()) return;
+    onUpdateNotes([
+      { id: `pending-${Date.now()}`, createdAt: todayKey(), body: draft.trim() },
+      ...habit.notes,
+    ]);
     setDraft("");
   };
   const deleteOne = (id: string) => onUpdateNotes(habit.notes.filter((note) => note.id !== id));
@@ -37,9 +48,7 @@ export function NotesManager({
   };
   const saveEdit = (id: string) => {
     const body = editDraft.trim();
-    if (!body) {
-      return;
-    }
+    if (!body) return;
     onUpdateNotes(habit.notes.map((note) => (note.id === id ? { ...note, body } : note)));
     cancelEdit();
   };
@@ -50,17 +59,14 @@ export function NotesManager({
   };
   const toggleSelected = (id: string) => {
     const next = new Set(selected);
-    if (next.has(id)) {
-      next.delete(id);
-    } else {
-      next.add(id);
-    }
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
     setSelected(next);
   };
 
   return (
     <div>
-      <div className="card card-pad" style={{ marginBottom: 16 }}>
+      <div className={`card card-pad ${styles.composer}`}>
         <textarea
           className="input"
           rows={2}
@@ -73,62 +79,77 @@ export function NotesManager({
             }
           }}
         />
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
-          <span className="muted mono" style={{ fontSize: 10, letterSpacing: "0.06em" }}>CTRL + ENTER TO SAVE</span>
-          <button className="btn btn-sm btn-primary" onClick={addNote} disabled={!draft.trim()}>Add note</button>
+        <div className={styles.composerRow}>
+          <span className={`muted mono ${styles.composerHint}`}>CTRL + ENTER TO SAVE</span>
+          <button className="btn btn-sm btn-primary" onClick={addNote} disabled={!draft.trim()}>
+            Add note
+          </button>
         </div>
       </div>
 
       {habit.notes.length > 0 && (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, padding: "0 4px" }}>
-          <div className="muted mono" style={{ fontSize: 11, letterSpacing: "0.06em" }}>
-            {bulkMode && selected.size > 0 ? `${selected.size} OF ${habit.notes.length} SELECTED` : `${habit.notes.length} NOTES`}
+        <div className={styles.headerBar}>
+          <div className={`muted mono ${styles.headerCount}`}>
+            {bulkMode && selected.size > 0
+              ? `${selected.size} OF ${habit.notes.length} SELECTED`
+              : `${habit.notes.length} NOTES`}
           </div>
           {bulkMode ? (
-            <div style={{ display: "flex", gap: 6 }}>
-              <button className="btn btn-sm" onClick={() => setSelected(new Set(habit.notes.map((note) => note.id)))}>Select all</button>
-              <button className="btn btn-sm" onClick={deleteSelected} disabled={selected.size === 0}>
-                <IconTrash style={{ width: 12, height: 12 }} /> Delete
+            <div className={styles.headerActions}>
+              <button
+                className="btn btn-sm"
+                onClick={() => setSelected(new Set(habit.notes.map((note) => note.id)))}
+              >
+                Select all
               </button>
-              <button className="btn btn-sm btn-ghost" onClick={() => { setBulkMode(false); setSelected(new Set()); }}>Done</button>
+              <button className="btn btn-sm" onClick={deleteSelected} disabled={selected.size === 0}>
+                <IconTrash className={styles.iconTiny} /> Delete
+              </button>
+              <button
+                className="btn btn-sm btn-ghost"
+                onClick={() => {
+                  setBulkMode(false);
+                  setSelected(new Set());
+                }}
+              >
+                Done
+              </button>
             </div>
           ) : (
-            <button className="btn btn-sm btn-ghost" onClick={() => setBulkMode(true)}>Select</button>
+            <button className="btn btn-sm btn-ghost" onClick={() => setBulkMode(true)}>
+              Select
+            </button>
           )}
         </div>
       )}
 
       {habit.notes.length === 0 ? (
-        <div className="card card-pad" style={{ textAlign: "center", color: "var(--ink-3)", fontStyle: "italic", fontFamily: "var(--serif)", fontSize: 16, padding: "40px 20px" }}>
+        <div className={`card card-pad ${styles.empty}`}>
           No standalone notes yet. Add one above, or capture them inline when you check in.
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div className={styles.list}>
           {habit.notes.map((note) => {
             const isSelected = selected.has(note.id);
             return (
               <div
                 key={note.id}
-                className="card card-pad"
+                className={`card card-pad ${styles.noteCard} ${
+                  bulkMode ? styles.noteCardSelectable : ""
+                } ${isSelected ? styles.noteCardSelected : ""}`}
                 onClick={() => bulkMode && toggleSelected(note.id)}
-                style={{
-                  cursor: bulkMode ? "pointer" : "default",
-                  background: isSelected ? "var(--accent-soft)" : "var(--bg-elev)",
-                  borderColor: isSelected ? "var(--accent)" : "var(--rule)",
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: 14,
-                }}
               >
                 {bulkMode && (
-                  <div style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0, marginTop: 2, border: `1.5px solid ${isSelected ? "var(--accent)" : "var(--rule-strong)"}`, background: isSelected ? "var(--accent)" : "transparent", display: "grid", placeItems: "center", color: "var(--bg)" }}>
-                    {isSelected && <IconCheck style={{ width: 12, height: 12 }} />}
+                  <div
+                    className={`${styles.checkbox} ${
+                      isSelected ? styles.checkboxChecked : styles.checkboxUnchecked
+                    }`}
+                  >
+                    {isSelected && <IconCheck className={styles.iconTiny} />}
                   </div>
                 )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="muted mono" style={{ fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>
-                    {fmt.short(note.createdAt)}
-                  </div>
+                <div className={styles.noteBody}>
+                  <div className={`muted mono ${styles.noteDate}`}>{fmt.short(note.createdAt)}</div>
                   {editingId === note.id ? (
                     <div>
                       <textarea
@@ -140,34 +161,61 @@ export function NotesManager({
                         onClick={(event) => event.stopPropagation()}
                         onChange={(event) => setEditDraft(event.target.value)}
                         onKeyDown={(event) => {
-                          if (event.key === "Escape") {
-                            cancelEdit();
-                          }
+                          if (event.key === "Escape") cancelEdit();
                           if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
                             saveEdit(note.id);
                           }
                         }}
                       />
-                      <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", marginTop: 8 }}>
-                        <button className="btn btn-sm" onClick={(event) => { event.stopPropagation(); cancelEdit(); }}>Cancel</button>
-                        <button className="btn btn-sm btn-primary" disabled={!editDraft.trim()} onClick={(event) => { event.stopPropagation(); saveEdit(note.id); }}>
+                      <div className={styles.editActions}>
+                        <button
+                          className="btn btn-sm"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            cancelEdit();
+                          }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          className="btn btn-sm btn-primary"
+                          disabled={!editDraft.trim()}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            saveEdit(note.id);
+                          }}
+                        >
                           Save note
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>{note.body}</p>
+                    <p className={styles.noteText}>{note.body}</p>
                   )}
                 </div>
                 {!bulkMode && (
-                  <div style={{ display: "flex", gap: 4 }}>
+                  <div className={styles.noteActions}>
                     {editingId !== note.id && (
-                      <button className="btn btn-sm btn-ghost" aria-label="Edit note" onClick={(event) => { event.stopPropagation(); beginEdit(note); }}>
-                        <IconEdit style={{ width: 12, height: 12 }} />
+                      <button
+                        className="btn btn-sm btn-ghost"
+                        aria-label="Edit note"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          beginEdit(note);
+                        }}
+                      >
+                        <IconEdit className={styles.iconTiny} />
                       </button>
                     )}
-                    <button className="btn btn-sm btn-ghost" aria-label="Delete note" onClick={(event) => { event.stopPropagation(); deleteOne(note.id); }}>
-                      <IconTrash style={{ width: 12, height: 12 }} />
+                    <button
+                      className="btn btn-sm btn-ghost"
+                      aria-label="Delete note"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        deleteOne(note.id);
+                      }}
+                    >
+                      <IconTrash className={styles.iconTiny} />
                     </button>
                   </div>
                 )}

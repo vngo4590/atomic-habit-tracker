@@ -1,0 +1,142 @@
+/* Module styles for StackDiagram — the chain editor on a habit's
+   stack tab. Most of the chip + drag-handle styling lives in the
+   global .stack-chain-list / .stack-drag-handle / .chip rules
+   (components.css) because those classes are reused by other surfaces
+   and need the responsive overrides in responsive.css. This module
+   carries the parts that are only relevant inside the diagram. */
+
+/* ---- StackChipItem ---------------------------------------------------- */
+
+/* Reorder.Item wrapper — flex row aligning the drag handle, chip, and
+   arrow with a small gap. */
+.chipItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* The chip itself — tightened padding/font size on top of the global .chip. */
+.chip {
+  font-size: 13px;
+  padding: 2px 4px 2px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Active chip — the current habit. Picks up its accent border + tint. */
+.chipCurrent {
+  border-color: var(--accent);
+  background: color-mix(in oklch, var(--accent) 12%, var(--bg-elev));
+}
+
+/* Non-current chip variant. */
+.chipOther {
+  border-color: var(--rule);
+  background: var(--bg-sunk);
+}
+
+/* Reset-shaped button for the chip's label (so the chip renders as a
+   button without any user-agent styling). */
+.chipLink {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+}
+.chipLinkClickable {
+  cursor: pointer;
+}
+.chipLinkCurrent {
+  cursor: default;
+}
+
+/* "×" remove button. all: unset so we draw it from scratch. */
+.chipRemove {
+  all: unset;
+  margin-left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+
+/* "→" arrow between chips. */
+.arrow {
+  color: var(--ink-3);
+  font-size: 14px;
+  margin-left: 4px;
+}
+
+/* ---- StackDiagram ----------------------------------------------------- */
+
+/* Header above the chip list — "Step N of M" + Remove button. */
+.chainHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+/* Empty state shown when the habit is not part of a stack. */
+.empty {
+  text-align: center;
+  padding: 24px 12px;
+}
+.emptyLead {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 15px;
+  color: var(--ink-3);
+  font-style: italic;
+}
+.emptyHint {
+  font-size: 12.5px;
+  margin-top: 6px;
+}
+
+/* ---- Link picker ------------------------------------------------------ */
+
+.picker {
+  margin-top: 10px;
+}
+.pickerPrompt {
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.pickerSearch {
+  width: 100%;
+  margin-bottom: 10px;
+}
+.pickerEmpty {
+  font-size: 12.5px;
+  padding: 8px 0;
+}
+.pickerOptions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.pickerToggle {
+  margin-top: 8px;
+}
+.pickerCancel {
+  margin-top: 10px;
+}
+
+/* Link before/after action row when the picker is closed. */
+.linkActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}

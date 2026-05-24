@@ -7,7 +7,10 @@ import { useRouter } from "next/navigation";
 import { useStoreContext } from "@/components/StoreProvider";
 import { formatScheduleLabel } from "@/lib/schedule";
 
+import styles from "./page.module.css";
+
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+/** Schedule presets. Each maps to a list of weekday tokens. */
 const PRESETS = {
   daily: { label: "Every day", days: [...DAYS] },
   weekdays: { label: "Weekdays", days: ["Mon", "Tue", "Wed", "Thu", "Fri"] },
@@ -20,6 +23,14 @@ const CUSTOM_TIME_BLOCK = "Custom";
 
 type Preset = keyof typeof PRESETS;
 
+/**
+ * MLInput — auto-resizing inline input used inside the Mad-Libs sentence.
+ *
+ * Measures the typed text in a hidden span so the input width matches the
+ * content (within min/max bounds). The width is exposed to CSS via the
+ * --ml-width and --ml-max-width custom properties so the wrapper stays
+ * style-free.
+ */
 function MLInput({
   value,
   onChange,
@@ -46,47 +57,30 @@ function MLInput({
   }, [text, minWidth, maxWidth]);
 
   return (
-    <span style={{ display: "inline-block", position: "relative", verticalAlign: "middle", margin: "0 4px", width: textWidth, maxWidth }}>
+    <span
+      className={styles.mlWrap}
+      style={
+        {
+          "--ml-width": `${textWidth}px`,
+          "--ml-max-width": `${maxWidth}px`,
+        } as React.CSSProperties
+      }
+    >
       <input
-        className="input"
+        className={`input ${styles.mlInput}`}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         maxLength={maxChars}
-        style={{
-          width: "100%",
-          height: 38,
-          fontFamily: "var(--serif)",
-          fontSize: 22,
-          fontStyle: "italic",
-          overflowWrap: "break-word",
-          wordBreak: "break-word",
-          hyphens: "auto",
-        }}
       />
-      <span
-        ref={measureRef}
-        aria-hidden="true"
-        style={{
-          position: "absolute",
-          left: 0,
-          top: 0,
-          visibility: "hidden",
-          whiteSpace: "pre",
-          fontFamily: "var(--serif)",
-          fontSize: 22,
-          fontStyle: "italic",
-          padding: "0 12px",
-          pointerEvents: "none",
-          maxWidth,
-        }}
-      >
+      <span ref={measureRef} aria-hidden="true" className={styles.mlMeasure}>
         {text}
       </span>
     </span>
   );
 }
 
+/** Small clickable chip that fills in a suggested identity into MLInput. */
 function MLChip({ children, onClick }: { children: string; onClick: () => void }) {
   return (
     <button className="chip identity-chip" type="button" onClick={onClick}>
@@ -95,6 +89,13 @@ function MLChip({ children, onClick }: { children: string; onClick: () => void }
   );
 }
 
+/**
+ * NewHabitPage — the create-habit Mad-Libs builder. Users fill in inline
+ * blanks ("I will [name], [time] [location], so I can become [identity]")
+ * and pick a schedule. The submit handler synthesises the full habit
+ * (cue, response, two-minute, craving, reward) from the four blanks so
+ * the user doesn't have to think about the loop on day one.
+ */
 export default function NewHabitPage() {
   const router = useRouter();
   const { habits, addHabit } = useStoreContext();
@@ -118,9 +119,7 @@ export default function NewHabitPage() {
       .map(([id]) => id);
   }, [habits]);
 
-  // Show top 5 by default; when the user types in the identity input, filter
-  // the full list so they can quickly select an existing identity. Empty
-  // results imply this is a new identity.
+  // Show top 5 by default; when the user types, filter the full list.
   const visibleIdentities = useMemo(() => {
     const query = identity.trim().toLowerCase();
     if (!query) return allIdentities.slice(0, 5);
@@ -128,9 +127,10 @@ export default function NewHabitPage() {
   }, [allIdentities, identity]);
 
   const activeDays: readonly string[] = preset === "custom" ? customDays : PRESETS[preset].days;
-  const schedule = preset === "custom"
-    ? formatScheduleLabel(customDays.join(", ") || "Custom")
-    : formatScheduleLabel(PRESETS[preset].label);
+  const schedule =
+    preset === "custom"
+      ? formatScheduleLabel(customDays.join(", ") || "Custom")
+      : formatScheduleLabel(PRESETS[preset].label);
   const selectedTimeBlock = TIME_BLOCKS.some((item) => item === time) ? time : CUSTOM_TIME_BLOCK;
 
   const toggleDay = (day: string) => {
@@ -140,10 +140,10 @@ export default function NewHabitPage() {
     );
   };
 
+  // Synthesise the full habit record from the four blanks then navigate
+  // to the habits list so the user can see their creation.
   const finalize = () => {
-    if (!name.trim() || !identity.trim()) {
-      return;
-    }
+    if (!name.trim() || !identity.trim()) return;
 
     const cleanName = name.trim();
     const cleanLocation = location.trim() || "a consistent place";
@@ -166,7 +166,11 @@ export default function NewHabitPage() {
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}>
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+    >
       <div className="page-header">
         <div>
           <div className="eyebrow">Create</div>
@@ -174,8 +178,8 @@ export default function NewHabitPage() {
         </div>
       </div>
 
-      <div className="card card-pad" style={{ marginBottom: 24 }}>
-        <div style={{ fontFamily: "var(--serif)", fontSize: 32, lineHeight: 1.8 }}>
+      <div className={`card card-pad ${styles.sentenceCard}`}>
+        <div className={styles.sentence}>
           I will
           <MLInput value={name} onChange={setName} placeholder="read 2 pages" wide />
           ,
@@ -185,7 +189,7 @@ export default function NewHabitPage() {
           <MLInput value={identity} onChange={setIdentity} placeholder="a reader" wide />
           .
         </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 18 }}>
+        <div className={styles.identityChips}>
           {visibleIdentities.map((item) => (
             <MLChip key={item} onClick={() => setIdentity(item)}>
               {item}
@@ -194,19 +198,25 @@ export default function NewHabitPage() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 18 }}>
+      <div className={styles.sections}>
         <section className="card card-pad">
           <div className="eyebrow">Schedule</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+          <div className={styles.presetRow}>
             {(Object.keys(PRESETS) as Preset[]).map((key) => (
-              <motion.button key={key} className={`chip ${preset === key ? "active" : ""}`} type="button" onClick={() => setPreset(key)} whileTap={{ scale: 0.95 }}>
+              <motion.button
+                key={key}
+                className={`chip ${preset === key ? "active" : ""}`}
+                type="button"
+                onClick={() => setPreset(key)}
+                whileTap={{ scale: 0.95 }}
+              >
                 {PRESETS[key].label}
               </motion.button>
             ))}
           </div>
-          {/* Day-of-week toggles. Uses a CSS class instead of inline grid styles so
-              the mobile layout override does not force each day onto its own row. */}
-          <div className="day-grid" style={{ marginTop: 16 }}>
+          {/* Day-of-week toggles. Uses the .day-grid global class so the
+              mobile layout override does not force each day onto its own row. */}
+          <div className={`day-grid ${styles.dayGridSpacer}`}>
             {DAYS.map((day) => (
               <motion.button
                 key={day}
@@ -219,9 +229,7 @@ export default function NewHabitPage() {
               </motion.button>
             ))}
           </div>
-          <label className="field-label" style={{ marginTop: 18 }}>
-            Time block
-          </label>
+          <label className={`field-label ${styles.timeLabel}`}>Time block</label>
           <select
             className="input"
             value={selectedTimeBlock}
@@ -237,20 +245,32 @@ export default function NewHabitPage() {
           </select>
           {selectedTimeBlock === CUSTOM_TIME_BLOCK && (
             <input
-              className="input"
+              className={`input ${styles.customTime}`}
               value={time}
               onChange={(event) => setTime(event.target.value)}
               placeholder="After school, lunch break, commute..."
-              style={{ marginTop: 10 }}
             />
           )}
         </section>
-
       </div>
 
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 24 }}>
-        <motion.button className="btn" type="button" onClick={() => router.push("/habits")} whileTap={{ scale: 0.97 }}>Cancel</motion.button>
-        <motion.button className="btn btn-primary" type="button" disabled={!name.trim() || !identity.trim()} onClick={finalize} whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
+      <div className={styles.footer}>
+        <motion.button
+          className="btn"
+          type="button"
+          onClick={() => router.push("/habits")}
+          whileTap={{ scale: 0.97 }}
+        >
+          Cancel
+        </motion.button>
+        <motion.button
+          className="btn btn-primary"
+          type="button"
+          disabled={!name.trim() || !identity.trim()}
+          onClick={finalize}
+          whileHover={{ y: -1 }}
+          whileTap={{ scale: 0.97 }}
+        >
           Create habit
         </motion.button>
       </div>

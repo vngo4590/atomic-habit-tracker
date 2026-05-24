@@ -2,6 +2,14 @@
 
 import { useState } from "react";
 
+import styles from "./Editable.module.css";
+
+/**
+ * EditableLine — single-line "click-to-edit" text used for short habit
+ * fields (e.g. identity statement). Renders a serif display button until
+ * clicked, then swaps to a textarea with Cancel/Save actions. The parent
+ * receives the new value through `onSave` only when the user confirms.
+ */
 export function EditableLine({
   value,
   placeholder,
@@ -18,10 +26,33 @@ export function EditableLine({
   if (editing) {
     return (
       <div>
-        <textarea className="input" rows={2} autoFocus value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={placeholder} />
-        <div style={{ display: "flex", gap: 6, marginTop: 6, justifyContent: "flex-end" }}>
-          <button className="btn btn-sm" onClick={() => { setDraft(value); setEditing(false); }}>Cancel</button>
-          <button className="btn btn-sm btn-primary" onClick={() => { onSave(draft); setEditing(false); }}>Save</button>
+        <textarea
+          className="input"
+          rows={2}
+          autoFocus
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder={placeholder}
+        />
+        <div className={styles.editorActions}>
+          <button
+            className="btn btn-sm"
+            onClick={() => {
+              setDraft(value);
+              setEditing(false);
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            className="btn btn-sm btn-primary"
+            onClick={() => {
+              onSave(draft);
+              setEditing(false);
+            }}
+          >
+            Save
+          </button>
         </div>
       </div>
     );
@@ -33,30 +64,16 @@ export function EditableLine({
         setDraft(value);
         setEditing(true);
       }}
-      style={{
-        display: "block",
-        width: "100%",
-        textAlign: "left",
-        cursor: "pointer",
-        background: "transparent",
-        border: "none",
-        padding: "4px 0",
-        margin: 0,
-        fontFamily: "var(--serif)",
-        fontStyle: empty ? "italic" : "normal",
-        fontSize: empty ? 14 : 16,
-        color: empty ? "var(--ink-3)" : "var(--ink-2)",
-        lineHeight: 1.45,
-      }}
+      className={`${styles.display} ${empty ? styles.displayLineEmpty : styles.displayLineFilled}`}
     >
       {empty ? (
         <>
-          <span className="mono" style={{ display: "block", fontSize: 9.5, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 2 }}>
-            Not set yet
-          </span>
+          <span className={`mono ${styles.notSetCaption}`}>Not set yet</span>
           {placeholder}
         </>
-      ) : value}
+      ) : (
+        value
+      )}
     </button>
   );
 }

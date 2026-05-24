@@ -9,6 +9,8 @@ import { useStoreContext } from "@/components/StoreProvider";
 import { dateAdd, fmt, todayKey } from "@/lib/helpers";
 import type { WeeklyReview, WeeklyReviewAnswers } from "@/lib/types";
 
+import styles from "./page.module.css";
+
 const QUESTIONS = [
   "What went well? Why?",
   "What didn't? What's the smallest fix?",
@@ -28,6 +30,7 @@ const REVIEW_BUBBLES = [
   { label: "Who did I vote to become?", tone: "ink" },
 ] as const;
 
+/** True iff any of the three answer fields has user text. */
 function hasReviewText(review: WeeklyReviewAnswers) {
   return [review.wentWell, review.smallestFix, review.identityVote].some((value) => value.trim());
 }
@@ -44,6 +47,7 @@ function reviewSummary(review: WeeklyReviewAnswers) {
   return review.wentWell || review.smallestFix || review.identityVote || "No notes saved yet.";
 }
 
+/** Intro panel shown when no review exists for the current week. */
 function ReviewIntro({ onStart }: { onStart: () => void }) {
   return (
     <section className="principle-intro">
@@ -55,7 +59,11 @@ function ReviewIntro({ onStart }: { onStart: () => void }) {
       </div>
       <div className="principle-bubbles" aria-hidden="true">
         {REVIEW_BUBBLES.map((bubble, index) => (
-          <span key={bubble.label} className={`principle-bubble ${bubble.tone}`} style={{ "--bubble-index": index } as CSSProperties}>
+          <span
+            key={bubble.label}
+            className={`principle-bubble ${bubble.tone}`}
+            style={{ "--bubble-index": index } as CSSProperties}
+          >
             {bubble.label}
           </span>
         ))}
@@ -64,6 +72,7 @@ function ReviewIntro({ onStart }: { onStart: () => void }) {
   );
 }
 
+/** Read-only view of an existing review with an "Edit" button. */
 function ReviewDisplay({
   review,
   title,
@@ -75,21 +84,22 @@ function ReviewDisplay({
 }) {
   return (
     <section className="card card-pad">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 16, marginBottom: 14 }}>
+      <div className={styles.displayHeader}>
         <div>
           <div className="eyebrow">Reflection</div>
-          <h2 className="h3" style={{ marginTop: 6 }}>{title}</h2>
+          <h2 className={`h3 ${styles.titleSpacer}`}>{title}</h2>
         </div>
         <button className="btn btn-sm btn-primary" onClick={onEdit}>Edit review</button>
       </div>
-      <div style={{ display: "grid", gap: 14 }}>
+      <div className={styles.answers}>
         {QUESTIONS.map((question, index) => {
           const field = ["wentWell", "smallestFix", "identityVote"][index] as keyof WeeklyReviewAnswers;
+          const text = review[field];
           return (
             <div key={question}>
               <div className="field-label">{question}</div>
-              <p style={{ margin: 0, fontFamily: "var(--serif)", fontSize: 18, fontStyle: "italic", color: review[field] ? "var(--ink)" : "var(--ink-3)", lineHeight: 1.45 }}>
-                {review[field] || "Not answered yet."}
+              <p className={`${styles.answer} ${text ? "" : styles.answerEmpty}`}>
+                {text || "Not answered yet."}
               </p>
             </div>
           );
@@ -99,20 +109,34 @@ function ReviewDisplay({
   );
 }
 
+/**
+ * ReviewPage — weekly retrospective. Shows the last 7 days as a bar
+ * chart, wins (>=85%) and slips (<50%) lists, an editable answers form
+ * for this week's review, and an archive of past reviews with
+ * pagination.
+ */
 export default function ReviewPage() {
   const { habits, completionRate, showToast, weeklyReview, weeklyReviews, setWeeklyReview } = useStoreContext();
   const today = todayKey();
   const days = useMemo(() => Array.from({ length: 7 }, (_, index) => dateAdd(today, index - 6)), [today]);
   const weekStartKey = days[0];
   const questionFields = ["wentWell", "smallestFix", "identityVote"] as const;
-  const currentReview = weeklyReviews.find((review) => review.weekStartKey === weekStartKey) ?? { weekStartKey, ...weeklyReview, updatedAt: "" };
+  const currentReview = weeklyReviews.find((review) => review.weekStartKey === weekStartKey) ?? {
+    weekStartKey,
+    ...weeklyReview,
+    updatedAt: "",
+  };
   const currentHasReview = hasReviewText(currentReview);
   const [editingWeekStartKey, setEditingWeekStartKey] = useState<string | null>(null);
-  const [answers, setAnswers] = useState<WeeklyReviewAnswers>(currentHasReview ? toReviewAnswers(currentReview) : EMPTY_REVIEW);
+  const [answers, setAnswers] = useState<WeeklyReviewAnswers>(
+    currentHasReview ? toReviewAnswers(currentReview) : EMPTY_REVIEW,
+  );
   const [showArchive, setShowArchive] = useState(false);
   const [archivePage, setArchivePage] = useState(0);
   const pastReviews = weeklyReviews.filter((review) => review.weekStartKey !== weekStartKey);
-  const visiblePastReviews = showArchive ? pastReviews.slice(archivePage * 5, archivePage * 5 + 5) : pastReviews.slice(0, 5);
+  const visiblePastReviews = showArchive
+    ? pastReviews.slice(archivePage * 5, archivePage * 5 + 5)
+    : pastReviews.slice(0, 5);
   const totalArchivePages = Math.max(1, Math.ceil(pastReviews.length / 5));
 
   const totals = useMemo(() => {
@@ -138,7 +162,11 @@ export default function ReviewPage() {
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}>
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+    >
       <div className="page-header">
         <div>
           <div className="eyebrow">Reflect</div>
@@ -146,10 +174,10 @@ export default function ReviewPage() {
         </div>
       </div>
 
-      <section className="card card-pad" style={{ marginBottom: 18 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 18 }}>
+      <section className={`card card-pad ${styles.weekSection}`}>
+        <div className={styles.weekHeader}>
           <h2 className="h3">Last 7 days</h2>
-          <div className="mono muted" style={{ fontSize: 12 }}>
+          <div className={`mono muted ${styles.weekTotals}`}>
             {totals.done} / {totals.possible} check-ins · {totals.pct}%
           </div>
         </div>
@@ -159,21 +187,26 @@ export default function ReviewPage() {
             const count = habits.filter((habit) => habit.history[day]).length;
             const pct = habits.length ? Math.round((count / habits.length) * 100) : 0;
             return (
-              <motion.div key={day} className="review-day-card" whileHover={{ y: -2, borderColor: "var(--rule-strong)" }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
+              <motion.div
+                key={day}
+                className="review-day-card"
+                whileHover={{ y: -2, borderColor: "var(--rule-strong)" }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              >
                 <div>
-                  <div className="mono muted" style={{ fontSize: 10 }}>{fmt.weekday(day)}</div>
-                  <div style={{ fontFamily: "var(--serif)", fontSize: 24 }}>{day.slice(-2)}</div>
+                  <div className={`mono muted ${styles.dayLabel}`}>{fmt.weekday(day)}</div>
+                  <div className={styles.dayNumber}>{day.slice(-2)}</div>
                 </div>
                 <div>
                   <div className="review-day-bar-container">
                     <motion.div
-                      style={{ width: "100%", background: "var(--accent)", borderRadius: 4 }}
+                      className={styles.dayBarFill}
                       initial={{ height: 0 }}
                       animate={{ height: `${Math.max(4, pct)}%` }}
                       transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
                     />
                   </div>
-                  <div className="mono muted" style={{ fontSize: 10, marginTop: 6 }}>{pct}%</div>
+                  <div className={`mono muted ${styles.dayPercent}`}>{pct}%</div>
                 </div>
               </motion.div>
             );
@@ -185,28 +218,40 @@ export default function ReviewPage() {
       <div className="review-insights-grid">
         <section className="card card-pad">
           <div className="eyebrow">Wins</div>
-          <StaggerContainer style={{ display: "grid", gap: 12, marginTop: 14 }} staggerDelay={0.05}>
-            {wins.length ? wins.map((habit) => (
-              <StaggerItem key={habit.id}>
-                <motion.div whileHover={{ x: 2 }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
-                <div className="habit-name">{habit.name}</div>
-                <div className="muted mono" style={{ fontSize: 11 }}>{Math.round(completionRate(habit, 7) * 100)}% this week</div>
-              </motion.div>
-              </StaggerItem>
-            )) : <div className="muted">No habit was 85%+ this week</div>}
+          <StaggerContainer className={styles.insightList} staggerDelay={0.05}>
+            {wins.length ? (
+              wins.map((habit) => (
+                <StaggerItem key={habit.id}>
+                  <motion.div whileHover={{ x: 2 }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
+                    <div className="habit-name">{habit.name}</div>
+                    <div className={`muted mono ${styles.insightCaption}`}>
+                      {Math.round(completionRate(habit, 7) * 100)}% this week
+                    </div>
+                  </motion.div>
+                </StaggerItem>
+              ))
+            ) : (
+              <div className="muted">No habit was 85%+ this week</div>
+            )}
           </StaggerContainer>
         </section>
         <section className="card card-pad">
           <div className="eyebrow">Slips</div>
-          <StaggerContainer style={{ display: "grid", gap: 12, marginTop: 14 }} staggerDelay={0.05}>
-            {slips.length ? slips.map((habit) => (
-              <StaggerItem key={habit.id}>
-                <motion.div whileHover={{ x: 2 }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
-                <div className="habit-name">{habit.name}</div>
-                <div className="muted mono" style={{ fontSize: 11 }}>{Math.round(completionRate(habit, 7) * 100)}% this week</div>
-              </motion.div>
-              </StaggerItem>
-            )) : <div className="muted">No habit fell below 50% this week</div>}
+          <StaggerContainer className={styles.insightList} staggerDelay={0.05}>
+            {slips.length ? (
+              slips.map((habit) => (
+                <StaggerItem key={habit.id}>
+                  <motion.div whileHover={{ x: 2 }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
+                    <div className="habit-name">{habit.name}</div>
+                    <div className={`muted mono ${styles.insightCaption}`}>
+                      {Math.round(completionRate(habit, 7) * 100)}% this week
+                    </div>
+                  </motion.div>
+                </StaggerItem>
+              ))
+            ) : (
+              <div className="muted">No habit fell below 50% this week</div>
+            )}
           </StaggerContainer>
         </section>
       </div>
@@ -214,64 +259,123 @@ export default function ReviewPage() {
       {editingWeekStartKey !== null ? (
         <section className="card card-pad">
           <div className="eyebrow">Reflection</div>
-          <h2 className="h3" style={{ marginTop: 6 }}>{editingWeekStartKey === weekStartKey ? "This week's review" : `Week of ${fmt.short(editingWeekStartKey)}`}</h2>
-          <div style={{ display: "grid", gap: 14, marginTop: 14 }}>
+          <h2 className={`h3 ${styles.titleSpacer}`}>
+            {editingWeekStartKey === weekStartKey
+              ? "This week's review"
+              : `Week of ${fmt.short(editingWeekStartKey)}`}
+          </h2>
+          <div className={styles.editorList}>
             {QUESTIONS.map((question, index) => {
               const field = questionFields[index];
               return (
                 <label key={question}>
                   <span className="field-label">{question}</span>
-                  <textarea className="input" rows={4} value={answers[field]} onChange={(event) => setAnswers((current) => ({ ...current, [field]: event.target.value }))} />
+                  <textarea
+                    className="input"
+                    rows={4}
+                    value={answers[field]}
+                    onChange={(event) =>
+                      setAnswers((current) => ({ ...current, [field]: event.target.value }))
+                    }
+                  />
                 </label>
               );
             })}
           </div>
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 14 }}>
-            <motion.button className="btn" onClick={() => setEditingWeekStartKey(null)} whileTap={{ scale: 0.97 }}>Cancel</motion.button>
-            <motion.button className="btn btn-primary" onClick={saveReview} whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>Save review</motion.button>
+          <div className={styles.editorActions}>
+            <motion.button
+              className="btn"
+              onClick={() => setEditingWeekStartKey(null)}
+              whileTap={{ scale: 0.97 }}
+            >
+              Cancel
+            </motion.button>
+            <motion.button
+              className="btn btn-primary"
+              onClick={saveReview}
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.97 }}
+            >
+              Save review
+            </motion.button>
           </div>
         </section>
       ) : currentHasReview ? (
-        <ReviewDisplay review={currentReview} title="This week's review" onEdit={() => startEditing(currentReview)} />
+        <ReviewDisplay
+          review={currentReview}
+          title="This week's review"
+          onEdit={() => startEditing(currentReview)}
+        />
       ) : (
         <ReviewIntro onStart={() => startEditing(null)} />
       )}
 
-      <section className="card card-pad" style={{ marginTop: 18 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 16, marginBottom: 14 }}>
+      <section className={`card card-pad ${styles.archiveSection}`}>
+        <div className={styles.archiveHeader}>
           <div>
             <div className="eyebrow">Past reviews</div>
-            <h2 className="h3" style={{ marginTop: 6 }}>{showArchive ? "Review archive" : "Top 5 summaries"}</h2>
+            <h2 className={`h3 ${styles.titleSpacer}`}>
+              {showArchive ? "Review archive" : "Top 5 summaries"}
+            </h2>
           </div>
           {pastReviews.length > 5 && (
-            <button className="btn btn-sm" onClick={() => { setShowArchive((current) => !current); setArchivePage(0); }}>
+            <button
+              className="btn btn-sm"
+              onClick={() => {
+                setShowArchive((current) => !current);
+                setArchivePage(0);
+              }}
+            >
               {showArchive ? "Show summary" : "Read more"}
             </button>
           )}
         </div>
-        <div style={{ display: "grid", gap: 12 }}>
-          {visiblePastReviews.length ? visiblePastReviews.map((review) => (
-            <div key={review.weekStartKey} className="review-past-row">
-              <div className="mono muted" style={{ fontSize: 11 }}>{fmt.short(review.weekStartKey)}</div>
-              <div>
-                <div style={{ fontFamily: "var(--serif)", fontSize: 17, fontStyle: "italic", color: "var(--ink)" }}>{reviewSummary(review).slice(0, 120)}{reviewSummary(review).length > 120 ? "..." : ""}</div>
-                {showArchive && (
-                  <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>
-                    Fix: {review.smallestFix || "Not answered"} · Vote: {review.identityVote || "Not answered"}
+        <div className={styles.archiveList}>
+          {visiblePastReviews.length ? (
+            visiblePastReviews.map((review) => (
+              <div key={review.weekStartKey} className="review-past-row">
+                <div className={`mono muted ${styles.insightCaption}`}>
+                  {fmt.short(review.weekStartKey)}
+                </div>
+                <div>
+                  <div className={styles.summary}>
+                    {reviewSummary(review).slice(0, 120)}
+                    {reviewSummary(review).length > 120 ? "..." : ""}
                   </div>
-                )}
+                  {showArchive && (
+                    <div className={`muted ${styles.summaryDetail}`}>
+                      Fix: {review.smallestFix || "Not answered"} · Vote: {review.identityVote || "Not answered"}
+                    </div>
+                  )}
+                </div>
+                <button className="btn btn-sm" onClick={() => startEditing(review)}>
+                  Edit
+                </button>
               </div>
-              <button className="btn btn-sm" onClick={() => startEditing(review)}>Edit</button>
-            </div>
-          )) : (
-            <p style={{ margin: 0, fontFamily: "var(--serif)", fontSize: 16, fontStyle: "italic", color: "var(--ink-3)" }}>No past reviews yet.</p>
+            ))
+          ) : (
+            <p className={styles.archiveEmpty}>No past reviews yet.</p>
           )}
         </div>
         {showArchive && pastReviews.length > 5 && (
-          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 10, marginTop: 14 }}>
-            <button className="btn btn-sm" disabled={archivePage === 0} onClick={() => setArchivePage((page) => Math.max(0, page - 1))}>Previous</button>
-            <span className="mono muted" style={{ fontSize: 11 }}>Page {archivePage + 1} / {totalArchivePages}</span>
-            <button className="btn btn-sm" disabled={archivePage >= totalArchivePages - 1} onClick={() => setArchivePage((page) => Math.min(totalArchivePages - 1, page + 1))}>Next</button>
+          <div className={styles.archivePagination}>
+            <button
+              className="btn btn-sm"
+              disabled={archivePage === 0}
+              onClick={() => setArchivePage((page) => Math.max(0, page - 1))}
+            >
+              Previous
+            </button>
+            <span className={`mono muted ${styles.pageLabel}`}>
+              Page {archivePage + 1} / {totalArchivePages}
+            </span>
+            <button
+              className="btn btn-sm"
+              disabled={archivePage >= totalArchivePages - 1}
+              onClick={() => setArchivePage((page) => Math.min(totalArchivePages - 1, page + 1))}
+            >
+              Next
+            </button>
           </div>
         )}
       </section>

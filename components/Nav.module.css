@@ -1,0 +1,11 @@
+/* Module styles for Nav — only the small bits that aren't covered by the
+   global sidebar / .nav-item / .brand classes. Most of the sidebar look
+   lives in app/styles/layout.css. */
+
+/* The text column in the sidebar footer (user name + vote count). Allows
+   the long text to truncate inside the flex row instead of pushing the
+   sign-out button off-screen. */
+.userText {
+  min-width: 0;
+  flex: 1;
+}

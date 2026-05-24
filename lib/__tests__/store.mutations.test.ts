@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { dateAdd, todayKey } from "@/lib/helpers";
+import { todayKey } from "@/lib/helpers";
 import {
   createJournalEntryAction,
   markLessonReadAction,
@@ -11,13 +11,10 @@ import {
   updateJournalEntryAction,
   deleteHabitAction,
 } from "@/lib/actions/domain";
-import {
-  completionRate,
-  longestStreak,
-  streak,
-  useStore,
-} from "@/lib/store";
+import { useStore } from "@/lib/store";
 import type { Habit } from "@/lib/types";
+
+import { makeLocalStorageMock, makeStoreTestHabit as makeHabit } from "./_store-test-helpers";
 
 // Pin "today" to a Wednesday so schedule-aware streak tests are deterministic.
 vi.mock("@/lib/helpers", async () => {
@@ -30,8 +27,6 @@ vi.mock("@/lib/helpers", async () => {
     },
   };
 });
-
-let localStorageMock: Pick<Storage, "getItem" | "setItem" | "removeItem" | "clear">;
 
 vi.mock("@/lib/actions/domain", () => ({
   createHabitAction: vi.fn(),
@@ -48,31 +43,7 @@ vi.mock("@/lib/actions/domain", () => ({
   updateJournalEntryAction: vi.fn(async () => null),
 }));
 
-function makeHabit(history: Habit["history"]): Habit {
-  return {
-    id: "1",
-    name: "Test habit",
-    emoji: "•",
-    cue: "",
-    craving: "",
-    response: "",
-    reward: "",
-    loopCue: "",
-    loopCraving: "",
-    loopResponse: "",
-    loopReward: "",
-    twoMin: "",
-    identity: "tester",
-    environment: "",
-    schedule: "Daily",
-    time: "Morning",
-    contract: "",
-    contractPartners: [],
-    history,
-    notes: [],
-    createdAt: todayKey(),
-  };
-}
+let localStorageMock: ReturnType<typeof makeLocalStorageMock>;
 
 describe("store mutations", () => {
   beforeEach(() => {
@@ -501,74 +472,3 @@ describe("store mutations", () => {
   });
 });
 
-describe("streak calculations", () => {
-  it("counts consecutive days ending today", () => {
-    const today = todayKey();
-    const habit = makeHabit({
-      [today]: true,
-      [dateAdd(today, -1)]: true,
-      [dateAdd(today, -2)]: true,
-      [dateAdd(today, -3)]: true,
-      [dateAdd(today, -4)]: true,
-    });
-
-    expect(streak(habit)).toBe(5);
-  });
-
-  it("starts from yesterday when today is not done", () => {
-    const today = todayKey();
-    const habit = makeHabit({
-      [dateAdd(today, -1)]: true,
-      [dateAdd(today, -2)]: true,
-      [dateAdd(today, -4)]: true,
-    });
-
-    expect(streak(habit)).toBe(2);
-  });
-
-  it("finds the longest streak", () => {
-    const today = todayKey();
-    const habit = makeHabit({
-      [dateAdd(today, -10)]: true,
-      [dateAdd(today, -9)]: true,
-      [dateAdd(today, -8)]: true,
-      [dateAdd(today, -4)]: true,
-      [dateAdd(today, -3)]: true,
-    });
-
-    expect(longestStreak(habit)).toBe(3);
-  });
-
-  it("calculates completion rate over N days", () => {
-    const today = todayKey();
-    const history: Habit["history"] = {};
-    for (let i = 0; i < 24; i++) {
-      history[dateAdd(today, -i)] = true;
-    }
-
-    expect(completionRate(makeHabit(history), 30)).toBe(0.8);
-  });
-
-  it("skips unscheduled days when computing streak", () => {
-    const today = todayKey();
-    const habit = makeHabit({
-      [dateAdd(today, -2)]: true,
-      [today]: true,
-    });
-    habit.schedule = "Mon, Wed";
-
-    expect(streak(habit)).toBe(2);
-  });
-
-  it("counts bonus days toward schedule-aware completion rate", () => {
-    const today = todayKey();
-    const habit = makeHabit({
-      [today]: true,
-      [dateAdd(today, -2)]: true,
-      [dateAdd(today, -4)]: true,
-    });
-    habit.schedule = "Mon, Wed";
-
-    expect(completionRate(habit, 7)).toBe(1.5);
-  });
-});

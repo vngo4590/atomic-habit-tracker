@@ -1,0 +1,60 @@
+/* Module styles for HistoryWall — the 26-week dot calendar shown on a
+   habit detail page. The .dot classes themselves are global (see
+   app/styles/components.css); this module only carries the layout. */
+
+/* Header row above the wall: title block on the left, legend on the right. */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 14px;
+}
+
+/* Subtitle beneath the "26-week wall" heading. */
+.subtitle {
+  font-size: 12.5px;
+  margin-top: 4px;
+}
+
+/* The "LESS … MORE" legend row. */
+.legend {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.legendLabel {
+  font-size: 10px;
+}
+.legendDots {
+  display: flex;
+  gap: 3px;
+}
+
+/* The grid of week columns. min-width: max-content lets the grid stretch
+   beyond the card width on small viewports so horizontal scroll works. */
+.grid {
+  display: flex;
+  gap: 3px;
+  min-width: max-content;
+}
+
+/* Each week is a vertical stack of 7 dots. */
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* Individual day cell — block so the dots line up cleanly within the column. */
+.cell {
+  display: block;
+}
+
+/* Footer row beneath the wall with "26 WEEKS AGO" and "TODAY" markers. */
+.footer {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  margin-top: 14px;
+  display: flex;
+  justify-content: space-between;
+}

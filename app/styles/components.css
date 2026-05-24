@@ -1,0 +1,762 @@
+/* ============================================================================
+ * components.css — shared UI primitives used across the app.
+ *
+ * Contains the visual contract for:
+ *   • .card                        – container surface
+ *   • .btn, .btn-* variants        – buttons
+ *   • .input, textarea.input       – form inputs
+ *   • .chip, .chip.active/etc.     – pill-shaped tags
+ *   • .tabs, .tab                  – tab bars
+ *   • .habit-row, .check, .habit-* – habit list rows
+ *   • .streak-pill, .dot, .dot-*   – status indicators
+ *   • .loop, .loop-*               – habit-loop diagram
+ *   • .principle-*                 – principle intro bubbles
+ *   • .stack-chain-list, .stack-*  – habit-stack chip chain
+ *   • .lesson-mode-*               – lessons toggle chips
+ *   • .review-*                    – weekly review panels
+ *   • .habit-library-*, .habit-list-* – habit library tabs + grid rows
+ *   • .vote-bar, .spark, .axis-label – analytics primitives
+ *   • .overlay, .overlay-card, .toast – overlays + transient feedback
+ *   • .emoji-grid, .day-grid       – fixed-column grids
+ *
+ * SOLID note: each rule targets a single component contract, not a route.
+ * Routes assemble components by composing these classes plus Tailwind
+ * utilities — never by overriding component internals.
+ * ============================================================================ */
+
+/* ── Cards ──────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--bg-elev);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+}
+.card:hover { border-color: var(--rule-strong); }
+.card-pad { padding: 22px; }
+.card-pad-lg { padding: 28px; }
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+.btn {
+  appearance: none;
+  border: 1px solid var(--rule-strong);
+  background: var(--bg-elev);
+  color: var(--ink);
+  height: 34px;
+  padding: 0 14px;
+  border-radius: var(--r-md);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
+  white-space: nowrap;
+}
+.btn:hover {
+  background: var(--bg-sunk);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+.btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+.btn-primary {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+.btn-primary:hover { background: var(--ink-2); }
+.btn-accent {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+.btn-danger {
+  background: var(--warn);
+  color: var(--bg);
+  border-color: var(--warn);
+}
+.btn-danger:hover { background: oklch(from var(--warn) calc(l - 0.07) c h); }
+.btn-ghost {
+  border-color: transparent;
+  background: transparent;
+}
+.btn-ghost:hover {
+  background: var(--bg-sunk);
+  border-color: var(--rule);
+}
+.btn-danger-ghost { color: var(--warn); }
+.btn-danger-ghost:hover {
+  border-color: var(--warn);
+  background: oklch(from var(--warn) 94% 0.025 h);
+}
+.btn-sm { height: 28px; padding: 0 10px; font-size: 12px; }
+.btn-lg { height: 40px; padding: 0 18px; font-size: 14px; }
+.btn-back {
+  min-width: 118px;
+  justify-content: center;
+  flex-shrink: 0;
+  padding-inline: 14px;
+}
+
+/* ── Habit row (Today + lists) ──────────────────────────────────────────── */
+.habit-row {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--rule);
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    transform var(--transition-fast);
+}
+.habit-row:last-child { border-bottom: none; }
+.habit-row:hover {
+  background: var(--bg-sunk);
+  transform: translateX(2px);
+}
+
+/* The circular check button on the left of every habit row. */
+.check {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid var(--rule-strong);
+  background: var(--bg-elev);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: all var(--transition-fast);
+  position: relative;
+  flex-shrink: 0;
+}
+.check:hover {
+  border-color: var(--ink-3);
+  transform: scale(1.08);
+}
+.check:active { transform: scale(0.95); }
+.check.done {
+  background: var(--done);
+  border-color: var(--done);
+  transform: scale(1);
+}
+.check.done svg {
+  color: white;
+  opacity: 1;
+  animation: checkPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.check svg {
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  color: var(--bg);
+  width: 14px;
+  height: 14px;
+}
+
+.habit-name { font-size: 15px; font-weight: 500; color: var(--ink); }
+.habit-row.done .habit-name {
+  color: var(--ink-3);
+  text-decoration: line-through;
+  text-decoration-color: var(--ink-4);
+  text-decoration-thickness: 1px;
+}
+.habit-meta {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+  margin-top: 3px;
+  display: flex;
+  gap: 12px;
+  text-transform: uppercase;
+}
+.habit-meta .dot { color: var(--ink-4); }
+
+.streak-pill {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-2);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: var(--bg-sunk);
+  border-radius: 999px;
+  border: 1px solid var(--rule);
+}
+.streak-pill svg {
+  width: 11px;
+  height: 11px;
+  color: var(--accent);
+}
+
+/* ── Dot grids (history wall, calendars) ────────────────────────────────── */
+.dot-grid { display: grid; gap: 3px; }
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--rule);
+}
+.dot.l1 { background: var(--accent-soft); }
+.dot.l2 { background: oklch(from var(--accent) calc(l + 0.12) c h); }
+.dot.l3 { background: var(--accent); }
+.dot.future { background: transparent; border: 1px dashed var(--rule); }
+.dot.today { box-shadow: 0 0 0 2px var(--ink); }
+
+/* ── Inputs ─────────────────────────────────────────────────────────────── */
+.input {
+  appearance: none;
+  width: 100%;
+  background: var(--bg-elev);
+  border: 1px solid var(--rule-strong);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 14px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  outline: none;
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+.input:focus {
+  border-color: var(--accent);
+  background: var(--bg);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.input.large {
+  font-family: var(--serif);
+  font-size: 22px;
+  padding: 14px 16px;
+}
+textarea.input {
+  resize: vertical;
+  min-height: 80px;
+  line-height: 1.55;
+}
+
+/* ── Chips ──────────────────────────────────────────────────────────────── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  background: var(--bg-sunk);
+  border: 1px solid var(--rule);
+  padding: 4px 9px;
+  border-radius: 999px;
+}
+.chip.active {
+  background: var(--bg-elev);
+  color: var(--ink);
+  border-color: var(--rule-strong);
+  box-shadow: var(--shadow);
+}
+.chip.accent {
+  background: var(--accent-soft);
+  color: oklch(35% 0.10 60);
+  border-color: transparent;
+}
+.chip.done {
+  background: var(--done-soft);
+  color: oklch(38% 0.08 145);
+  border-color: transparent;
+}
+
+/* Emoji grid used in the journal custom-mood picker. Kept as a class (not
+   inline style) so the mobile override that forces single-column grids does
+   not flatten it. */
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+}
+
+/* Day-of-week grid on the create-habit page. Class-based so mobile does not
+   squash it into a single column like it does for inline grid styles. */
+.day-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+/* ── Lesson mode toggle ─────────────────────────────────────────────────── */
+.lesson-mode-switch {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  min-width: 124px;
+}
+.lesson-mode-chip {
+  cursor: pointer;
+  justify-content: center;
+  min-height: 30px;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.16s ease;
+}
+.lesson-mode-chip:hover {
+  transform: translateY(-1px);
+  border-color: var(--rule-strong);
+}
+.lesson-mode-chip.active {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+  box-shadow: 0 8px 18px -12px color-mix(in oklch, var(--ink) 70%, transparent);
+}
+.lesson-mode-chip.pulse { animation: lessonModePulse 0.28s ease-out; }
+
+/* ── Habit loop diagram (cue → craving → response → reward) ─────────────── */
+.loop {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  background: var(--bg-elev);
+  overflow: hidden;
+}
+.loop-cell {
+  padding: 22px 20px;
+  border-right: 1px solid var(--rule);
+  position: relative;
+}
+.loop-cell:last-child { border-right: none; }
+.loop-step {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  margin-bottom: 6px;
+}
+.loop-label {
+  font-family: var(--serif);
+  font-size: 16px;
+  font-style: italic;
+  color: var(--ink-3);
+  margin-bottom: 10px;
+}
+.loop-value {
+  font-size: 14px;
+  color: var(--ink);
+  line-height: 1.4;
+}
+.loop-arrow {
+  position: absolute;
+  right: -7px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  background: var(--bg-elev);
+  border: 1px solid var(--rule);
+  border-left: none;
+  border-bottom: none;
+  rotate: 45deg;
+  z-index: 1;
+}
+.loop-cell:last-child .loop-arrow { display: none; }
+
+/* ── Habit overview + principle intro panels ────────────────────────────── */
+.habit-overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(280px, 1fr);
+  gap: 20px;
+}
+.principle-intro {
+  min-height: 260px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  background: var(--bg-elev);
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(220px, 1.05fr);
+  gap: 20px;
+  overflow: hidden;
+  position: relative;
+}
+.principle-copy {
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+}
+.principle-copy p {
+  margin: 0;
+  color: var(--ink-2);
+  font-family: var(--serif);
+  font-size: 18px;
+  font-style: italic;
+  line-height: 1.45;
+}
+.principle-bubbles {
+  min-height: 260px;
+  position: relative;
+  background: linear-gradient(135deg, var(--bg-sunk), var(--bg-elev));
+  border-left: 1px solid var(--rule);
+  overflow: hidden;
+}
+.principle-bubble {
+  --bubble-index: 0;
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 112px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 1px solid var(--rule-strong);
+  background: var(--bg);
+  color: var(--bubble-text);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.25;
+  padding: 10px;
+  text-align: center;
+  text-transform: uppercase;
+  text-shadow: 0 1px 0 color-mix(in oklch, var(--bg-elev) 55%, transparent);
+  box-shadow: 0 18px 44px color-mix(in oklch, var(--ink) 10%, transparent);
+  animation: principle-float 7s ease-in-out infinite;
+  animation-delay: calc(var(--bubble-index) * -1.2s);
+}
+.principle-bubble:nth-child(1) { left: 10%; top: 17%; }
+.principle-bubble:nth-child(2) { left: 43%; top: 10%; }
+.principle-bubble:nth-child(3) { left: 20%; top: 55%; }
+.principle-bubble:nth-child(4) { left: 58%; top: 48%; }
+.principle-bubble.warm {
+  background: var(--bubble-warm-bg);
+  border-color: var(--bubble-warm-border);
+  color: var(--bubble-text);
+}
+.principle-bubble.green {
+  background: var(--bubble-green-bg);
+  border-color: var(--bubble-green-border);
+  color: var(--bubble-text);
+}
+.principle-bubble.blue {
+  background: var(--bubble-blue-bg);
+  border-color: var(--bubble-blue-border);
+  color: var(--bubble-text);
+}
+.principle-bubble.ink {
+  background: var(--bubble-inverse-bg);
+  border-color: var(--bubble-inverse-bg);
+  color: var(--bubble-inverse-text);
+  text-shadow: none;
+}
+
+/* ── Tabs ───────────────────────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 24px;
+}
+.tab {
+  padding: 10px 14px;
+  background: transparent;
+  border: none;
+  color: var(--ink-3);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  position: relative;
+  margin-bottom: -1px;
+}
+.tab:hover { color: var(--ink); }
+.tab.active {
+  color: var(--ink);
+  border-bottom: 2px solid var(--accent);
+}
+
+/* ── Vote bar (identity ledger) + analytics primitives ──────────────────── */
+.vote-bar {
+  height: 6px;
+  background: var(--bg-sunk);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+.vote-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.4s cubic-bezier(0.3, 0.7, 0.4, 1);
+}
+.spark { display: block; }
+.axis-label {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  color: var(--ink-4);
+  text-transform: uppercase;
+}
+
+/* ── Generic clickable row (settings, lists, etc.) ──────────────────────── */
+.click-row {
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    transform var(--transition-fast);
+}
+.click-row:hover {
+  background: var(--bg-sunk);
+  transform: translateX(1px);
+}
+
+/* ── Habit library tabs + sort row ──────────────────────────────────────── */
+.habit-library-toolbar {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+.habit-library-tabs {
+  border-bottom: none;
+  margin: 0;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px;
+  scrollbar-width: none;
+  scroll-behavior: smooth;
+}
+.habit-library-tabs::-webkit-scrollbar { display: none; }
+.habit-library-tabs .tab {
+  min-height: 38px;
+  padding: 9px 15px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+}
+.habit-library-tabs .tab:hover {
+  background: var(--bg-elev);
+  border-color: var(--rule);
+}
+.habit-library-tabs .tab.active {
+  border-bottom: 1px solid var(--rule-strong);
+  border-color: var(--rule-strong);
+  background: var(--bg-elev);
+  box-shadow: var(--shadow);
+}
+.habit-sort-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.habit-sort-row .field-label { margin: 0; }
+.habit-sort-select {
+  width: auto;
+  min-width: 190px;
+  height: 40px;
+  padding: 0 36px 0 15px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  background-color: var(--bg-elev);
+  box-shadow: var(--shadow);
+}
+
+/* ── Habit list grid rows (All Habits page) ─────────────────────────────── */
+.habit-list { display: grid; gap: 12px; }
+.habit-list-header {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr) 90px 90px 100px;
+  padding: 0 22px 2px;
+  gap: 18px;
+}
+.habit-list-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr) 90px 90px 100px;
+  padding: 20px 22px;
+  align-items: center;
+  gap: 18px;
+  background: var(--bg-elev);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow);
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+.habit-list-row:hover {
+  background: color-mix(in oklch, var(--bg-elev) 68%, var(--bg-sunk));
+  border-color: var(--rule-strong);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+.habit-list-label { display: none; }
+.habit-list-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+}
+
+/* ── Weekly review panels ───────────────────────────────────────────────── */
+/* 7-day progress grid (one card per weekday). */
+.review-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+}
+.review-day-card {
+  min-height: 132px;
+  background: var(--bg-sunk);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 12px;
+  display: grid;
+  align-content: space-between;
+}
+.review-day-bar-container {
+  height: 72px;
+  display: flex;
+  align-items: end;
+}
+
+/* Wins / slips two-column grid on desktop, stacked on mobile. */
+.review-insights-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+/* Past review row (date | summary | "open" button). */
+.review-past-row {
+  display: grid;
+  grid-template-columns: 120px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 0;
+  border-top: 1px solid var(--rule);
+}
+
+/* ── Stack diagram (chain of habits) ────────────────────────────────────── */
+/* Horizontal chain list — explicit class so the global mobile flex-wrap
+   override does not break the drag-to-reorder interaction. */
+.stack-chain-list {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 4px 0 10px;
+  list-style: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  /* Firefox scrollbar */
+  scrollbar-width: auto;
+  scrollbar-color: var(--ink-3) var(--bg-sunk);
+}
+/* Visible WebKit scrollbar so users know the list is scrollable. */
+.stack-chain-list::-webkit-scrollbar { height: 8px; }
+.stack-chain-list::-webkit-scrollbar-track {
+  background: var(--bg-sunk);
+  border-radius: 4px;
+}
+.stack-chain-list::-webkit-scrollbar-thumb {
+  background: var(--ink-3);
+  border-radius: 4px;
+  min-width: 40px;
+}
+.stack-chain-list::-webkit-scrollbar-thumb:hover { background: var(--ink-2); }
+
+/* Drag handle for stack chips — the only element that triggers reorder drag.
+   `touch-action: none` prevents accidental reorder while scrolling. */
+.stack-drag-handle {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 28px;
+  cursor: grab;
+  color: var(--ink-3);
+  border-radius: 4px;
+  transition: color 0.15s ease, background 0.15s ease;
+  touch-action: none;
+  flex-shrink: 0;
+}
+.stack-drag-handle:hover {
+  color: var(--ink-2);
+  background: var(--bg-sunk);
+}
+.stack-drag-handle:active {
+  cursor: grabbing;
+  color: var(--ink);
+}
+
+/* ── Overlays and toasts ────────────────────────────────────────────────── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: oklch(from var(--bg) l c h / 0.85);
+  backdrop-filter: blur(12px) saturate(1.2);
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 40px;
+}
+.overlay-card {
+  background: var(--bg-elev);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  width: 540px;
+  max-width: 100%;
+  padding: 44px 48px;
+  box-shadow: var(--shadow);
+}
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: var(--bg);
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.3);
+}
+.toast em {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--accent-2);
+  font-size: 14px;
+}

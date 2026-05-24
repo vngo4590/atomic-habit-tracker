@@ -1,0 +1,86 @@
+/* ============================================================================
+ * animations.css — keyframes and animation utility classes.
+ *
+ * Contains:
+ *   • @keyframes used by component states (checkPop, lessonModePulse,
+ *     principle-float, fadeUp, pulse, shimmer).
+ *   • Animation utility classes (.fade-up, .skeleton, .glass, .focus-ring).
+ *
+ * Notes:
+ *   • Framer Motion is the primary animation library (per AGENTS.md).
+ *     These CSS animations cover three cases:
+ *       1. always-on ambient motion (principle-float),
+ *       2. one-shot state transitions where Framer would be overkill
+ *          (checkPop on .check.done),
+ *       3. simple loading affordances (skeleton shimmer).
+ *   • Prefer transform/opacity for performance — never animate width/height
+ *     or box-shadow on large lists.
+ * ============================================================================ */
+
+/* Slow ambient float used by the principle bubbles on landing surfaces. */
+@keyframes principle-float {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  33%      { transform: translate3d(10px, -18px, 0) scale(1.04); }
+  66%      { transform: translate3d(-12px, 14px, 0) scale(0.97); }
+}
+
+/* Reveal animation for cards/sections — fade + 4px upward translate. */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+.fade-up { animation: fadeUp 0.25s ease-out both; }
+
+/* Generic pulse — used by accents that briefly draw attention. */
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.15); }
+}
+
+/* Lesson mode chip activation pulse. */
+@keyframes lessonModePulse {
+  0%   { transform: scale(0.96); }
+  55%  { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+/* Check pop — plays when a habit row is marked done. */
+@keyframes checkPop {
+  0%   { transform: scale(0.5); opacity: 0; }
+  60%  { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+/* Skeleton shimmer — used while data loads. */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Glass surface — frosted background used on overlays. */
+.glass {
+  background: oklch(from var(--bg-elev) l c h / 0.72);
+  backdrop-filter: blur(12px) saturate(1.15);
+  -webkit-backdrop-filter: blur(12px) saturate(1.15);
+}
+
+/* Skeleton placeholder — animated gradient used for loading rows. */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-sunk) 25%,
+    var(--bg-elev) 50%,
+    var(--bg-sunk) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+  border-radius: var(--r-md);
+}
+
+/* Keyboard-only focus ring — applied to focusable elements that opt in.
+   Uses two box-shadows to draw a halo around the element regardless of
+   background colour. */
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+}

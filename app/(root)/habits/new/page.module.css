@@ -1,0 +1,100 @@
+/* Module styles for the New Habit page — inline Mad-Libs sentence + schedule. */
+
+/* The Mad-Libs sentence card. */
+.sentenceCard {
+  margin-bottom: 24px;
+}
+
+/* The serif sentence text — large, loose. */
+.sentence {
+  font-family: var(--serif);
+  font-size: 32px;
+  line-height: 1.8;
+}
+
+/* Wrap-row of suggested-identity chips beneath the sentence. */
+.identityChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+/* Section list (currently just Schedule but kept in case more sections are added). */
+.sections {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+/* Schedule preset chips row. */
+.presetRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* Day-of-week grid spacing (the .day-grid base class lives in
+   components.css; this just adds the top margin). */
+.dayGridSpacer {
+  margin-top: 16px;
+}
+
+/* "Time block" label spacing. */
+.timeLabel {
+  margin-top: 18px;
+}
+
+/* Custom time-block input. */
+.customTime {
+  margin-top: 10px;
+}
+
+/* Page footer with Cancel + Create buttons. */
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+/* ---- MLInput (the inline mad-libs input) ----------------------------- */
+
+/* Inline-block wrapper that sizes to the text content. Width passed in
+   as --ml-width and capped at --ml-max-width (both inline). */
+.mlWrap {
+  display: inline-block;
+  position: relative;
+  vertical-align: middle;
+  margin: 0 4px;
+  width: var(--ml-width);
+  max-width: var(--ml-max-width);
+}
+
+/* The actual <input> inside .mlWrap. */
+.mlInput {
+  width: 100%;
+  height: 38px;
+  font-family: var(--serif);
+  font-size: 22px;
+  font-style: italic;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
+}
+
+/* Hidden measurement span used to size the wrapper to its content. */
+.mlMeasure {
+  position: absolute;
+  left: 0;
+  top: 0;
+  visibility: hidden;
+  white-space: pre;
+  font-family: var(--serif);
+  font-size: 22px;
+  font-style: italic;
+  padding: 0 12px;
+  pointer-events: none;
+  max-width: var(--ml-max-width);
+}

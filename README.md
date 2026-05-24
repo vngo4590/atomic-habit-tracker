@@ -292,29 +292,42 @@ Notes:
 ## Project Structure
 
 - `app/`: Next.js App Router routes and layouts.
-- `app/(root)/`: shared sidebar shell and all app screens.
-- `components/`: reusable client UI components.
+- `app/(root)/`: shared sidebar shell and all app screens. Each route has a co-located `page.module.css` for page-specific styles.
+- `app/styles/`: modular global stylesheet partials (see "Styles & Design Tokens" below).
+- `app/globals.css`: thin entry point that `@import`s the modular partials in cascade order.
+- `components/`: reusable client UI components. Each non-trivial component has a co-located `Component.module.css` next to it.
 - `lib/`: types, helpers, lessons data, auth/db helpers, repositories, server actions, store cache logic, and unit tests.
 - `scripts/`: local automation helpers, including Docker/PostgreSQL database management.
 - `k8s/local/`: local Docker Desktop Kubernetes overlay for the app deployment and migration job.
 - `reference_ui/`: original reference implementation used during the port.
 - `Dockerfile`: multi-stage container build with `runner` and `migrator` targets.
 - `docs/architecture/backend-auth-mobile.md`: backend, auth, database, and deployment architecture notes.
-- `openspec/changes/settings-account-email-notifications/`: active OpenSpec change.
+- `openspec/changes/`: active OpenSpec changes.
 - `openspec/changes/archive/`: archived OpenSpec changes, including the completed reference UI port and backend/auth/mobile architecture work.
 - `.agents/skills/`: canonical project-local skills shared by Claude and Codex.
 - `.claude/skills/`: generated compatibility copy/link for Claude; do not edit directly.
 
-## Data Flow
+## Styles & Design Tokens
 
-- Authenticated app routes require a valid Auth.js session and an existing database user; missing, expired, deleted, or otherwise invalid users are redirected to `/login`.
-- JWT sessions expire after 1 day of inactivity.
-- `app/(root)/layout.tsx` loads the user-owned backend snapshot with `getStoreSnapshot(userId, todayKey())`.
-- `components/StoreProvider.tsx` and `lib/store.ts` keep an in-memory optimistic cache around server actions. They are not a browser persistence layer.
-- Domain writes go through `lib/actions/domain.ts` and user-scoped repositories under `lib/repositories/`.
-- Mobile-ready clients use the authenticated `/api/v1` route handlers, documented in `app/api/v1/README.md`.
-- `localStorage` is limited to local UI mirrors such as `atomicly:theme`, `atomicly:accent`, and `atomicly:onboarding-seen`; it is not the source of truth for authenticated domain data.
-- `lib/sample-data.ts` is retained as a development/reference fixture module only. Normal authenticated flows do not import it.
+The styling layer is intentionally modular. There is **no monolithic global stylesheet** and **no inline `style={{...}}` for static layout or colour values**.
+
+| Layer | Location | Purpose |
+| --- | --- | --- |
+| Design tokens | `app/styles/tokens.css` | CSS variables for colours, fonts, shadows, transitions; light + dark theme. |
+| Element baseline | `app/styles/base.css` | Reset, `<body>` baseline, scrollbar styling. |
+| Typography | `app/styles/typography.css` | `.h1`/`.h2`/`.h3`, `.lede`, `.markdown-body`, text helpers. |
+| App shell | `app/styles/layout.css` | `.app` grid, sidebar, brand, `.main`, `.page-header`. |
+| Component classes | `app/styles/components.css` | `.card`, `.btn`, `.input`, `.chip`, `.habit-row`, `.loop`, `.principle-*`, `.stack-*`, etc. |
+| Animations | `app/styles/animations.css` | `@keyframes` + animation utility classes (`.fade-up`, `.skeleton`, `.glass`, `.focus-ring`). |
+| Responsive | `app/styles/responsive.css` | Mobile (`max-width: 900px`) and tablet (`901–1180px`) overrides. |
+| Per-component | `components/*.module.css` | Locally-scoped CSS Module next to the component. |
+| Per-page | `app/(root)/*/page.module.css` | Locally-scoped CSS Module next to the page. |
+
+`app/globals.css` is a thin entry file that `@import`s the partials in cascade order (Tailwind preflight → tokens → base → typography → layout → components → animations → responsive).
+
+**Inline `style={{}}` is reserved for dynamic CSS-variable passthrough** (e.g. `style={{ "--mood-color": item.color }}`) so a generic module class can theme against per-data values. Every such usage is documented inline.
+
+See `.agents/skills/atomic-habit-workflow/SKILL.md` for the full styling convention.
 
 ## Implementation Notes
 
@@ -323,7 +336,8 @@ Notes:
 - Date keys use local `YYYY-MM-DD` strings via `lib/helpers.ts`.
 - Schedule evaluation uses `lib/schedule.ts` helpers (`isScheduledForDate`, `nextScheduledDateKey`) to determine which habits appear on a given day.
 - Streaks, completion rates, and analytics charts are **schedule-aware**: unscheduled days do not break streaks, and completion rates are measured against scheduled days (bonus completions can exceed 100%). See `lib/store.ts`.
-- Design tokens and reference classes live in `app/globals.css`.
+- Design tokens live in `app/styles/tokens.css`; component classes live in `app/styles/components.css`; everything is re-imported by `app/globals.css`.
+- Component-level and page-level styles are co-located CSS Modules; the design system follows SOLID + GRASP principles documented in `.agents/skills/atomic-habit-workflow/SKILL.md`.
 - Auth pages (`/login`, `/register`) redirect already-authenticated users to the main app flow.
 - The active OpenSpec change is `settings-account-email-notifications`.
 - Deployment architecture specs live under `openspec/specs/deployment-architecture/`; provider choices and deployment notes are in `docs/architecture/backend-auth-mobile.md`.

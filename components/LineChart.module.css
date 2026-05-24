@@ -1,0 +1,7 @@
+/* Module styles for LineChart — the responsive SVG container. */
+
+.svg {
+  width: 100%;
+  height: 240px;
+  display: block;
+}

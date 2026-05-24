@@ -1,0 +1,142 @@
+/* Module styles for the Weekly Review page. */
+
+/* Display section header: eyebrow + title on left, Edit button on right. */
+.displayHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.titleSpacer {
+  margin-top: 6px;
+}
+
+/* Answers list inside the display view. */
+.answers {
+  display: grid;
+  gap: 14px;
+}
+
+/* One answer paragraph — serif italic, coloured by whether it has content. */
+.answer {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 18px;
+  font-style: italic;
+  color: var(--ink);
+  line-height: 1.45;
+}
+.answerEmpty {
+  color: var(--ink-3);
+}
+
+/* Section above the 7-day grid. */
+.weekSection {
+  margin-bottom: 18px;
+}
+.weekHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 18px;
+}
+.weekTotals {
+  font-size: 12px;
+}
+
+/* Per-day card content. */
+.dayLabel {
+  font-size: 10px;
+}
+.dayNumber {
+  font-family: var(--serif);
+  font-size: 24px;
+}
+.dayBarContainer {
+  /* Inherits height from global .review-day-bar-container; this is just a hook
+     for any future overrides. */
+}
+.dayBarFill {
+  width: 100%;
+  background: var(--accent);
+  border-radius: 4px;
+}
+.dayPercent {
+  font-size: 10px;
+  margin-top: 6px;
+}
+
+/* Wins / slips list spacing. */
+.insightList {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+.insightCaption {
+  font-size: 11px;
+}
+
+/* Editor form. */
+.editorList {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+.editorActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+/* Past reviews section. */
+.archiveSection {
+  margin-top: 18px;
+}
+.archiveHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+/* List of past review rows. */
+.archiveList {
+  display: grid;
+  gap: 12px;
+}
+
+/* Past review summary text. */
+.summary {
+  font-family: var(--serif);
+  font-size: 17px;
+  font-style: italic;
+  color: var(--ink);
+}
+.summaryDetail {
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+/* Empty-state for archive. */
+.archiveEmpty {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 16px;
+  font-style: italic;
+  color: var(--ink-3);
+}
+
+/* Pagination row at the bottom of the archive. */
+.archivePagination {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+.pageLabel {
+  font-size: 11px;
+}
