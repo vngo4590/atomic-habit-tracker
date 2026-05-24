@@ -1,34 +1,31 @@
 ## ADDED Requirements
 
 ### Requirement: Onboarding overlay shows on first visit only
-The system SHALL display a 4-step onboarding overlay when localStorage has no existing store data. It SHALL NOT show on subsequent visits.
+The system SHALL display the onboarding overlay the first time a signed-in user lands on the app shell and SHALL NOT show it on subsequent visits. The "seen" state is tracked by the server-side `onboardingSeen` preference and mirrored to the `atomicly:onboarding-seen` localStorage key for instant client-side suppression.
 
 #### Scenario: Onboarding shows on first visit
-- **WHEN** localStorage has no `atomicly:store` key
+- **WHEN** the user signs in for the first time and the `onboardingSeen` preference is false and the `atomicly:onboarding-seen` localStorage key is missing
 - **THEN** the onboarding overlay appears on top of the Today screen
 
 #### Scenario: Onboarding does not show on return visits
-- **WHEN** `atomicly:store` exists in localStorage
+- **WHEN** the `onboardingSeen` preference is true or the `atomicly:onboarding-seen` localStorage key is set
 - **THEN** the onboarding overlay is not rendered
 
-### Requirement: Onboarding has four steps with a progress indicator
-The system SHALL render Welcome, Name, Identity explanation, and Ready steps. A four-dot progress bar tracks the current step. The user can advance with the primary button or skip with "Skip".
+### Requirement: Onboarding has three steps with a progress indicator
+The system SHALL render Welcome, Identity explanation, and Ready steps. A three-dot progress bar tracks the current step. The user can advance with the primary button or skip with "Skip". The overlay SHALL NOT prompt for the user's name because the name is already captured during registration.
 
 #### Scenario: Next button advances the step
-- **WHEN** the user clicks "Begin" on step 0
-- **THEN** step 1 (name input) becomes active
+- **WHEN** the user clicks "Begin" on the Welcome step
+- **THEN** the Identity step becomes active
+
+#### Scenario: Continue advances from Identity to Ready
+- **WHEN** the user clicks "Continue" on the Identity step
+- **THEN** the Ready step becomes active
+
+#### Scenario: Start completes onboarding from the final step
+- **WHEN** the user clicks "Start" on the Ready step
+- **THEN** the overlay closes and the `onboardingSeen` preference is set to true
 
 #### Scenario: Skip closes the overlay immediately
 - **WHEN** the user clicks "Skip" on any step
 - **THEN** the overlay closes and the Today screen is fully visible
-
-### Requirement: Name step requires input before advancing
-The system SHALL disable the Next button on the Name step until the user has typed at least one character.
-
-#### Scenario: Next is disabled with empty name
-- **WHEN** the name input is empty on the Name step
-- **THEN** the Next button is disabled
-
-#### Scenario: Next enables after typing a name
-- **WHEN** the user types their name
-- **THEN** the Next button becomes enabled
