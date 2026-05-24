@@ -1,0 +1,102 @@
+/* Module styles for the Hall of Fame page. Most layout is generic
+   grid/flex utilities; surfaced here so the page JSX is style-free. */
+
+/* Page sections vertically stacked with rule lines between them. */
+.readySection {
+  margin-bottom: 18px;
+}
+
+/* Ready-for-review list — single column of habit rows with 12px gaps. */
+.readyList {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+/* One row in the ready-for-review list (name on left, Review button on right). */
+.readyRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Mono caption beneath a habit name (e.g. "72 days old · a writer"). */
+.captionMono {
+  font-size: 11px;
+}
+
+/* Two-column layout below the ready section (Inducted | In progress). */
+.twoCol {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+/* Inducted: nested 2x2 grid of badge cards. */
+.inductedGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+/* Tinted inducted card (uses the sunk surface). */
+.inductedCard {
+  background: var(--bg-sunk);
+}
+
+/* Caption beneath the badge name (e.g. "SCORE 4.6 · BEST 12D"). */
+.captionMonoFirst {
+  font-size: 11px;
+  margin-top: 5px;
+}
+.captionMonoSecond {
+  font-size: 11px;
+  margin-top: 3px;
+}
+
+/* In-progress list (one row per maturing habit). */
+.inProgressList {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+/* Header row inside an in-progress row (name + N/66). */
+.progressHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Progress bar track + fill (formation progress, 0-66 days). */
+.progressTrack {
+  height: 6px;
+  background: var(--bg-sunk);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-top: 7px;
+}
+.progressFill {
+  width: var(--pct);
+  height: 100%;
+  background: var(--accent);
+}
+
+/* Chip cluster below the progress bar (today + streak + adherence). */
+.chipCluster {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+/* Responsive: stack the two-column grid into a single column on mobile,
+   and collapse the inducted 2x2 grid into one column too. */
+@media (max-width: 900px) {
+  .twoCol,
+  .inductedGrid {
+    grid-template-columns: 1fr;
+  }
+}
