@@ -1,3 +1,8 @@
+---
+name: atomic-habit-ui-animation
+description: Reusable animation patterns and conventions for the Atomicly habit tracker UI. Use when adding motion to pages or components, creating entrance/hover/tap interactions, implementing page transitions, staggered lists, or scroll-triggered reveals. Covers Framer Motion primitives in `components/motion/`, shared spring/easing/duration configs in `lib/animations.ts`, and when to prefer Framer Motion over CSS transitions.
+---
+
 # Atomicly UI Animation Skill
 
 ## Purpose

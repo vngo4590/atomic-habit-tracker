@@ -1,3 +1,8 @@
+---
+name: atomic-habit-workflow
+description: Mandatory agent workflow conventions for the Atomicly habit tracker. Load at the start of every coding session and before any change to this repo. Covers branch-per-task naming, small incremental Conventional Commits, test-every-change rules, commenting expectations for non-coder readability, SOLID + GRASP for multi-file changes, skill/docs upkeep, and the pre-push validation checklist (tests, typecheck, build, sync skills). Use whenever planning, branching, committing, pushing, or asking "what's the workflow for X?" in this repo.
+---
+
 # Atomicly Agent Workflow
 
 > **TL;DR:** Branch → tiny commit → test → repeat. Comment everything. Follow SOLID + GRASP. No exceptions.
