@@ -12,6 +12,8 @@ import { todayKey } from "@/lib/helpers";
 import { formatNextDayLabel, nextScheduledDateKey } from "@/lib/schedule";
 import type { Habit } from "@/lib/types";
 
+import styles from "./page.module.css";
+
 type Filter = "all" | "done" | "upcoming";
 type Sort = "streak" | "rate" | "newest" | "name";
 
@@ -23,6 +25,12 @@ const TAB_LABELS: Record<Filter, string> = {
   upcoming: "Upcoming Habits",
 };
 
+/**
+ * HabitsPage — the All Habits library. Three filter tabs (All / Done /
+ * Upcoming), search-by-name/identity/cue, four sort modes, and a row
+ * per habit with the same check + name + streak + 30-day-progress
+ * shape used on Today.
+ */
 export default function HabitsPage() {
   const router = useRouter();
   const { habits, streak, completionRate, toggleHabit, logCheckIn } = useStoreContext();
@@ -32,15 +40,12 @@ export default function HabitsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [moodHabit, setMoodHabit] = useState<Habit | null>(null);
 
+  // Apply filter -> search -> sort to derive the rendered list.
   const filtered = useMemo(() => {
     const list = habits.filter((habit) => {
-      if (filter === "all") {
-        return true;
-      }
+      if (filter === "all") return true;
       const isDone = Boolean(habit.history[today]);
-      if (filter === "done") {
-        return isDone;
-      }
+      if (filter === "done") return isDone;
       // upcoming = habits with a next scheduled day in the future
       const next = nextScheduledDateKey(today, habit.schedule);
       return next !== null;
@@ -55,19 +60,15 @@ export default function HabitsPage() {
         )
       : list;
     return [...searched].sort((a, b) => {
-      if (sort === "streak") {
-        return streak(b) - streak(a);
-      }
-      if (sort === "rate") {
-        return completionRate(b) - completionRate(a);
-      }
-      if (sort === "newest") {
-        return b.createdAt.localeCompare(a.createdAt);
-      }
+      if (sort === "streak") return streak(b) - streak(a);
+      if (sort === "rate") return completionRate(b) - completionRate(a);
+      if (sort === "newest") return b.createdAt.localeCompare(a.createdAt);
       return a.name.localeCompare(b.name);
     });
   }, [completionRate, filter, habits, searchQuery, sort, streak, today]);
 
+  // Clicking the check on a not-yet-done habit opens the mood sheet so
+  // the user can capture their mood + a journal note alongside the vote.
   const handleCheck = (habit: Habit) => {
     const isDone = Boolean(habit.history[today]);
     if (!isDone) {
@@ -95,7 +96,7 @@ export default function HabitsPage() {
           whileHover={{ y: -1 }}
           whileTap={{ scale: 0.97 }}
         >
-          <IconPlus style={{ width: 13, height: 13 }} /> New habit
+          <IconPlus className={styles.iconBtn} /> New habit
         </motion.button>
       </div>
 
@@ -113,22 +114,21 @@ export default function HabitsPage() {
             </motion.button>
           ))}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ position: "relative" }}>
-            <IconSearch style={{ width: 13, height: 13, position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--ink-3)", pointerEvents: "none" }} />
+        <div className={styles.searchCluster}>
+          <div className={styles.searchWrap}>
+            <IconSearch className={styles.searchIcon} />
             <input
-              className="input"
+              className={`input ${styles.searchInput}`}
               placeholder="Search habits..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ paddingLeft: 30, height: 34, fontSize: 13, width: searchQuery ? 220 : 160 }}
+              // Search input width is dynamic (160px → 220px when active).
+              // Passed via --search-w so the .searchInput class stays static.
+              style={{ ["--search-w" as string]: searchQuery ? "220px" : "160px" }}
             />
             {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--ink-3)" }}
-              >
-                <IconClose style={{ width: 12, height: 12 }} />
+              <button onClick={() => setSearchQuery("")} className={styles.searchClear}>
+                <IconClose className={styles.searchClearIcon} />
               </button>
             )}
           </div>
@@ -159,17 +159,13 @@ export default function HabitsPage() {
             return (
               <StaggerItem key={habit.id}>
                 <motion.div
-                  className="click-row habit-list-row"
-                  style={{
-                    gridTemplateColumns: "44px minmax(0, 1fr) 80px 140px",
-                    alignItems: "center",
-                  }}
+                  className={`click-row habit-list-row ${styles.row}`}
                   onClick={() => router.push(`/habits/${habit.id}`)}
                   whileHover={{ y: -2, boxShadow: "var(--shadow-md)" }}
                   transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 >
                   {/* Check */}
-                  <div className="habit-list-field" style={{ alignItems: "center" }}>
+                  <div className="habit-list-field">
                     <motion.button
                       className={`check ${isDone ? "done" : ""}`}
                       onClick={(event) => {
@@ -186,35 +182,18 @@ export default function HabitsPage() {
 
                   {/* Habit */}
                   <div className="habit-list-field">
-                    <div style={{ minWidth: 0 }}>
+                    <div className={styles.nameInner}>
                       <div className="habit-name">{habit.name}</div>
-                      <div
-                        className="mono muted"
-                        style={{
-                          fontSize: 10.5,
-                          marginTop: 3,
-                          letterSpacing: "0.04em",
-                          textTransform: "uppercase",
-                        }}
-                      >
+                      <div className={`mono muted ${styles.captionMono}`}>
                         {habit.identity}
-                        {nextLabel && (
-                          <span style={{ marginLeft: 8, color: "var(--ink-3)" }}>· {nextLabel}</span>
-                        )}
+                        {nextLabel && <span className={styles.nextLabel}>· {nextLabel}</span>}
                       </div>
                     </div>
                   </div>
 
                   {/* Streak */}
                   <div className="habit-list-field">
-                    <div
-                      className="mono"
-                      style={{
-                        fontSize: 16,
-                        fontWeight: 500,
-                        color: activeStreak > 0 ? "var(--ink)" : "var(--ink-3)",
-                      }}
-                    >
+                    <div className={`mono ${styles.streak} ${activeStreak > 0 ? styles.streakActive : ""}`}>
                       {activeStreak}d
                     </div>
                   </div>
@@ -222,33 +201,15 @@ export default function HabitsPage() {
                   {/* 30-Day */}
                   <div className="habit-list-field">
                     <div className="habit-list-progress">
-                      <div
-                        style={{
-                          flex: 1,
-                          height: 4,
-                          background: "var(--bg-sunk)",
-                          borderRadius: 99,
-                          overflow: "hidden",
-                        }}
-                      >
+                      <div className={styles.progressTrack}>
                         <motion.div
-                          style={{ height: "100%", background: "var(--accent)" }}
+                          className={styles.progressFill}
                           initial={{ width: 0 }}
                           animate={{ width: `${rate}%` }}
                           transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
                         />
                       </div>
-                      <span
-                        className="mono"
-                        style={{
-                          fontSize: 11,
-                          color: "var(--ink-3)",
-                          minWidth: 28,
-                          textAlign: "right",
-                        }}
-                      >
-                        {rate}%
-                      </span>
+                      <span className={`mono ${styles.progressLabel}`}>{rate}%</span>
                     </div>
                   </div>
                 </motion.div>
@@ -258,16 +219,14 @@ export default function HabitsPage() {
         </StaggerContainer>
         {habits.length === 0 && (
           <motion.div
-            style={{ padding: "42px 22px", textAlign: "center" }}
+            className={styles.empty}
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4 }}
           >
             <div className="eyebrow">Empty library</div>
-            <h2 className="h2" style={{ marginTop: 8 }}>
-              No habits in your account yet.
-            </h2>
-            <p className="muted" style={{ margin: "10px auto 18px", maxWidth: 420, lineHeight: 1.5 }}>
+            <h2 className={`h2 ${styles.emptyTitle}`}>No habits in your account yet.</h2>
+            <p className={`muted ${styles.emptyBody}`}>
               Create one habit to begin casting identity votes.
             </p>
             <motion.button
@@ -276,12 +235,12 @@ export default function HabitsPage() {
               whileHover={{ y: -1 }}
               whileTap={{ scale: 0.97 }}
             >
-              <IconPlus style={{ width: 13, height: 13 }} /> New habit
+              <IconPlus className={styles.iconBtn} /> New habit
             </motion.button>
           </motion.div>
         )}
         {habits.length > 0 && filtered.length === 0 && (
-          <div className="muted" style={{ padding: "28px 22px", textAlign: "center" }}>
+          <div className={`muted ${styles.noResults}`}>
             {searchQuery ? `No habits match "${searchQuery}".` : "No habits match this filter."}
           </div>
         )}
