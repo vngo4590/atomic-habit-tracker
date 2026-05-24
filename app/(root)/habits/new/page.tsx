@@ -229,6 +229,20 @@ export default function NewHabitPage() {
               </motion.button>
             ))}
           </div>
+          {/* Legend so the meaning of the selected vs. unselected day pills
+              is explicit. We render miniature pills styled the same way as
+              the day buttons so the legend stays correct in both light and
+              dark themes (no colour names baked into copy). */}
+          <div className={styles.dayLegend} aria-label="Day selector legend">
+            <span className={styles.dayLegendItem}>
+              <span className={`btn btn-sm btn-primary ${styles.dayLegendSwatch}`} aria-hidden="true" />
+              <span className={styles.dayLegendLabel}>Scheduled</span>
+            </span>
+            <span className={styles.dayLegendItem}>
+              <span className={`btn btn-sm ${styles.dayLegendSwatch}`} aria-hidden="true" />
+              <span className={styles.dayLegendLabel}>Off</span>
+            </span>
+          </div>
           <label className={`field-label ${styles.timeLabel}`}>Time block</label>
           <select
             className="input"
