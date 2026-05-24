@@ -145,7 +145,14 @@ export function HistoryWall({ habit }: { habit: Habit }) {
       </div>
 
       <div className="card card-pad">
-        <div className="history-wall-scroll">
+        {/*
+          The wallBox wrapper deliberately uses overflow: visible and a small
+          inner pad so the bottom row's `today` dot outline is never clipped
+          on mobile. (The legacy `.history-wall-scroll` class implicitly forced
+          overflow-y: clip via the spec when overflow-x was auto, which was
+          the real cause of the "blocks look cut off" bug.)
+        */}
+        <div className={styles.wallBox}>
           <div
             className={styles.grid}
             style={

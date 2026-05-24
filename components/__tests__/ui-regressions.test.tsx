@@ -177,7 +177,7 @@ describe("UI regressions", () => {
     const { container } = render(<HistoryWall habit={makeHabit()} />);
 
     // When: we look at the inline style of the grid element
-    // The component renders one grid <div> inside .history-wall-scroll. We
+    // The component renders one grid <div> inside the wall wrapper. We
     // can locate it as the parent of the first column (the first child of
     // a column is a `.dot` cell, so the grid is the cell's grandparent).
     const firstCell = container.querySelector('[aria-label$="missed"], [aria-label$="done"]');
@@ -202,6 +202,24 @@ describe("UI regressions", () => {
     const newStyle = newGrid.getAttribute("style") ?? "";
     expect(newStyle).toContain("7");
     expect(newStyle).toContain("20px");
+  });
+
+  it("does not wrap the grid in the legacy overflow-clipping scroll container", () => {
+    // Given: a HistoryWall rendered with default props
+    const { container } = render(<HistoryWall habit={makeHabit()} />);
+
+    // When: we inspect the element wrapping the grid columns
+    const firstCell = container.querySelector('[aria-label$="missed"], [aria-label$="done"]')!;
+    const grid = firstCell.parentElement!.parentElement!;
+    const wrapper = grid.parentElement!;
+
+    // Then: the wrapper does NOT carry the legacy `.history-wall-scroll`
+    //       class. That class triggered overflow-x: auto on mobile, which
+    //       implicitly forced overflow-y to a non-visible value per the
+    //       CSS Overflow spec and clipped the bottom row's `.today` outline
+    //       under the card edge — the actual cause of the "blocks look
+    //       cut off underneath" bug the user reported.
+    expect(wrapper.classList.contains("history-wall-scroll")).toBe(false);
   });
 
   it("lets the habit loop response be edited independently", () => {

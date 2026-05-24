@@ -47,6 +47,19 @@
   gap: 4px;
 }
 
+/* Outer wrapper around the grid inside the card. We give the wall a small
+   inset so the `.today` dot's 2px outline (drawn by box-shadow: 0 0 0 2px)
+   has room to render without being clipped by the parent's edge or the
+   card's padding box. We also explicitly set overflow: visible so older
+   mobile rules in app/styles/responsive.css (which set overflow-x: auto
+   on .history-wall-scroll and implicitly forced overflow-y: clip on
+   touch browsers, cutting off the bottom row's outline) cannot reach in
+   here. */
+.wallBox {
+  overflow: visible;
+  padding: 2px;
+}
+
 /* The grid of week columns. We render as CSS grid so the columns auto-fit
    the container width — each track shrinks down to nothing if needed via
    minmax(0, --max-cell), which makes the whole wall fit the card on any
@@ -69,9 +82,13 @@
   min-width: 0;
 }
 
-/* Individual day cell. We bump specificity with .cell.cell so this beats the
-   global `.dot { width: 10px; height: 10px }` rule. width:100% lets the cell
-   fill its grid track, and aspect-ratio:1 keeps it square as it shrinks. */
+/* Individual day cell. We bump specificity with .cell.cell so this beats
+   BOTH the desktop global `.dot { width: 10px; height: 10px }` AND the
+   mobile media query in responsive.css that bumps `.dot` to 14px — that
+   override used to stretch the column tall enough to be clipped at the
+   bottom of the card on mobile. width:100% lets the cell fill its grid
+   track, aspect-ratio:1 keeps it square as it shrinks, and the explicit
+   `height: auto` is necessary to override the global fixed-height rule. */
 .cell.cell {
   display: block;
   width: 100%;
