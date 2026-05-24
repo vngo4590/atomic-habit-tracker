@@ -57,6 +57,17 @@ This project uses Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, and the Ap
 - Default to ASCII in new files unless the existing file or UI text needs otherwise.
 - Avoid broad refactors while porting planned OpenSpec phases.
 
+## Styling Conventions
+
+- **Global stylesheet is modular.** `app/globals.css` is a thin entry that `@import`s partials under `app/styles/`:
+  - `tokens.css` (CSS variables / dark theme), `base.css`, `typography.css`, `layout.css`, `components.css`, `animations.css`, `responsive.css`.
+- **Per-component styles** live in `components/Component.module.css` next to the component.
+- **Per-page styles** live in `app/(root)/<route>/page.module.css` next to the page.
+- **No inline `style={{ ... }}` for static layout or colour.** Move such styles into a co-located `*.module.css`.
+- **Allowed inline style:** dynamic CSS-variable passthrough (e.g. `style={{ "--mood-color": item.color }}`) so a generic module class can theme against per-data values. Always add a brief inline comment explaining why.
+- **Allowed inline style:** Framer Motion animation values (`initial`, `animate`, `whileHover`, `whileTap`) — these are animation, not style.
+- **SOLID + GRASP** apply throughout. Keep files under ~300 lines / ~7 KB; split components into folders with sub-components, hooks, and a barrel when they grow beyond that.
+
 ## Animation Conventions
 
 - **Framer Motion** is the primary animation library. Prefer it for entrance animations, page transitions, gesture interactions, and staggered lists.
@@ -70,7 +81,7 @@ This project uses Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, and the Ap
 ## Validation
 
 - Run focused tests after changing helpers, store logic, or components with tests:
-  `npm exec vitest run`
+  `npm exec vitest run path/to/file.test.ts`
 - Run the full test suite when completing a phase:
   `npm exec vitest run`
 - Run typecheck and lint after any implementation:
@@ -89,9 +100,10 @@ This project uses Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, and the Ap
 ## Agent Workflow
 
 Read `.agents/skills/atomic-habit-workflow/SKILL.md` at the start of every session. Key rules:
-- Branch per task (`feat/`, `fix/`, `docs/`, `test/`).
-- Small incremental commits — one logical change per commit.
+- Branch per task (`feat/`, `fix/`, `refactor/`, `docs/`, `test/`, `chore/`).
+- Small incremental commits — one logical change per commit, Conventional Commits prefixes.
 - Test every change. No exceptions.
 - Comment everything for non-coder understanding.
+- Follow SOLID + GRASP for any change spanning more than one file.
 - Update skills and docs when you discover new patterns or stale info.
 - Validate before push: tests, typecheck, build, sync skills.
