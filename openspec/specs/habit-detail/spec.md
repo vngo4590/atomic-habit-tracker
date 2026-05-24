@@ -56,11 +56,15 @@ The system SHALL render a textarea composer and a list of timestamped notes. Not
 - **THEN** both notes are removed from the habit
 
 ### Requirement: Mark done button on habit detail opens mood sheet
-The system SHALL show a "Mark done" / "Done today · edit" button at the top of the detail screen. Clicking it calls `toggleHabit` (if not done) and opens the MoodCheckSheet.
+The system SHALL show a "Mark done" / "Done today · tap to unmark" button at the top of the detail screen. Clicking it calls `toggleHabit` (if not done) and opens the MoodCheckSheet.
 
 #### Scenario: Undone habit shows "Mark done"
 - **WHEN** the habit is not done today
 - **THEN** the button reads "Mark done"
+
+#### Scenario: Done habit shows "Done today · tap to unmark"
+- **WHEN** the habit is done today
+- **THEN** the button reads "Done today · tap to unmark" and clicking it unmarks today
 
 #### Scenario: Clicking Mark done checks habit and opens mood sheet
 - **WHEN** the user clicks "Mark done"

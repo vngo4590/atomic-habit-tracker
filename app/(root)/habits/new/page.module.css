@@ -41,6 +41,39 @@
   margin-top: 16px;
 }
 
+/* Legend that sits under the day grid and clarifies the meaning of the
+   active (filled) vs. inactive (outlined) pill styles. */
+.dayLegend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.dayLegendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Miniature non-interactive pill used as a colour swatch in the legend.
+   Inherits all colour rules from .btn / .btn-primary so it always tracks
+   the real day button styling, including theme changes. */
+.dayLegendSwatch {
+  width: 26px;
+  height: 18px;
+  min-height: 0;
+  padding: 0;
+  pointer-events: none;
+  cursor: default;
+}
+
+.dayLegendLabel {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
 /* Page footer with Cancel + Create buttons. */
 .footer {
   display: flex;

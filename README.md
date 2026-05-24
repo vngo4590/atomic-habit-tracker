@@ -1,6 +1,6 @@
 # Atomicly Habit Tracker
 
-Atomicly is a habit tracking app inspired by Atomic Habits. It helps users design small habits, check them in daily, reflect on patterns, learn through a 36-lesson curriculum, and track identity votes over time.
+Atomicly is a habit tracking app inspired by Atomic Habits. It helps users design small habits, check them in daily, reflect on patterns, and track identity votes over time.
 
 The app is implemented with Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, Framer Motion, Prisma, Auth.js, PostgreSQL, and the App Router. Authenticated habit, reflection, lesson, identity, and preference data is loaded from the backend and written through server actions or `/api/v1` route handlers.
 
@@ -11,7 +11,7 @@ The app is implemented with Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, 
 - Habit detail pages with history wall, notes, contracts, editable habit-loop fields, and back-button navigation.
 - New habit builder using an inline Mad-Libs implementation intention sentence with schedule presets and time-block selection.
 - Analytics with schedule-aware adherence stats, completion trend chart, weekday bars, and leaderboard. Metrics evaluate progress against scheduled days only, and bonus completions on unscheduled days are counted positively.
-- Journal, weekly review, identity ledger, settings, onboarding, lessons, and Hall of Fame flows.
+- Journal, weekly review, identity ledger, settings, onboarding, and Hall of Fame flows.
 - Backend persistence for habits, journal entries, identity, completed lessons, formation verdicts, and user preferences, with local mirroring only for immediate appearance/onboarding UI.
 
 ## Routes
@@ -25,7 +25,6 @@ The app is implemented with Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, 
 | `/analytics` | Analytics |
 | `/journal` | Journal |
 | `/review` | Weekly review |
-| `/lessons` | Daily lessons and library |
 | `/hall-of-fame` | 66-day habit formation review |
 | `/identity` | Identity statement and vote ledger |
 | `/settings` | Account, appearance, and data controls |
@@ -296,7 +295,7 @@ Notes:
 - `app/styles/`: modular global stylesheet partials (see "Styles & Design Tokens" below).
 - `app/globals.css`: thin entry point that `@import`s the modular partials in cascade order.
 - `components/`: reusable client UI components. Each non-trivial component has a co-located `Component.module.css` next to it.
-- `lib/`: types, helpers, lessons data, auth/db helpers, repositories, server actions, store cache logic, and unit tests.
+- `lib/`: types, helpers, auth/db helpers, repositories, server actions, store cache logic, and unit tests.
 - `scripts/`: local automation helpers, including Docker/PostgreSQL database management.
 - `k8s/local/`: local Docker Desktop Kubernetes overlay for the app deployment and migration job.
 - `reference_ui/`: original reference implementation used during the port.

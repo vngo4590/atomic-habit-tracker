@@ -16,7 +16,7 @@
   margin-top: 4px;
 }
 
-/* The "LESS … MORE" legend row. */
+/* The "DONE / MISSED / TODAY" legend row. */
 .legend {
   display: flex;
   gap: 14px;
@@ -25,29 +25,76 @@
 .legendLabel {
   font-size: 10px;
 }
-.legendDots {
-  display: flex;
-  gap: 3px;
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.legendDot {
+  display: inline-block;
 }
 
-/* The grid of week columns. min-width: max-content lets the grid stretch
-   beyond the card width on small viewports so horizontal scroll works. */
+/* Toggle controls sit between the header and the wall. Two button groups
+   sit side by side; on narrow screens they wrap onto separate lines. */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.controlGroup {
+  display: inline-flex;
+  gap: 4px;
+}
+
+/* Outer wrapper around the grid inside the card. We give the wall a small
+   inset so the `.today` dot's 2px outline (drawn by box-shadow: 0 0 0 2px)
+   has room to render without being clipped by the parent's edge or the
+   card's padding box. We also explicitly set overflow: visible so older
+   mobile rules in app/styles/responsive.css (which set overflow-x: auto
+   on .history-wall-scroll and implicitly forced overflow-y: clip on
+   touch browsers, cutting off the bottom row's outline) cannot reach in
+   here. */
+.wallBox {
+  overflow: visible;
+  padding: 2px;
+}
+
+/* The grid of week columns. We render as CSS grid so the columns auto-fit
+   the container width — each track shrinks down to nothing if needed via
+   minmax(0, --max-cell), which makes the whole wall fit the card on any
+   viewport instead of overflowing horizontally on small phones. --cols and
+   --max-cell are set inline by HistoryWall.tsx based on the current view
+   (week vs 26 weeks). */
 .grid {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 26), minmax(0, var(--max-cell, 12px)));
   gap: 3px;
-  min-width: max-content;
+  width: 100%;
 }
 
-/* Each week is a vertical stack of 7 dots. */
+/* Each week is a vertical stack of N dots. min-width: 0 lets the column
+   shrink below its intrinsic content width inside the grid track. */
 .column {
   display: flex;
   flex-direction: column;
   gap: 3px;
+  min-width: 0;
 }
 
-/* Individual day cell — block so the dots line up cleanly within the column. */
-.cell {
+/* Individual day cell. We bump specificity with .cell.cell so this beats
+   BOTH the desktop global `.dot { width: 10px; height: 10px }` AND the
+   mobile media query in responsive.css that bumps `.dot` to 14px — that
+   override used to stretch the column tall enough to be clipped at the
+   bottom of the card on mobile. width:100% lets the cell fill its grid
+   track, aspect-ratio:1 keeps it square as it shrinks, and the explicit
+   `height: auto` is necessary to override the global fixed-height rule. */
+.cell.cell {
   display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  min-width: 0;
 }
 
 /* Footer row beneath the wall with "26 WEEKS AGO" and "TODAY" markers. */

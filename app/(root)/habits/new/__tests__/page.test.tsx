@@ -41,6 +41,17 @@ describe("NewHabitPage", () => {
     expect(screen.getByRole("button", { name: "Sat" })).toBeTruthy();
   });
 
+  
+  it("renders a legend explaining scheduled vs off day pills", () => {
+    // Given: the create-habit page mounted
+    render(<NewHabitPage />);
+
+    // Then: the day-selector legend is present with both states labelled
+    expect(screen.getByLabelText("Day selector legend")).toBeTruthy();
+    expect(screen.getByText("Scheduled")).toBeTruthy();
+    expect(screen.getByText("Off")).toBeTruthy();
+  });
+
   it("does not render a time-block selector under the Schedule section", () => {
     // Given: the new habit page (Time block control was removed in PR1)
     const { container } = render(<NewHabitPage />);
