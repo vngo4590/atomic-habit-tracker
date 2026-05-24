@@ -202,4 +202,55 @@ describe("ReviewPage", () => {
       expect(screen.getByText(/57%/)).toBeTruthy();
     });
   });
+
+  describe("markdown rendering of review entries", () => {
+    // Given: the current week's review has markdown formatting in its answers
+    // When: the review page renders the read-only display
+    // Then: each answer is rendered via the shared MarkdownText component,
+    //       producing the matching block-level HTML (strong, list items, etc.)
+    it("renders markdown formatting in the current week's saved answers", () => {
+      const weekStartKey = dateAdd(todayKey(), -6);
+      storeMock.weeklyReview = {
+        wentWell: "**Bold win** with formatting",
+        smallestFix: "- step one\n- step two",
+        identityVote: "Become _disciplined_",
+      };
+      storeMock.weeklyReviews = [makeReview(weekStartKey, storeMock.weeklyReview)];
+
+      render(<ReviewPage />);
+
+      // Bold markdown -> <strong>
+      const strong = screen.getByText("Bold win");
+      expect(strong.tagName).toBe("STRONG");
+      // List markdown -> two <li> children inside an <ul>
+      expect(screen.getByText("step one").tagName).toBe("LI");
+      expect(screen.getByText("step two").tagName).toBe("LI");
+      // Italic markdown -> <em>
+      const em = screen.getByText("disciplined");
+      expect(em.tagName).toBe("EM");
+    });
+
+    // Given: a past review with markdown in smallestFix and identityVote
+    // When: the user expands the archive to read full entries
+    // Then: the expanded "Fix:" and "Vote:" detail values also render markdown
+    it("renders markdown in the expanded archive detail values", () => {
+      const weekStartKey = dateAdd(todayKey(), -6);
+      const pastReview = makeReview(dateAdd(weekStartKey, -7), {
+        wentWell: "summary",
+        smallestFix: "**fix in bold**",
+        identityVote: "_voter_",
+      });
+      // Need >5 past reviews for the "Read more" button to appear.
+      storeMock.weeklyReviews = [
+        pastReview,
+        ...Array.from({ length: 5 }, (_, index) => makeReview(dateAdd(weekStartKey, -7 * (index + 2)))),
+      ];
+
+      render(<ReviewPage />);
+      fireEvent.click(screen.getByRole("button", { name: "Read more" }));
+
+      expect(screen.getByText("fix in bold").tagName).toBe("STRONG");
+      expect(screen.getByText("voter").tagName).toBe("EM");
+    });
+  });
 });

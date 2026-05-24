@@ -118,6 +118,26 @@
 .summaryDetail {
   font-size: 13px;
   margin-top: 6px;
+  display: grid;
+  gap: 4px;
+}
+
+/* One "Fix:" / "Vote:" row inside the expanded archive detail. Label sits
+   above the markdown value to give the markdown block room to render. */
+.detailRow {
+  display: grid;
+  gap: 2px;
+}
+.detailLabel {
+  font-weight: 600;
+}
+/* Tighten markdown rendering inside the compact archive detail so single
+   paragraphs do not introduce extra vertical space. */
+.detailValue {
+  font-size: 13px;
+}
+.detailValue :global(p) {
+  margin: 0;
 }
 
 /* Empty-state for archive. */

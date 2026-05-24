@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import type { CSSProperties } from "react";
 import { useMemo, useState } from "react";
 
+import { MarkdownText } from "@/components/MarkdownText";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { useStoreContext } from "@/components/StoreProvider";
 import { dateAdd, fmt, todayKey } from "@/lib/helpers";
@@ -98,9 +99,13 @@ function ReviewDisplay({
           return (
             <div key={question}>
               <div className="field-label">{question}</div>
-              <p className={`${styles.answer} ${text ? "" : styles.answerEmpty}`}>
-                {text || "Not answered yet."}
-              </p>
+              {text ? (
+                /* Render saved answers as markdown so users can format reviews
+                   the same way they format journal entries. */
+                <MarkdownText className={styles.answer}>{text}</MarkdownText>
+              ) : (
+                <p className={`${styles.answer} ${styles.answerEmpty}`}>Not answered yet.</p>
+              )}
             </div>
           );
         })}
@@ -332,27 +337,52 @@ export default function ReviewPage() {
         </div>
         <div className={styles.archiveList}>
           {visiblePastReviews.length ? (
-            visiblePastReviews.map((review) => (
-              <div key={review.weekStartKey} className="review-past-row">
-                <div className={`mono muted ${styles.insightCaption}`}>
-                  {fmt.short(review.weekStartKey)}
-                </div>
-                <div>
-                  <div className={styles.summary}>
-                    {reviewSummary(review).slice(0, 120)}
-                    {reviewSummary(review).length > 120 ? "..." : ""}
+            visiblePastReviews.map((review) => {
+              const summaryText = reviewSummary(review);
+              const truncated = summaryText.slice(0, 120) + (summaryText.length > 120 ? "..." : "");
+              const hasNotes = hasReviewText(review);
+              return (
+                <div key={review.weekStartKey} className="review-past-row">
+                  <div className={`mono muted ${styles.insightCaption}`}>
+                    {fmt.short(review.weekStartKey)}
                   </div>
-                  {showArchive && (
-                    <div className={`muted ${styles.summaryDetail}`}>
-                      Fix: {review.smallestFix || "Not answered"} · Vote: {review.identityVote || "Not answered"}
-                    </div>
-                  )}
+                  <div>
+                    {/* Summary preview. Render as markdown so formatting (bold,
+                        lists, links) appears the same as in the full display.
+                        Fall back to plain text for the "No notes saved yet."
+                        placeholder so it stays styled as muted italic copy. */}
+                    {hasNotes ? (
+                      <MarkdownText className={styles.summary}>{truncated}</MarkdownText>
+                    ) : (
+                      <div className={styles.summary}>{truncated}</div>
+                    )}
+                    {showArchive && (
+                      <div className={`muted ${styles.summaryDetail}`}>
+                        <div className={styles.detailRow}>
+                          <span className={styles.detailLabel}>Fix:</span>
+                          {review.smallestFix ? (
+                            <MarkdownText className={styles.detailValue}>{review.smallestFix}</MarkdownText>
+                          ) : (
+                            <span>Not answered</span>
+                          )}
+                        </div>
+                        <div className={styles.detailRow}>
+                          <span className={styles.detailLabel}>Vote:</span>
+                          {review.identityVote ? (
+                            <MarkdownText className={styles.detailValue}>{review.identityVote}</MarkdownText>
+                          ) : (
+                            <span>Not answered</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <button className="btn btn-sm" onClick={() => startEditing(review)}>
+                    Edit
+                  </button>
                 </div>
-                <button className="btn btn-sm" onClick={() => startEditing(review)}>
-                  Edit
-                </button>
-              </div>
-            ))
+              );
+            })
           ) : (
             <p className={styles.archiveEmpty}>No past reviews yet.</p>
           )}
