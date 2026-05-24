@@ -9,18 +9,30 @@ import { useStoreContext } from "@/components/StoreProvider";
 import { dateAdd, fmt, todayKey } from "@/lib/helpers";
 import { isScheduledForDate } from "@/lib/schedule";
 
+import styles from "./page.module.css";
+
 const RANGES = [14, 30, 90] as const;
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
+/**
+ * Analytics — overview of habit progress with four stat cards, a daily
+ * completion line chart, weekday adherence bars, and a leaderboard.
+ *
+ * All percentages are schedule-aware: only days where a habit was
+ * actually scheduled count toward its completion rate. See
+ * `isScheduledForDate` and the chart/weekday memos.
+ */
 export default function AnalyticsPage() {
   const { habits, completionRate, longestStreak } = useStoreContext();
   const [range, setRange] = useState<(typeof RANGES)[number]>(30);
   const today = todayKey();
 
+  // Build the daily-completion chart data — one point per day in the
+  // selected range. Each point is the % of scheduled habits completed
+  // that day; unscheduled habits don't drag the average down.
   const chartData = useMemo(() => {
     return Array.from({ length: range }, (_, index) => {
       const key = dateAdd(today, index - range + 1);
-      // Only count habits that were actually scheduled for this day.
       const scheduled = habits.filter((habit) => isScheduledForDate(key, habit.schedule));
       const done = scheduled.filter((habit) => habit.history[key]).length;
       return {
@@ -30,6 +42,8 @@ export default function AnalyticsPage() {
     });
   }, [habits, range, today]);
 
+  // Compute the four top stats (average adherence, total check-ins,
+  // best streak, at-risk count).
   const stats = useMemo(() => {
     const average = habits.length
       ? Math.round((habits.reduce((sum, habit) => sum + completionRate(habit), 0) / habits.length) * 100)
@@ -43,6 +57,7 @@ export default function AnalyticsPage() {
     return { average, total, best, atRisk };
   }, [completionRate, habits, longestStreak]);
 
+  // Walk the last 90 days and bucket scheduled/done counts per weekday.
   const weekdayRates = useMemo(() => {
     return WEEKDAYS.map((label, weekday) => {
       let total = 0;
@@ -63,6 +78,7 @@ export default function AnalyticsPage() {
   }, [habits, today]);
   const hasWeekdayData = weekdayRates.some((day) => day.total > 0);
 
+  // 30-day leaderboard sorted descending by completion rate.
   const leaderboard = useMemo(() => {
     return [...habits]
       .map((habit) => ({ habit, pct: Math.round(completionRate(habit, 30) * 100) }))
@@ -85,7 +101,7 @@ export default function AnalyticsPage() {
       </div>
 
       <motion.div
-        style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 18 }}
+        className={styles.statsGrid}
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.1, ease: [0.4, 0, 0.2, 1] }}
@@ -103,24 +119,21 @@ export default function AnalyticsPage() {
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
           >
             <div className="eyebrow">{label}</div>
-            <div style={{ fontFamily: "var(--serif)", fontSize: 32, marginTop: 6 }}>{value}</div>
-            <div className="muted" style={{ fontSize: 12 }}>
-              {sub}
-            </div>
+            <div className={styles.statValue}>{value}</div>
+            <div className={`muted ${styles.statSub}`}>{sub}</div>
           </motion.div>
         ))}
       </motion.div>
 
       <motion.section
-        className="card card-pad"
-        style={{ marginBottom: 18 }}
+        className={`card card-pad ${styles.section}`}
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.15, ease: [0.4, 0, 0.2, 1] }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <div className={styles.sectionHeader}>
           <h2 className="h3">Daily completion</h2>
-          <div className="tabs" style={{ borderBottom: "none", margin: 0 }}>
+          <div className={`tabs ${styles.tabsInline}`}>
             {RANGES.map((days) => (
               <motion.button
                 key={days}
@@ -138,7 +151,7 @@ export default function AnalyticsPage() {
       </motion.section>
 
       <motion.div
-        style={{ display: "grid", gridTemplateColumns: "0.9fr 1.1fr", gap: 18 }}
+        className={styles.bottomGrid}
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.2, ease: [0.4, 0, 0.2, 1] }}
@@ -146,45 +159,31 @@ export default function AnalyticsPage() {
         <section className="card card-pad">
           <div className="eyebrow">By weekday</div>
           {hasWeekdayData ? (
-            <StaggerContainer staggerDelay={0.05} style={{ display: "grid", gap: 12, marginTop: 18 }}>
+            <StaggerContainer staggerDelay={0.05} className={styles.weekdayList}>
               {weekdayRates.map((day) => (
                 <StaggerItem key={day.label}>
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "42px 1fr 44px",
-                      gap: 10,
-                      alignItems: "center",
-                    }}
-                  >
-                    <div className="mono muted" style={{ fontSize: 11 }}>
-                      {day.label}
-                    </div>
-                    <div style={{ height: 10, background: "var(--bg-sunk)", borderRadius: 99, overflow: "hidden" }}>
+                  <div className={styles.weekdayRow}>
+                    <div className={`mono muted ${styles.captionMono}`}>{day.label}</div>
+                    <div className={styles.barTrack}>
                       <motion.div
                         aria-label={`${day.label} completion ${day.pct}%`}
-                        style={{
-                          minWidth: day.pct > 0 ? 6 : 0,
-                          height: "100%",
-                          background: "var(--accent)",
-                          borderRadius: 99,
-                        }}
+                        className={styles.barFill}
+                        // minWidth ensures a tiny sliver renders for >0% bars.
+                        style={{ minWidth: day.pct > 0 ? 6 : 0 }}
                         initial={{ width: 0 }}
                         animate={{ width: `${day.pct}%` }}
                         transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
                       />
                     </div>
-                    <div className="mono" style={{ textAlign: "right", fontSize: 11 }}>
-                      {day.pct}%
-                    </div>
+                    <div className={`mono ${styles.percentRight}`}>{day.pct}%</div>
                   </div>
                 </StaggerItem>
               ))}
             </StaggerContainer>
           ) : (
-            <div className="empty-state" style={{ marginTop: 18 }}>
+            <div className={`empty-state ${styles.emptySpacer}`}>
               <div className="empty-title">No weekday data yet</div>
-              <p className="muted" style={{ margin: "6px 0 0" }}>
+              <p className={`muted ${styles.emptyBody}`}>
                 Check in a habit to see completion patterns by day.
               </p>
             </div>
@@ -193,40 +192,23 @@ export default function AnalyticsPage() {
 
         <section className="card card-pad">
           <div className="eyebrow">Leaderboard</div>
-          <StaggerContainer staggerDelay={0.04} style={{ display: "grid", gap: 14, marginTop: 16 }}>
+          <StaggerContainer staggerDelay={0.04} className={styles.leaderboardList}>
             {leaderboard.map(({ habit, pct }, index) => (
               <StaggerItem key={habit.id}>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "34px 1fr 48px",
-                    gap: 12,
-                    alignItems: "center",
-                  }}
-                >
+                <div className={styles.leaderboardRow}>
                   <div className="mono muted">{String(index + 1).padStart(2, "0")}</div>
                   <div>
                     <div className="habit-name">{habit.name}</div>
-                    <div
-                      style={{
-                        height: 5,
-                        background: "var(--bg-sunk)",
-                        borderRadius: 99,
-                        overflow: "hidden",
-                        marginTop: 7,
-                      }}
-                    >
+                    <div className={styles.leaderboardTrack}>
                       <motion.div
-                        style={{ height: "100%", background: "var(--accent)" }}
+                        className={styles.barFill}
                         initial={{ width: 0 }}
                         animate={{ width: `${pct}%` }}
                         transition={{ duration: 0.6, delay: index * 0.04, ease: [0.4, 0, 0.2, 1] }}
                       />
                     </div>
                   </div>
-                  <div className="mono" style={{ textAlign: "right", fontSize: 12 }}>
-                    {pct}%
-                  </div>
+                  <div className={`mono ${styles.percentRight}`}>{pct}%</div>
                 </div>
               </StaggerItem>
             ))}

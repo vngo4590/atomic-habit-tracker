@@ -1,0 +1,131 @@
+/* Module styles for the Analytics page — stat cards, charts, weekday bars,
+   leaderboard. */
+
+/* Top row of 4 stat cards. */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+/* Big serif number inside a stat card. */
+.statValue {
+  font-family: var(--serif);
+  font-size: 32px;
+  margin-top: 6px;
+}
+
+/* Sub-label beneath the value (e.g. "Last 30 days"). */
+.statSub {
+  font-size: 12px;
+}
+
+/* Daily-completion section. */
+.section {
+  margin-bottom: 18px;
+}
+
+/* Header row: title left, tab buttons right. */
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+/* Tabs in the daily-completion section — borderless override of .tabs. */
+.tabsInline {
+  border-bottom: none;
+  margin: 0;
+}
+
+/* Two-column grid for weekday/leaderboard side-by-side panels. */
+.bottomGrid {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 18px;
+}
+
+/* Weekday list — vertical stack of rows. */
+.weekdayList {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+/* One weekday row: label | bar | percent. */
+.weekdayRow {
+  display: grid;
+  grid-template-columns: 42px 1fr 44px;
+  gap: 10px;
+  align-items: center;
+}
+
+/* Mono caption inside a weekday/leaderboard row. */
+.captionMono {
+  font-size: 11px;
+}
+
+/* Bar track for a weekday row. */
+.barTrack {
+  height: 10px;
+  background: var(--bg-sunk);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+/* Bar fill — width animated by Framer. */
+.barFill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 99px;
+}
+
+/* Right-aligned percentage label. */
+.percentRight {
+  text-align: right;
+  font-size: 11px;
+}
+
+/* Empty state when no weekday data exists yet. */
+.emptySpacer {
+  margin-top: 18px;
+}
+.emptyBody {
+  margin: 6px 0 0;
+}
+
+/* Leaderboard list. */
+.leaderboardList {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+/* Leaderboard row: rank | name+bar | percent. */
+.leaderboardRow {
+  display: grid;
+  grid-template-columns: 34px 1fr 48px;
+  gap: 12px;
+  align-items: center;
+}
+
+/* Thin bar track under a leaderboard habit name. */
+.leaderboardTrack {
+  height: 5px;
+  background: var(--bg-sunk);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-top: 7px;
+}
+
+/* Mobile: collapse two-column bottom grid + tighten stats grid. */
+@media (max-width: 900px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .bottomGrid {
+    grid-template-columns: 1fr;
+  }
+}
