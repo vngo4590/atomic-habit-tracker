@@ -165,7 +165,7 @@ vitest.config.mts
 5. **Domain writes:** All habit/journal/identity mutations go through `lib/actions/domain.ts` which calls user-scoped repository functions in `lib/repositories/`.
 6. **Mobile/API clients:** Use authenticated `/api/v1/` route handlers with stable `{ ok, data }` / `{ ok, error }` envelopes (see `app/api/v1/README.md`).
 7. **Appearance sync:** `components/AppearanceSync.tsx` applies backend `preferences.theme` and `preferences.accentHue` globally through `lib/appearance.ts`.
-8. **localStorage:** Only used for `atomicly:theme`, `atomicly:accent`, `atomicly:onboarding-seen` — UI mirrors only, NOT source of truth for domain data.
+8. **localStorage:** Only used for `atomicly:theme` and `atomicly:accent` — UI mirrors only, NOT source of truth for domain data. Onboarding state is server-side only (per-user) so it cannot leak across accounts on a shared browser.
 
 ---
 
