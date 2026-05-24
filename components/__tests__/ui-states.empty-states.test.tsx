@@ -184,4 +184,36 @@ describe("Today page search ordering", () => {
     const relation = emptyHeading.compareDocumentPosition(statsCard!);
     expect(relation & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
+
+  // Given: a user has habits scheduled for today and uses the search bar
+  // When: they type a query (matching or not)
+  // Then: the today "Habits" list section remains visible so they can still
+  //       check off today's habits without clearing the search.
+  it("keeps today's habit list visible while searching", () => {
+    storeMock.habits = [
+      makeHabit({ id: "h1", name: "Read", schedule: "Daily" }),
+      makeHabit({ id: "h2", name: "Run", schedule: "Daily" }),
+    ];
+
+    render(<TodayPage />);
+
+    // Sanity: today's list is visible before any search.
+    expect(screen.getByRole("heading", { name: "Habits" })).toBeTruthy();
+
+    fireEvent.change(screen.getByPlaceholderText("Search habits..."), {
+      target: { value: "Read" },
+    });
+
+    // Today's "Habits" heading is still present alongside the "Search
+    // results" section.
+    expect(screen.getByRole("heading", { name: "Habits" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Search results" })).toBeTruthy();
+
+    // Even a query that matches nothing must not hide today's list.
+    fireEvent.change(screen.getByPlaceholderText("Search habits..."), {
+      target: { value: "xyz-no-match" },
+    });
+    expect(screen.getByRole("heading", { name: "Habits" })).toBeTruthy();
+    expect(screen.getByText(/No habits match/)).toBeTruthy();
+  });
 });

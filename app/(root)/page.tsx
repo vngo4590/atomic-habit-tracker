@@ -410,7 +410,12 @@ export default function TodayPage() {
         </div>
       </motion.div>
 
-      {!searchQuery && scheduledUndone.length > 0 && (
+      {/* Today's habit list always renders when there is something undone
+          today, even while the user is searching. The search-results section
+          renders above this; keeping the today list visible means the user
+          never loses access to today's check-ins while typing in the search
+          box. */}
+      {scheduledUndone.length > 0 && (
         <motion.section
           className={styles.section}
           initial={{ opacity: 0, y: 16 }}
