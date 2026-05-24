@@ -1,0 +1,39 @@
+/*
+ * ExpandableText.module.css — visuals for the Read more / Read less wrapper.
+ *
+ * The collapsed state uses a CSS line-clamp so the underlying content can be
+ * arbitrary (plain text, headings, or MarkdownText rendering a full block).
+ * `--expandable-lines` lets each call site pick its own clamp without forking
+ * the class.
+ */
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.clamped {
+  display: -webkit-box;
+  -webkit-line-clamp: var(--expandable-lines, 4);
+  -webkit-box-orient: vertical;
+  line-clamp: var(--expandable-lines, 4);
+  overflow: hidden;
+  /* When the children are MarkdownText (which renders multiple block-level
+     nodes), -webkit-box still clamps them collectively. This text-overflow
+     keeps the visible final line ending in an ellipsis where supported. */
+  text-overflow: ellipsis;
+}
+
+.expanded {
+  /* Default block flow; no clamp. Kept explicit so we don't depend on
+     un-setting the -webkit-box rules. */
+}
+
+.toggle {
+  /* Inline, low-weight affordance. Aligned to the start of the column so the
+     toggle reads as "more for this paragraph", not as a primary action. */
+  align-self: flex-start;
+  padding: 2px 8px;
+  font-size: 0.85rem;
+}
