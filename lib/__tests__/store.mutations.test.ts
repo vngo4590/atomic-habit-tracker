@@ -327,6 +327,39 @@ describe("store mutations", () => {
     expect(updateJournalEntryAction).toHaveBeenCalledWith("j1", { title: "Edited", body: "Kept", mood: "good" });
   });
 
+  it("ignores any date in a journal update patch so entries stay anchored to their original day", async () => {
+    // Given: an existing journal entry dated 2030-01-01
+    const { result } = renderHook(() =>
+      useStore({
+        habits: [],
+        journal: [{ id: "j1", date: "2030-01-01", title: "Old", body: "Draft", mood: "meh", tags: [] }],
+        identity: { statement: "", values: [] },
+        weeklyReview: { wentWell: "", smallestFix: "", identityVote: "" },
+        completedLessons: [],
+        formationVerdicts: [],
+        preferences: {
+          theme: "light",
+          accentHue: 60,
+          remindersEnabled: true,
+          weeklyReviewNudge: true,
+          accountabilityNudge: false,
+          onboardingSeen: false,
+          lessonMode: "sequential",
+          timezone: "UTC",
+        },
+      }),
+    );
+
+    // When: a caller (maliciously or by mistake) tries to update the date along with other fields
+    act(() => result.current.updateJournal("j1", { date: "2099-12-31", title: "Edited", body: "Same", mood: "good" }));
+
+    // Then: the in-memory entry keeps its original date and the server action is not given a date either
+    expect(result.current.journal[0]).toMatchObject({ id: "j1", date: "2030-01-01", title: "Edited" });
+    expect(updateJournalEntryAction).toHaveBeenCalledWith("j1", { title: "Edited", body: "Same", mood: "good" });
+    const lastCall = vi.mocked(updateJournalEntryAction).mock.calls.at(-1);
+    expect(lastCall?.[1]).not.toHaveProperty("date");
+  });
+
   it("keeps edits made to a pending journal entry when the create save returns", async () => {
     let resolveCreate: (entry: { id: string; date: string; title: string; body: string; mood: string; tags: string[] }) => void = () => {};
     vi.mocked(createJournalEntryAction).mockReturnValueOnce(new Promise((resolve) => { resolveCreate = resolve; }));

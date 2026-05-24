@@ -142,8 +142,10 @@ export async function createJournalEntryAction(entry: Partial<JournalEntry>) {
 
 export async function updateJournalEntryAction(entryId: string, patch: Partial<JournalEntry>) {
   const userId = await requireUserId();
+  // Journal entries are anchored to the day they happened. The dateKey is
+  // set on creation and never editable afterwards, so we deliberately
+  // ignore `patch.date` here even if the caller sends it.
   const journalEntry = await updateJournalEntry(userId, entryId, {
-    ...(patch.date ? { dateKey: patch.date } : {}),
     ...(patch.title !== undefined ? { title: patch.title } : {}),
     ...(patch.body !== undefined ? { body: patch.body } : {}),
     ...(patch.mood !== undefined ? { mood: patch.mood } : {}),
