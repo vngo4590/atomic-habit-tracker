@@ -75,6 +75,20 @@ jobs:
     if: github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     environment: dev
+    # -----------------------------------------------------------------------
+    # Serialise deploys on master. When multiple PRs merge in quick
+    # succession, GitHub Actions would otherwise start parallel deploy jobs
+    # that race on the same Azure resources (ACR push, Bicep deployment,
+    # App Service container update, DB migrations, Front Door endpoint).
+    # Using a shared concurrency group with cancel-in-progress=false makes
+    # later runs queue behind any in-flight deploy and execute one at a time.
+    # The group is keyed on the workflow + ref so master deploys serialise
+    # against each other, while workflow_dispatch runs against other refs
+    # still get their own queue.
+    # -----------------------------------------------------------------------
+    concurrency:
+      group: deploy-${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: false
     steps:
       - name: Checkout
         uses: actions/checkout@v4
