@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import type { CSSProperties } from "react";
 import { useMemo, useState } from "react";
 
+import { ExpandableText } from "@/components/ExpandableText";
 import { MarkdownText } from "@/components/MarkdownText";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { useStoreContext } from "@/components/StoreProvider";
@@ -101,8 +102,16 @@ function ReviewDisplay({
               <div className="field-label">{question}</div>
               {text ? (
                 /* Render saved answers as markdown so users can format reviews
-                   the same way they format journal entries. */
-                <MarkdownText className={styles.answer}>{text}</MarkdownText>
+                   the same way they format journal entries. Long answers get
+                   a Read more / Read less toggle so the page stays scannable
+                   when the user writes a lot. */
+                <ExpandableText
+                  source={text}
+                  previewLines={4}
+                  collapsedThreshold={220}
+                >
+                  <MarkdownText className={styles.answer}>{text}</MarkdownText>
+                </ExpandableText>
               ) : (
                 <p className={`${styles.answer} ${styles.answerEmpty}`}>Not answered yet.</p>
               )}
@@ -339,7 +348,6 @@ export default function ReviewPage() {
           {visiblePastReviews.length ? (
             visiblePastReviews.map((review) => {
               const summaryText = reviewSummary(review);
-              const truncated = summaryText.slice(0, 120) + (summaryText.length > 120 ? "..." : "");
               const hasNotes = hasReviewText(review);
               return (
                 <div key={review.weekStartKey} className="review-past-row">
@@ -347,21 +355,35 @@ export default function ReviewPage() {
                     {fmt.short(review.weekStartKey)}
                   </div>
                   <div>
-                    {/* Summary preview. Render as markdown so formatting (bold,
-                        lists, links) appears the same as in the full display.
+                    {/* Summary preview. Render the FULL source as markdown
+                        (so formatting like bold, lists, and links is never
+                        broken mid-token) and let ExpandableText visually clip
+                        the preview, giving the user a Read more/less toggle.
                         Fall back to plain text for the "No notes saved yet."
                         placeholder so it stays styled as muted italic copy. */}
                     {hasNotes ? (
-                      <MarkdownText className={styles.summary}>{truncated}</MarkdownText>
+                      <ExpandableText
+                        source={summaryText}
+                        previewLines={3}
+                        collapsedThreshold={160}
+                      >
+                        <MarkdownText className={styles.summary}>{summaryText}</MarkdownText>
+                      </ExpandableText>
                     ) : (
-                      <div className={styles.summary}>{truncated}</div>
+                      <div className={styles.summary}>{summaryText}</div>
                     )}
                     {showArchive && (
                       <div className={`muted ${styles.summaryDetail}`}>
                         <div className={styles.detailRow}>
                           <span className={styles.detailLabel}>Fix:</span>
                           {review.smallestFix ? (
-                            <MarkdownText className={styles.detailValue}>{review.smallestFix}</MarkdownText>
+                            <ExpandableText
+                              source={review.smallestFix}
+                              previewLines={3}
+                              collapsedThreshold={180}
+                            >
+                              <MarkdownText className={styles.detailValue}>{review.smallestFix}</MarkdownText>
+                            </ExpandableText>
                           ) : (
                             <span>Not answered</span>
                           )}
@@ -369,7 +391,13 @@ export default function ReviewPage() {
                         <div className={styles.detailRow}>
                           <span className={styles.detailLabel}>Vote:</span>
                           {review.identityVote ? (
-                            <MarkdownText className={styles.detailValue}>{review.identityVote}</MarkdownText>
+                            <ExpandableText
+                              source={review.identityVote}
+                              previewLines={3}
+                              collapsedThreshold={180}
+                            >
+                              <MarkdownText className={styles.detailValue}>{review.identityVote}</MarkdownText>
+                            </ExpandableText>
                           ) : (
                             <span>Not answered</span>
                           )}

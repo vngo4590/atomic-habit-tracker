@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 
+import { ExpandableText } from "@/components/ExpandableText";
 import { MarkdownText } from "@/components/MarkdownText";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { useStoreContext } from "@/components/StoreProvider";
@@ -336,7 +337,16 @@ export default function JournalPage() {
                 <div className={styles.entryHeader}>
                   <div>
                     <div className="eyebrow">{fmt.long(entry.date)}</div>
-                    <h2 className={`h3 ${styles.entryTitle}`}>{entry.title}</h2>
+                    {/* Long titles are clamped to two lines with a toggle so
+                        a sentence-style title doesn't push the body offscreen.
+                        Short titles render normally with no extra UI. */}
+                    <ExpandableText
+                      source={entry.title}
+                      previewLines={2}
+                      collapsedThreshold={80}
+                    >
+                      <h2 className={`h3 ${styles.entryTitle}`}>{entry.title}</h2>
+                    </ExpandableText>
                   </div>
                   <div className={styles.entryActions}>
                     <span className="chip">
@@ -350,7 +360,16 @@ export default function JournalPage() {
                 </div>
                 {entry.body && (
                   <div className={`muted ${styles.entryBody}`}>
-                    <MarkdownText>{entry.body}</MarkdownText>
+                    {/* Long reflections get a Read more / Read less toggle so
+                        the journal feed stays scannable when the user writes
+                        in depth. */}
+                    <ExpandableText
+                      source={entry.body}
+                      previewLines={5}
+                      collapsedThreshold={240}
+                    >
+                      <MarkdownText>{entry.body}</MarkdownText>
+                    </ExpandableText>
                   </div>
                 )}
               </motion.article>
