@@ -750,11 +750,14 @@ describe("StackDiagram", () => {
 
       const chips = screen.getAllByTestId("stack-chain-chip");
       expect(chips.length).toBe(5);
-      // Each chip's parent Reorder.Item has flexShrink: 0
+      // Each chip's parent Reorder.Item carries the .chipItem class from
+      // StackDiagram.module.css, which sets flex-shrink: 0. We assert the
+      // class rather than the computed style because jsdom does not
+      // resolve external CSS modules at runtime.
       chips.forEach((chip) => {
         const reorderItem = chip.closest("[data-testid^='stack-chip-item']");
         expect(reorderItem).toBeTruthy();
-        expect((reorderItem as HTMLElement).style.flexShrink).toBe("0");
+        expect((reorderItem as HTMLElement).className).toMatch(/chipItem/);
       });
     });
   });

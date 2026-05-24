@@ -1,0 +1,139 @@
+/* Module styles for StackCardGroup — the Apple-Wallet-style stacked card
+   used on Today for habit chains.
+
+   Dynamic data (peek depth, completion percentage) flows in as inline
+   CSS variables (--peek-depth, --peek-offset) which these classes
+   consume. The same pattern keeps the stylesheet generic across any
+   stack length the component might render. */
+
+/* ---- Habit row (used by both collapsed top card + expanded list) ----- */
+
+.row {
+  grid-template-columns: 44px minmax(0, 1fr) 80px 140px;
+  align-items: center;
+  position: relative;
+}
+
+/* Optional bottom margin between rows in the expanded list. */
+.rowSpaced {
+  margin-bottom: 8px;
+}
+
+/* Check button cell layout adjustment. */
+.checkField {
+  align-items: center;
+}
+
+/* Inner wrapper for the name/identity column. */
+.nameInner {
+  min-width: 0;
+}
+
+/* "IDENTITY · Done" caption beneath the habit name. */
+.identityLine {
+  font-size: 10.5px;
+  margin-top: 3px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.identityDone {
+  margin-left: 8px;
+  color: var(--accent);
+}
+
+/* Streak count cell. */
+.streak {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+.streakActive {
+  color: var(--ink);
+}
+
+/* Progress bar track and fill. */
+.progressTrack {
+  flex: 1;
+  height: 4px;
+  background: var(--bg-sunk);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.progressFill {
+  height: 100%;
+  background: var(--accent);
+}
+
+/* Numeric percentage label at the right of the progress bar. */
+.progressLabel {
+  font-size: 11px;
+  color: var(--ink-3);
+  min-width: 28px;
+  text-align: right;
+}
+
+/* ---- Collapsed wallet view ------------------------------------------ */
+
+/* Wrapper around the top card; pads the bottom so the peek slivers don't
+   overflow the next page section. The --peek-pad inline variable equals
+   `8 + peekCount * 8` in px. */
+.collapsed {
+  position: relative;
+  margin-bottom: var(--peek-pad);
+}
+
+/* Peek sliver behind the top card. Depth (1 or 2) is passed in as the
+   --peek-depth variable; the offset is `8 * depth` in px. */
+.peek {
+  position: absolute;
+  left: var(--peek-offset);
+  right: var(--peek-offset);
+  top: var(--peek-offset);
+  bottom: calc(-1 * var(--peek-offset));
+  background: var(--bg-elev);
+  border-radius: 12px;
+  opacity: calc(1 - var(--peek-depth) * 0.18);
+  transform: scale(calc(1 - var(--peek-depth) * 0.02));
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* The top card sits above the peek slivers. --top-z is `peekCount + 1`
+   set inline; using a CSS variable keeps the JSX free of magic numbers. */
+.top {
+  position: relative;
+  z-index: var(--top-z);
+}
+
+/* "+N more in stack" indicator beneath the collapsed top card. */
+.moreLine {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: center;
+  padding: 6px 0 0;
+  position: relative;
+  z-index: var(--more-z);
+}
+
+/* ---- Expanded view --------------------------------------------------- */
+
+.expanded {
+  margin-bottom: 8px;
+}
+
+/* The expanded "+N more" indicator (no z-index — there are no peek
+   layers in expanded mode). */
+.moreLineExpanded {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: center;
+  padding: 6px 0;
+}
+
+/* The "Collapse stack" button centered under the expanded list. */
+.collapseBtn {
+  display: block;
+  margin: 8px auto 0;
+}

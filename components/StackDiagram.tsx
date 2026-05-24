@@ -9,6 +9,8 @@ import { useStoreContext } from "@/components/StoreProvider";
 import { getStackChain, isInStack } from "@/lib/stack";
 import type { Habit } from "@/lib/types";
 
+import styles from "./StackDiagram.module.css";
+
 /**
  * Maximum number of standalone habits the picker shows by default. When the
  * filtered list exceeds this cap the user is offered two ways to find more:
@@ -54,9 +56,9 @@ function StackChipItem({
       dragListener={false}
       dragControls={dragControls}
       onDragEnd={onDragEnd}
-      style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}
+      className={styles.chipItem}
     >
-      {/* Drag handle — the only element that triggers reorder drag */}
+      {/* Drag handle — the only element that triggers reorder drag. */}
       <button
         type="button"
         className="stack-drag-handle"
@@ -85,32 +87,16 @@ function StackChipItem({
       <div
         data-testid="stack-chain-chip"
         data-chip-id={h.id}
-        className="chip"
-        style={{
-          borderColor: isCurrent ? "var(--accent)" : "var(--rule)",
-          background: isCurrent
-            ? "color-mix(in oklch, var(--accent) 12%, var(--bg-elev))"
-            : "var(--bg-sunk)",
-          fontSize: 13,
-          padding: "2px 4px 2px 8px",
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
-        }}
+        className={`chip ${styles.chip} ${isCurrent ? styles.chipCurrent : styles.chipOther}`}
       >
         <button
           type="button"
           data-testid={`stack-chip-link-${h.id}`}
           onClick={() => onChipClick(h.id)}
           aria-label={isCurrent ? `Current: ${h.name}` : `Open ${h.name}`}
-          style={{
-            all: "unset",
-            cursor: isCurrent ? "default" : "pointer",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "4px 0",
-          }}
+          className={`${styles.chipLink} ${
+            isCurrent ? styles.chipLinkCurrent : styles.chipLinkClickable
+          }`}
         >
           <span>{h.emoji}</span>
           <span>{h.name}</span>
@@ -127,27 +113,12 @@ function StackChipItem({
           onPointerDown={(event) => {
             event.stopPropagation();
           }}
-          style={{
-            all: "unset",
-            marginLeft: 2,
-            width: 18,
-            height: 18,
-            borderRadius: 9,
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 12,
-            lineHeight: 1,
-            color: "var(--ink-3)",
-            cursor: "pointer",
-          }}
+          className={styles.chipRemove}
         >
           ×
         </button>
       </div>
-      {!isLast && (
-        <span style={{ color: "var(--ink-3)", fontSize: 14, marginLeft: 4 }}>→</span>
-      )}
+      {!isLast && <span className={styles.arrow}>→</span>}
     </Reorder.Item>
   );
 }
@@ -371,7 +342,7 @@ export function StackDiagram({
     <div className="card card-pad" data-testid="stack-diagram">
       {chain.length > 1 ? (
         <>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <div className={styles.chainHeader}>
             <div className="eyebrow">
               Step {position} of {chain.length}
             </div>
@@ -408,24 +379,20 @@ export function StackDiagram({
           </Reorder.Group>
         </>
       ) : (
-        <div style={{ textAlign: "center", padding: "24px 12px" }}>
-          <p style={{ margin: 0, fontFamily: "var(--serif)", fontSize: 15, color: "var(--ink-3)", fontStyle: "italic" }}>
-            This habit is not part of a stack.
-          </p>
-          <p className="muted" style={{ fontSize: 12.5, marginTop: 6 }}>
+        <div className={styles.empty}>
+          <p className={styles.emptyLead}>This habit is not part of a stack.</p>
+          <p className={`muted ${styles.emptyHint}`}>
             Link it to another habit to build a chain.
           </p>
         </div>
       )}
 
       {linkMode ? (
-        <div style={{ marginTop: 10 }} data-testid="stack-link-picker">
-          <div className="muted" style={{ fontSize: 12, marginBottom: 8 }}>
-            Select a habit to link {linkMode}:
-          </div>
+        <div className={styles.picker} data-testid="stack-link-picker">
+          <div className={`muted ${styles.pickerPrompt}`}>Select a habit to link {linkMode}:</div>
           <input
             type="search"
-            className="input"
+            className={`input ${styles.pickerSearch}`}
             placeholder="Search habits..."
             value={query}
             onChange={(event) => {
@@ -435,14 +402,12 @@ export function StackDiagram({
               setExpanded(false);
             }}
             data-testid="stack-link-search"
-            style={{ width: "100%", marginBottom: 10 }}
             aria-label="Search habits to link"
             autoFocus
           />
           {availableHabits.length === 0 ? (
             <div
-              className="muted"
-              style={{ fontSize: 12.5, padding: "8px 0" }}
+              className={`muted ${styles.pickerEmpty}`}
               data-testid="stack-link-empty"
             >
               {query.trim()
@@ -453,10 +418,7 @@ export function StackDiagram({
             </div>
           ) : (
             <>
-              <div
-                style={{ display: "flex", flexWrap: "wrap", gap: 8, maxHeight: 220, overflowY: "auto" }}
-                data-testid="stack-link-options"
-              >
+              <div className={styles.pickerOptions} data-testid="stack-link-options">
                 {visibleHabits.map((h) => (
                   <button
                     key={h.id}
@@ -472,8 +434,7 @@ export function StackDiagram({
               {hiddenCount > 0 && (
                 <button
                   type="button"
-                  className="btn btn-sm btn-ghost"
-                  style={{ marginTop: 8 }}
+                  className={`btn btn-sm btn-ghost ${styles.pickerToggle}`}
                   data-testid="stack-link-show-all"
                   onClick={() => setExpanded(true)}
                   aria-expanded={false}
@@ -484,8 +445,7 @@ export function StackDiagram({
               {expanded && availableHabits.length > STACK_PICKER_DEFAULT_LIMIT && (
                 <button
                   type="button"
-                  className="btn btn-sm btn-ghost"
-                  style={{ marginTop: 8 }}
+                  className={`btn btn-sm btn-ghost ${styles.pickerToggle}`}
                   data-testid="stack-link-show-less"
                   onClick={() => setExpanded(false)}
                   aria-expanded={true}
@@ -496,8 +456,7 @@ export function StackDiagram({
             </>
           )}
           <button
-            className="btn btn-sm btn-ghost"
-            style={{ marginTop: 10 }}
+            className={`btn btn-sm btn-ghost ${styles.pickerCancel}`}
             onClick={() => {
               setLinkMode(null);
               setQuery("");
@@ -508,7 +467,7 @@ export function StackDiagram({
           </button>
         </div>
       ) : (
-        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+        <div className={styles.linkActions}>
           <button className="btn btn-sm" onClick={() => setLinkMode("after")}>
             Link after…
           </button>
