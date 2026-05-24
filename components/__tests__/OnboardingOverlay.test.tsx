@@ -23,20 +23,38 @@ describe("OnboardingOverlay business logic", () => {
     expect(screen.getByText("Begin")).toBeTruthy();
   });
 
-  it("shows progress dots that indicate the current step", () => {
+  it("shows three progress dots — one per onboarding step", () => {
     // Given the onboarding overlay is rendered
     const onComplete = vi.fn();
     const { container } = render(<OnboardingOverlay onComplete={onComplete} />);
 
-    // When on step 1 (index 0)
-    // Then there are 4 progress indicator bars (one per onboarding step).
-    // We query by the data-testid the component exposes so the test stays
-    // stable across styling refactors.
+    // When inspecting the progress indicators
+    // Then there are exactly 3 progress dots (Welcome / Identity / Ready),
+    // matching the number of steps after the name step was removed.
     const bars = container.querySelectorAll('[data-testid="onboarding-progress-dot"]');
-    expect(bars.length).toBe(4);
+    expect(bars.length).toBe(3);
   });
 
-  it("advances to the next step when the action button is clicked", async () => {
+  it("does not render a name input on any step", async () => {
+    // Given onboarding is rendered (regression guard — registration already
+    // collected the user's name, so the overlay must never ask for it).
+    const onComplete = vi.fn();
+    render(<OnboardingOverlay onComplete={onComplete} />);
+
+    // Then there is no "Your name" input on the Welcome step
+    expect(screen.queryByPlaceholderText("Your name")).toBeNull();
+
+    // When the user advances to the next step
+    fireEvent.click(screen.getByText("Begin"));
+
+    // Then still no name input is shown on subsequent steps
+    await waitFor(() => {
+      expect(screen.getByText("Identity")).toBeTruthy();
+    });
+    expect(screen.queryByPlaceholderText("Your name")).toBeNull();
+  });
+
+  it("advances from Welcome to Identity when Begin is clicked", async () => {
     // Given the onboarding overlay is on the Welcome step
     const onComplete = vi.fn();
     render(<OnboardingOverlay onComplete={onComplete} />);
@@ -44,66 +62,30 @@ describe("OnboardingOverlay business logic", () => {
     // When the user clicks Begin
     fireEvent.click(screen.getByText("Begin"));
 
-    // Then the Name step is shown
-    await waitFor(() => {
-      expect(screen.getByText("Name")).toBeTruthy();
-      expect(screen.getByText("What should we call you?")).toBeTruthy();
-    });
-  });
-
-  it("shows a name input field on step 2", async () => {
-    // Given the user has advanced to step 2
-    const onComplete = vi.fn();
-    render(<OnboardingOverlay onComplete={onComplete} />);
-    fireEvent.click(screen.getByText("Begin"));
-
-    // Then a text input for the name is visible
-    await waitFor(() => {
-      expect(screen.getByPlaceholderText("Your name")).toBeTruthy();
-    });
-  });
-
-  it("does not allow advancing past step 2 without entering a name", async () => {
-    // Given the user is on the Name step and the input is empty
-    const onComplete = vi.fn();
-    render(<OnboardingOverlay onComplete={onComplete} />);
-    fireEvent.click(screen.getByText("Begin"));
-
-    await waitFor(() => {
-      expect(screen.getByPlaceholderText("Your name")).toBeTruthy();
-    });
-
-    // When the user clicks Continue without typing a name
-    fireEvent.click(screen.getByText("Continue"));
-
-    // Then the user is still on the Name step
-    await waitFor(() => {
-      expect(screen.getByText("Name")).toBeTruthy();
-      expect(screen.getByPlaceholderText("Your name")).toBeTruthy();
-    });
-
-    // And onComplete was not called
-    expect(onComplete).not.toHaveBeenCalled();
-  });
-
-  it("allows advancing past step 2 after entering a name", async () => {
-    // Given the user is on the Name step
-    const onComplete = vi.fn();
-    render(<OnboardingOverlay onComplete={onComplete} />);
-    fireEvent.click(screen.getByText("Begin"));
-
-    await waitFor(() => {
-      expect(screen.getByPlaceholderText("Your name")).toBeTruthy();
-    });
-
-    // When the user types their name and clicks Continue
-    fireEvent.change(screen.getByPlaceholderText("Your name"), { target: { value: "Alice" } });
-    fireEvent.click(screen.getByText("Continue"));
-
-    // Then the Identity step is shown
+    // Then the Identity step is shown next (no Name step in between)
     await waitFor(() => {
       expect(screen.getByText("Identity")).toBeTruthy();
       expect(screen.getByText("Habits are identity votes.")).toBeTruthy();
+    });
+  });
+
+  it("advances from Identity to Ready when Continue is clicked", async () => {
+    // Given the user has reached the Identity step
+    const onComplete = vi.fn();
+    render(<OnboardingOverlay onComplete={onComplete} />);
+    fireEvent.click(screen.getByText("Begin"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Identity")).toBeTruthy();
+    });
+
+    // When the user clicks Continue
+    fireEvent.click(screen.getByText("Continue"));
+
+    // Then the Ready step is shown
+    await waitFor(() => {
+      expect(screen.getByText("Ready")).toBeTruthy();
+      expect(screen.getByText("Start with the smallest useful action.")).toBeTruthy();
     });
   });
 
@@ -115,55 +97,31 @@ describe("OnboardingOverlay business logic", () => {
     // When the user clicks Skip
     fireEvent.click(screen.getByText("Skip"));
 
-    // Then onComplete is called immediately
+    // Then onComplete is called immediately with no arguments
     expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(onComplete).toHaveBeenCalledWith();
   });
 
-  it("passes the entered name to onComplete when finishing from the final step", async () => {
-    // Given the user has progressed through onboarding and entered a name
+  it("calls onComplete when Start is clicked on the final step", async () => {
+    // Given the user has progressed through all three steps
     const onComplete = vi.fn();
     render(<OnboardingOverlay onComplete={onComplete} />);
 
-    // Advance through all steps
     fireEvent.click(screen.getByText("Begin"));
-
-    await waitFor(() => {
-      expect(screen.getByPlaceholderText("Your name")).toBeTruthy();
-    });
-
-    fireEvent.change(screen.getByPlaceholderText("Your name"), { target: { value: "Alice" } });
-    fireEvent.click(screen.getByText("Continue"));
-
     await waitFor(() => {
       expect(screen.getByText("Identity")).toBeTruthy();
     });
 
     fireEvent.click(screen.getByText("Continue"));
-
-    // Then the Ready step is visible
     await waitFor(() => {
       expect(screen.getByText("Ready")).toBeTruthy();
-      expect(screen.getByText("Start with the smallest useful action.")).toBeTruthy();
     });
 
     // When the user clicks Start on the final step
     fireEvent.click(screen.getByText("Start"));
 
-    // Then onComplete is called with the entered name
+    // Then onComplete is called exactly once with no arguments
     expect(onComplete).toHaveBeenCalledTimes(1);
-    expect(onComplete).toHaveBeenCalledWith("Alice");
-  });
-
-  it("passes undefined to onComplete when finishing without a name", () => {
-    // Given the user skips onboarding from the first step
-    const onComplete = vi.fn();
-    render(<OnboardingOverlay onComplete={onComplete} />);
-
-    // When the user clicks Skip immediately
-    fireEvent.click(screen.getByText("Skip"));
-
-    // Then onComplete is called with undefined (no name provided)
-    expect(onComplete).toHaveBeenCalledTimes(1);
-    expect(onComplete).toHaveBeenCalledWith(undefined);
+    expect(onComplete).toHaveBeenCalledWith();
   });
 });

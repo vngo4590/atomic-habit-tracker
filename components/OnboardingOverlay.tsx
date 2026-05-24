@@ -7,20 +7,16 @@ import { slideUpVariants } from "@/lib/animations";
 
 import styles from "./OnboardingOverlay.module.css";
 
-/** Ordered onboarding steps. Each step has its own eyebrow/title/body and
-    the button label at the bottom of the card. The body is shown once. */
+/** Ordered onboarding steps shown after a user signs up. Each step has its
+    own eyebrow/title/body and the button label at the bottom of the card.
+    The name step was removed because the user's name is already captured
+    during registration, so prompting again would be redundant. */
 const STEPS = [
   {
     eyebrow: "Welcome",
     title: "Build evidence, one vote at a time.",
     body: "Atomicly turns each habit check-in into a visible vote for the person you are becoming.",
     action: "Begin",
-  },
-  {
-    eyebrow: "Name",
-    title: "What should we call you?",
-    body: "This stays in this browser and helps personalize the practice.",
-    action: "Continue",
   },
   {
     eyebrow: "Identity",
@@ -38,35 +34,23 @@ const STEPS = [
 
 /**
  * OnboardingOverlay — first-run multi-step intro shown on top of the
- * Today page. Users can either step through it (Begin → Continue → …) or
- * Skip at any time. The "name" step is skipped automatically when the
- * user already registered with a name.
+ * Today page right after a user has signed up. The user can either step
+ * through the cards (Begin → Continue → Start) or Skip at any time.
+ *
+ * The user's name is collected at registration, so this overlay no longer
+ * asks for it. `onComplete` is therefore a zero-arg callback — it just
+ * signals "the overlay should close and never show again for this user".
  */
-export function OnboardingOverlay({
-  onComplete,
-  initialName,
-}: {
-  onComplete: (name?: string) => void;
-  initialName?: string;
-}) {
-  // If the user already provided a name during registration, skip the name step.
-  const hasName = Boolean(initialName?.trim());
+export function OnboardingOverlay({ onComplete }: { onComplete: () => void }) {
   const [step, setStep] = useState(0);
-  const [name, setName] = useState(initialName ?? "");
   const current = STEPS[step];
-  // Block "Continue" on the name step until the user enters a name.
-  const blocked = step === 1 && !name.trim();
 
-  // Advance to the next step, completing onboarding at the end. Honours the
-  // hasName shortcut by skipping past the name step on step 0.
+  // Advance to the next step, completing onboarding when we reach the end
+  // of the list. Kept as a single intent-named handler so call sites read
+  // as "Continue" / "Start" rather than raw setState calls.
   const next = () => {
-    if (blocked) return;
     if (step === STEPS.length - 1) {
-      onComplete(name.trim() || undefined);
-      return;
-    }
-    if (step === 0 && hasName) {
-      setStep(2);
+      onComplete();
       return;
     }
     setStep((value) => value + 1);
@@ -108,32 +92,16 @@ export function OnboardingOverlay({
           <div className="eyebrow">{current.eyebrow}</div>
           <h2 className={`h1 ${styles.title}`}>{current.title}</h2>
           <p className={`lede ${styles.body}`}>{current.body}</p>
-          {step === 1 && (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
-            >
-              <input
-                className="input"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Your name"
-                autoFocus
-              />
-            </motion.div>
-          )}
           <div className={styles.footer}>
             <motion.button
               className="btn"
-              onClick={() => onComplete(name.trim() || undefined)}
+              onClick={() => onComplete()}
               whileTap={{ scale: 0.97 }}
             >
               Skip
             </motion.button>
             <motion.button
               className="btn btn-primary"
-              disabled={blocked}
               onClick={next}
               whileHover={{ y: -1 }}
               whileTap={{ scale: 0.97 }}

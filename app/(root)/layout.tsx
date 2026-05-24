@@ -21,7 +21,7 @@ export default async function RootGroupLayout({ children }: { children: ReactNod
         <main className="main">
           <div className="main-inner">{children}</div>
         </main>
-        <OnboardingGate userName={user.name} />
+        <OnboardingGate />
         <Toast />
       </div>
     </StoreProvider>
