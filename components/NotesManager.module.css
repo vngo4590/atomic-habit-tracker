@@ -101,9 +101,11 @@
   margin-bottom: 6px;
 }
 
-/* The actual note paragraph. */
+/* The rendered note body. MarkdownText wraps the content in a
+   `.markdown-body` div whose `:last-child { margin-bottom: 0 }` rule already
+   neutralises the final paragraph's bottom margin, so we don't reset
+   margins here — we just align font sizing with the card's compact look. */
 .noteText {
-  margin: 0;
   font-size: 14px;
   line-height: 1.5;
 }

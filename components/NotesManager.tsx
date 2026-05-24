@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { IconCheck, IconEdit, IconTrash } from "@/components/Icons";
+import { MarkdownText } from "@/components/MarkdownText";
 import { fmt, todayKey } from "@/lib/helpers";
 import type { Habit } from "@/lib/types";
 
@@ -190,7 +191,11 @@ export function NotesManager({
                       </div>
                     </div>
                   ) : (
-                    <p className={styles.noteText}>{note.body}</p>
+                    /* Render saved notes as markdown so users get the same
+                       formatting affordances (bold, lists, links, code) they
+                       have in the journal and weekly review. The composer is
+                       still a plain textarea — markdown shines on read. */
+                    <MarkdownText className={styles.noteText}>{note.body}</MarkdownText>
                   )}
                 </div>
                 {!bulkMode && (

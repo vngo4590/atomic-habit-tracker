@@ -251,6 +251,35 @@ describe("UI regressions", () => {
     expect(onUpdateNotes).toHaveBeenCalledWith([{ id: "note_1", body: "Updated note", createdAt: "2030-01-03" }]);
   });
 
+  // Given: a saved habit note containing markdown formatting (bold, list, link)
+  // When: NotesManager renders the read view
+  // Then: each markdown token becomes its matching HTML element so users see
+  //       the formatted result the same way they do on the journal/review
+  //       surfaces. This proves the markdown render is wired for habit notes.
+  it("renders saved habit notes as markdown (bold, list, link)", () => {
+    render(
+      <NotesManager
+        habit={makeHabit({
+          notes: [
+            {
+              id: "note_md",
+              createdAt: "2030-01-03",
+              body: "**bold lead**\n\n- step one\n- step two\n\n[atomicly](https://atomicly.local)",
+            },
+          ],
+        })}
+        onUpdateNotes={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("bold lead").tagName).toBe("STRONG");
+    expect(screen.getByText("step one").tagName).toBe("LI");
+    expect(screen.getByText("step two").tagName).toBe("LI");
+    const link = screen.getByText("atomicly");
+    expect(link.tagName).toBe("A");
+    expect(link.getAttribute("href")).toBe("https://atomicly.local");
+  });
+
   it("allows habit journal entries to edit mood emoji and note", () => {
     const onSaveEntry = vi.fn();
     render(
