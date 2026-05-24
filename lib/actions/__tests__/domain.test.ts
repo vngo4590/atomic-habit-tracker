@@ -129,6 +129,21 @@ describe("domain server actions", () => {
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/review");
   });
 
+  it("strips date from journal update patches so entries stay anchored to their original day", async () => {
+    // Given: an existing journal entry the server can update
+    const entry = testJournalEntry({ id: "journal_2" });
+    mocks.updateJournalEntry.mockResolvedValue(entry);
+    const { updateJournalEntryAction } = await import("@/lib/actions/domain");
+
+    // When: a caller sends a patch that includes a new date alongside other fields
+    await updateJournalEntryAction("journal_2", { date: "2099-12-31", title: "Edited", mood: "good" });
+
+    // Then: only the editable fields are forwarded to the repository — dateKey must not appear
+    expect(mocks.updateJournalEntry).toHaveBeenCalledWith("user_1", "journal_2", { title: "Edited", mood: "good" });
+    const repoCall = mocks.updateJournalEntry.mock.calls.at(-1);
+    expect(repoCall?.[2]).not.toHaveProperty("dateKey");
+  });
+
   it("persists identity, preferences, lessons, and formation verdicts through user-scoped repositories", async () => {
     mocks.saveIdentity.mockResolvedValue(testIdentity());
     mocks.savePreferences.mockResolvedValue(testPreferences({ lessonMode: "random" }));

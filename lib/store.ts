@@ -467,22 +467,28 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
 
   const updateJournal = useCallback((id: string, patch: Partial<JournalEntry>) => {
     const version = ++updateJournalVersion.current;
+    // Journal entries are anchored to the day they happened — the date is
+    // assigned at creation and is never editable afterwards. Strip any
+    // incoming `date` from the patch defensively so neither the optimistic
+    // cache nor the server mutation can move an entry to a different day.
+    const { date: _ignoredDate, ...safePatch } = patch;
+    void _ignoredDate;
     if (id.startsWith("pending-")) {
       pendingJournalPatches.current.set(id, {
         ...(pendingJournalPatches.current.get(id) ?? {}),
-        ...patch,
+        ...safePatch,
       });
     }
     setJournal((currentJournal) =>
-      currentJournal.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry)),
+      currentJournal.map((entry) => (entry.id === id ? { ...entry, ...safePatch } : entry)),
     );
 
-    void updateJournalEntryAction(id, patch).then((saved) => {
+    void updateJournalEntryAction(id, safePatch).then((saved) => {
       if (!saved || version !== updateJournalVersion.current) {
         return;
       }
       setJournal((currentJournal) =>
-        currentJournal.map((entry) => (entry.id === id ? { ...entry, ...saved, ...patch } : entry)),
+        currentJournal.map((entry) => (entry.id === id ? { ...entry, ...saved, ...safePatch } : entry)),
       );
     });
   }, []);
