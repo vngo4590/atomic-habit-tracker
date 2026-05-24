@@ -41,16 +41,6 @@
   margin-top: 16px;
 }
 
-/* "Time block" label spacing. */
-.timeLabel {
-  margin-top: 18px;
-}
-
-/* Custom time-block input. */
-.customTime {
-  margin-top: 10px;
-}
-
 /* Page footer with Cancel + Create buttons. */
 .footer {
   display: flex;

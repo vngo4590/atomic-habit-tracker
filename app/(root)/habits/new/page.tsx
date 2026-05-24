@@ -18,9 +18,6 @@ const PRESETS = {
   three: { label: "3x a week", days: ["Mon", "Wed", "Fri"] },
   custom: { label: "Custom", days: [] },
 } as const;
-const TIME_BLOCKS = ["Morning", "Afternoon", "Evening"] as const;
-const CUSTOM_TIME_BLOCK = "Custom";
-
 type Preset = keyof typeof PRESETS;
 
 /**
@@ -131,7 +128,6 @@ export default function NewHabitPage() {
     preset === "custom"
       ? formatScheduleLabel(customDays.join(", ") || "Custom")
       : formatScheduleLabel(PRESETS[preset].label);
-  const selectedTimeBlock = TIME_BLOCKS.some((item) => item === time) ? time : CUSTOM_TIME_BLOCK;
 
   const toggleDay = (day: string) => {
     setPreset("custom");
@@ -229,28 +225,6 @@ export default function NewHabitPage() {
               </motion.button>
             ))}
           </div>
-          <label className={`field-label ${styles.timeLabel}`}>Time block</label>
-          <select
-            className="input"
-            value={selectedTimeBlock}
-            onChange={(event) => {
-              const next = event.target.value;
-              setTime(next === CUSTOM_TIME_BLOCK ? "" : next);
-            }}
-          >
-            {TIME_BLOCKS.map((block) => (
-              <option key={block}>{block}</option>
-            ))}
-            <option>{CUSTOM_TIME_BLOCK}</option>
-          </select>
-          {selectedTimeBlock === CUSTOM_TIME_BLOCK && (
-            <input
-              className={`input ${styles.customTime}`}
-              value={time}
-              onChange={(event) => setTime(event.target.value)}
-              placeholder="After school, lunch break, commute..."
-            />
-          )}
         </section>
       </div>
 
