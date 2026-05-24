@@ -280,6 +280,43 @@ describe("UI regressions", () => {
     expect(link.getAttribute("href")).toBe("https://atomicly.local");
   });
 
+  // Given: a saved habit note whose body exceeds the ExpandableText threshold
+  // When: NotesManager renders the read view
+  // Then: a Read more toggle appears so the user can collapse/expand a long
+  //       note without losing it in the list. Clicking flips the label.
+  it("clamps long habit notes with a Read more / Read less toggle", () => {
+    const longBody = "A really long habit note. ".repeat(15); // ~390 chars
+    render(
+      <NotesManager
+        habit={makeHabit({
+          notes: [{ id: "note_long", createdAt: "2030-01-03", body: longBody }],
+        })}
+        onUpdateNotes={vi.fn()}
+      />,
+    );
+
+    const toggle = screen.getByRole("button", { name: /read more/i });
+    expect(toggle).toBeTruthy();
+    fireEvent.click(toggle);
+    expect(screen.getByRole("button", { name: /read less/i })).toBeTruthy();
+  });
+
+  // Given: a short habit note well under the ExpandableText threshold
+  // When: NotesManager renders the read view
+  // Then: no Read more toggle is rendered, keeping short notes uncluttered.
+  it("does not add a toggle to short habit notes", () => {
+    render(
+      <NotesManager
+        habit={makeHabit({
+          notes: [{ id: "note_short", createdAt: "2030-01-03", body: "quick win today" }],
+        })}
+        onUpdateNotes={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: /read more/i })).toBeNull();
+  });
+
   it("allows habit journal entries to edit mood emoji and note", () => {
     const onSaveEntry = vi.fn();
     render(
