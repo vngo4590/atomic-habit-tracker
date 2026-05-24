@@ -41,6 +41,16 @@ describe("NewHabitPage", () => {
     expect(screen.getByRole("button", { name: "Sat" })).toBeTruthy();
   });
 
+  it("renders a legend explaining scheduled vs off day pills", () => {
+    // Given: the create-habit page mounted
+    render(<NewHabitPage />);
+
+    // Then: the day-selector legend is present with both states labelled
+    expect(screen.getByLabelText("Day selector legend")).toBeTruthy();
+    expect(screen.getByText("Scheduled")).toBeTruthy();
+    expect(screen.getByText("Off")).toBeTruthy();
+  });
+
   it("keeps custom sentence time blocks visible in the time block selector", () => {
     const { container } = render(<NewHabitPage />);
     const timeSelect = container.querySelector("select") as HTMLSelectElement;
