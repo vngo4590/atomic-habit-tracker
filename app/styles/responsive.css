@@ -37,12 +37,14 @@
     display: none;
   }
 
-  /* Fixed hamburger button that opens the mobile navigation drawer. */
+  /* Fixed hamburger button that opens the mobile navigation drawer.
+     Anchored below the device safe-area inset so it never hides behind a
+     notch or status bar on iOS/Android. */
   .mobile-menu-btn {
     position: fixed;
     z-index: 80;
-    top: 12px;
-    left: 12px;
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    left: calc(12px + env(safe-area-inset-left, 0px));
     width: 40px;
     height: 40px;
     border-radius: var(--r-md);
@@ -111,7 +113,10 @@
     height: 14px;
   }
 
-  /* Main column on mobile — full bleed, looser padding. */
+  /* Main column on mobile — full bleed, looser padding.
+     Top padding reserves room for the fixed hamburger button (40px square
+     anchored at top:12px), plus the device safe-area inset on notched
+     phones, so page headings never sit behind the menu trigger. */
   .main {
     overflow: visible;
     min-width: 0;
@@ -119,7 +124,7 @@
   .main-inner {
     width: 100%;
     max-width: none;
-    padding: 22px 16px 28px;
+    padding: calc(64px + env(safe-area-inset-top, 0px)) 16px 28px;
     overflow-x: clip;
   }
 
