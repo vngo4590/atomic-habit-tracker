@@ -245,6 +245,7 @@ When working as (or with) an AI agent:
   - `atomic-habit-test-engineer` for tests.
   - `atomic-habit-ui-animation` for motion work.
   - `atomic-habit-forward-deploy-engineer` for infra/deployment concerns.
+  - `atomic-habit-logging` for logging conventions, redaction rules, and event taxonomy.
 - For non-trivial work (multiple files, architectural decisions), consult the `rubber-duck` agent **before** implementing — design feedback is cheap at the plan stage and expensive after the code is written.
 - Use the OpenSpec skills (`openspec-propose`, `openspec-apply-change`, `openspec-archive-change`, `openspec-explore`) when the work spans multiple sessions or needs upfront design.
 

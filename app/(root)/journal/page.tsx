@@ -1,13 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { ExpandableText } from "@/components/ExpandableText";
 import { MarkdownText } from "@/components/MarkdownText";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { useStoreContext } from "@/components/StoreProvider";
 import { fmt } from "@/lib/helpers";
+import { clientLogger } from "@/lib/logger-client";
 
 import styles from "./page.module.css";
 
@@ -64,6 +65,10 @@ export default function JournalPage() {
   const [customLabel, setCustomLabel] = useState("");
   const [entryOverrides, setEntryOverrides] = useState<Record<string, Partial<(typeof journal)[number]>>>({});
 
+  useEffect(() => {
+    clientLogger.info("Page viewed", { page: "journal" });
+  }, []);
+
   // Merge any local optimistic overrides into the rendered entries.
   const entries = useMemo(
     () =>
@@ -74,6 +79,7 @@ export default function JournalPage() {
   );
 
   const selectMood = (key: string) => {
+    clientLogger.info("Journal mood selected", { page: "journal", mood: key });
     setMood(key);
     setShowEmojiPicker(false);
     setCustomEmoji("");
@@ -110,6 +116,11 @@ export default function JournalPage() {
   const applyCustomMood = () => {
     const parts = [customEmoji, customLabel.trim()].filter(Boolean);
     if (parts.length === 0) return;
+    clientLogger.info("Journal custom mood selected", {
+      page: "journal",
+      hasEmoji: Boolean(customEmoji),
+      hasLabel: Boolean(customLabel.trim()),
+    });
     setMood(parts.join(" "));
     setShowEmojiPicker(false);
     setCustomEmoji("");
@@ -159,6 +170,13 @@ export default function JournalPage() {
   };
 
   const save = () => {
+    clientLogger.info("Journal entry submission attempted", {
+      page: "journal",
+      mode: editingId ? "edit" : "create",
+      hasTitle: Boolean(title.trim()),
+      hasBody: Boolean(body.trim()),
+      moodType: isPreset(mood) ? "preset" : "custom",
+    });
     if (!title.trim()) return;
     if (editingId) {
       const patch = { title: title.trim(), body: body.trim(), mood };

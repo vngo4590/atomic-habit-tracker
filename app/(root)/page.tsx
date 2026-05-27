@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { CompletionRing } from "@/components/CompletionRing";
 import { IconCheck, IconClose, IconPlus, IconSearch } from "@/components/Icons";
@@ -12,6 +12,7 @@ import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContai
 import { useStoreContext } from "@/components/StoreProvider";
 import { dateAdd, fmt, todayKey } from "@/lib/helpers";
 import { useMotionReduced } from "@/lib/hooks/useMotionReduced";
+import { clientLogger } from "@/lib/logger-client";
 import { isScheduledForDate } from "@/lib/schedule";
 import { getChainFrom, getStackRoot, isInStack } from "@/lib/stack";
 import { completionRate } from "@/lib/store";
@@ -38,6 +39,10 @@ export default function TodayPage() {
   const [moodHabit, setMoodHabit] = useState<Habit | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const scheduledToday = habits.filter((habit) => isScheduledForDate(today, habit.schedule));
+
+  useEffect(() => {
+    clientLogger.info("Page viewed", { page: "today" });
+  }, []);
   const scheduledUndone = scheduledToday.filter((habit) => !habit.history[today]);
 
   /**
@@ -122,6 +127,15 @@ export default function TodayPage() {
   }, [habits, today]);
 
   const topHabit = [...habits].sort((a, b) => streak(b) - streak(a))[0];
+
+  const handleSearchChange = (query: string) => {
+    const hasQuery = Boolean(query.trim());
+    const hadQuery = Boolean(searchQuery.trim());
+    if (hasQuery !== hadQuery) {
+      clientLogger.info("Habit search", { page: "today", hasQuery });
+    }
+    setSearchQuery(query);
+  };
 
   /**
    * Render one habit row (used in both the search-results list and the
@@ -227,13 +241,13 @@ export default function TodayPage() {
               className={`input ${styles.searchInput}`}
               placeholder="Search habits..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               // Width is dynamic; passed through as --search-w so the
               // .searchInput class stays static.
               style={{ ["--search-w" as string]: searchQuery ? "220px" : "160px" }}
             />
             {searchQuery && (
-              <button onClick={() => setSearchQuery("")} className={styles.searchClear}>
+              <button onClick={() => handleSearchChange("")} className={styles.searchClear}>
                 <IconClose className={styles.searchClearIcon} />
               </button>
             )}

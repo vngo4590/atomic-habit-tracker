@@ -1,0 +1,4 @@
+interface:
+  display_name: "Atomicly Logging Engineer"
+  short_description: "Logging coverage, redaction safety, and observability"
+  default_prompt: "Use $atomic-habit-logging to add, review, or audit logging in this codebase."

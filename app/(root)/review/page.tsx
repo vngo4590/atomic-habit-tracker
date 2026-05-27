@@ -2,13 +2,14 @@
 
 import { motion } from "framer-motion";
 import type { CSSProperties } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { ExpandableText } from "@/components/ExpandableText";
 import { MarkdownText } from "@/components/MarkdownText";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { useStoreContext } from "@/components/StoreProvider";
 import { dateAdd, fmt, todayKey } from "@/lib/helpers";
+import { clientLogger } from "@/lib/logger-client";
 import type { WeeklyReview, WeeklyReviewAnswers } from "@/lib/types";
 
 import styles from "./page.module.css";
@@ -148,6 +149,10 @@ export default function ReviewPage() {
   const [showArchive, setShowArchive] = useState(false);
   const [archivePage, setArchivePage] = useState(0);
   const pastReviews = weeklyReviews.filter((review) => review.weekStartKey !== weekStartKey);
+
+  useEffect(() => {
+    clientLogger.info("Page viewed", { page: "review" });
+  }, []);
   const visiblePastReviews = showArchive
     ? pastReviews.slice(archivePage * 5, archivePage * 5 + 5)
     : pastReviews.slice(0, 5);
@@ -170,6 +175,11 @@ export default function ReviewPage() {
   };
   const saveReview = () => {
     const targetWeekStartKey = editingWeekStartKey || weekStartKey;
+    clientLogger.info("Weekly review submission attempted", {
+      page: "review",
+      weekStartKey: targetWeekStartKey,
+      answeredCount: questionFields.filter((field) => Boolean(answers[field].trim())).length,
+    });
     setWeeklyReview(targetWeekStartKey, toReviewAnswers(answers));
     setEditingWeekStartKey(null);
     showToast("Weekly review saved", "Reflection captured to your account");

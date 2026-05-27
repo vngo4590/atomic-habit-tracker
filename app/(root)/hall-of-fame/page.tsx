@@ -1,12 +1,13 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { FormationQuestionnaire } from "@/components/FormationQuestionnaire";
 import { useStoreContext } from "@/components/StoreProvider";
 import { todayKey } from "@/lib/helpers";
+import { clientLogger } from "@/lib/logger-client";
 import type { FormationVerdict, Habit } from "@/lib/types";
 
 import styles from "./page.module.css";
@@ -42,6 +43,10 @@ export default function HallOfFamePage() {
   const today = todayKey();
   const reviewedIds = new Set(verdicts.map((verdict) => verdict.habitId));
 
+  useEffect(() => {
+    clientLogger.info("Page viewed", { page: "hall-of-fame" });
+  }, []);
+
   const ready = habits.filter(
     (habit) => daysSince(habit.createdAt) >= FORMATION_DAYS && !reviewedIds.has(habit.id),
   );
@@ -64,6 +69,12 @@ export default function HallOfFamePage() {
   );
 
   const saveVerdict = (verdict: FormationVerdict) => {
+    clientLogger.info("Formation verdict submitted", {
+      page: "hall-of-fame",
+      habitId: verdict.habitId,
+      formed: verdict.formed,
+      score: verdict.score,
+    });
     saveFormationVerdict(verdict);
     setReviewing(null);
   };
@@ -101,7 +112,13 @@ export default function HallOfFamePage() {
                     </div>
                     <motion.button
                       className="btn btn-primary"
-                      onClick={() => setReviewing(habit)}
+                      onClick={() => {
+                        clientLogger.info("Formation review opened", {
+                          page: "hall-of-fame",
+                          habitId: habit.id,
+                        });
+                        setReviewing(habit);
+                      }}
                       whileHover={{ y: -1 }}
                       whileTap={{ scale: 0.97 }}
                     >

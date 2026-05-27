@@ -1,11 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { IconClose } from "@/components/Icons";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { useStoreContext } from "@/components/StoreProvider";
+import { clientLogger } from "@/lib/logger-client";
 
 import styles from "./page.module.css";
 
@@ -20,6 +21,10 @@ export default function IdentityPage() {
   const [editingStatement, setEditingStatement] = useState(false);
   const [statementDraft, setStatementDraft] = useState(identity.statement);
   const [newValue, setNewValue] = useState("");
+
+  useEffect(() => {
+    clientLogger.info("Page viewed", { page: "identity" });
+  }, []);
 
   // Aggregate habit check-ins grouped by identity label, sorted descending.
   const ledger = useMemo(() => {
@@ -36,16 +41,29 @@ export default function IdentityPage() {
 
   const addValue = () => {
     const value = newValue.trim();
+    clientLogger.info("Identity value save attempted", {
+      page: "identity",
+      canSave: Boolean(value) && !identity.values.includes(value),
+      valueCount: identity.values.length,
+    });
     if (!value || identity.values.includes(value)) return;
     setIdentity({ ...identity, values: [...identity.values, value] });
     setNewValue("");
   };
 
   const removeValue = (value: string) => {
+    clientLogger.info("Identity value removed", {
+      page: "identity",
+      valueCount: identity.values.length,
+    });
     setIdentity({ ...identity, values: identity.values.filter((item) => item !== value) });
   };
 
   const saveStatement = () => {
+    clientLogger.info("Identity statement saved", {
+      page: "identity",
+      changed: statementDraft !== identity.statement,
+    });
     if (statementDraft !== identity.statement) {
       setIdentity({ ...identity, statement: statementDraft });
     }
@@ -95,6 +113,7 @@ export default function IdentityPage() {
           ) : (
             <button
               onClick={() => {
+                clientLogger.info("Identity statement edit opened", { page: "identity" });
                 setStatementDraft(identity.statement);
                 setEditingStatement(true);
               }}

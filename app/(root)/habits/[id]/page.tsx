@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import type { CSSProperties } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
 import { ContractSheet } from "@/components/ContractSheet";
@@ -22,7 +22,9 @@ import { MoodCheckSheet } from "@/components/MoodCheckSheet";
 import { NotesManager } from "@/components/NotesManager";
 import { useStoreContext } from "@/components/StoreProvider";
 import { todayKey } from "@/lib/helpers";
+import { clientLogger } from "@/lib/logger-client";
 import { formatScheduleLabel } from "@/lib/schedule";
+import type { CheckIn, Habit } from "@/lib/types";
 
 import styles from "./page.module.css";
 
@@ -113,7 +115,12 @@ export default function HabitDetailPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const today = todayKey();
   const habitId = params.id;
+  const viewedHabitIdRef = useRef(habitId);
   const habit = store.habits.find((item) => item.id === habitId);
+
+  useEffect(() => {
+    clientLogger.info("Page viewed", { page: "habit-detail", habitId: viewedHabitIdRef.current });
+  }, []);
 
   // Derive the four header stats. Returns null when the habit is missing
   // so the page can render a "Habit not found" card instead.
@@ -172,6 +179,31 @@ export default function HabitDetailPage() {
   const deleteHabit = () => {
     store.deleteHabit(habit.id);
     router.push("/habits");
+  };
+
+  const saveHabitPatch = (field: string, patch: Partial<Habit>) => {
+    clientLogger.info("Habit detail saved", { page: "habit-detail", habitId: habit.id, field });
+    store.updateHabit(habit.id, patch);
+  };
+
+  const saveJournalEntry = (dateKey: string, payload: Partial<CheckIn>) => {
+    clientLogger.info("Habit detail entry saved", {
+      page: "habit-detail",
+      habitId: habit.id,
+      dateKey,
+      hasMood: Boolean(payload.mood),
+      hasJournal: Boolean(payload.journal),
+    });
+    store.logCheckIn(habit.id, payload, dateKey);
+  };
+
+  const clearJournalEntry = (dateKey: string) => {
+    clientLogger.info("Habit detail entry cleared", {
+      page: "habit-detail",
+      habitId: habit.id,
+      dateKey,
+    });
+    store.logCheckIn(habit.id, { mood: undefined, journal: undefined }, dateKey);
   };
 
   return (
@@ -290,6 +322,11 @@ export default function HabitDetailPage() {
                     <button
                       className="btn btn-sm btn-ghost"
                       onClick={() => {
+                        clientLogger.info("Habit detail saved", {
+                          page: "habit-detail",
+                          habitId: habit.id,
+                          field: "laws",
+                        });
                         store.updateHabit(habit.id, { cue: "", craving: "", twoMin: "", reward: "" });
                         hidePanel("laws");
                       }}
@@ -303,28 +340,28 @@ export default function HabitDetailPage() {
                   hint="Cue"
                   value={habit.cue}
                   placeholder="When 7am, after I pour coffee..."
-                  onSave={(value) => store.updateHabit(habit.id, { cue: value })}
+                  onSave={(value) => saveHabitPatch("cue", { cue: value })}
                 />
                 <EditableLaw
                   label="2. Make it attractive"
                   hint="Craving"
                   value={habit.craving}
                   placeholder="To feel curious, calm, strong..."
-                  onSave={(value) => store.updateHabit(habit.id, { craving: value })}
+                  onSave={(value) => saveHabitPatch("craving", { craving: value })}
                 />
                 <EditableLaw
                   label="3. Make it easy"
                   hint="2-minute version"
                   value={habit.twoMin}
                   placeholder="Just open the book. Just put on the shoes."
-                  onSave={(value) => store.updateHabit(habit.id, { twoMin: value })}
+                  onSave={(value) => saveHabitPatch("twoMinute", { twoMin: value })}
                 />
                 <EditableLaw
                   label="4. Make it satisfying"
                   hint="Reward"
                   value={habit.reward}
                   placeholder="One visible win."
-                  onSave={(value) => store.updateHabit(habit.id, { reward: value })}
+                  onSave={(value) => saveHabitPatch("reward", { reward: value })}
                   last
                 />
               </div>
@@ -350,6 +387,11 @@ export default function HabitDetailPage() {
                   <button
                     className="btn btn-sm btn-ghost"
                     onClick={() => {
+                      clientLogger.info("Habit detail saved", {
+                        page: "habit-detail",
+                        habitId: habit.id,
+                        field: "loop",
+                      });
                       store.updateHabit(habit.id, {
                         loopCue: "",
                         loopCraving: "",
@@ -362,7 +404,7 @@ export default function HabitDetailPage() {
                     Clear loop
                   </button>
                 </div>
-                <LoopDiagram habit={habit} onUpdate={(patch) => store.updateHabit(habit.id, patch)} />
+                <LoopDiagram habit={habit} onUpdate={(patch) => saveHabitPatch("loop", patch)} />
               </div>
             ) : (
               <PrincipleIntro
@@ -386,7 +428,7 @@ export default function HabitDetailPage() {
               <EditableLine
                 value={habit.environment}
                 placeholder="Stage your space..."
-                onSave={(value) => store.updateHabit(habit.id, { environment: value })}
+                onSave={(value) => saveHabitPatch("environment", { environment: value })}
               />
             </div>
             <div className={`card card-pad ${habit.contract ? styles.contractCardActive : ""}`}>
@@ -421,10 +463,8 @@ export default function HabitDetailPage() {
       {tab === "journal" && (
         <HabitJournalStream
           habit={habit}
-          onSaveEntry={(dateKey, payload) => store.logCheckIn(habit.id, payload, dateKey)}
-          onClearEntry={(dateKey) =>
-            store.logCheckIn(habit.id, { mood: undefined, journal: undefined }, dateKey)
-          }
+          onSaveEntry={saveJournalEntry}
+          onClearEntry={clearJournalEntry}
         />
       )}
       {tab === "history" && <HistoryWall habit={habit} />}
@@ -437,7 +477,7 @@ export default function HabitDetailPage() {
         <ContractSheet
           habit={habit}
           onClose={() => setShowContract(false)}
-          onSave={(patch) => store.updateHabit(habit.id, patch)}
+          onSave={(patch) => saveHabitPatch("contract", patch)}
         />
       )}
       {showMood && (
@@ -445,7 +485,7 @@ export default function HabitDetailPage() {
           habit={habit}
           dateKey={today}
           onClose={() => setShowMood(false)}
-          onSave={(payload) => store.logCheckIn(habit.id, payload)}
+          onSave={(payload) => saveJournalEntry(today, payload)}
         />
       )}
     </motion.div>

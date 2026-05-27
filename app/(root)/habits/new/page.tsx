@@ -1,10 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useStoreContext } from "@/components/StoreProvider";
+import { clientLogger } from "@/lib/logger-client";
 import { formatScheduleLabel } from "@/lib/schedule";
 
 import styles from "./page.module.css";
@@ -103,6 +104,10 @@ export default function NewHabitPage() {
   const [preset, setPreset] = useState<Preset>("daily");
   const [customDays, setCustomDays] = useState<string[]>([]);
 
+  useEffect(() => {
+    clientLogger.info("Page viewed", { page: "habit-new" });
+  }, []);
+
   // Compute all unique habit identities sorted by frequency (most-used first).
   const allIdentities = useMemo(() => {
     const counts = new Map<string, number>();
@@ -139,6 +144,12 @@ export default function NewHabitPage() {
   // Synthesise the full habit record from the four blanks then navigate
   // to the habits list so the user can see their creation.
   const finalize = () => {
+    clientLogger.info("New habit submission attempted", {
+      page: "habit-new",
+      canSubmit: Boolean(name.trim() && identity.trim()),
+      scheduleType: preset,
+    });
+
     if (!name.trim() || !identity.trim()) return;
 
     const cleanName = name.trim();

@@ -105,3 +105,29 @@ Read `.agents/skills/atomic-habit-workflow/SKILL.md` at the start of every sessi
 - Follow SOLID + GRASP for any change spanning more than one file.
 - Update skills and docs when you discover new patterns or stale info.
 - Validate before push: tests, typecheck, build.
+
+## Custom Agents
+
+### `atomic-log-orchestrator`
+
+- **Purpose:** Orchestrate parallel logging instrumentation across the codebase by deploying subagents to add, audit, and update logging in multiple files simultaneously.
+- **Agent type:** Orchestrator that deploys subagents in parallel by file category.
+- **Skills:** `atomic-habit-logging`, `atomic-habit-workflow`
+- **Trigger phrases:**
+  - "add logging to..."
+  - "audit log coverage for..."
+  - "ensure all files are instrumented"
+  - "check logging compliance"
+  - "update logging across..."
+- **Behavior:**
+  1. Scan the requested scope for files that lack logger imports.
+  2. Categorize the target files by type: server action, repository, API route, component, or page.
+  3. Deploy parallel subagents — one per file category — to add or update logging.
+  4. Require each subagent to follow the `atomic-habit-logging` skill rules.
+  5. Run validation after all subagents finish: `npm run typecheck`, `npm run lint`, `npm exec vitest run`.
+  6. Report a summary of instrumented files and any follow-up issues.
+- **Key rules:**
+  - Never log sensitive data; always follow the redaction rules defined by `atomic-habit-logging`.
+  - Server-side code uses `lib/logger.ts` — use `debug` for repositories and routes, `info` for server actions.
+  - Client-side code uses `lib/logger-client.ts` — keep logging development-only and use `info` for user interactions.
+  - Always validate the repo after instrumentation changes.

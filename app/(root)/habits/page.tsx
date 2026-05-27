@@ -2,13 +2,14 @@
 
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { IconCheck, IconClose, IconPlus, IconSearch } from "@/components/Icons";
 import { MoodCheckSheet } from "@/components/MoodCheckSheet";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { useStoreContext } from "@/components/StoreProvider";
 import { todayKey } from "@/lib/helpers";
+import { clientLogger } from "@/lib/logger-client";
 import { formatNextDayLabel, nextScheduledDateKey } from "@/lib/schedule";
 import type { Habit } from "@/lib/types";
 
@@ -39,6 +40,10 @@ export default function HabitsPage() {
   const [sort, setSort] = useState<Sort>("streak");
   const [searchQuery, setSearchQuery] = useState("");
   const [moodHabit, setMoodHabit] = useState<Habit | null>(null);
+
+  useEffect(() => {
+    clientLogger.info("Page viewed", { page: "habits" });
+  }, []);
 
   // Apply filter -> search -> sort to derive the rendered list.
   const filtered = useMemo(() => {
@@ -77,6 +82,25 @@ export default function HabitsPage() {
     toggleHabit(habit.id);
   };
 
+  const handleFilterChange = (nextFilter: Filter) => {
+    clientLogger.info("Habit filter changed", { page: "habits", filter: nextFilter });
+    setFilter(nextFilter);
+  };
+
+  const handleSearchChange = (query: string) => {
+    const hasQuery = Boolean(query.trim());
+    const hadQuery = Boolean(searchQuery.trim());
+    if (hasQuery !== hadQuery) {
+      clientLogger.info("Habit search", { page: "habits", hasQuery });
+    }
+    setSearchQuery(query);
+  };
+
+  const handleSortChange = (nextSort: Sort) => {
+    clientLogger.info("Habit sort changed", { page: "habits", sort: nextSort });
+    setSort(nextSort);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -106,7 +130,7 @@ export default function HabitsPage() {
             <motion.button
               key={item}
               className={`tab ${filter === item ? "active" : ""}`}
-              onClick={() => setFilter(item)}
+              onClick={() => handleFilterChange(item)}
               whileHover={{ y: -1 }}
               whileTap={{ scale: 0.97 }}
             >
@@ -121,13 +145,13 @@ export default function HabitsPage() {
               className={`input ${styles.searchInput}`}
               placeholder="Search habits..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               // Search input width is dynamic (160px → 220px when active).
               // Passed via --search-w so the .searchInput class stays static.
               style={{ ["--search-w" as string]: searchQuery ? "220px" : "160px" }}
             />
             {searchQuery && (
-              <button onClick={() => setSearchQuery("")} className={styles.searchClear}>
+              <button onClick={() => handleSearchChange("")} className={styles.searchClear}>
                 <IconClose className={styles.searchClearIcon} />
               </button>
             )}
@@ -137,7 +161,7 @@ export default function HabitsPage() {
             <select
               className="input habit-sort-select"
               value={sort}
-              onChange={(event) => setSort(event.target.value as Sort)}
+              onChange={(event) => handleSortChange(event.target.value as Sort)}
             >
               <option value="streak">Active streak</option>
               <option value="rate">30-day rate</option>

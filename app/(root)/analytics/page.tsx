@@ -1,12 +1,13 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { LineChart } from "@/components/LineChart";
 import { useStoreContext } from "@/components/StoreProvider";
 import { dateAdd, fmt, todayKey } from "@/lib/helpers";
+import { clientLogger } from "@/lib/logger-client";
 import { isScheduledForDate } from "@/lib/schedule";
 
 import styles from "./page.module.css";
@@ -26,6 +27,10 @@ export default function AnalyticsPage() {
   const { habits, completionRate, longestStreak } = useStoreContext();
   const [range, setRange] = useState<(typeof RANGES)[number]>(30);
   const today = todayKey();
+
+  useEffect(() => {
+    clientLogger.info("Page viewed", { page: "analytics" });
+  }, []);
 
   // Build the daily-completion chart data — one point per day in the
   // selected range. Each point is the % of scheduled habits completed

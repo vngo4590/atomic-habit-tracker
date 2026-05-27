@@ -5,9 +5,10 @@ import { useActionState, useEffect, useState } from "react";
 
 import { IconMoon, IconSun } from "@/components/Icons";
 import { useStoreContext } from "@/components/StoreProvider";
-import { applyAppearance } from "@/lib/appearance";
 import { changePasswordAction, updateProfileAction } from "@/lib/actions/auth";
 import type { ProfileFormState } from "@/lib/actions/auth";
+import { applyAppearance } from "@/lib/appearance";
+import { clientLogger } from "@/lib/logger-client";
 
 import styles from "./page.module.css";
 
@@ -42,6 +43,10 @@ export default function SettingsPage() {
   // Password change state
   const [changingPassword, setChangingPassword] = useState(false);
 
+  useEffect(() => {
+    clientLogger.info("Page viewed", { page: "settings" });
+  }, []);
+
   // Server action states (React 19 useActionState)
   const [profileState, profileAction, profilePending] = useActionState<ProfileFormState, FormData>(
     updateProfileAction,
@@ -69,7 +74,8 @@ export default function SettingsPage() {
           setNameValue(userData.name ?? "");
         }
       })
-      .catch(() => {
+      .catch((error) => {
+        clientLogger.error("Settings session load failed", { page: "settings", error });
         // silently fail — profile will show fallback
       });
   }, []);
@@ -80,12 +86,14 @@ export default function SettingsPage() {
   const passwordSuccess = passwordState.ok;
 
   const setNextTheme = (nextTheme: Theme) => {
+    clientLogger.info("Theme changed", { page: "settings", theme: nextTheme });
     setTheme(nextTheme);
     applyAppearance(nextTheme, accent);
     store.setPreferences({ theme: nextTheme });
   };
 
   const setNextAccent = (hue: number) => {
+    clientLogger.info("Accent changed", { page: "settings", accentHue: hue });
     setAccent(hue);
     applyAppearance(theme, hue);
     store.setPreferences({ accentHue: hue });
@@ -93,6 +101,7 @@ export default function SettingsPage() {
 
   // Build a JSON blob with the user's data and trigger a download.
   const exportJson = () => {
+    clientLogger.info("Data export started", { page: "settings", habitCount: store.habits.length });
     const payload = JSON.stringify(
       {
         habits: store.habits,
@@ -149,7 +158,11 @@ export default function SettingsPage() {
           {editingName && (
             <div className={styles.editFormShell}>
               {!profileSuccess ? (
-                <form action={profileAction} className={styles.nameForm}>
+                <form
+                  action={profileAction}
+                  className={styles.nameForm}
+                  onSubmit={() => clientLogger.info("Profile update submitted", { page: "settings" })}
+                >
                   <input
                     className={`input ${styles.smallInputFlex}`}
                     name="name"
@@ -215,7 +228,11 @@ export default function SettingsPage() {
           {changingPassword && (
             <div className={styles.editFormShell}>
               {!passwordSuccess ? (
-                <form action={passwordAction} className={styles.passwordForm}>
+                <form
+                  action={passwordAction}
+                  className={styles.passwordForm}
+                  onSubmit={() => clientLogger.info("Password change submitted", { page: "settings" })}
+                >
                   <label>
                     <span className="field-label">Current password</span>
                     <input
