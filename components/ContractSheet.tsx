@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { IconClose } from "@/components/Icons";
+import { clientLogger } from "@/lib/logger-client";
 import type { Habit } from "@/lib/types";
 
 import styles from "./ContractSheet.module.css";
@@ -26,15 +27,50 @@ export function ContractSheet({
   const [contract, setContract] = useState(habit.contract);
   const [partners, setPartners] = useState(habit.contractPartners.join(", "));
 
+  const handleDismiss = (reason: "backdrop" | "close_button" | "cancel") => {
+    clientLogger.info("Contract editor dismissed", {
+      event: "contract.dismiss",
+      habitId: habit.id,
+      reason,
+    });
+    onClose();
+  };
+
+  const handleSave = () => {
+    const contractPartners = partners
+      .split(",")
+      .map((partner) => partner.trim())
+      .filter(Boolean);
+
+    clientLogger.info("Contract saved", {
+      event: "contract.save",
+      habitId: habit.id,
+      hasContract: Boolean(contract.trim()),
+      partnerCount: contractPartners.length,
+    });
+
+    // Trim the contract sentence and split partners on commas so
+    // empty entries (from "Sam, , Mira") are discarded.
+    onSave({
+      contract: contract.trim(),
+      contractPartners,
+    });
+    onClose();
+  };
+
   return (
-    <div className="overlay" role="dialog" aria-modal="true" onClick={onClose}>
+    <div className="overlay" role="dialog" aria-modal="true" onClick={() => handleDismiss("backdrop")}>
       <div className="overlay-card fade-up" onClick={(event) => event.stopPropagation()}>
         <div className={styles.header}>
           <div>
             <div className="eyebrow">Accountability</div>
             <h2 className="h2">Contract</h2>
           </div>
-          <button className="btn btn-ghost btn-sm" onClick={onClose} aria-label="Close">
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => handleDismiss("close_button")}
+            aria-label="Close"
+          >
             <IconClose className={styles.closeIcon} />
           </button>
         </div>
@@ -60,21 +96,10 @@ export function ContractSheet({
           />
         </div>
         <div className={styles.actions}>
-          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="btn btn-ghost" onClick={() => handleDismiss("cancel")}>Cancel</button>
           <button
             className="btn btn-primary"
-            onClick={() => {
-              // Trim the contract sentence and split partners on commas so
-              // empty entries (from "Sam, , Mira") are discarded.
-              onSave({
-                contract: contract.trim(),
-                contractPartners: partners
-                  .split(",")
-                  .map((partner) => partner.trim())
-                  .filter(Boolean),
-              });
-              onClose();
-            }}
+            onClick={handleSave}
           >
             Save contract
           </button>

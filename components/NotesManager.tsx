@@ -6,6 +6,7 @@ import { ExpandableText } from "@/components/ExpandableText";
 import { IconCheck, IconEdit, IconTrash } from "@/components/Icons";
 import { MarkdownText } from "@/components/MarkdownText";
 import { fmt, todayKey } from "@/lib/helpers";
+import { clientLogger } from "@/lib/logger-client";
 import type { Habit } from "@/lib/types";
 
 import styles from "./NotesManager.module.css";
@@ -33,13 +34,27 @@ export function NotesManager({
 
   const addNote = () => {
     if (!draft.trim()) return;
+    const noteId = `pending-${Date.now()}`;
+    clientLogger.info("Note created", {
+      event: "notes.create",
+      habitId: habit.id,
+      noteId,
+    });
     onUpdateNotes([
-      { id: `pending-${Date.now()}`, createdAt: todayKey(), body: draft.trim() },
+      { id: noteId, createdAt: todayKey(), body: draft.trim() },
       ...habit.notes,
     ]);
     setDraft("");
   };
-  const deleteOne = (id: string) => onUpdateNotes(habit.notes.filter((note) => note.id !== id));
+  const deleteOne = (id: string) => {
+    clientLogger.info("Note deleted", {
+      event: "notes.delete",
+      habitId: habit.id,
+      noteId: id,
+      count: 1,
+    });
+    onUpdateNotes(habit.notes.filter((note) => note.id !== id));
+  };
   const beginEdit = (note: Habit["notes"][number]) => {
     setEditingId(note.id);
     setEditDraft(note.body);
@@ -55,6 +70,11 @@ export function NotesManager({
     cancelEdit();
   };
   const deleteSelected = () => {
+    clientLogger.info("Notes deleted", {
+      event: "notes.bulk_delete",
+      habitId: habit.id,
+      count: selected.size,
+    });
     onUpdateNotes(habit.notes.filter((note) => !selected.has(note.id)));
     setSelected(new Set());
     setBulkMode(false);

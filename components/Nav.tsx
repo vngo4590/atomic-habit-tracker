@@ -20,6 +20,7 @@ import {
 import { useStoreContext } from "@/components/StoreProvider";
 import { logoutAction } from "@/lib/actions/auth";
 import { navItemVariants, sidebarStagger } from "@/lib/animations";
+import { clientLogger } from "@/lib/logger-client";
 
 import styles from "./Nav.module.css";
 
@@ -73,8 +74,18 @@ function NavItemLink({
     pathname === item.href ||
     (item.href === "/habits" && pathname.startsWith("/habits/") && pathname !== "/habits/new");
 
+  const handleNavigate = () => {
+    clientLogger.info("Navigation clicked", {
+      event: "nav.navigate",
+      href: item.href,
+      label: item.label,
+      source: "sidebar_link",
+    });
+    onClick?.();
+  };
+
   return (
-    <Link className={`nav-item ${active ? "active" : ""}`} href={item.href} onClick={onClick}>
+    <Link className={`nav-item ${active ? "active" : ""}`} href={item.href} onClick={handleNavigate}>
       <Icon className="nav-icon" />
       <span>{item.label}</span>
       <span className="ni-key">{item.key}</span>
@@ -152,7 +163,15 @@ function SidebarContent({
           <div className="who-name">{user.name ?? user.email ?? "Atomicly user"}</div>
           <div className="who-id">{totalVotes} votes cast</div>
         </div>
-        <form action={logoutAction}>
+        <form
+          action={logoutAction}
+          onSubmit={() => {
+            clientLogger.info("Logout submitted", {
+              event: "nav.logout",
+              source: "sidebar",
+            });
+          }}
+        >
           <motion.button
             className="btn btn-sm"
             type="submit"
@@ -190,6 +209,11 @@ export function Nav({ user }: NavProps) {
       const href = SHORTCUTS.get(event.key.toLowerCase());
       if (href) {
         event.preventDefault();
+        clientLogger.info("Navigation shortcut used", {
+          event: "nav.shortcut",
+          href,
+          key: event.key.toLowerCase(),
+        });
         router.push(href);
       }
     };

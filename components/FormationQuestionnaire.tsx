@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 
+import { clientLogger } from "@/lib/logger-client";
 import type { FormationVerdict, Habit } from "@/lib/types";
 
 import styles from "./FormationQuestionnaire.module.css";
@@ -51,13 +52,21 @@ export function FormationQuestionnaire({
 
   const submit = (formed: boolean) => {
     if (!complete) return;
-    onSubmit({
+    const verdict = {
       habitId: habit.id,
       score: Number(score.toFixed(1)),
       reflection,
       formed,
       reviewedAt: new Date().toISOString(),
+    };
+
+    clientLogger.info("Formation verdict submitted", {
+      event: "formation.submit",
+      habitId: habit.id,
+      formed,
+      score: verdict.score,
     });
+    onSubmit(verdict);
   };
 
   return (

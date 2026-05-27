@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 
 import { IconArrow, IconCheck, IconFlame } from "@/components/Icons";
+import { clientLogger } from "@/lib/logger-client";
 import type { Habit } from "@/lib/types";
 
 import styles from "./HabitRow.module.css";
@@ -34,6 +35,16 @@ export function HabitRow({
   onCheck: () => void;
   onOpen: () => void;
 }) {
+  // Log the next done state so local toggle intent is visible during development.
+  const handleCheck = () => {
+    clientLogger.info("Habit toggled", {
+      event: "habit.toggle",
+      habitId: habit.id,
+      done: !done,
+    });
+    onCheck();
+  };
+
   return (
     <motion.div
       className={`habit-row ${done ? "done" : ""}`}
@@ -45,7 +56,7 @@ export function HabitRow({
         className={`check ${done ? "done" : ""}`}
         onClick={(event) => {
           event.stopPropagation();
-          onCheck();
+          handleCheck();
         }}
         aria-label={done ? "Uncheck" : "Check"}
         whileTap={{ scale: 0.85 }}

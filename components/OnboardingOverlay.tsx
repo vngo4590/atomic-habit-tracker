@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
 
 import { slideUpVariants } from "@/lib/animations";
+import { clientLogger } from "@/lib/logger-client";
 
 import styles from "./OnboardingOverlay.module.css";
 
@@ -50,10 +51,23 @@ export function OnboardingOverlay({ onComplete }: { onComplete: () => void }) {
   // as "Continue" / "Start" rather than raw setState calls.
   const next = () => {
     if (step === STEPS.length - 1) {
+      clientLogger.info("Onboarding completed", {
+        event: "onboarding.complete",
+        stepCount: STEPS.length,
+      });
       onComplete();
       return;
     }
     setStep((value) => value + 1);
+  };
+
+  const handleDismiss = () => {
+    clientLogger.info("Onboarding dismissed", {
+      event: "onboarding.dismiss",
+      stepIndex: step,
+      stepCount: STEPS.length,
+    });
+    onComplete();
   };
 
   return (
@@ -95,7 +109,7 @@ export function OnboardingOverlay({ onComplete }: { onComplete: () => void }) {
           <div className={styles.footer}>
             <motion.button
               className="btn"
-              onClick={() => onComplete()}
+              onClick={handleDismiss}
               whileTap={{ scale: 0.97 }}
             >
               Skip

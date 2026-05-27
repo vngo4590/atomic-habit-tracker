@@ -19,6 +19,7 @@ import {
 } from "@/lib/actions/domain";
 import type { StackMutationInput } from "@/lib/contracts/domain";
 import { dateAdd, todayKey } from "@/lib/helpers";
+import { clientLogger } from "@/lib/logger-client";
 import { isScheduledForDate } from "@/lib/schedule";
 import {
   stackInsertPatches as stackInsertPatchesHelper,
@@ -69,6 +70,16 @@ function normalizeDraft(draft: HabitDraft): Omit<Habit, "id" | "history" | "note
     contract: draft.contract ?? "",
     contractPartners: draft.contractPartners ?? [],
   };
+}
+
+/** Reduce repeated unknown-error handling to a safe, non-sensitive message. */
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Unexpected error.";
+}
+
+/** Report which allowlisted fields are changing without logging their values. */
+function changedFields(patch: object) {
+  return Object.keys(patch).sort();
 }
 
 /**
@@ -258,12 +269,30 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
         }),
       );
 
-      void toggleHabitAction(id, dateKey, shouldComplete).then((saved) => {
-        if (!saved) {
-          return;
-        }
-        setHabits((currentHabits) => currentHabits.map((habit) => (habit.id === id ? saved : habit)));
+      clientLogger.info("Habit toggled", {
+        event: "store.habit.toggle",
+        habitId: id,
+        dateKey,
+        done: shouldComplete,
+        includesCheckIn: Boolean(payload),
       });
+
+      void toggleHabitAction(id, dateKey, shouldComplete)
+        .then((saved) => {
+          if (!saved) {
+            return;
+          }
+          setHabits((currentHabits) => currentHabits.map((habit) => (habit.id === id ? saved : habit)));
+        })
+        .catch((error: unknown) => {
+          clientLogger.warn("Habit toggle failed", {
+            event: "store.habit.toggle_failed",
+            habitId: id,
+            dateKey,
+            done: shouldComplete,
+            message: errorMessage(error),
+          });
+        });
 
       if (toastIdentity) {
         showToast(`Vote cast for "${toastIdentity}"`, `${toastVotes} total`);
@@ -295,12 +324,29 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
         }),
       );
 
-      void logCheckInAction(id, dateKey, payload).then((saved) => {
-        if (!saved) {
-          return;
-        }
-        setHabits((currentHabits) => currentHabits.map((habit) => (habit.id === id ? saved : habit)));
+      clientLogger.info("Habit check-in saved", {
+        event: "store.check-in.save",
+        habitId: id,
+        dateKey,
+        hasMood: payload.mood !== undefined,
+        hasJournal: payload.journal !== undefined,
       });
+
+      void logCheckInAction(id, dateKey, payload)
+        .then((saved) => {
+          if (!saved) {
+            return;
+          }
+          setHabits((currentHabits) => currentHabits.map((habit) => (habit.id === id ? saved : habit)));
+        })
+        .catch((error: unknown) => {
+          clientLogger.warn("Habit check-in failed", {
+            event: "store.check-in.save_failed",
+            habitId: id,
+            dateKey,
+            message: errorMessage(error),
+          });
+        });
     },
     [],
   );
@@ -318,11 +364,28 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
       },
     ]);
 
-    void createHabitAction(draft).then((saved) => {
-      setHabits((currentHabits) =>
-        currentHabits.map((habit) => (habit.id === tempId ? saved : habit)),
-      );
+    clientLogger.info("Creating habit", {
+      event: "store.habit.create",
+      habitId: tempId,
+      schedule: draft.schedule ?? "Daily",
+      time: draft.time ?? "Morning",
+      hasStackTarget: Boolean(draft.stackNextId),
+      hasContract: Boolean(draft.contract?.trim()),
     });
+
+    void createHabitAction(draft)
+      .then((saved) => {
+        setHabits((currentHabits) =>
+          currentHabits.map((habit) => (habit.id === tempId ? saved : habit)),
+        );
+      })
+      .catch((error: unknown) => {
+        clientLogger.warn("Habit creation failed", {
+          event: "store.habit.create_failed",
+          habitId: tempId,
+          message: errorMessage(error),
+        });
+      });
   }, []);
 
   const updateHabit = useCallback((id: string, patch: Partial<Habit>) => {
@@ -332,6 +395,13 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
       preSnapshot = currentHabits.find((habit) => habit.id === id) ?? null;
       return currentHabits.map((habit) => (habit.id === id ? { ...habit, ...patch } : habit));
     });
+
+    clientLogger.info("Updating habit", {
+      event: "store.habit.update",
+      habitId: id,
+      fields: changedFields(patch),
+    });
+
     void updateHabitAction(id, patch)
       .then((saved) => {
         if (!saved || version !== updateHabitVersion.current) {
@@ -349,7 +419,13 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
             currentHabits.map((habit) => (habit.id === id ? snapshot : habit)),
           );
         }
-        const message = error instanceof Error ? error.message : "Update failed.";
+        const message = errorMessage(error);
+        clientLogger.warn("Habit update rolled back", {
+          event: "store.habit.update_failed",
+          habitId: id,
+          fields: changedFields(patch),
+          message,
+        });
         showToast("Couldn't update habit", message);
       });
   }, [showToast]);
@@ -397,6 +473,13 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
       return Array.from(map.values());
     });
 
+    clientLogger.info("Applying habit stack mutation", {
+      event: "store.habit.stack_mutation",
+      kind: input.kind,
+      habitId: "habitId" in input ? input.habitId : undefined,
+      count: input.kind === "reorder" ? input.habitIds.length : undefined,
+    });
+
     try {
       const updated = await applyStackMutationAction(input);
       setHabits((currentHabits) => {
@@ -409,14 +492,31 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
     } catch (error: unknown) {
       // Roll back optimistic state and rethrow so the caller can show a modal.
       setHabits(snapshot);
-      const message = error instanceof Error ? error.message : "Couldn't update stack.";
+      const message = errorMessage(error);
+      clientLogger.warn("Habit stack mutation rolled back", {
+        event: "store.habit.stack_mutation_failed",
+        kind: input.kind,
+        habitId: "habitId" in input ? input.habitId : undefined,
+        count: input.kind === "reorder" ? input.habitIds.length : undefined,
+        message,
+      });
       throw new Error(message);
     }
   }, []);
 
   const deleteHabit = useCallback((id: string) => {
     setHabits((currentHabits) => currentHabits.filter((habit) => habit.id !== id));
-    void deleteHabitAction(id);
+    clientLogger.info("Deleting habit", {
+      event: "store.habit.delete",
+      habitId: id,
+    });
+    void Promise.resolve(deleteHabitAction(id)).catch((error: unknown) => {
+      clientLogger.warn("Habit deletion failed", {
+        event: "store.habit.delete_failed",
+        habitId: id,
+        message: errorMessage(error),
+      });
+    });
   }, []);
 
   const addJournal = useCallback((entry: Partial<JournalEntry>) => {
@@ -434,35 +534,59 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
       ...currentJournal,
     ]);
 
-    void createJournalEntryAction(entry).then((saved) => {
-      setJournal((currentJournal) =>
-        currentJournal.map((journalEntry) => {
-          if (journalEntry.id !== tempId) {
-            return journalEntry;
-          }
-
-          const pendingPatch = pendingJournalPatches.current.get(tempId) ?? {};
-          pendingJournalPatches.current.delete(tempId);
-          const merged = { ...saved, ...journalEntry, ...pendingPatch, id: saved.id };
-          if (
-            merged.title !== saved.title ||
-            merged.body !== saved.body ||
-            merged.mood !== saved.mood ||
-            merged.date !== saved.date ||
-            merged.tags.join("\u0000") !== saved.tags.join("\u0000")
-          ) {
-            void updateJournalEntryAction(saved.id, {
-              date: merged.date,
-              title: merged.title,
-              body: merged.body,
-              mood: merged.mood,
-              tags: merged.tags,
-            });
-          }
-          return merged;
-        }),
-      );
+    clientLogger.info("Creating journal entry", {
+      event: "store.journal.create",
+      journalId: tempId,
+      dateKey: entry.date ?? todayKey(),
+      mood: entry.mood ?? "good",
+      tagCount: entry.tags?.length ?? 0,
+      hasTitle: Boolean(entry.title?.trim()),
+      hasBody: Boolean(entry.body?.trim()),
     });
+
+    void createJournalEntryAction(entry)
+      .then((saved) => {
+        setJournal((currentJournal) =>
+          currentJournal.map((journalEntry) => {
+            if (journalEntry.id !== tempId) {
+              return journalEntry;
+            }
+
+            const pendingPatch = pendingJournalPatches.current.get(tempId) ?? {};
+            pendingJournalPatches.current.delete(tempId);
+            const merged = { ...saved, ...journalEntry, ...pendingPatch, id: saved.id };
+            if (
+              merged.title !== saved.title ||
+              merged.body !== saved.body ||
+              merged.mood !== saved.mood ||
+              merged.date !== saved.date ||
+              merged.tags.join("\u0000") !== saved.tags.join("\u0000")
+            ) {
+              void updateJournalEntryAction(saved.id, {
+                date: merged.date,
+                title: merged.title,
+                body: merged.body,
+                mood: merged.mood,
+                tags: merged.tags,
+              }).catch((error: unknown) => {
+                clientLogger.warn("Journal entry reconciliation failed", {
+                  event: "store.journal.reconcile_failed",
+                  journalId: saved.id,
+                  message: errorMessage(error),
+                });
+              });
+            }
+            return merged;
+          }),
+        );
+      })
+      .catch((error: unknown) => {
+        clientLogger.warn("Journal creation failed", {
+          event: "store.journal.create_failed",
+          journalId: tempId,
+          message: errorMessage(error),
+        });
+      });
   }, []);
 
   const updateJournal = useCallback((id: string, patch: Partial<JournalEntry>) => {
@@ -483,25 +607,54 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
       currentJournal.map((entry) => (entry.id === id ? { ...entry, ...safePatch } : entry)),
     );
 
-    void updateJournalEntryAction(id, safePatch).then((saved) => {
-      if (!saved || version !== updateJournalVersion.current) {
-        return;
-      }
-      setJournal((currentJournal) =>
-        currentJournal.map((entry) => (entry.id === id ? { ...entry, ...saved, ...safePatch } : entry)),
-      );
+    clientLogger.info("Updating journal entry", {
+      event: "store.journal.update",
+      journalId: id,
+      fields: changedFields(safePatch),
+      isPending: id.startsWith("pending-"),
     });
+
+    void updateJournalEntryAction(id, safePatch)
+      .then((saved) => {
+        if (!saved || version !== updateJournalVersion.current) {
+          return;
+        }
+        setJournal((currentJournal) =>
+          currentJournal.map((entry) => (entry.id === id ? { ...entry, ...saved, ...safePatch } : entry)),
+        );
+      })
+      .catch((error: unknown) => {
+        clientLogger.warn("Journal update failed", {
+          event: "store.journal.update_failed",
+          journalId: id,
+          fields: changedFields(safePatch),
+          message: errorMessage(error),
+        });
+      });
   }, []);
 
   const setIdentity = useCallback((nextIdentity: Identity) => {
     const version = ++identityVersion.current;
     setIdentityState(nextIdentity);
-    void saveIdentityAction(nextIdentity).then((saved) => {
-      if (version !== identityVersion.current) {
-        return;
-      }
-      setIdentityState((current) => ({ ...current, ...saved, statement: nextIdentity.statement }));
+    clientLogger.info("Saving identity", {
+      event: "store.identity.save",
+      hasStatement: Boolean(nextIdentity.statement.trim()),
+      valuesCount: nextIdentity.values.length,
     });
+    void saveIdentityAction(nextIdentity)
+      .then((saved) => {
+        if (version !== identityVersion.current) {
+          return;
+        }
+        setIdentityState((current) => ({ ...current, ...saved, statement: nextIdentity.statement }));
+      })
+      .catch((error: unknown) => {
+        clientLogger.warn("Identity save failed", {
+          event: "store.identity.save_failed",
+          valuesCount: nextIdentity.values.length,
+          message: errorMessage(error),
+        });
+      });
   }, []);
 
   const setWeeklyReview = useCallback((weekStartKey: string, answers: WeeklyReviewAnswers) => {
@@ -515,27 +668,65 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
       optimisticReview,
       ...current.filter((review) => review.weekStartKey !== weekStartKey),
     ].sort((a, b) => b.weekStartKey.localeCompare(a.weekStartKey)));
-    void saveWeeklyReviewAction(weekStartKey, answers).then((saved) => {
-      setWeeklyReviewState(saved);
-      setWeeklyReviews((current) => [
-        saved,
-        ...current.filter((review) => review.weekStartKey !== saved.weekStartKey),
-      ].sort((a, b) => b.weekStartKey.localeCompare(a.weekStartKey)));
+
+    clientLogger.info("Saving weekly review", {
+      event: "store.weekly-review.save",
+      weekStartKey,
     });
+
+    void saveWeeklyReviewAction(weekStartKey, answers)
+      .then((saved) => {
+        setWeeklyReviewState(saved);
+        setWeeklyReviews((current) => [
+          saved,
+          ...current.filter((review) => review.weekStartKey !== saved.weekStartKey),
+        ].sort((a, b) => b.weekStartKey.localeCompare(a.weekStartKey)));
+      })
+      .catch((error: unknown) => {
+        clientLogger.warn("Weekly review save failed", {
+          event: "store.weekly-review.save_failed",
+          weekStartKey,
+          message: errorMessage(error),
+        });
+      });
   }, []);
 
   const setLessonMode = useCallback((lessonMode: UserPreferences["lessonMode"]) => {
     setLessonModeState(lessonMode);
     setPreferencesState((current) => ({ ...current, lessonMode }));
-    void savePreferencesAction({ lessonMode }).then((saved) => {
-      setPreferencesState(saved);
-      setLessonModeState(saved.lessonMode);
+    clientLogger.info("Setting lesson mode", {
+      event: "store.preferences.lesson_mode",
+      lessonMode,
     });
+    void savePreferencesAction({ lessonMode })
+      .then((saved) => {
+        setPreferencesState(saved);
+        setLessonModeState(saved.lessonMode);
+      })
+      .catch((error: unknown) => {
+        clientLogger.warn("Lesson mode save failed", {
+          event: "store.preferences.lesson_mode_failed",
+          lessonMode,
+          message: errorMessage(error),
+        });
+      });
   }, []);
 
   const markLessonRead = useCallback((lessonId: number) => {
     setCompletedLessons((current) => new Set([...current, lessonId]));
-    void markLessonReadAction(lessonId).then((completed) => setCompletedLessons(new Set(completed)));
+    clientLogger.info("Marking lesson read", {
+      event: "store.lesson.read",
+      lessonId,
+    });
+    void markLessonReadAction(lessonId)
+      .then((completed) => setCompletedLessons(new Set(completed)))
+      .catch((error: unknown) => {
+        clientLogger.warn("Lesson completion sync failed", {
+          event: "store.lesson.read_failed",
+          lessonId,
+          message: errorMessage(error),
+        });
+      });
   }, []);
 
   const saveFormationVerdict = useCallback((verdict: FormationVerdict) => {
@@ -543,15 +734,29 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
       ...current.filter((item) => item.habitId !== verdict.habitId),
       verdict,
     ]);
-    void saveFormationVerdictAction(verdict).then((saved) => {
-      if (!saved) {
-        return;
-      }
-      setFormationVerdicts((current) => [
-        ...current.filter((item) => item.habitId !== saved.habitId),
-        saved,
-      ]);
+    clientLogger.info("Saving formation verdict", {
+      event: "store.formation.save",
+      habitId: verdict.habitId,
+      formed: verdict.formed,
+      score: verdict.score,
     });
+    void saveFormationVerdictAction(verdict)
+      .then((saved) => {
+        if (!saved) {
+          return;
+        }
+        setFormationVerdicts((current) => [
+          ...current.filter((item) => item.habitId !== saved.habitId),
+          saved,
+        ]);
+      })
+      .catch((error: unknown) => {
+        clientLogger.warn("Formation verdict save failed", {
+          event: "store.formation.save_failed",
+          habitId: verdict.habitId,
+          message: errorMessage(error),
+        });
+      });
   }, []);
 
   const setPreferences = useCallback((patch: Partial<UserPreferences>) => {
@@ -559,10 +764,22 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
     if (patch.lessonMode) {
       setLessonModeState(patch.lessonMode);
     }
-    void savePreferencesAction(patch).then((saved) => {
-      setPreferencesState(saved);
-      setLessonModeState(saved.lessonMode);
+    clientLogger.info("Saving preferences", {
+      event: "store.preferences.save",
+      fields: changedFields(patch),
     });
+    void savePreferencesAction(patch)
+      .then((saved) => {
+        setPreferencesState(saved);
+        setLessonModeState(saved.lessonMode);
+      })
+      .catch((error: unknown) => {
+        clientLogger.warn("Preferences save failed", {
+          event: "store.preferences.save_failed",
+          fields: changedFields(patch),
+          message: errorMessage(error),
+        });
+      });
   }, []);
 
   return useMemo(

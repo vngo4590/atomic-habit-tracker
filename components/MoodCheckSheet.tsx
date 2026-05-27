@@ -6,6 +6,7 @@ import { useState } from "react";
 import { IconClose } from "@/components/Icons";
 import { overlayCardVariants, overlayVariants } from "@/lib/animations";
 import { fmt } from "@/lib/helpers";
+import { clientLogger } from "@/lib/logger-client";
 import type { CheckIn, Habit } from "@/lib/types";
 
 import styles from "./MoodCheckSheet.module.css";
@@ -43,6 +44,35 @@ export function MoodCheckSheet({
   const existing = checkIn(habit.history[dateKey]);
   const [mood, setMood] = useState<number | null>(existing?.mood ?? null);
   const [journal, setJournal] = useState(existing?.journal ?? "");
+
+  // Keep check-in diagnostics safe by logging only the selected mood metadata.
+  const handleMoodSelect = (value: number, label: string) => {
+    clientLogger.info("Mood selected", {
+      event: "mood-check.select",
+      habitId: habit.id,
+      dateKey,
+      mood: label,
+      moodValue: value,
+    });
+    setMood(value);
+  };
+
+  const handleSave = () => {
+    const payload = {
+      ...(mood ? { mood } : {}),
+      ...(journal.trim() ? { journal: journal.trim() } : {}),
+    };
+
+    clientLogger.info("Mood check-in submitted", {
+      event: "mood-check.submit",
+      habitId: habit.id,
+      dateKey,
+      hasMood: Boolean(payload.mood),
+      hasJournal: Boolean(payload.journal),
+    });
+    onSave(payload);
+    onClose();
+  };
 
   return (
     <AnimatePresence>
@@ -92,7 +122,7 @@ export function MoodCheckSheet({
               return (
                 <motion.button
                   key={item.value}
-                  onClick={() => setMood(item.value)}
+                  onClick={() => handleMoodSelect(item.value, item.label)}
                   whileHover={{ y: -3 }}
                   whileTap={{ scale: 0.95 }}
                   animate={
@@ -151,13 +181,7 @@ export function MoodCheckSheet({
             </motion.button>
             <motion.button
               className="btn btn-primary"
-              onClick={() => {
-                onSave({
-                  ...(mood ? { mood } : {}),
-                  ...(journal.trim() ? { journal: journal.trim() } : {}),
-                });
-                onClose();
-              }}
+              onClick={handleSave}
               whileHover={{ y: -1 }}
               whileTap={{ scale: 0.97 }}
             >

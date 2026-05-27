@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { clientLogger } from "@/lib/logger-client";
+
 import styles from "./Editable.module.css";
 
 /**
@@ -22,6 +24,16 @@ export function EditableLine({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const empty = !value.trim();
+
+  const handleSave = () => {
+    clientLogger.info("Inline text saved", {
+      event: "editable-line.save",
+      hadValue: Boolean(value.trim()),
+      hasValue: Boolean(draft.trim()),
+    });
+    onSave(draft);
+    setEditing(false);
+  };
 
   if (editing) {
     return (
@@ -46,10 +58,7 @@ export function EditableLine({
           </button>
           <button
             className="btn btn-sm btn-primary"
-            onClick={() => {
-              onSave(draft);
-              setEditing(false);
-            }}
+            onClick={handleSave}
           >
             Save
           </button>

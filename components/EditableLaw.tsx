@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { clientLogger } from "@/lib/logger-client";
+
 import styles from "./Editable.module.css";
 
 /**
@@ -28,6 +30,17 @@ export function EditableLaw({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const empty = !value.trim();
+
+  const handleSave = () => {
+    clientLogger.info("Habit law saved", {
+      event: "editable-law.save",
+      label,
+      hadValue: Boolean(value.trim()),
+      hasValue: Boolean(draft.trim()),
+    });
+    onSave(draft);
+    setEditing(false);
+  };
 
   return (
     <div className={last ? styles.lawRowLast : styles.lawRow}>
@@ -57,10 +70,7 @@ export function EditableLaw({
             </button>
             <button
               className="btn btn-sm btn-primary"
-              onClick={() => {
-                onSave(draft);
-                setEditing(false);
-              }}
+              onClick={handleSave}
             >
               Save
             </button>

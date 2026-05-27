@@ -16,7 +16,9 @@
  */
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
+
+import { clientLogger } from "@/lib/logger-client";
 
 import styles from "./Modal.module.css";
 
@@ -45,16 +47,38 @@ export function Modal({
   tone = "info",
   primaryLabel = "OK",
 }: ModalProps) {
+  const previousOpen = useRef(false);
+
+  const handleClose = useCallback((reason: "backdrop" | "escape" | "primary") => {
+    clientLogger.info("Modal closed", {
+      event: "modal.close",
+      tone,
+      reason,
+    });
+    onClose();
+  }, [onClose, tone]);
+
+  // Log when the dialog becomes visible so open/close flows can be traced in dev.
+  useEffect(() => {
+    if (open && !previousOpen.current) {
+      clientLogger.info("Modal opened", {
+        event: "modal.open",
+        tone,
+      });
+    }
+    previousOpen.current = open;
+  }, [open, tone]);
+
   // Wire up Escape-to-close while the modal is visible. The listener is
   // removed when the modal closes or unmounts to avoid lingering handlers.
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") handleClose("escape");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, handleClose]);
 
   return (
     <AnimatePresence>
@@ -73,7 +97,7 @@ export function Modal({
         >
           {/* Backdrop — clicking it dismisses the modal. */}
           <motion.div
-            onClick={onClose}
+            onClick={() => handleClose("backdrop")}
             className={styles.backdrop}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -102,7 +126,7 @@ export function Modal({
             <div className={styles.actions}>
               <button
                 className="btn btn-primary btn-sm"
-                onClick={onClose}
+                onClick={() => handleClose("primary")}
                 autoFocus
                 data-testid="modal-primary"
               >

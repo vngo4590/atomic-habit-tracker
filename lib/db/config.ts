@@ -1,7 +1,11 @@
+import { logger } from "@/lib/logger";
+
 const GENERATED_PLACEHOLDERS = [
   "postgresql://johndoe:randompassword@localhost:5432/mydb",
   "postgres://johndoe:randompassword@localhost:5432/mydb",
 ];
+
+const log = logger.child({ module: "db.config" });
 
 export class DatabaseConfigurationError extends Error {
   constructor(message: string) {
@@ -16,22 +20,26 @@ export function getDatabaseUrl(env: NodeJS.ProcessEnv = process.env) {
 
 export function validateDatabaseUrl(databaseUrl = getDatabaseUrl()) {
   if (!databaseUrl) {
+    log.error("Database URL validation failed", { event: "db.config.invalid_url" });
     throw new DatabaseConfigurationError("DATABASE_URL is not set. Copy .env.example to .env and configure PostgreSQL.");
   }
 
   if (GENERATED_PLACEHOLDERS.some((placeholder) => databaseUrl.startsWith(placeholder))) {
+    log.error("Database URL validation failed", { event: "db.config.invalid_url" });
     throw new DatabaseConfigurationError("DATABASE_URL still uses Prisma's generated placeholder credentials.");
   }
 
   try {
     const url = new URL(databaseUrl);
     if (!["postgresql:", "postgres:"].includes(url.protocol)) {
+      log.error("Database URL validation failed", { event: "db.config.invalid_url" });
       throw new DatabaseConfigurationError("DATABASE_URL must use a PostgreSQL connection string.");
     }
   } catch (error) {
     if (error instanceof DatabaseConfigurationError) {
       throw error;
     }
+    log.error("Database URL validation failed", { event: "db.config.invalid_url" });
     throw new DatabaseConfigurationError("DATABASE_URL is not a valid connection string.");
   }
 

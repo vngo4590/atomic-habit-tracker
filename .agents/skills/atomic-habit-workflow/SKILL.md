@@ -265,7 +265,7 @@ All code in the Atomicly repo must use the structured logger. Raw `console.log` 
 - Import and use a child logger scoped to the module: `const log = logger.child({ module: "actions.auth" });`
 - **All server actions** must emit structured info-level logs for significant business events (create, update, delete, auth events).
 - **All repositories** must emit debug-level logs at the start of each exported function.
-- **All API route handlers** get automatic logging via `withApiUser` in `lib/api/http.ts`.
+- **All API route handlers** must emit an explicit debug-level log at the start of each handler, usually inside `withApiUser` so the log includes `userId`.
 - **Errors**: Log unexpected errors at `error` level. Log expected failures (validation, auth rejection) at `warn` level.
 - **Never** log raw user content (journal body, review answers, notes), raw request payloads, raw `FormData`, or full error stacks in production.
 - **Always** use allowlisted fields — pass only known-safe context to log calls.

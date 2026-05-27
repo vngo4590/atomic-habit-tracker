@@ -1,5 +1,6 @@
 import { handleApiError, jsonOk, readJson, withApiUser } from "@/lib/api/http";
 import { lessonProgressSchema, preferencesSchema } from "@/lib/contracts/domain";
+import { logger } from "@/lib/logger";
 import {
   getPreferences,
   listCompletedLessons,
@@ -7,10 +8,13 @@ import {
   savePreferences,
 } from "@/lib/repositories/reflection";
 
+const log = logger.child({ module: "api.v1.reflection.lessons" });
+
 export const runtime = "nodejs";
 
 export async function GET() {
   return withApiUser(async (userId) => {
+    log.debug("GET /api/v1/reflection/lessons", { event: "api.reflection.lessons.get", userId });
     const [completedLessonIds, preferences] = await Promise.all([
       listCompletedLessons(userId),
       getPreferences(userId),
@@ -22,6 +26,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   return withApiUser(async (userId) => {
+    log.debug("POST /api/v1/reflection/lessons", { event: "api.reflection.lessons.post", userId });
     const body = await readJson(request);
 
     if (typeof body === "object" && body && "lessonMode" in body) {

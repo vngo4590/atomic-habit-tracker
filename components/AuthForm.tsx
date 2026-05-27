@@ -5,6 +5,7 @@ import { useActionState } from "react";
 
 import type { AuthFormState } from "@/lib/contracts/auth";
 import { initialAuthFormState } from "@/lib/contracts/auth";
+import { clientLogger } from "@/lib/logger-client";
 
 import styles from "./AuthForm.module.css";
 
@@ -47,6 +48,16 @@ export function AuthForm({
   footer,
 }: AuthFormProps) {
   const [state, formAction, pending] = useActionState(action, initialAuthFormState);
+  const authMode = includeName ? "register" : "login";
+
+  // Record safe auth intent metadata in development without exposing credentials.
+  const handleSubmit = () => {
+    clientLogger.info("Auth form submitted", {
+      event: "auth.submit",
+      mode: authMode,
+      hasCallbackUrl: Boolean(callbackUrl),
+    });
+  };
 
   return (
     <main className={styles.shell}>
@@ -54,7 +65,7 @@ export function AuthForm({
         <div className="eyebrow">{eyebrow}</div>
         <h1 className={`h1 ${styles.title}`}>{title}</h1>
 
-        <form action={formAction} className={styles.form}>
+        <form action={formAction} className={styles.form} onSubmit={handleSubmit}>
           <input type="hidden" name="callbackUrl" value={callbackUrl ?? "/"} />
           {includeName && (
             <label>

@@ -3,10 +3,13 @@ import { PrismaPg } from "@prisma/adapter-pg";
 
 import { getDatabaseUrl } from "@/lib/db/config";
 import { PrismaClient } from "@/lib/generated/prisma/client";
+import { logger } from "@/lib/logger";
 
 const globalForPrisma = globalThis as typeof globalThis & {
   prisma?: InstanceType<typeof PrismaClient>;
 };
+
+const log = logger.child({ module: "db.client" });
 
 /**
  * Strips Prisma-specific query parameters (like `schema`) from the database
@@ -40,8 +43,10 @@ function createPrismaClient() {
   });
 
   const adapter = new PrismaPg(pool);
+  const client = new PrismaClient({ adapter });
 
-  return new PrismaClient({ adapter });
+  log.debug("Database client initialized", { event: "db.client.init" });
+  return client;
 }
 
 // Always cache on globalThis to prevent multiple PrismaClient instances

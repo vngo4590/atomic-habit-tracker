@@ -7,11 +7,36 @@ import { StoreProvider } from "@/components/StoreProvider";
 import { Toast } from "@/components/Toast";
 import { requireCurrentUser } from "@/lib/auth/session";
 import { todayKey } from "@/lib/helpers";
+import { logger, redactUserId } from "@/lib/logger";
 import { getStoreSnapshot } from "@/lib/repositories/reflection";
+
+const log = logger.child({ module: "layout.root" });
 
 export default async function RootGroupLayout({ children }: { children: ReactNode }) {
   const user = await requireCurrentUser();
-  const backendSnapshot = await getStoreSnapshot(user.id, todayKey());
+
+  log.debug("Loading store snapshot", {
+    event: "layout.snapshot.loading",
+    userId: redactUserId(user.id),
+  });
+
+  const backendSnapshot = await (async () => {
+    try {
+      const snapshot = await getStoreSnapshot(user.id, todayKey());
+      log.debug("Store snapshot loaded", {
+        event: "layout.snapshot.loaded",
+        userId: redactUserId(user.id),
+      });
+      return snapshot;
+    } catch (error) {
+      log.error("Failed to load store snapshot", {
+        event: "layout.snapshot.failed",
+        userId: redactUserId(user.id),
+        error,
+      });
+      throw error;
+    }
+  })();
 
   return (
     <StoreProvider backendSnapshot={backendSnapshot}>
