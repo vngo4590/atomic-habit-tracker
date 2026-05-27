@@ -96,7 +96,7 @@ resource errorRateSpikeAlert 'Microsoft.Insights/scheduledQueryRules@2023-12-01'
       ]
     }
     autoMitigate: true
-    skipQueryValidation: false
+    skipQueryValidation: true
     actions: {
       actionGroups: []
     }
@@ -137,7 +137,7 @@ resource authFailureSpikeAlert 'Microsoft.Insights/scheduledQueryRules@2023-12-0
       ]
     }
     autoMitigate: true
-    skipQueryValidation: false
+    skipQueryValidation: true
     actions: {
       actionGroups: []
     }
@@ -178,7 +178,7 @@ resource uncaughtExceptionAlert 'Microsoft.Insights/scheduledQueryRules@2023-12-
       ]
     }
     autoMitigate: true
-    skipQueryValidation: false
+    skipQueryValidation: true
     actions: {
       actionGroups: []
     }

@@ -113,7 +113,7 @@
           ]
         },
         "autoMitigate": true,
-        "skipQueryValidation": false,
+        "skipQueryValidation": true,
         "actions": {
           "actionGroups": []
         }
@@ -154,7 +154,7 @@
           ]
         },
         "autoMitigate": true,
-        "skipQueryValidation": false,
+        "skipQueryValidation": true,
         "actions": {
           "actionGroups": []
         }
@@ -195,7 +195,7 @@
           ]
         },
         "autoMitigate": true,
-        "skipQueryValidation": false,
+        "skipQueryValidation": true,
         "actions": {
           "actionGroups": []
         }
