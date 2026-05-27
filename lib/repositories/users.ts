@@ -1,5 +1,6 @@
 import { db } from "@/lib/db/client";
 import { validateDatabaseUrl } from "@/lib/db/config";
+import { logger, redactEmail, redactUserId } from "@/lib/logger";
 
 type DbClient = typeof db;
 
@@ -25,7 +26,10 @@ const authUserSelect = {
   passwordHash: true,
 } as const;
 
+const log = logger.child({ module: "repo.users" });
+
 export async function findAuthUserByEmail(email: string, client: DbClient = db): Promise<AuthUserRecord | null> {
+  log.debug("Finding auth user by email", { event: "repo.user.findByEmail", email: redactEmail(email) });
   validateDatabaseUrl();
 
   return client.user.findUnique({
@@ -35,6 +39,7 @@ export async function findAuthUserByEmail(email: string, client: DbClient = db):
 }
 
 export async function findAuthUserById(id: string, client: DbClient = db): Promise<AuthUserRecord | null> {
+  log.debug("Finding auth user by id", { event: "repo.user.findById", userId: redactUserId(id) });
   validateDatabaseUrl();
 
   return client.user.findUnique({
@@ -44,6 +49,11 @@ export async function findAuthUserById(id: string, client: DbClient = db): Promi
 }
 
 export async function createUserWithDefaults(input: CreateUserInput, client: DbClient = db): Promise<AuthUserRecord> {
+  log.debug("Creating user with defaults", {
+    event: "repo.user.create",
+    email: redactEmail(input.email),
+    hasName: Boolean(input.name),
+  });
   validateDatabaseUrl();
 
   return client.user.create({
@@ -64,6 +74,11 @@ export async function createUserWithDefaults(input: CreateUserInput, client: DbC
 }
 
 export async function updateUserName(id: string, name: string, client: DbClient = db): Promise<AuthUserRecord> {
+  log.debug("Updating user name", {
+    event: "repo.user.updateName",
+    userId: redactUserId(id),
+    hasName: Boolean(name),
+  });
   validateDatabaseUrl();
 
   return client.user.update({
@@ -74,6 +89,7 @@ export async function updateUserName(id: string, name: string, client: DbClient 
 }
 
 export async function updateUserPassword(id: string, passwordHash: string, client: DbClient = db): Promise<AuthUserRecord> {
+  log.debug("Updating user password", { event: "repo.user.updatePassword", userId: redactUserId(id) });
   validateDatabaseUrl();
 
   return client.user.update({

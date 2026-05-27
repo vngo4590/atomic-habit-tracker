@@ -2,6 +2,7 @@ import type { RegisterInput } from "@/lib/contracts/auth";
 import { registerSchema } from "@/lib/contracts/auth";
 import { hashPassword } from "@/lib/auth/password";
 import { databaseSetupMessage } from "@/lib/db/config";
+import { logger, redactEmail } from "@/lib/logger";
 import type { AuthUserRecord, CreateUserInput } from "@/lib/repositories/users";
 import { createUserWithDefaults, findAuthUserByEmail } from "@/lib/repositories/users";
 
@@ -21,10 +22,21 @@ const defaultDeps: RegisterDeps = {
   hash: hashPassword,
 };
 
+const log = logger.child({ module: "auth.register" });
+
 export async function registerUser(input: unknown, deps: RegisterDeps = defaultDeps): Promise<RegisterResult> {
+  const submittedEmail =
+    typeof input === "object" && input !== null && "email" in input && typeof input.email === "string"
+      ? input.email
+      : undefined;
   const parsed = registerSchema.safeParse(input);
 
   if (!parsed.success) {
+    log.warn("Registration validation failed", {
+      event: "auth.register.failed",
+      ...(submittedEmail ? { email: redactEmail(submittedEmail) } : {}),
+      reason: "validation",
+    });
     return {
       ok: false,
       message: "Check the highlighted fields.",
@@ -38,11 +50,21 @@ export async function registerUser(input: unknown, deps: RegisterDeps = defaultD
   } catch (error) {
     const message = databaseSetupMessage(error);
     if (message) {
+      log.warn("Registration failed", {
+        event: "auth.register.failed",
+        email: redactEmail(parsed.data.email),
+        reason: message,
+      });
       return { ok: false, message };
     }
     throw error;
   }
   if (existing) {
+    log.warn("Registration failed", {
+      event: "auth.register.failed",
+      email: redactEmail(parsed.data.email),
+      reason: "duplicate_email",
+    });
     return {
       ok: false,
       message: "An account already exists for that email.",
@@ -61,10 +83,19 @@ export async function registerUser(input: unknown, deps: RegisterDeps = defaultD
   } catch (error) {
     const message = databaseSetupMessage(error);
     if (message) {
+      log.warn("Registration failed", {
+        event: "auth.register.failed",
+        email: redactEmail(parsed.data.email),
+        reason: message,
+      });
       return { ok: false, message };
     }
     throw error;
   }
 
+  log.info("Registration succeeded", {
+    event: "auth.register.success",
+    email: redactEmail(user.email),
+  });
   return { ok: true, user };
 }

@@ -154,7 +154,7 @@ jobs:
       - name: Deploy infrastructure (Bicep)
         id: bicep
         run: |
-          az deployment sub create \
+          DEPLOY_OUTPUTS=$(az deployment sub create \
             --name "atomicly-${{ env.ENVIRONMENT }}-${{ github.run_id }}" \
             --location ${{ env.LOCATION }} \
             --template-file infra/main.bicep \
@@ -164,7 +164,11 @@ jobs:
               uniqueSuffix=${{ secrets.AZURE_UNIQUE_SUFFIX }} \
               postgresAdminPassword='${{ secrets.POSTGRES_ADMIN_PASSWORD }}' \
               imageTag=${{ steps.vars.outputs.tag }} \
-            --query properties.outputs
+            --query properties.outputs \
+            -o json)
+          echo "$DEPLOY_OUTPUTS"
+          APP_INSIGHTS_CONNECTION_STRING=$(echo "$DEPLOY_OUTPUTS" | python -c "import json, sys; print(json.load(sys.stdin)['appInsightsConnectionString']['value'])")
+          echo "app_insights_connection_string=$APP_INSIGHTS_CONNECTION_STRING" >> "$GITHUB_OUTPUT"
 
       - name: Resolve actual Front Door hostname
         id: fd
@@ -236,6 +240,7 @@ jobs:
               "AUTH_URL=$FD_URL" \
               "NEXT_PUBLIC_APP_URL=$FD_URL" \
               "DEPLOYMENT_VERSION=${{ steps.vars.outputs.tag }}" \
+              "APPLICATIONINSIGHTS_CONNECTION_STRING=${{ steps.bicep.outputs.app_insights_connection_string }}" \
               "DATABASE_URL=@Microsoft.KeyVault(SecretUri=${KV_URL}/secrets/database-url/)" \
               "AUTH_SECRET=@Microsoft.KeyVault(SecretUri=${KV_URL}/secrets/auth-secret/)"
 

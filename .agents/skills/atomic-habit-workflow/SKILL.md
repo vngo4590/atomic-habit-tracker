@@ -222,6 +222,7 @@ Before `git push`, walk through this list. If any item fails, fix it before push
 □ TypeScript clean:          npm run typecheck
 □ Lint clean:                npm run lint
 □ Build succeeds:            npm run build
+□ No raw console.log in app code (use lib/logger.ts or lib/logger-client.ts)
 □ Docs updated (if needed):  README.md, AGENTS.md
 □ Branch pushed:             git push -u origin <branch>
 ```
@@ -254,3 +255,64 @@ When working as (or with) an AI agent:
 - **CSS Modules** — `*.module.css` files whose class names are locally scoped by Next.js at build time. Import `styles from './X.module.css'` and use `styles.className`.
 - **CSS variable passthrough** — Inline `style={{ "--token": value }}` used to feed per-data values (e.g. mood colour) into a generic CSS module class.
 - **Module CSS vs Tailwind** — Use module CSS for component-specific styling; Tailwind utilities are acceptable for one-off layout primitives but prefer modules for anything reused or non-trivial.
+
+## 13. Logging
+
+All code in the Atomicly repo must use the structured logger. Raw `console.log` / `console.warn` / `console.error` calls are not permitted in application code (they are fine in scripts, seeds, and test helpers).
+
+### Server-side (`lib/logger.ts`)
+
+- Import and use a child logger scoped to the module: `const log = logger.child({ module: "actions.auth" });`
+- **All server actions** must emit structured info-level logs for significant business events (create, update, delete, auth events).
+- **All repositories** must emit debug-level logs at the start of each exported function.
+- **All API route handlers** get automatic logging via `withApiUser` in `lib/api/http.ts`.
+- **Errors**: Log unexpected errors at `error` level. Log expected failures (validation, auth rejection) at `warn` level.
+- **Never** log raw user content (journal body, review answers, notes), raw request payloads, raw `FormData`, or full error stacks in production.
+- **Always** use allowlisted fields — pass only known-safe context to log calls.
+- **Sensitive data** must be redacted using helpers from `lib/logger-redact.ts`:
+  - `redactEmail(email)` — partial mask (`a***@domain.com`)
+  - `redactUserId(id)` — truncated to 8 chars
+  - Fields named `password`, `passwordHash`, `secret`, `token` → never logged
+- **Correlation**: Pass `requestId` when available (API routes generate one automatically).
+- **Event naming**: Use dotted taxonomy — `auth.login_attempted`, `habit.created`, `repo.habit.list`, `api.unauthenticated`.
+
+### Client-side (`lib/logger-client.ts`)
+
+- Client logging is **development-only** — all output is suppressed in production.
+- Use `clientLogger.info(...)` for significant UI events during development.
+- Never log sensitive data even in development — same redaction rules apply.
+- If production client telemetry is needed, route through a dedicated API endpoint.
+
+### Log levels
+
+| Level | When to use |
+| --- | --- |
+| `debug` | Diagnostic information (repository DB calls, auth flow details). Off in production unless `LOG_LEVEL=debug`. |
+| `info` | Significant business events (habit created, user registered, preferences saved). |
+| `warn` | Expected-but-notable failures (invalid login, validation rejection, unauthenticated API call). |
+| `error` | Unexpected failures only (unhandled exceptions, DB connection failures). |
+
+### Adding logging to new code
+
+When creating a new server action:
+```ts
+import { logger, redactUserId } from "@/lib/logger";
+const log = logger.child({ module: "actions.mymodule" });
+
+export async function myAction(input: MyInput) {
+  const userId = await requireUserId();
+  log.info("Doing the thing", { event: "thing.done", userId: redactUserId(userId), entityId: input.id });
+  // ... implementation
+}
+```
+
+When creating a new repository function:
+```ts
+import { logger, redactUserId } from "@/lib/logger";
+const log = logger.child({ module: "repo.myentity" });
+
+export async function findEntity(userId: string, entityId: string, db: DbClient = defaultDb) {
+  log.debug("Finding entity", { event: "repo.entity.find", userId: redactUserId(userId), entityId });
+  // ... implementation
+}
+```

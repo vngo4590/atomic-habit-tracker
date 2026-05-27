@@ -16,6 +16,9 @@ param imageTag string = 'dev-latest'
 @description('Log Analytics workspace resource ID for diagnostics')
 param logAnalyticsWorkspaceId string = ''
 
+@description('Application Insights connection string injected into the web app runtime.')
+param applicationInsightsConnectionString string = ''
+
 // ---------------------------------------------------------------------------
 // Web App — runs the Next.js standalone container.
 //
@@ -27,8 +30,9 @@ param logAnalyticsWorkspaceId string = ''
 //   • Health check endpoint for load-balancer probes
 //   • Detailed logging enabled for diagnostics
 //
-// NOTE: App settings (DATABASE_URL, AUTH_SECRET, etc.) are injected
+// NOTE: Secret app settings (DATABASE_URL, AUTH_SECRET, etc.) are injected
 // post-deployment by the deploy script so secrets never live in Bicep.
+// The non-secret Application Insights connection string is safe to stamp here.
 // ---------------------------------------------------------------------------
 resource webApp 'Microsoft.Web/sites@2023-12-01' = {
   name: appName
@@ -54,6 +58,14 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
       requestTracingEnabled: true
       numberOfWorkers: 1
       http20Enabled: true
+      appSettings: empty(applicationInsightsConnectionString)
+        ? []
+        : [
+            {
+              name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+              value: applicationInsightsConnectionString
+            }
+          ]
     }
   }
 }

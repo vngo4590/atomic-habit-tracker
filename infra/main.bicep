@@ -46,6 +46,8 @@ param imageTag string = 'dev-latest'
 // ---------------------------------------------------------------------------
 var rgName = 'rg-${projectName}-${environment}-aue-${uniqueSuffix}'
 var baseName = '${projectName}${environment}${uniqueSuffix}'
+var appServiceName = 'app-${projectName}-${environment}-aue'
+var appServiceId = resourceId(subscription().subscriptionId, rg.name, 'Microsoft.Web/sites', appServiceName)
 var frontDoorEndpointName = '${projectName}-${environment}-${uniqueSuffix}'
 // NOTE: Front Door Standard auto-generates a unique hash suffix for the endpoint
 // hostname (e.g. atomicly-dev-XXXX-fab7fhdwbsehg7af.z01.azurefd.net).  This
@@ -74,8 +76,9 @@ module monitoring 'modules/monitoring.bicep' = {
   scope: rg
   params: {
     location: location
-    logAnalyticsName: 'law-${projectName}-${environment}-aue'
-    appInsightsName: 'appi-${projectName}-${environment}-aue'
+    environment: environment
+    uniqueSuffix: uniqueSuffix
+    appServiceId: appServiceId
   }
 }
 
@@ -136,11 +139,12 @@ module appService 'modules/appService.bicep' = {
   scope: rg
   params: {
     location: location
-    appName: 'app-${projectName}-${environment}-aue'
+    appName: appServiceName
     planId: appServicePlan.outputs.id
     acrLoginServer: acr.outputs.loginServer
     imageTag: imageTag
     logAnalyticsWorkspaceId: monitoring.outputs.logAnalyticsWorkspaceId
+    applicationInsightsConnectionString: monitoring.outputs.connectionString
   }
 }
 
@@ -196,4 +200,4 @@ output frontDoorEndpoint string = 'https://${frontDoor.outputs.endpointHostName}
 output postgresFqdn string = postgres.outputs.fqdn
 output keyVaultUri string = keyvault.outputs.vaultUri
 output keyVaultName string = keyvault.outputs.vaultName
-output appInsightsConnectionString string = monitoring.outputs.appInsightsConnectionString
+output appInsightsConnectionString string = monitoring.outputs.connectionString

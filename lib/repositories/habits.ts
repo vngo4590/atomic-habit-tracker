@@ -12,8 +12,9 @@ import {
   type HabitUpdateInput,
   type StackMutationInput,
 } from "@/lib/contracts/domain";
-import { makeStackError } from "@/lib/stack-errors";
+import { logger, redactUserId } from "@/lib/logger";
 import { stackInsertPatches, stackRemovePatches, stackReorderPatches, getStackChain, getStackRoot } from "@/lib/stack";
+import { makeStackError } from "@/lib/stack-errors";
 import type { CheckIn, Habit, Note } from "@/lib/types";
 
 type DbClient = typeof defaultDb;
@@ -50,6 +51,8 @@ const habitInclude = {
   notes: { orderBy: { createdAt: "desc" as const } },
   contract: true,
 };
+
+const log = logger.child({ module: "repo.habits" });
 
 function toDateKey(date: Date) {
   return date.toISOString().slice(0, 10);
@@ -100,6 +103,7 @@ function toHabit(record: HabitRecord & { stackNextId?: string | null }): Habit {
 }
 
 export async function listHabits(userId: string, db: DbClient = defaultDb) {
+  log.debug("Listing habits", { event: "repo.habit.list", userId: redactUserId(userId) });
   validateDatabaseUrl();
 
   const records = await db.habit.findMany({
@@ -112,6 +116,7 @@ export async function listHabits(userId: string, db: DbClient = defaultDb) {
 }
 
 export async function getHabit(userId: string, habitId: string, db: DbClient = defaultDb) {
+  log.debug("Getting habit", { event: "repo.habit.get", userId: redactUserId(userId), habitId });
   validateDatabaseUrl();
 
   const record = await db.habit.findFirst({
@@ -123,6 +128,12 @@ export async function getHabit(userId: string, habitId: string, db: DbClient = d
 }
 
 export async function createHabit(userId: string, input: HabitCreateInput, db: DbClient = defaultDb) {
+  log.debug("Creating habit", {
+    event: "repo.habit.create",
+    userId: redactUserId(userId),
+    hasContract: Boolean(input.contract || input.contractPartners.length),
+    stackNextId: input.stackNextId ?? null,
+  });
   validateDatabaseUrl();
   const data = habitCreateSchema.parse(input);
 
@@ -156,6 +167,14 @@ export async function createHabit(userId: string, input: HabitCreateInput, db: D
 }
 
 export async function updateHabit(userId: string, habitId: string, input: HabitUpdateInput, db: DbClient = defaultDb) {
+  log.debug("Updating habit", {
+    event: "repo.habit.update",
+    userId: redactUserId(userId),
+    habitId,
+    updatesContract: input.contract !== undefined || input.contractPartners !== undefined,
+    updatesNotes: input.notes !== undefined,
+    updatesStackLink: input.stackNextId !== undefined,
+  });
   validateDatabaseUrl();
   const current = await getHabit(userId, habitId, db);
 
@@ -214,6 +233,7 @@ export async function updateHabit(userId: string, habitId: string, input: HabitU
 }
 
 export async function archiveHabit(userId: string, habitId: string, db: DbClient = defaultDb) {
+  log.debug("Archiving habit", { event: "repo.habit.archive", userId: redactUserId(userId), habitId });
   validateDatabaseUrl();
   const current = await getHabit(userId, habitId, db);
 
@@ -230,6 +250,15 @@ export async function archiveHabit(userId: string, habitId: string, db: DbClient
 }
 
 export async function upsertCheckIn(userId: string, habitId: string, input: CheckInInput, db: DbClient = defaultDb) {
+  log.debug("Upserting habit check-in", {
+    event: "repo.habit.checkIn.upsert",
+    userId: redactUserId(userId),
+    habitId,
+    dateKey: input.dateKey,
+    done: input.done,
+    hasJournal: Boolean(input.journal),
+    hasMood: input.mood !== undefined && input.mood !== null,
+  });
   validateDatabaseUrl();
   const data = checkInSchema.parse(input);
   const habit = await getHabit(userId, habitId, db);
@@ -264,10 +293,17 @@ export async function upsertCheckIn(userId: string, habitId: string, input: Chec
 }
 
 export async function replaceNotes(userId: string, habitId: string, notes: Note[], db: DbClient = defaultDb) {
+  log.debug("Replacing habit notes", {
+    event: "repo.habit.note.replace",
+    userId: redactUserId(userId),
+    habitId,
+    noteCount: notes.length,
+  });
   return updateHabit(userId, habitId, { notes }, db);
 }
 
 export async function addNote(userId: string, habitId: string, body: string, db: DbClient = defaultDb) {
+  log.debug("Adding habit note", { event: "repo.habit.note.add", userId: redactUserId(userId), habitId });
   validateDatabaseUrl();
   const data = noteSchema.parse({ body });
   const habit = await getHabit(userId, habitId, db);
@@ -286,6 +322,13 @@ export async function saveContract(
   input: { terms: string; partners: string[] },
   db: DbClient = defaultDb,
 ) {
+  log.debug("Saving habit contract", {
+    event: "repo.habit.contract.save",
+    userId: redactUserId(userId),
+    habitId,
+    hasTerms: Boolean(input.terms),
+    partnerCount: input.partners.length,
+  });
   const data = contractSchema.parse(input);
   return updateHabit(userId, habitId, { contract: data.terms, contractPartners: data.partners }, db);
 }
@@ -309,6 +352,12 @@ export async function validateStackLink(
   nextId: string | null,
   db: DbClient = defaultDb,
 ) {
+  log.debug("Validating stack link", {
+    event: "repo.habit.stackLink.validate",
+    userId: redactUserId(userId),
+    habitId,
+    nextId,
+  });
   if (nextId === null) return;
 
   if (nextId === habitId) {
@@ -365,6 +414,14 @@ export async function applyStackMutation(
   input: StackMutationInput,
   db: DbClient = defaultDb,
 ): Promise<Habit[]> {
+  log.debug("Applying stack mutation", {
+    event: "repo.habit.stackMutation.apply",
+    userId: redactUserId(userId),
+    kind: input.kind,
+    habitId: "habitId" in input ? input.habitId : undefined,
+    targetId: "targetId" in input ? input.targetId : undefined,
+    habitCount: "habitIds" in input ? input.habitIds.length : undefined,
+  });
   validateDatabaseUrl();
   const mutation = stackMutationSchema.parse(input);
 

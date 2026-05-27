@@ -11,6 +11,8 @@ import {
   type PreferencesInput,
   type WeeklyReviewInput,
 } from "@/lib/contracts/domain";
+import { logger, redactUserId } from "@/lib/logger";
+import { listHabits } from "@/lib/repositories/habits";
 import type {
   FormationVerdict,
   Identity,
@@ -20,7 +22,6 @@ import type {
   WeeklyReview,
   WeeklyReviewAnswers,
 } from "@/lib/types";
-import { listHabits } from "@/lib/repositories/habits";
 
 type DbClient = typeof defaultDb;
 
@@ -34,6 +35,8 @@ const defaultPreferences: UserPreferences = {
   lessonMode: "sequential",
   timezone: "UTC",
 };
+
+const log = logger.child({ module: "repo.reflection" });
 
 export const emptyWeeklyReview: WeeklyReviewAnswers = {
   wentWell: "",
@@ -103,6 +106,7 @@ function toFormationVerdict(record: {
 }
 
 export async function getIdentity(userId: string, db: DbClient = defaultDb): Promise<Identity> {
+  log.debug("Getting identity", { event: "repo.identity.get", userId: redactUserId(userId) });
   validateDatabaseUrl();
 
   const record = await db.identityProfile.upsert({
@@ -115,6 +119,11 @@ export async function getIdentity(userId: string, db: DbClient = defaultDb): Pro
 }
 
 export async function saveIdentity(userId: string, input: Identity, db: DbClient = defaultDb) {
+  log.debug("Saving identity", {
+    event: "repo.identity.save",
+    userId: redactUserId(userId),
+    valueCount: input.values.length,
+  });
   validateDatabaseUrl();
   const data = identitySchema.parse(input);
 
@@ -128,6 +137,7 @@ export async function saveIdentity(userId: string, input: Identity, db: DbClient
 }
 
 export async function listJournalEntries(userId: string, db: DbClient = defaultDb) {
+  log.debug("Listing journal entries", { event: "repo.journal.list", userId: redactUserId(userId) });
   validateDatabaseUrl();
 
   const records = await db.journalEntry.findMany({
@@ -139,6 +149,12 @@ export async function listJournalEntries(userId: string, db: DbClient = defaultD
 }
 
 export async function createJournalEntry(userId: string, input: JournalEntryInput, db: DbClient = defaultDb) {
+  log.debug("Creating journal entry", {
+    event: "repo.journal.create",
+    userId: redactUserId(userId),
+    dateKey: input.dateKey,
+    hasTags: input.tags.length > 0,
+  });
   validateDatabaseUrl();
   const data = journalEntrySchema.parse(input);
 
@@ -162,6 +178,14 @@ export async function updateJournalEntry(
   input: Partial<JournalEntryInput>,
   db: DbClient = defaultDb,
 ) {
+  log.debug("Updating journal entry", {
+    event: "repo.journal.update",
+    userId: redactUserId(userId),
+    entryId,
+    dateKey: input.dateKey,
+    updatesMood: input.mood !== undefined,
+    updatesTags: input.tags !== undefined,
+  });
   validateDatabaseUrl();
   const current = await db.journalEntry.findFirst({ where: { id: entryId, userId } });
 
@@ -185,6 +209,11 @@ export async function updateJournalEntry(
 }
 
 export async function getWeeklyReview(userId: string, weekStartKey: string, db: DbClient = defaultDb) {
+  log.debug("Getting weekly review", {
+    event: "repo.weeklyReview.get",
+    userId: redactUserId(userId),
+    weekStartKey,
+  });
   validateDatabaseUrl();
 
   const record = await db.weeklyReview.findUnique({
@@ -197,6 +226,7 @@ export async function getWeeklyReview(userId: string, weekStartKey: string, db: 
 }
 
 export async function listWeeklyReviews(userId: string, db: DbClient = defaultDb) {
+  log.debug("Listing weekly reviews", { event: "repo.weeklyReview.list", userId: redactUserId(userId) });
   validateDatabaseUrl();
 
   const records = await db.weeklyReview.findMany({
@@ -208,6 +238,11 @@ export async function listWeeklyReviews(userId: string, db: DbClient = defaultDb
 }
 
 export async function saveWeeklyReview(userId: string, input: WeeklyReviewInput, db: DbClient = defaultDb) {
+  log.debug("Saving weekly review", {
+    event: "repo.weeklyReview.save",
+    userId: redactUserId(userId),
+    weekStartKey: input.weekStartKey,
+  });
   validateDatabaseUrl();
   const data = weeklyReviewSchema.parse(input);
 
@@ -231,6 +266,7 @@ export async function saveWeeklyReview(userId: string, input: WeeklyReviewInput,
 }
 
 export async function listCompletedLessons(userId: string, db: DbClient = defaultDb) {
+  log.debug("Listing completed lessons", { event: "repo.lesson.list", userId: redactUserId(userId) });
   validateDatabaseUrl();
 
   const records = await db.lessonProgress.findMany({
@@ -242,6 +278,11 @@ export async function listCompletedLessons(userId: string, db: DbClient = defaul
 }
 
 export async function markLessonComplete(userId: string, lessonId: number, db: DbClient = defaultDb) {
+  log.debug("Marking lesson complete", {
+    event: "repo.lesson.complete",
+    userId: redactUserId(userId),
+    lessonId,
+  });
   validateDatabaseUrl();
   const data = lessonProgressSchema.parse({ lessonId });
 
@@ -255,6 +296,7 @@ export async function markLessonComplete(userId: string, lessonId: number, db: D
 }
 
 export async function getPreferences(userId: string, db: DbClient = defaultDb) {
+  log.debug("Getting preferences", { event: "repo.preferences.get", userId: redactUserId(userId) });
   validateDatabaseUrl();
 
   const record = await db.userPreference.upsert({
@@ -276,6 +318,13 @@ export async function getPreferences(userId: string, db: DbClient = defaultDb) {
 }
 
 export async function savePreferences(userId: string, input: PreferencesInput, db: DbClient = defaultDb) {
+  log.debug("Saving preferences", {
+    event: "repo.preferences.save",
+    userId: redactUserId(userId),
+    theme: input.theme,
+    remindersEnabled: input.remindersEnabled,
+    timezone: input.timezone,
+  });
   validateDatabaseUrl();
   const data = preferencesSchema.parse(input);
 
@@ -298,6 +347,7 @@ export async function savePreferences(userId: string, input: PreferencesInput, d
 }
 
 export async function listFormationVerdicts(userId: string, db: DbClient = defaultDb) {
+  log.debug("Listing formation verdicts", { event: "repo.formationVerdict.list", userId: redactUserId(userId) });
   validateDatabaseUrl();
 
   const records = await db.formationVerdict.findMany({
@@ -309,6 +359,11 @@ export async function listFormationVerdicts(userId: string, db: DbClient = defau
 }
 
 export async function saveFormationVerdict(userId: string, input: FormationVerdict, db: DbClient = defaultDb) {
+  log.debug("Saving formation verdict", {
+    event: "repo.formationVerdict.save",
+    userId: redactUserId(userId),
+    habitId: input.habitId,
+  });
   validateDatabaseUrl();
   const data = formationVerdictSchema.parse(input);
   const habit = await db.habit.findFirst({ where: { id: data.habitId, userId } });
@@ -339,6 +394,11 @@ export async function saveFormationVerdict(userId: string, input: FormationVerdi
 }
 
 export async function getStoreSnapshot(userId: string, weekStartKey: string, db: DbClient = defaultDb): Promise<StoreSnapshot> {
+  log.debug("Getting store snapshot", {
+    event: "repo.snapshot.get",
+    userId: redactUserId(userId),
+    weekStartKey,
+  });
   validateDatabaseUrl();
 
   const [habits, journal, identity, weeklyReview, weeklyReviews, completedLessons, formationVerdicts, preferences] = await Promise.all([
