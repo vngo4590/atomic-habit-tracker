@@ -303,8 +303,7 @@ Notes:
 - `docs/architecture/backend-auth-mobile.md`: backend, auth, database, and deployment architecture notes.
 - `openspec/changes/`: active OpenSpec changes.
 - `openspec/changes/archive/`: archived OpenSpec changes, including the completed reference UI port and backend/auth/mobile architecture work.
-- `.agents/skills/`: canonical project-local skills shared by Claude and Codex.
-- `.claude/skills/`: generated compatibility copy/link for Claude; do not edit directly.
+- `.agents/skills/`: project-local skills shared by all agents.
 
 ## Styles & Design Tokens
 

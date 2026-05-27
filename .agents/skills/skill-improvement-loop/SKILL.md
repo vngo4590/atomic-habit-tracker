@@ -24,9 +24,8 @@ Use this at the end of a meaningful work session, or when the user asks to captu
    - A reusable script, reference, asset, or template that would reduce future effort.
    - A recurring task pattern with no existing skill.
 2. Inspect available project skills before assigning a target:
-   - Canonical project-local skills: `.agents/skills/*/SKILL.md`.
-   - Generated compatibility copies/links: `.claude/skills/*/SKILL.md` and `~/.codex/skills/*/SKILL.md`.
-   - Codex skills, only if relevant and readable: `~/.codex/skills/*/SKILL.md`.
+   - Project-local skills (single shared location): `.agents/skills/*/SKILL.md`.
+   - Codex system skills, only if relevant and readable: `~/.codex/skills/*/SKILL.md`.
 3. Log one opportunity per actionable improvement using `scripts/log_opportunity.py`.
 4. Keep entries evidence-based. Include the observed trigger, affected skill or `NEW_SKILL`, and the smallest useful recommendation.
 
@@ -97,7 +96,7 @@ Use the scripts instead of manual JSON editing unless a script is missing a need
 - Do not invent session evidence. If the reason is speculative, lower `confidence` and mark it as a recommendation.
 - Do not make broad rewrites to skills during observe-only passes.
 - Do not change system skills under `~/.codex/skills/.system` unless the user explicitly asks and approves any required filesystem escalation.
-- Do not edit generated `.claude/skills` or `~/.codex/skills` compatibility links/copies directly. Edit `.agents/skills` and run `scripts/sync-agent-skills.ps1`.
+- Edit project skills only under `.agents/skills/` — it is the single shared skills location for all agents in this repo.
 - Preserve a skill's existing scope. If an improvement would overload it, log a new-skill recommendation.
 - Prefer adding a concise checklist item or reference pointer over long narrative.
 - When adding scripts to skills, run at least one representative script test.

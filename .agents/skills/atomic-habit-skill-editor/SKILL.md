@@ -48,10 +48,6 @@ At the start of each response turn, do a lightweight scan — no file reads requ
      ```bash
      python "C:/Users/Aaron Ngo/.codex/skills/.system/skill-creator/scripts/quick_validate.py" .agents/skills/<skill-name>
      ```
-   - Sync to `.claude/skills/`:
-     ```bash
-     .\scripts\sync-agent-skills.ps1
-     ```
    - Mark the backlog entry applied:
      ```bash
      python .agents/skills/skill-improvement-loop/scripts/update_opportunity.py \
@@ -76,7 +72,6 @@ Files that commonly signal a skill update is needed:
 | `lib/types.ts` | `atomic-habit-project-walkthrough` |
 | New `app/(root)/*/page.tsx` | `atomic-habit-project-walkthrough` (Routes table) |
 | `AGENTS.md` | `atomic-habit-project-walkthrough` (Conventions) |
-| `scripts/sync-agent-skills.ps1` | `atomic-habit-project-walkthrough` (Skills section) |
 | `.agents/skills/atomic-habit-*/SKILL.md` | `atomic-habit-skill-editor` (if editing rules changed) |
 
 ## Scheduled Implementation Session
@@ -122,7 +117,7 @@ Run when the user asks to "look through code and update Atomicly skills", "refre
    - current OpenSpec archive/active-change state,
    - deployment/runtime facts that prevent incorrect operational advice.
 
-4. Validate every edited skill with `quick_validate.py`, then run `.\scripts\sync-agent-skills.ps1`.
+4. Validate every edited skill with `quick_validate.py`.
 
 ## New Skill Detection
 
@@ -146,5 +141,4 @@ python .agents/skills/skill-improvement-loop/scripts/log_opportunity.py \
 - Do not make broad rewrites during observation passes — smallest durable change only.
 - Do not invent session evidence. Lower confidence to reflect speculation.
 - Always run `quick_validate.py` after any SKILL.md edit.
-- Always run `sync-agent-skills.ps1` after any edit so `.claude/skills/` stays in sync.
 - Backlog lives at `.agents/skill-improvement/opportunities.jsonl`. Use the scripts; never edit JSON directly.
