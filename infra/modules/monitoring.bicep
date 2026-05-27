@@ -84,7 +84,7 @@ resource errorRateSpikeAlert 'Microsoft.Insights/scheduledQueryRules@2023-12-01'
     criteria: {
       allOf: [
         {
-          query: 'union isfuzzy=true AppExceptions | where TimeGenerated >= ago(5m)'
+          query: 'union isfuzzy=true (datatable(TimeGenerated:datetime)[]), AppExceptions | where TimeGenerated >= ago(5m)'
           timeAggregation: 'Count'
           operator: 'GreaterThan'
           threshold: 10
@@ -125,7 +125,7 @@ resource authFailureSpikeAlert 'Microsoft.Insights/scheduledQueryRules@2023-12-0
     criteria: {
       allOf: [
         {
-          query: 'union isfuzzy=true AppEvents | where TimeGenerated >= ago(5m) | where Name == "auth.login_failed"'
+          query: 'union isfuzzy=true (datatable(TimeGenerated:datetime, Name:string)[]), AppEvents | where TimeGenerated >= ago(5m) | where Name == "auth.login_failed"'
           timeAggregation: 'Count'
           operator: 'GreaterThan'
           threshold: 20
@@ -166,7 +166,7 @@ resource uncaughtExceptionAlert 'Microsoft.Insights/scheduledQueryRules@2023-12-
     criteria: {
       allOf: [
         {
-          query: 'union isfuzzy=true AppExceptions, AppTraces | where TimeGenerated >= ago(5m) | where (tolower(tostring(column_ifexists("HandledAt", ""))) == "unhandled") or (column_ifexists("Message", "") has "Unhandled exception") or (column_ifexists("Message", "") has "uncaught exception")'
+          query: 'union isfuzzy=true (datatable(TimeGenerated:datetime)[]), AppExceptions, AppTraces | where TimeGenerated >= ago(5m) | where (tolower(tostring(column_ifexists("HandledAt", ""))) == "unhandled") or (column_ifexists("Message", "") has "Unhandled exception") or (column_ifexists("Message", "") has "uncaught exception")'
           timeAggregation: 'Count'
           operator: 'GreaterThan'
           threshold: 0
