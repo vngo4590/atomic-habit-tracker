@@ -1,6 +1,6 @@
 ---
 name: atomic-habit-workflow
-description: Mandatory agent workflow conventions for the Atomicly habit tracker. Load at the start of every coding session and before any change to this repo. Covers branch-per-task naming, small incremental Conventional Commits, test-every-change rules, commenting expectations for non-coder readability, SOLID + GRASP for multi-file changes, skill/docs upkeep, and the pre-push validation checklist (tests, typecheck, build, sync skills). Use whenever planning, branching, committing, pushing, or asking "what's the workflow for X?" in this repo.
+description: Mandatory agent workflow conventions for the Atomicly habit tracker. Load at the start of every coding session and before any change to this repo. Covers branch-per-task naming, small incremental Conventional Commits, test-every-change rules, commenting expectations for non-coder readability, SOLID + GRASP for multi-file changes, skill/docs upkeep, and the pre-push validation checklist (tests, typecheck, build). Use whenever planning, branching, committing, pushing, or asking "what's the workflow for X?" in this repo.
 ---
 
 # Atomicly Agent Workflow
@@ -193,7 +193,6 @@ After every session, ask: "Did I discover a pattern, convention, or gotcha that 
 
 - If yes, update the relevant `.agents/skills/atomic-habit-*` skill.
 - If no skill exists, consider creating one.
-- Run `scripts/sync-agent-skills.ps1` after editing skills so Claude and Codex see the same content.
 - Log unresolved skill improvement opportunities in `.agents/skill-improvement/opportunities.jsonl` via the `skill-improvement-loop` skill's scripts.
 
 ## 8. Keep docs current
@@ -223,7 +222,6 @@ Before `git push`, walk through this list. If any item fails, fix it before push
 □ TypeScript clean:          npm run typecheck
 □ Lint clean:                npm run lint
 □ Build succeeds:            npm run build
-□ Skills synced (if edited): .\scripts\sync-agent-skills.ps1
 □ Docs updated (if needed):  README.md, AGENTS.md
 □ Branch pushed:             git push -u origin <branch>
 ```

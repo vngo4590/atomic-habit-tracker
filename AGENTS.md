@@ -16,8 +16,7 @@ This project uses Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, and the Ap
 - `lib/`: shared types, helpers, auth/db helpers, repositories, server actions, store cache logic, and tests.
 - `reference_ui/`: source reference implementation used for the completed UI port.
 - `openspec/changes/port-reference-ui/`: completed OpenSpec proposal, design, specs, and task checklist for the reference UI port.
-- `.agents/skills/`: canonical project-local skills shared by Claude and Codex.
-- `.claude/skills/`: generated compatibility link/copy for Claude; do not edit directly.
+- `.agents/skills/`: project-local skills shared by all agents.
 - `README.md`: app overview, routes, storage keys, validation commands, and implementation notes.
 
 ## App Context
@@ -93,7 +92,6 @@ This project uses Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, and the Ap
 ## Shared Skills
 
 - Edit project skills only under `.agents/skills/`.
-- Run `.\scripts\sync-agent-skills.ps1` after changing shared skills so Claude and Codex see the same canonical skills.
 - Use `.agents/skills/skill-improvement-loop/` to log and apply skill improvement opportunities.
 - Project skill opportunities should be recorded in `.agents/skill-improvement/opportunities.jsonl` via the skill's scripts, not by manual JSON edits.
 
@@ -106,4 +104,4 @@ Read `.agents/skills/atomic-habit-workflow/SKILL.md` at the start of every sessi
 - Comment everything for non-coder understanding.
 - Follow SOLID + GRASP for any change spanning more than one file.
 - Update skills and docs when you discover new patterns or stale info.
-- Validate before push: tests, typecheck, build, sync skills.
+- Validate before push: tests, typecheck, build.
