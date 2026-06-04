@@ -56,7 +56,7 @@ export default function SettingsPage() {
   useEffect(() => {
     const stored = readStoredVariant();
     if (isThemeVariantId(stored)) {
-      setVariant(stored);
+      window.queueMicrotask(() => setVariant(stored));
     }
   }, []);
 
