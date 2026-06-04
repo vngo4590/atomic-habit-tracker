@@ -46,7 +46,7 @@ npm run prisma:migrate:deploy   # apply committed migrations
 1. **Server:** `app/(root)/layout.tsx` calls `getStoreSnapshot(userId, todayKey())` to load all user data from PostgreSQL via Prisma repositories.
 2. **Client:** `components/StoreProvider.tsx` + `lib/store.ts` provide an optimistic in-memory cache around server actions. This is *not* a browser persistence layer.
 3. **Mutations:** All writes go through server actions in `lib/actions/` (or `/api/v1` route handlers for mobile/external callers) with Zod contracts in `lib/contracts/`.
-4. **Browser localStorage** is limited to UI-only mirrors (`atomicly:theme`, `atomicly:accent`).
+4. **Browser localStorage** is limited to UI-only mirrors (`atomicly:theme`, `atomicly:accent`, `atomicly:theme-variant`).
 
 Backend/deployment architecture notes live in `docs/architecture/backend-auth-mobile.md`. Active and archived design proposals live under `openspec/changes/` — read the matching `tasks.md` / `design.md` / `specs/` before implementing planned OpenSpec work.
 

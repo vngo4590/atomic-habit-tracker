@@ -317,11 +317,14 @@ The styling layer is intentionally modular. There is **no monolithic global styl
 | App shell | `app/styles/layout.css` | `.app` grid, sidebar, brand, `.main`, `.page-header`. |
 | Component classes | `app/styles/components.css` | `.card`, `.btn`, `.input`, `.chip`, `.habit-row`, `.loop`, `.principle-*`, `.stack-*`, etc. |
 | Animations | `app/styles/animations.css` | `@keyframes` + animation utility classes (`.fade-up`, `.skeleton`, `.glass`, `.focus-ring`). |
+| Theme variants | `app/styles/themes.css` | `[data-theme-variant="glass\|neon\|fairy\|stars"]` token overrides driven by the theme registry in `lib/themes.ts`. |
 | Responsive | `app/styles/responsive.css` | Mobile (`max-width: 900px`) and tablet (`901–1180px`) overrides. |
 | Per-component | `components/*.module.css` | Locally-scoped CSS Module next to the component. |
 | Per-page | `app/(root)/*/page.module.css` | Locally-scoped CSS Module next to the page. |
 
-`app/globals.css` is a thin entry file that `@import`s the partials in cascade order (Tailwind preflight → tokens → base → typography → layout → components → animations → responsive).
+`app/globals.css` is a thin entry file that `@import`s the partials in cascade order (Tailwind preflight → tokens → base → typography → layout → components → animations → themes → responsive).
+
+**Selectable themes.** `lib/themes.ts` is the registry of named themes (Bright, Midnight, Glass, Neon, Fairy, Starlight). The Settings → Appearance gallery lets users pick a theme and a custom accent hue. The selection is persisted as a UI-only `localStorage` mirror under `atomicly:theme-variant` (the base light/dark mode still persists server-side via the `theme` preference) and applied as a `data-theme-variant` attribute on `<html>`. A pre-hydration inline script in `app/layout.tsx` applies the stored theme before paint to avoid a flash. Each theme can declare a signature click effect rendered by `components/ClickFX.tsx` (pure particle logic in `lib/click-fx.ts`).
 
 **Inline `style={{}}` is reserved for dynamic CSS-variable passthrough** (e.g. `style={{ "--mood-color": item.color }}`) so a generic module class can theme against per-data values. Every such usage is documented inline.
 

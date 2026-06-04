@@ -110,7 +110,7 @@ explicit user justification:
 - **Analytics:** seed N check-ins over 30 days → see streak, completion rate,
   longest streak match the values computed by `lib/store.ts`.
 - **Settings:** change theme / accent → setting persists across reload (mirrors
-  `atomicly:theme`, `atomicly:accent` localStorage keys).
+  `atomicly:theme`, `atomicly:accent`, `atomicly:theme-variant` localStorage keys).
 
 ---
 
