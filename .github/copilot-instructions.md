@@ -26,9 +26,18 @@ npm run build
 
 # E2E tests (requires Playwright + running app)
 npm run test:e2e
+
+# Aggregate backend gate (prisma validate + generate + typecheck + lint:app + vitest + build)
+npm run backend:validate
+
+# Prisma
+npm run prisma:validate
+npm run prisma:generate
+npm run prisma:migrate:dev      # create/apply a new local migration
+npm run prisma:migrate:deploy   # apply committed migrations
 ```
 
-**Note:** `npm test -- --run` does not pass flags correctly; always use `npm exec vitest run`.
+**Note:** `npm test -- --run` does not pass flags correctly; always use `npm exec vitest run`. Prefer `npm run lint:app` over `npm run lint` (the broad lint includes generated/reference files).
 
 ## Architecture
 
@@ -36,8 +45,10 @@ npm run test:e2e
 
 1. **Server:** `app/(root)/layout.tsx` calls `getStoreSnapshot(userId, todayKey())` to load all user data from PostgreSQL via Prisma repositories.
 2. **Client:** `components/StoreProvider.tsx` + `lib/store.ts` provide an optimistic in-memory cache around server actions. This is *not* a browser persistence layer.
-3. **Mutations:** All writes go through server actions in `lib/actions/` with Zod contracts in `lib/contracts/`.
+3. **Mutations:** All writes go through server actions in `lib/actions/` (or `/api/v1` route handlers for mobile/external callers) with Zod contracts in `lib/contracts/`.
 4. **Browser localStorage** is limited to UI-only mirrors (`atomicly:theme`, `atomicly:accent`).
+
+Backend/deployment architecture notes live in `docs/architecture/backend-auth-mobile.md`. Active and archived design proposals live under `openspec/changes/` — read the matching `tasks.md` / `design.md` / `specs/` before implementing planned OpenSpec work.
 
 ### Key Directories
 
@@ -100,3 +111,7 @@ Local PostgreSQL runs on port **55432** (not 5432) to avoid conflicts.
 
 - Unit/integration tests run without Docker or network — they mock Prisma at the boundary.
 - When stubbing `localStorage` in tests, use `Object.defineProperty(window, "localStorage", ...)` per file to avoid cross-worker leaks.
+
+## Project Skills
+
+Project-local skills live under `.agents/skills/` and are shared by all agents. Read `.agents/skills/atomic-habit-workflow/SKILL.md` at the start of any non-trivial session. Edit skills only inside `.agents/skills/`; every `SKILL.md` must start with YAML frontmatter (`--- name: ... description: ... ---`) or the loader silently drops it.
