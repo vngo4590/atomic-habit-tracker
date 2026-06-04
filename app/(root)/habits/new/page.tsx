@@ -5,6 +5,7 @@ import { useLayoutEffect, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useStoreContext } from "@/components/StoreProvider";
+import { capitalizeFirst, withCueConnector } from "@/lib/habit-sentence";
 import { clientLogger } from "@/lib/logger-client";
 import { formatScheduleLabel } from "@/lib/schedule";
 
@@ -88,18 +89,23 @@ function MLChip({ children, onClick }: { children: string; onClick: () => void }
 }
 
 /**
- * NewHabitPage — the create-habit Mad-Libs builder. Users fill in inline
- * blanks ("I will [name], [time] [location], so I can become [identity]")
+ * NewHabitPage — the create-habit sentence builder. Users fill in inline
+ * blanks ("I'm becoming [identity] — I'll [action] when [cue], [place].")
  * and pick a schedule. The submit handler synthesises the full habit
- * (cue, response, two-minute, craving, reward) from the four blanks so
- * the user doesn't have to think about the loop on day one.
+ * (the four laws, the loop, environment, craving and reward) from those
+ * blanks so the user doesn't have to think about the loop on day one.
+ *
+ * The wording is intentionally identity-first ("I'm becoming ... I'll ...
+ * when ...") rather than an implementation-intention template, and the cue
+ * (when) and place (where) are separate, clearly-labelled blanks so the
+ * place never ends up holding a time phrase.
  */
 export default function NewHabitPage() {
   const router = useRouter();
   const { habits, addHabit } = useStoreContext();
   const [name, setName] = useState("");
-  const [time, setTime] = useState("Morning");
-  const [location, setLocation] = useState("in the kitchen");
+  const [cue, setCue] = useState("");
+  const [location, setLocation] = useState("");
   const [identity, setIdentity] = useState("");
   const [preset, setPreset] = useState<Preset>("daily");
   const [customDays, setCustomDays] = useState<string[]>([]);
@@ -141,8 +147,10 @@ export default function NewHabitPage() {
     );
   };
 
-  // Synthesise the full habit record from the four blanks then navigate
-  // to the habits list so the user can see their creation.
+  // Synthesise the full habit record from the blanks then navigate to the
+  // habits list so the user can see their creation. We set the loop fields
+  // explicitly (rather than letting the store inherit them from the law
+  // sentences) so the "loop in a sentence" recap reads grammatically.
   const finalize = () => {
     clientLogger.info("New habit submission attempted", {
       page: "habit-new",
@@ -153,21 +161,34 @@ export default function NewHabitPage() {
     if (!name.trim() || !identity.trim()) return;
 
     const cleanName = name.trim();
-    const cleanLocation = location.trim() || "a consistent place";
-    const cleanTime = time.trim() || "Morning";
+    const cleanIdentity = identity.trim();
+    const cleanCue = cue.trim();
+    const cleanLocation = location.trim();
+
+    // Law 1 ("make it obvious") reads as a trigger statement, e.g.
+    // "When I pour my coffee, at my desk." We add the connector and place
+    // here so the standalone law card and the habit row preview read well.
+    const cueClause = cleanCue ? capitalizeFirst(withCueConnector(cleanCue)) : "When the moment is right";
+    const lawCue = cleanLocation ? `${cueClause}, ${cleanLocation}.` : `${cueClause}.`;
 
     addHabit({
       name: cleanName,
       emoji: "•",
-      identity: identity.trim(),
-      time: cleanTime,
+      identity: cleanIdentity,
+      time: "Morning",
       schedule,
-      cue: `At ${cleanTime.toLowerCase()} ${cleanLocation}, I will ${cleanName.toLowerCase()}.`,
+      cue: lawCue,
       response: cleanName,
-      twoMin: `Do ${cleanName.toLowerCase()} for two minutes.`,
-      craving: `Become ${identity.trim()}.`,
-      reward: "A visible vote for the person I am becoming.",
+      twoMin: `Just ${cleanName.toLowerCase()} for two minutes.`,
+      craving: `To become ${cleanIdentity}.`,
+      reward: "A visible win I can see and feel.",
       environment: cleanLocation,
+      // Bare phrases for the loop diagram so its recap can supply the
+      // connectors ("when ...", "I want ...") and read naturally.
+      loopCue: cleanCue,
+      loopCraving: `to become ${cleanIdentity}`,
+      loopResponse: cleanName,
+      loopReward: "a visible win",
     });
     router.push("/habits");
   };
@@ -187,13 +208,14 @@ export default function NewHabitPage() {
 
       <div className={`card card-pad ${styles.sentenceCard}`}>
         <div className={styles.sentence}>
-          I will
-          <MLInput value={name} onChange={setName} placeholder="read 2 pages" wide />
-          ,
-          <MLInput value={time} onChange={setTime} placeholder="Morning" />
-          <MLInput value={location} onChange={setLocation} placeholder="at my desk" wide />
-          , so I can become
+          I&apos;m becoming
           <MLInput value={identity} onChange={setIdentity} placeholder="a reader" wide />
+          — I&apos;ll
+          <MLInput value={name} onChange={setName} placeholder="read 1 page" wide />
+          when
+          <MLInput value={cue} onChange={setCue} placeholder="I pour my coffee" wide />
+          ,
+          <MLInput value={location} onChange={setLocation} placeholder="at my desk" wide />
           .
         </div>
         <div className={styles.identityChips}>
