@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { applyAppearance } from "@/lib/appearance";
+import { applyAppearance, readStoredVariant } from "@/lib/appearance";
 
 describe("Appearance theming", () => {
   // Given: a clean DOM and mocked localStorage before each test
@@ -9,6 +9,7 @@ describe("Appearance theming", () => {
   beforeEach(() => {
     storage = new Map();
     document.documentElement.removeAttribute("data-theme");
+    document.documentElement.removeAttribute("data-theme-variant");
     document.documentElement.style.cssText = "";
 
     Object.defineProperty(window, "localStorage", {
@@ -24,6 +25,7 @@ describe("Appearance theming", () => {
 
   afterEach(() => {
     document.documentElement.removeAttribute("data-theme");
+    document.documentElement.removeAttribute("data-theme-variant");
     document.documentElement.style.cssText = "";
   });
 
@@ -78,5 +80,49 @@ describe("Appearance theming", () => {
     // Then: the new accent replaces the old one in CSS
     expect(document.documentElement.style.getPropertyValue("--accent")).toContain("240");
     expect(document.documentElement.style.getPropertyValue("--accent")).not.toContain("60");
+  });
+
+  describe("named theme variant", () => {
+    it("does not touch the variant attribute or storage when omitted", () => {
+      // When: a plain 2-arg call is made (e.g. the accent picker)
+      applyAppearance("light", 60);
+
+      // Then: no variant attribute is written and storage stays empty
+      expect(document.documentElement.dataset.themeVariant).toBeUndefined();
+      expect(storage.get("atomicly:theme-variant")).toBeUndefined();
+    });
+
+    it("sets the variant attribute and persists it when provided", () => {
+      // When: the user selects the Neon theme (a dark-based variant)
+      applyAppearance("dark", 145, "neon");
+
+      // Then: the variant is reflected on <html> for CSS to target
+      expect(document.documentElement.dataset.themeVariant).toBe("neon");
+      // And: it is mirrored to localStorage so it survives a reload
+      expect(storage.get("atomicly:theme-variant")).toBe("neon");
+      // And: the original theme/accent behaviour is unaffected
+      expect(document.documentElement.dataset.theme).toBe("dark");
+      expect(storage.get("atomicly:theme")).toBe("dark");
+    });
+
+    it("does NOT clear an existing variant on a later accent-only change", () => {
+      // Given: the user is on the Glass theme
+      applyAppearance("light", 60, "glass");
+      // When: they later change only the accent (no variant passed)
+      applyAppearance("light", 240);
+
+      // Then: the Glass variant is preserved, not wiped
+      expect(document.documentElement.dataset.themeVariant).toBe("glass");
+      expect(storage.get("atomicly:theme-variant")).toBe("glass");
+    });
+
+    it("readStoredVariant returns the persisted id or null", () => {
+      // Given: nothing stored yet
+      expect(readStoredVariant()).toBeNull();
+      // When: a variant is applied
+      applyAppearance("dark", 60, "stars");
+      // Then: it can be read back
+      expect(readStoredVariant()).toBe("stars");
+    });
   });
 });
