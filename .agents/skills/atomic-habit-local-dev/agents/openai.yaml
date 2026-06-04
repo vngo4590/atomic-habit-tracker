@@ -1,0 +1,4 @@
+interface:
+  display_name: "Atomicly Local Dev"
+  short_description: "Local DB, seed/demo data, validation commands, k8s overlay"
+  default_prompt: "Use $atomic-habit-local-dev for any local setup, seed, or validation work."

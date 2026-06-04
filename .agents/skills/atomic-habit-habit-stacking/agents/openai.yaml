@@ -1,0 +1,4 @@
+interface:
+  display_name: "Atomicly Habit Stacking"
+  short_description: "Linked-list data model, mutation API, picker semantics, UI"
+  default_prompt: "Use $atomic-habit-habit-stacking when touching stack data, mutations, or stack UI."

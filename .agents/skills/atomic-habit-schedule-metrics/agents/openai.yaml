@@ -1,0 +1,4 @@
+interface:
+  display_name: "Atomicly Schedule-Aware Metrics"
+  short_description: "How streak / longestStreak / completionRate respect schedules"
+  default_prompt: "Use $atomic-habit-schedule-metrics when touching any habit metric or analytics calculation."

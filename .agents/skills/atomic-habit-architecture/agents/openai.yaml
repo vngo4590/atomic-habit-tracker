@@ -1,0 +1,4 @@
+interface:
+  display_name: "Atomicly Architecture"
+  short_description: "Project tree, data flow, routes, key files"
+  default_prompt: "Use $atomic-habit-architecture to locate code and trace request flows."
