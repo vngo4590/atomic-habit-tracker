@@ -56,18 +56,18 @@ describe("Dark Mode States", () => {
     expect(document.documentElement.style.getPropertyValue("--accent")).toBe("oklch(62% 0.13 145)");
   });
 
-  it("Theme toggle buttons show the correct active state", () => {
-    // Given: the store is in light mode
+  it("Theme gallery marks the active theme as selected", () => {
+    // Given: the store is in light mode with no named variant stored
     storeMock.preferences = { ...storeMock.preferences, theme: "light" as const };
 
     // When: the Settings page renders
     render(<SettingsPage />);
 
-    // Then: the Light button carries the primary active class
-    const lightBtn = screen.getByText("Light");
-    const darkBtn = screen.getByText("Dark");
-    expect(lightBtn.className).toContain("btn-primary");
-    expect(darkBtn.className).not.toContain("btn-primary");
+    // Then: the light-based "Bright" card is pressed and "Midnight" is not
+    const brightCard = screen.getByRole("button", { name: /Bright/ });
+    const midnightCard = screen.getByRole("button", { name: /Midnight/ });
+    expect(brightCard.getAttribute("aria-pressed")).toBe("true");
+    expect(midnightCard.getAttribute("aria-pressed")).toBe("false");
   });
 
   it("Accent color applies the CSS custom property to the document", () => {

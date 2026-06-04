@@ -7,8 +7,9 @@ import { IconMoon, IconSun } from "@/components/Icons";
 import { useStoreContext } from "@/components/StoreProvider";
 import { changePasswordAction, updateProfileAction } from "@/lib/actions/auth";
 import type { ProfileFormState } from "@/lib/actions/auth";
-import { applyAppearance } from "@/lib/appearance";
+import { applyAppearance, readStoredVariant } from "@/lib/appearance";
 import { clientLogger } from "@/lib/logger-client";
+import { THEMES, getTheme, isThemeVariantId } from "@/lib/themes";
 
 import styles from "./page.module.css";
 
@@ -34,6 +35,9 @@ export default function SettingsPage() {
   const store = useStoreContext();
   const [theme, setTheme] = useState<Theme>(store.preferences.theme);
   const [accent, setAccent] = useState(store.preferences.accentHue);
+  // The named theme variant (Glass/Neon/...) is stored only in the browser.
+  // Undefined means "use the plain light/dark look for the current base mode".
+  const [variant, setVariant] = useState<string | undefined>(undefined);
   const [user, setUser] = useState<SessionUser | null>(null);
 
   // Profile name editing state
@@ -45,6 +49,15 @@ export default function SettingsPage() {
 
   useEffect(() => {
     clientLogger.info("Page viewed", { page: "settings" });
+  }, []);
+
+  // Hydrate the selected theme variant from the browser mirror on mount so the
+  // gallery highlights whatever the user last picked.
+  useEffect(() => {
+    const stored = readStoredVariant();
+    if (isThemeVariantId(stored)) {
+      setVariant(stored);
+    }
   }, []);
 
   // Server action states (React 19 useActionState)
@@ -85,17 +98,28 @@ export default function SettingsPage() {
   const profileSuccess = profileState.ok;
   const passwordSuccess = passwordState.ok;
 
-  const setNextTheme = (nextTheme: Theme) => {
-    clientLogger.info("Theme changed", { page: "settings", theme: nextTheme });
-    setTheme(nextTheme);
-    applyAppearance(nextTheme, accent);
-    store.setPreferences({ theme: nextTheme });
+  // The id of the currently active look: the chosen variant if any, otherwise
+  // the plain light/dark theme (whose ids double as variant ids).
+  const selectedThemeId = isThemeVariantId(variant) ? variant : theme;
+
+  const setNextVariant = (id: string) => {
+    const option = getTheme(id);
+    clientLogger.info("Theme changed", { page: "settings", theme: option.id });
+    setVariant(option.id);
+    setTheme(option.base);
+    // Apply the variant's base light/dark mode plus the variant itself, keeping
+    // the current accent. applyAppearance persists the variant to localStorage.
+    applyAppearance(option.base, accent, option.id);
+    // Persist the resolved base mode server-side so reloads restore it.
+    store.setPreferences({ theme: option.base });
   };
 
   const setNextAccent = (hue: number) => {
     clientLogger.info("Accent changed", { page: "settings", accentHue: hue });
     setAccent(hue);
-    applyAppearance(theme, hue);
+    // Re-apply with the active variant so changing the accent never drops the
+    // user's chosen theme.
+    applyAppearance(theme, hue, isThemeVariantId(variant) ? variant : undefined);
     store.setPreferences({ accentHue: hue });
   };
 
@@ -287,24 +311,44 @@ export default function SettingsPage() {
         </SettingGroup>
 
         <SettingGroup title="Appearance">
-          <SettingRow label="Theme" value={theme}>
-            <div className={styles.optionRow}>
-              <motion.button
-                className={`btn btn-sm ${theme === "light" ? "btn-primary" : ""}`}
-                onClick={() => setNextTheme("light")}
-                whileTap={{ scale: 0.97 }}
-              >
-                <IconSun className={styles.iconSm} /> Light
-              </motion.button>
-              <motion.button
-                className={`btn btn-sm ${theme === "dark" ? "btn-primary" : ""}`}
-                onClick={() => setNextTheme("dark")}
-                whileTap={{ scale: 0.97 }}
-              >
-                <IconMoon className={styles.iconSm} /> Dark
-              </motion.button>
+          <div className={styles.appearanceBlock}>
+            <span className="field-label">Theme</span>
+            {/* Theme gallery — one card per look in the registry. Selecting a
+                card applies its base mode + variant + signature click effect. */}
+            <div className={styles.themeGallery} role="group" aria-label="Theme">
+              {THEMES.map((option) => {
+                const selected = selectedThemeId === option.id;
+                const BaseIcon = option.base === "dark" ? IconMoon : IconSun;
+                return (
+                  <motion.button
+                    key={option.id}
+                    type="button"
+                    className={`${styles.themeCard} ${selected ? styles.themeCardSelected : ""}`}
+                    aria-pressed={selected}
+                    onClick={() => setNextVariant(option.id)}
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    {/* Static preview gradient — per-theme data, so inline vars. */}
+                    <span
+                      className={styles.themeSwatch}
+                      style={{
+                        ["--swatch-from" as string]: option.swatch.from,
+                        ["--swatch-to" as string]: option.swatch.to,
+                      }}
+                    />
+                    <span className={styles.themeMeta}>
+                      <span className={styles.themeLabel}>
+                        <BaseIcon className={styles.iconSm} /> {option.label}
+                      </span>
+                      <span className={styles.themeDesc}>{option.description}</span>
+                    </span>
+                  </motion.button>
+                );
+              })}
             </div>
-          </SettingRow>
+          </div>
+
           <SettingRow label="Accent" value={ACCENTS.find((item) => item.hue === accent)?.name ?? "Custom"}>
             <div className={styles.optionRow}>
               {ACCENTS.map((item) => (
@@ -320,6 +364,20 @@ export default function SettingsPage() {
                 </motion.button>
               ))}
             </div>
+          </SettingRow>
+
+          {/* Custom accent — drag the hue slider to personalise the accent. */}
+          <SettingRow label="Custom hue" value={`${accent}°`}>
+            <input
+              type="range"
+              min={0}
+              max={360}
+              step={1}
+              value={accent}
+              aria-label="Custom accent hue"
+              className={styles.hueSlider}
+              onChange={(event) => setNextAccent(Number(event.target.value))}
+            />
           </SettingRow>
         </SettingGroup>
 
