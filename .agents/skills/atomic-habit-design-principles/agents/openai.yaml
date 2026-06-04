@@ -1,0 +1,4 @@
+interface:
+  display_name: "Atomicly Design Principles"
+  short_description: "SOLID + GRASP with Atomicly-specific signals and boundaries"
+  default_prompt: "Use $atomic-habit-design-principles before any multi-file refactor or new abstraction."

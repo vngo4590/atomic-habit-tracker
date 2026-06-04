@@ -1,0 +1,4 @@
+interface:
+  display_name: "Atomicly Pre-Push Checklist"
+  short_description: "Mandatory validation gate before every git push"
+  default_prompt: "Use $atomic-habit-pre-push-checklist immediately before pushing any branch."

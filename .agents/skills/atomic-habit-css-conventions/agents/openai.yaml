@@ -1,0 +1,4 @@
+interface:
+  display_name: "Atomicly CSS Conventions"
+  short_description: "Global tokens, CSS Modules, inline-style policy, page/component templates"
+  default_prompt: "Use $atomic-habit-css-conventions when writing or reviewing styles."
