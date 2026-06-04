@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
-### Requirement: New habit is created via a Mad-Libs sentence builder
-The system SHALL render a sentence "I will [name], [time] [location], so I can become [identity]." with inline inputs embedded in the text. The Create button is disabled until `name` and `identity` are filled.
+### Requirement: New habit is created via a sentence builder
+The system SHALL render an identity-first sentence "I'm becoming [identity] — I'll [name] when [cue], [location]." with inline inputs embedded in the text. The cue (when) and location (where) are separate blanks so the location never captures a time phrase. The Create button is disabled until `name` and `identity` are filled.
 
 #### Scenario: Create button is disabled with empty name
 - **WHEN** the name field is empty

@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import type { Habit } from "@/lib/types";
+import { capitalizeFirst, withCravingConnector, withCueConnector } from "@/lib/habit-sentence";
 
 import styles from "./LoopDiagram.module.css";
 
@@ -17,12 +18,14 @@ type LoopCell = {
 };
 
 /** The four habit-loop steps. Each cell renders as one column in the
-    .loop grid (see app/styles/components.css). */
+    .loop grid (see app/styles/components.css). Placeholders are bare phrases
+    (no leading "When"/"To") because the lead label above each cell, and the
+    recap sentence below, supply those connective words. */
 const CELLS: LoopCell[] = [
-  { number: "01", step: "Cue", lead: "When", field: "loopCue", placeholder: "When 7am, after I pour coffee..." },
-  { number: "02", step: "Craving", lead: "I want", field: "loopCraving", placeholder: "To feel curious, calm, strong..." },
-  { number: "03", step: "Response", lead: "So I", field: "loopResponse", placeholder: "Open the book. Put on the shoes." },
-  { number: "04", step: "Reward", lead: "And I get", field: "loopReward", placeholder: "One visible win." },
+  { number: "01", step: "Cue", lead: "When", field: "loopCue", placeholder: "I pour my morning coffee" },
+  { number: "02", step: "Craving", lead: "I want", field: "loopCraving", placeholder: "to become a reader" },
+  { number: "03", step: "Response", lead: "So I", field: "loopResponse", placeholder: "read one page" },
+  { number: "04", step: "Reward", lead: "And I get", field: "loopReward", placeholder: "a visible win" },
 ];
 
 /**
@@ -104,14 +107,19 @@ export function LoopDiagram({
   habit: Habit;
   onUpdate: (patch: Partial<Pick<Habit, LoopField>>) => void;
 }) {
-  // Sentence-form recap below the grid. Falls back to placeholder copy
-  // so the sentence reads grammatically even before the user fills the
-  // four fields.
+  // Sentence-form recap below the grid. We supply the connective words
+  // ("when ...", "I want ...") via small grammar helpers so the sentence
+  // reads correctly whatever short phrase the user typed — and so older
+  // habits whose craving was stored as "become X" still read "to become X".
+  // Falls back to placeholder copy so the sentence is grammatical even
+  // before the four fields are filled.
+  const cueRaw = habit.loopCue.trim().toLowerCase();
+  const cravingRaw = habit.loopCraving.trim().toLowerCase();
   const loopSentence = {
-    cue: habit.loopCue.toLowerCase() || "the cue appears",
-    craving: habit.loopCraving.toLowerCase() || "the reward",
-    response: habit.loopResponse.toLowerCase() || "take the smallest next step",
-    reward: habit.loopReward.toLowerCase() || "a vote for my identity",
+    cue: cueRaw ? capitalizeFirst(withCueConnector(cueRaw)) : "When the cue appears",
+    craving: cravingRaw ? withCravingConnector(cravingRaw) : "to feel the payoff",
+    response: habit.loopResponse.trim().toLowerCase() || "take the smallest next step",
+    reward: habit.loopReward.trim().toLowerCase() || "a vote for my identity",
   };
 
   return (
@@ -136,7 +144,7 @@ export function LoopDiagram({
       <div className={`card card-pad ${styles.recap}`}>
         <h3 className={`h3 ${styles.recapTitle}`}>The loop in a sentence</h3>
         <p className={styles.recapSentence}>
-          When <span className={styles.recapValue}>{loopSentence.cue}</span>, I crave{" "}
+          <span className={styles.recapValue}>{loopSentence.cue}</span>, I want{" "}
           <span className={styles.recapValue}>{loopSentence.craving}</span>, so I{" "}
           <span className={styles.recapValue}>{loopSentence.response}</span>, and the reward is{" "}
           <span className={styles.recapReward}>{loopSentence.reward}</span>.
