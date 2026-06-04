@@ -113,6 +113,21 @@ describe("HabitDetailPage", () => {
     expect(screen.getByRole("button", { name: "Define the loop" })).toBeTruthy();
   });
 
+  it("shows the composed plan sentence at the top of the page", () => {
+    // Given: a habit with an identity, action, cue and place
+    storeMock.habits = [
+      makeHabit({ name: "read 1 page", identity: "a reader", loopCue: "I pour my coffee", environment: "at my desk" }),
+    ];
+
+    // When: the detail page renders
+    render(<HabitDetailPage />);
+
+    // Then: the user's full plan is summarised in one readable sentence up top
+    expect(
+      screen.getByText("I'm becoming a reader — I'll read 1 page when I pour my coffee, at my desk."),
+    ).toBeTruthy();
+  });
+
   it("labels the post-completion primary button 'Done today · tap to unmark'", () => {
     // Given: a habit marked done for today
     const today = todayKey();

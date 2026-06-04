@@ -44,6 +44,16 @@
   font-size: 52px;
 }
 
+/* The composed summary sentence shown directly under the habit name —
+   the user's full "I'm becoming X — I'll Y when Z, at P." plan in serif. */
+.headerSentence {
+  margin-top: 16px;
+  font-family: var(--serif);
+  font-size: 22px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
 /* Lede paragraph beneath the name ("I am X. Each check-in is a vote..."). */
 .headerLede {
   margin-top: 14px;

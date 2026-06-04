@@ -22,6 +22,7 @@ import { MoodCheckSheet } from "@/components/MoodCheckSheet";
 import { NotesManager } from "@/components/NotesManager";
 import { useStoreContext } from "@/components/StoreProvider";
 import { todayKey } from "@/lib/helpers";
+import { composeHabitSentence } from "@/lib/habit-sentence";
 import { clientLogger } from "@/lib/logger-client";
 import { formatScheduleLabel } from "@/lib/schedule";
 import type { CheckIn, Habit } from "@/lib/types";
@@ -225,6 +226,10 @@ export default function HabitDetailPage() {
           <div>
             <div className="eyebrow">{formatScheduleLabel(habit.schedule)} · {habit.time}</div>
             <h1 className={`h1 ${styles.headerName}`}>{habit.name}</h1>
+            {/* The habit summarised as one plain sentence, rebuilt from the
+                live fields so it stays accurate after inline edits. Shown up
+                top so the user sees exactly what they committed to. */}
+            <p className={styles.headerSentence}>{composeHabitSentence(habit)}</p>
             <p className={`lede ${styles.headerLede}`}>
               I am <em className={styles.identityEm}>{habit.identity}</em>. Each check-in is a vote for that.
             </p>
