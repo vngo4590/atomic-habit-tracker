@@ -63,10 +63,12 @@ function initials(name: string | null, email: string | null) {
 function NavItemLink({
   item,
   pathname,
+  instanceId,
   onClick,
 }: {
   item: (typeof NAV)[number];
   pathname: string;
+  instanceId: string;
   onClick?: () => void;
 }) {
   const Icon = item.icon;
@@ -86,6 +88,17 @@ function NavItemLink({
 
   return (
     <Link className={`nav-item ${active ? "active" : ""}`} href={item.href} onClick={handleNavigate}>
+      {/* Sliding highlight pill — shares a layoutId across this sidebar instance
+          so it animates smoothly from the old item to the newly active one.
+          The id is namespaced per instance (desktop vs mobile drawer) so the two
+          sidebars never try to animate a single pill between each other. */}
+      {active && (
+        <motion.span
+          className="nav-active-pill"
+          layoutId={`nav-pill-${instanceId}`}
+          transition={{ type: "spring", stiffness: 400, damping: 32 }}
+        />
+      )}
       <Icon className="nav-icon" />
       <span>{item.label}</span>
       <span className="ni-key">{item.key}</span>
@@ -101,11 +114,13 @@ function SidebarContent({
   pathname,
   user,
   groups,
+  instanceId,
   onNavClick,
 }: {
   pathname: string;
   user: NavProps["user"];
   groups: NavGroupMap;
+  instanceId: string;
   onNavClick?: () => void;
 }) {
   const { habits } = useStoreContext();
@@ -138,7 +153,7 @@ function SidebarContent({
             <motion.div variants={sidebarStagger} initial="hidden" animate="visible">
               {groups[group]?.map((item) => (
                 <motion.div key={item.href} variants={navItemVariants}>
-                  <NavItemLink item={item} pathname={pathname} onClick={onNavClick} />
+                  <NavItemLink item={item} pathname={pathname} instanceId={instanceId} onClick={onNavClick} />
                 </motion.div>
               ))}
             </motion.div>
@@ -226,7 +241,7 @@ export function Nav({ user }: NavProps) {
     <>
       {/* Desktop sidebar — always visible on large screens, hidden on mobile via CSS */}
       <aside className="sidebar" aria-label="Main navigation">
-        <SidebarContent pathname={pathname} user={user} groups={groups} />
+        <SidebarContent pathname={pathname} user={user} groups={groups} instanceId="desktop" />
       </aside>
 
       {/* Mobile hamburger button — fixed to the top-left, visible only on small screens */}
@@ -269,6 +284,7 @@ export function Nav({ user }: NavProps) {
                 pathname={pathname}
                 user={user}
                 groups={groups}
+                instanceId="mobile"
                 onNavClick={() => setDrawerOpen(false)}
               />
             </motion.aside>

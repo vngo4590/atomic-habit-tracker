@@ -11,6 +11,7 @@ import { EditableLine } from "@/components/EditableLine";
 import { HabitJournalStream } from "@/components/HabitJournalStream";
 import { HistoryWall } from "@/components/HistoryWall";
 import { StackDiagram } from "@/components/StackDiagram";
+import { TabUnderline } from "@/components/TabUnderline";
 import {
   IconBack,
   IconCheck,
@@ -311,6 +312,7 @@ export default function HabitDetailPage() {
             whileTap={{ scale: 0.97 }}
           >
             {item[0].toUpperCase() + item.slice(1)}
+            {tab === item && <TabUnderline groupId="habit-detail" />}
           </motion.button>
         ))}
       </div>

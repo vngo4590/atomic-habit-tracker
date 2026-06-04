@@ -98,11 +98,18 @@
   background: transparent;
   text-align: left;
   width: 100%;
+  position: relative;
   transition:
     background var(--transition-fast),
     color var(--transition-fast),
     transform var(--transition-fast),
     box-shadow var(--transition-fast);
+}
+/* Keep the icon, label, and shortcut key painted above the sliding pill. */
+.nav-item > .nav-icon,
+.nav-item > span:not(.nav-active-pill) {
+  position: relative;
+  z-index: 1;
 }
 .nav-item:hover {
   background: var(--bg);
@@ -110,8 +117,17 @@
   transform: translateX(2px);
 }
 .nav-item.active {
-  background: var(--bg-elev);
   color: var(--ink);
+}
+/* The animated active highlight. Framer Motion slides this element between nav
+   items via a shared layoutId; the visual treatment (raised card look) lives
+   here so the motion carries the highlight with it. */
+.nav-active-pill {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: var(--r-md);
+  background: var(--bg-elev);
   box-shadow: 0 0 0 1px var(--rule), var(--shadow-sm);
 }
 .nav-item .ni-key {
