@@ -72,27 +72,22 @@ gap, propose a path forward, and stop.
 
 ---
 
-## The Business-Logic Bar (Non-Negotiable)
+## Required Skills (Load Before Writing)
 
-Every E2E test you produce must satisfy **all** of the following:
+- **`atomic-habit-test-quality-standard`** — the non-negotiable business-logic bar; every spec must satisfy it.
+- **`atomic-habit-test-tier-policy`** — tier boundaries (you own Tier 3; Playwright + real DB + real browser).
+- **`atomic-habit-local-dev`** — `npm run db:setup`, seed/demo commands you'll rely on.
 
-1. The spec corresponds to a **named user journey** drawn from `AGENTS.md`
-   § "App Context" or the OpenSpec proposal under
-   `openspec/changes/.../specs/`. If you cannot name the journey in product
-   terms, do not write the spec.
-2. Each step asserts a **user-visible outcome** — a heading, a toast, a
-   navigation, a list item, a disabled button — not an internal DOM detail.
-3. The journey covers **at least two screens / routes**. A single-page assertion
-   belongs in the unit or integration tier.
-4. The spec is **independent of internal refactors**. If the implementation
-   swaps a component for another but keeps the same user-visible flow, the spec
-   must still pass.
-5. The spec runs **against the production build** of the app
-   (`npm run build && npm run start`) or a stable dev server — never against a
-   half-built target.
+## Tier-Specific Additions to the Quality Bar
 
-If a "journey" reduces to "click a button and assert one DOM node", drop it. It
-is not E2E material.
+In addition to the bar in `atomic-habit-test-quality-standard`, every E2E test must:
+
+1. Correspond to a **named user journey** drawn from `AGENTS.md` § "App Context" or an OpenSpec proposal. If you cannot name the journey in product terms, do not write the spec.
+2. Each step asserts a **user-visible outcome** — a heading, a toast, a navigation, a list item, a disabled button — not an internal DOM detail.
+3. The journey covers **at least two screens / routes**. A single-page assertion belongs in unit or integration tier.
+4. The spec runs **against the production build** (`npm run build && npm run start`) or a stable dev server — never a half-built target.
+
+If a "journey" reduces to "click a button and assert one DOM node", drop it. It is not E2E material.
 
 ---
 

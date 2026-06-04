@@ -49,27 +49,14 @@ code under test, **report it**, do not fix it.
 
 ---
 
-## The Business-Logic Bar (Non-Negotiable)
+## Required Skills (Load Before Writing)
 
-Every test you produce must satisfy **all** of the following before you hand it
-back to the orchestrator:
+- **`atomic-habit-test-quality-standard`** — the non-negotiable business-logic bar, Given/When/Then, naming, organization. Every test you produce must satisfy this bar.
+- **`atomic-habit-test-tier-policy`** — tier boundaries (you own Tier 1; never write Tier 2 or 3 here).
+- **`atomic-habit-test-edge-cases`** — checklist used in Step 5.
+- **`atomic-habit-test-mocking-patterns`** — `vi.mock` / `vi.hoisted`, mock Prisma, jsdom gotchas, `next-auth` ESM, `localStorage`.
 
-1. The `describe` string names the **feature or behaviour** ("streak across month
-   boundary", "createHabitAction rejection for unauthenticated user"), not the
-   internal function call.
-2. The `it` string is a present-tense, observable-outcome sentence: "increments
-   streak when check-in is consecutive", not "calls update with new streak value".
-3. At least one assertion verifies a **domain outcome**:
-   - a returned value a caller will inspect,
-   - a persisted field a user will see,
-   - an error envelope (`{ ok: false, error: ... }`) shape and status,
-   - or a thrown error type and message a UI would surface.
-4. Mock-invocation assertions (`toHaveBeenCalledWith`) appear **at most as
-   supporting evidence**, never as the only assertion of a test.
-5. The test would **still pass** after a behaviour-preserving refactor that
-   renamed internal helpers or restructured private code paths.
-
-If a test cannot meet bar #5, it is coupled to mechanism. Rewrite or drop it.
+The summary below is just to keep this agent self-contained when the sub-skills are not preloaded.
 
 ---
 
@@ -138,18 +125,9 @@ Comments describe **intent and workflow**, not mechanics.
 
 ### Step 5 — Edge-case checklist
 
-Before declaring the suite complete, verify coverage of every applicable item.
-Inherit the full list from `atomic-habit-test-engineer`. Highlights:
-
-- Input boundaries: empty, null, max length, whitespace, unicode.
-- Date/time: today vs. yesterday, UTC/local, month/year boundaries, schedule kinds.
-- Auth: missing session, mismatched user, expired session, deleted user in JWT.
-- Repository: not found → null/empty (not thrown), duplicate key, concurrent
-  writes.
-- Zod: missing field, max length, invalid enum, coerced types.
-- Store: optimistic state, rejection rollback, zero/one/many check-ins.
-- API envelope: `{ ok: true, data }` vs. `{ ok: false, error }` with correct HTTP
-  status.
+Walk the full **`atomic-habit-test-edge-cases`** checklist before declaring the
+suite complete. Cover every applicable item. The checklist owns input boundaries,
+date/time, auth, repository, Zod, store, and API-envelope cases.
 
 ### Step 6 — Validate
 
@@ -182,20 +160,11 @@ populated with:
 
 ---
 
-## Known Gotchas (Inherit From `atomic-habit-test-engineer`)
+## Known Gotchas
 
-- **`window.localStorage`** — stub per-file with
-  `Object.defineProperty(window, "localStorage", { configurable: true, value: { ... } })`.
-  Other test files leak partial stubs across workers.
-- **`next-auth` ESM interop** — mock `@/lib/actions/domain` at the very top of
-  files that transitively import `next-auth`.
-- **Framer Motion** — mock `IntersectionObserver` for `whileInView`; avoid
-  `AnimatePresence mode="wait"` in jsdom; spring transitions cap at 2 keyframes.
-- **App Router pages** — test underlying client components, not `page.tsx`
-  entry points.
-- **Test isolation failures** (passes alone, fails in suite) — suspect module
-  cache pollution, global state leakage (localStorage, `document.documentElement`
-  attributes, timers), or missing `vi.resetAllMocks()`.
+See **`atomic-habit-test-mocking-patterns`** for the full list (Framer Motion in
+jsdom, `next-auth` ESM interop, `localStorage` per-file stubbing, App Router page
+imports, test isolation failures). Load that skill before writing any mock setup.
 
 ---
 

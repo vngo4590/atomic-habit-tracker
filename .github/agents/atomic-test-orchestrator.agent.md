@@ -62,6 +62,19 @@ You may also call:
 
 ---
 
+## Required Skills
+
+Load these atomic sub-skills as needed; the tier specialists you dispatch inherit them too:
+
+- **`atomic-habit-test-quality-standard`** — the business-logic bar every test must meet (used in your plan critique + synthesis critique).
+- **`atomic-habit-test-tier-policy`** — tier boundaries and the parallel orchestration model below.
+- **`atomic-habit-test-edge-cases`** — the checklist that informs your "what edge case is missing?" critique.
+- **`atomic-habit-test-mocking-patterns`** — referenced when synthesising whether tiers split mocking responsibility correctly.
+- **`atomic-habit-architecture`** — to locate code under test.
+- **`atomic-habit-workflow`** — overall session conventions and branch/commit shape.
+
+---
+
 ## Operating Principles
 
 ### 1. Business logic, not code

@@ -54,27 +54,23 @@ Unit tests prove each piece works alone. You prove the **wiring** works.
 
 ---
 
-## The Business-Logic Bar (Non-Negotiable)
+## Required Skills (Load Before Writing)
 
-Every integration test you produce must satisfy **all** of the following:
+- **`atomic-habit-test-quality-standard`** — the non-negotiable business-logic bar, Given/When/Then, naming, organization. Every test you produce must satisfy this bar.
+- **`atomic-habit-test-tier-policy`** — tier boundaries (you own Tier 2; never write Tier 1 or 3 here).
+- **`atomic-habit-test-edge-cases`** — additional cross-layer scenarios to cover.
+- **`atomic-habit-test-mocking-patterns`** — `vi.hoisted`, mock Prisma at the boundary, `next-auth` mocking, `next/cache` mocking.
 
-1. The `describe` block names a **user-visible flow**, not a function call.
-   Good: `"creating a habit through the action persists it for the current user"`.
-   Bad: `"createHabitAction → habitRepository.create"`.
-2. Each test exercises **at least two real layers** end-to-end on the test side
-   of the boundary.
-3. Each test makes **at least two complementary assertions**:
-   - one on the **outcome the caller observes** (returned value, store state, API
-     envelope), AND
-   - one on the **shape that crosses the persistence boundary** (the mock Prisma
-     call's `data` payload, the revalidation path, the response status).
-4. Both assertions must reflect domain rules drawn from `openspec/specs/` or the
-   `AGENTS.md` app-context section.
-5. The test must **still pass** if internal helpers between the two layers are
-   renamed or restructured, as long as the outward behaviour is preserved.
+## Tier-Specific Additions to the Quality Bar
 
-If a test is just "unit test A + unit test B with extra ceremony", drop it —
-that work belongs in unit tier.
+In addition to the bar in `atomic-habit-test-quality-standard`, every integration test must:
+
+1. Exercise **at least two real layers** end-to-end on the test side of the boundary.
+2. Make **at least two complementary assertions**:
+   - one on the **outcome the caller observes** (returned value, store state, API envelope), AND
+   - one on the **shape that crosses the persistence boundary** (mock Prisma `data` payload, revalidation path, response status).
+
+If a test is just "unit test A + unit test B with extra ceremony", drop it — that work belongs in unit tier.
 
 ---
 
