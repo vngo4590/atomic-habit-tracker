@@ -1,0 +1,4 @@
+interface:
+  display_name: "Atomicly Test Quality Standard"
+  short_description: "Business-logic bar + Given/When/Then style for every test"
+  default_prompt: "Use $atomic-habit-test-quality-standard before writing or reviewing any test in this repo."

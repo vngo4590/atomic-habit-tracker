@@ -1,0 +1,4 @@
+interface:
+  display_name: "Atomicly Test Tier Policy"
+  short_description: "Unit mandatory; integration/E2E opt-in. Parallel orchestration model."
+  default_prompt: "Use $atomic-habit-test-tier-policy to decide which tier to write at and how to orchestrate multi-tier work."

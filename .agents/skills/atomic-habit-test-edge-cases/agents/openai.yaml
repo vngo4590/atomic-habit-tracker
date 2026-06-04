@@ -1,0 +1,4 @@
+interface:
+  display_name: "Atomicly Test Edge Cases"
+  short_description: "Checklist of input/date/auth/repo/Zod/store/UI scenarios"
+  default_prompt: "Use $atomic-habit-test-edge-cases before finalising any test suite to confirm coverage breadth."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Atomicly Test Mocking Patterns"
+  short_description: "vi.mock, mock Prisma, fixtures, Framer Motion + ESM gotchas"
+  default_prompt: "Use $atomic-habit-test-mocking-patterns when setting up or debugging mocks in this repo's tests."
