@@ -60,7 +60,7 @@
   background: var(--accent);
 }
 .brand-name {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-size: 19px;
   line-height: 1;
 }

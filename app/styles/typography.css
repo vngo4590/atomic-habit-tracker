@@ -23,7 +23,7 @@
 
 /* Hero heading. Italic <em> picks up the accent colour for editorial flair. */
 .h1 {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-weight: 400;
   font-size: 44px;
   line-height: 1.05;
@@ -37,7 +37,7 @@
 
 /* Section heading — used inside cards and panels. */
 .h2 {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-weight: 400;
   font-size: 26px;
   line-height: 1.1;
@@ -57,7 +57,7 @@
 
 /* Lede — the editorial intro paragraph below a hero heading. */
 .lede {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-size: 19px;
   line-height: 1.45;
   color: var(--ink-2);

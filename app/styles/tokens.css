@@ -64,6 +64,11 @@
   --sans: var(--font-sans), -apple-system, system-ui, sans-serif;
   --mono: var(--font-mono), ui-monospace, monospace;
 
+  /* Heading/display font. Defaults to the editorial serif; modern theme
+     variants (Glass/Neon/Fairy/Starlight) override this to --sans so headings
+     read as a clean, modern sans-serif. Headings consume var(--display). */
+  --display: var(--serif);
+
   /* Shadow ramp — layered shadows soft enough for the editorial aesthetic. */
   --shadow: 0 1px 0 rgba(0, 0, 0, 0.02), 0 1px 2px rgba(40, 30, 10, 0.04), 0 8px 24px -12px rgba(40, 30, 10, 0.08);
   --shadow-sm: 0 1px 2px rgba(40, 30, 10, 0.04), 0 1px 3px rgba(40, 30, 10, 0.06);
