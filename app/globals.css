@@ -9,6 +9,7 @@
  *   typography.css   — headings, body text helpers, .markdown-body
  *   layout.css       — .app shell, sidebar, .main, .page-header
  *   components.css   — .card, .btn, .input, .chip, .habit-row, .loop, etc.
+ *   themes.css       — [data-theme-variant] looks (glass, neon, fairy, stars)
  *   animations.css   — @keyframes + animation utility classes
  *   responsive.css   — @media (max-width: 900px) mobile overrides
  *
@@ -32,5 +33,6 @@
 @import "./styles/typography.css";
 @import "./styles/layout.css";
 @import "./styles/components.css";
+@import "./styles/themes.css";
 @import "./styles/animations.css";
 @import "./styles/responsive.css";

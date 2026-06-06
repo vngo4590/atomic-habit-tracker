@@ -1,8 +1,10 @@
 import type { ReactNode } from "react";
 
 import { AppearanceSync } from "@/components/AppearanceSync";
+import { ClickFX } from "@/components/ClickFX";
 import { Nav } from "@/components/Nav";
 import { OnboardingGate } from "@/components/OnboardingGate";
+import { PageTransition } from "@/components/motion/PageTransition";
 import { StoreProvider } from "@/components/StoreProvider";
 import { Toast } from "@/components/Toast";
 import { requireCurrentUser } from "@/lib/auth/session";
@@ -41,10 +43,13 @@ export default async function RootGroupLayout({ children }: { children: ReactNod
   return (
     <StoreProvider backendSnapshot={backendSnapshot}>
       <AppearanceSync />
+      <ClickFX />
       <div className="app">
         <Nav user={{ name: user.name, email: user.email }} />
         <main className="main">
-          <div className="main-inner">{children}</div>
+          <div className="main-inner">
+            <PageTransition>{children}</PageTransition>
+          </div>
         </main>
         <OnboardingGate />
         <Toast />

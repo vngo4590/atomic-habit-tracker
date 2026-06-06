@@ -1,0 +1,12 @@
+/* TabUnderline.module.css — the animated accent bar under the active tab.
+   Sits on the .tabs container's bottom border; Framer Motion slides it between
+   tabs via a shared layoutId. */
+.underline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+}

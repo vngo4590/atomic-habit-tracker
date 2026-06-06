@@ -1,0 +1,47 @@
+/* ClickFX.module.css — styles for the app-wide click-effect overlay.
+   The layer floats above everything but is click-through; individual particles
+   are tiny shapes coloured from the active theme's --accent. */
+
+/* Full-viewport, non-interactive layer that holds all live particles. */
+.layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  overflow: hidden;
+}
+
+/* Positioning wrapper placed exactly at the click point. Keeping the centering
+   transform here frees the inner particle to use Framer Motion's x/y/scale. */
+.anchor {
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+
+/* Ripple — an expanding accent-coloured ring. */
+.ripple {
+  display: block;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+}
+
+/* Bubble — a soft translucent orb with a glassy highlight. */
+.bubble {
+  display: block;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, oklch(100% 0 0 / 0.85), var(--accent) 70%);
+  box-shadow: 0 0 10px -2px var(--accent);
+}
+
+/* Sparkle — a glowing four-point star drawn with a CSS mask so it inherits the
+   accent colour and twinkles as it flies outward. */
+.sparkle {
+  display: block;
+  background: var(--accent);
+  box-shadow: 0 0 8px 1px var(--accent);
+  /* Four-point star silhouette. */
+  clip-path: polygon(
+    50% 0%, 61% 39%, 100% 50%, 61% 61%,
+    50% 100%, 39% 61%, 0% 50%, 39% 39%
+  );
+}

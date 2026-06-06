@@ -8,6 +8,7 @@ import { IconCheck, IconClose, IconPlus, IconSearch } from "@/components/Icons";
 import { MoodCheckSheet } from "@/components/MoodCheckSheet";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { useStoreContext } from "@/components/StoreProvider";
+import { TabUnderline } from "@/components/TabUnderline";
 import { todayKey } from "@/lib/helpers";
 import { clientLogger } from "@/lib/logger-client";
 import { formatNextDayLabel, nextScheduledDateKey } from "@/lib/schedule";
@@ -135,6 +136,7 @@ export default function HabitsPage() {
               whileTap={{ scale: 0.97 }}
             >
               {TAB_LABELS[item]}
+              {filter === item && <TabUnderline groupId="habit-library" />}
             </motion.button>
           ))}
         </div>

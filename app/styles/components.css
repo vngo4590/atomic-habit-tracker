@@ -494,7 +494,6 @@ textarea.input {
 .tab:hover { color: var(--ink); }
 .tab.active {
   color: var(--ink);
-  border-bottom: 2px solid var(--accent);
 }
 
 /* ── Vote bar (identity ledger) + analytics primitives ──────────────────── */

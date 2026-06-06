@@ -72,7 +72,7 @@ k8s/local/         # Docker Desktop Kubernetes manifests
 5. **Domain writes**: All habit/journal/identity mutations go through `lib/actions/domain.ts`, which calls user-scoped repository functions in `lib/repositories/`.
 6. **Mobile/API clients**: Use authenticated `/api/v1/` route handlers with stable `{ ok, data }` / `{ ok, error }` envelopes (see `app/api/v1/README.md`).
 7. **Appearance sync**: `components/AppearanceSync.tsx` applies backend `preferences.theme` and `preferences.accentHue` via `lib/appearance.ts`.
-8. **localStorage**: Only used for `atomicly:theme` and `atomicly:accent` — UI mirrors only, **never** source of truth for domain data.
+8. **localStorage**: Only used for `atomicly:theme`, `atomicly:accent`, and `atomicly:theme-variant` (selected named theme) — UI mirrors only, **never** source of truth for domain data.
 
 ## 3. Routes
 

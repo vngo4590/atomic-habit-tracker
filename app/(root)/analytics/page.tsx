@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { LineChart } from "@/components/LineChart";
 import { useStoreContext } from "@/components/StoreProvider";
+import { TabUnderline } from "@/components/TabUnderline";
 import { dateAdd, fmt, todayKey } from "@/lib/helpers";
 import { clientLogger } from "@/lib/logger-client";
 import { isScheduledForDate } from "@/lib/schedule";
@@ -148,6 +149,7 @@ export default function AnalyticsPage() {
                 whileTap={{ scale: 0.97 }}
               >
                 {days} days
+                {range === days && <TabUnderline groupId="analytics-range" />}
               </motion.button>
             ))}
           </div>

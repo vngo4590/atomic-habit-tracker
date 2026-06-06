@@ -1,0 +1,66 @@
+/* HuePicker — a visual accent-hue spectrum with a draggable thumb. */
+
+.picker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* The spectrum track. Its gradient (the real selectable colours) arrives as the
+   inline --track-gradient variable so this class stays data-agnostic. */
+.track {
+  position: relative;
+  width: 220px;
+  height: 16px;
+  border-radius: 99px;
+  background: var(--track-gradient);
+  border: 1px solid oklch(0% 0 0 / 0.12);
+  cursor: pointer;
+  touch-action: none;
+  transition: box-shadow var(--transition-fast);
+}
+.track:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+}
+
+/* The draggable knob. Horizontal position arrives as --thumb-pos; we offset by
+   half its width so it stays centred over the chosen hue at both ends. */
+.thumb {
+  position: absolute;
+  top: 50%;
+  left: var(--thumb-pos);
+  width: 18px;
+  height: 18px;
+  border-radius: 99px;
+  background: var(--bg-elev);
+  border: 2px solid var(--ink);
+  box-shadow: 0 1px 4px oklch(0% 0 0 / 0.3);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* Preview swatch + degree readout shown beside the track. */
+.readout {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.preview {
+  width: 16px;
+  height: 16px;
+  border-radius: 99px;
+  border: 1px solid oklch(0% 0 0 / 0.12);
+  /* Live accent colour for the current hue. */
+  background: var(--preview-color);
+}
+
+@media (max-width: 900px) {
+  .track {
+    width: 100%;
+  }
+}
