@@ -1,9 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 
 import { IconMoon, IconSun } from "@/components/Icons";
+import { HuePicker } from "@/components/HuePicker";
 import { useStoreContext } from "@/components/StoreProvider";
 import { changePasswordAction, updateProfileAction } from "@/lib/actions/auth";
 import type { ProfileFormState } from "@/lib/actions/auth";
@@ -47,6 +48,12 @@ export default function SettingsPage() {
   // Password change state
   const [changingPassword, setChangingPassword] = useState(false);
 
+  // Trailing-debounce timer for persisting accent-hue changes (see commitAccent).
+  const accentSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (accentSaveTimer.current) clearTimeout(accentSaveTimer.current);
+  }, []);
+
   useEffect(() => {
     clientLogger.info("Page viewed", { page: "settings" });
   }, []);
@@ -70,12 +77,10 @@ export default function SettingsPage() {
     { ok: false, message: "" },
   );
 
-  useEffect(() => {
-    window.queueMicrotask(() => {
-      setTheme(store.preferences.theme);
-      setAccent(store.preferences.accentHue);
-    });
-  }, [store.preferences.accentHue, store.preferences.theme]);
+  // Note: local `theme`/`accent` are seeded from the store on mount (above) and
+  // are the source of truth while the Settings page is open. We deliberately do
+  // NOT re-sync them from `store.preferences` on every change — doing so let a
+  // late-arriving save response clobber the hue the user is actively dragging.
 
   useEffect(() => {
     fetch("/api/v1/session")
@@ -115,12 +120,29 @@ export default function SettingsPage() {
   };
 
   const setNextAccent = (hue: number) => {
-    clientLogger.info("Accent changed", { page: "settings", accentHue: hue });
+    applyAccent(hue);
+    commitAccent(hue);
+  };
+
+  // Apply an accent hue to the document immediately. Cheap (DOM + localStorage
+  // only) so it can run on every drag tick for instant visual feedback.
+  const applyAccent = (hue: number) => {
     setAccent(hue);
     // Re-apply with the active variant so changing the accent never drops the
     // user's chosen theme.
     applyAppearance(theme, hue, isThemeVariantId(variant) ? variant : undefined);
-    store.setPreferences({ accentHue: hue });
+  };
+
+  // Persist the accent hue to the backend, debounced. A drag or a burst of
+  // arrow-key presses produces a single trailing save once the user settles,
+  // so rapid in-flight saves can never race and bounce the value back (and the
+  // re-renders they trigger can't interrupt page transitions).
+  const commitAccent = (hue: number) => {
+    if (accentSaveTimer.current) clearTimeout(accentSaveTimer.current);
+    accentSaveTimer.current = setTimeout(() => {
+      clientLogger.info("Accent changed", { page: "settings", accentHue: hue });
+      store.setPreferences({ accentHue: hue });
+    }, 250);
   };
 
   // Build a JSON blob with the user's data and trigger a download.
@@ -366,17 +388,14 @@ export default function SettingsPage() {
             </div>
           </SettingRow>
 
-          {/* Custom accent — drag the hue slider to personalise the accent. */}
+          {/* Custom accent — drag the spectrum to pick any hue. Applied live as
+              you drag; persisted once the interaction settles. */}
           <SettingRow label="Custom hue" value={`${accent}°`}>
-            <input
-              type="range"
-              min={0}
-              max={360}
-              step={1}
-              value={accent}
-              aria-label="Custom accent hue"
-              className={styles.hueSlider}
-              onChange={(event) => setNextAccent(Number(event.target.value))}
+            <HuePicker
+              hue={accent}
+              onChange={applyAccent}
+              onCommit={commitAccent}
+              ariaLabel="Custom accent hue"
             />
           </SettingRow>
         </SettingGroup>

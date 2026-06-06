@@ -7,6 +7,15 @@ const ACCENT_KEY = "atomicly:accent";
 const VARIANT_KEY = "atomicly:theme-variant";
 
 /**
+ * The primary accent colour for a given hue. Lightness and chroma are fixed so
+ * the accent stays legible across every hue; only the hue is user-selectable.
+ * Centralised here so the hue picker and `applyAppearance` can never drift.
+ */
+export function accentColor(hue: number): string {
+  return `oklch(62% 0.13 ${hue})`;
+}
+
+/**
  * Apply the user's appearance choices to the document and persist them.
  *
  * @param theme    The base light/dark mode (drives `data-theme` + token set).
@@ -19,7 +28,7 @@ const VARIANT_KEY = "atomicly:theme-variant";
  */
 export function applyAppearance(theme: Theme, accentHue: number, variant?: string) {
   document.documentElement.dataset.theme = theme;
-  document.documentElement.style.setProperty("--accent", `oklch(62% 0.13 ${accentHue})`);
+  document.documentElement.style.setProperty("--accent", accentColor(accentHue));
   document.documentElement.style.setProperty("--accent-2", `oklch(72% 0.10 ${accentHue})`);
   document.documentElement.style.setProperty(
     "--accent-soft",

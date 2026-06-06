@@ -164,13 +164,6 @@
   color: var(--ink-3);
 }
 
-/* Custom accent hue slider — tinted track using the live accent colour. */
-.hueSlider {
-  width: 180px;
-  accent-color: var(--accent);
-  cursor: pointer;
-}
-
 /* Colour swatch inside an accent button. */
 .swatch {
   width: 10px;
