@@ -49,6 +49,39 @@ export function capitalizeFirst(text: string): string {
 }
 
 /**
+ * Remove trailing sentence punctuation (".", ",", ";", ":") and surrounding
+ * whitespace from a field a user typed. We compose the summary sentence from
+ * several blanks and add our own single full stop, so any stray period a user
+ * left at the end of a blank would otherwise produce "...prompting.." — this
+ * keeps the joined sentence clean regardless of how each blank was punctuated.
+ */
+export function stripTrailingPunctuation(text: string): string {
+  return text.replace(/[\s.,;:]+$/u, "").trim();
+}
+
+/**
+ * Lower-case the first letter of a clause that sits in the *middle* of the
+ * summary sentence (e.g. the identity after "I'm becoming", the action after
+ * "I'll", or a cue after the connector). A user who types "Read 1 page" should
+ * read "I'll read 1 page", not "I'll Read 1 page".
+ *
+ * We deliberately leave intact:
+ *  - a standalone "I" (the pronoun), and
+ *  - acronyms / initialisms such as "AI" or "API" (a multi-letter word that is
+ *    already all upper-case),
+ * so meaningful capitalisation the user intended is never flattened.
+ */
+export function lowercaseFirst(text: string): string {
+  const trimmed = text.trim();
+  if (!trimmed) return trimmed;
+  const firstWord = trimmed.split(/\s+/u)[0];
+  const isPronounI = firstWord === "I";
+  const isAcronym = firstWord.length > 1 && /[A-Z]/u.test(firstWord) && firstWord === firstWord.toUpperCase();
+  if (isPronounI || isAcronym) return trimmed;
+  return trimmed.charAt(0).toLowerCase() + trimmed.slice(1);
+}
+
+/**
  * Make a cue read as a trigger clause. A bare clause such as "I pour my coffee"
  * becomes "when I pour my coffee", while phrases that already begin with a
  * temporal/locational connector ("after coffee", "at 7am") are returned as-is.
@@ -83,10 +116,15 @@ export function withCravingConnector(craving: string): string {
 export function composeHabitSentence(
   habit: Pick<Habit, "identity" | "name" | "loopCue" | "environment">,
 ): string {
-  const identity = habit.identity.trim();
-  const action = habit.name.trim() || "show up";
-  const cue = withCueConnector(habit.loopCue);
-  const place = habit.environment.trim();
+  // Each blank is normalised before we join it: trailing punctuation is
+  // dropped (so we never get double full stops) and mid-sentence clauses are
+  // lower-cased on their first letter (so "Read 1 page" reads "read 1 page")
+  // while acronyms and the pronoun "I" survive intact.
+  const identity = lowercaseFirst(stripTrailingPunctuation(habit.identity));
+  const action = lowercaseFirst(stripTrailingPunctuation(habit.name)) || "show up";
+  const cueRaw = withCueConnector(stripTrailingPunctuation(habit.loopCue));
+  const cue = lowercaseFirst(cueRaw);
+  const place = lowercaseFirst(stripTrailingPunctuation(habit.environment));
 
   let body = `I'll ${action}`;
   if (cue) body += ` ${cue}`;

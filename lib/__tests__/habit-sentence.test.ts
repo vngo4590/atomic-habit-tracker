@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   capitalizeFirst,
   composeHabitSentence,
+  lowercaseFirst,
+  stripTrailingPunctuation,
   withCravingConnector,
   withCueConnector,
 } from "@/lib/habit-sentence";
@@ -60,6 +62,44 @@ describe("capitalizeFirst", () => {
   });
 });
 
+describe("stripTrailingPunctuation", () => {
+  it("removes a trailing full stop a user typed in a blank", () => {
+    // Given/When/Then: a stray period must not survive into the joined sentence
+    expect(stripTrailingPunctuation("read 1 page about ai prompting.")).toBe(
+      "read 1 page about ai prompting",
+    );
+  });
+
+  it("removes trailing commas, semicolons and surrounding whitespace", () => {
+    // Given/When/Then: any sentence punctuation at the end is trimmed
+    expect(stripTrailingPunctuation("at my desk,  ")).toBe("at my desk");
+    expect(stripTrailingPunctuation("when I wake up;")).toBe("when I wake up");
+  });
+
+  it("leaves a clean phrase untouched", () => {
+    // Given/When/Then: well-formed input is returned as-is
+    expect(stripTrailingPunctuation("read 1 page")).toBe("read 1 page");
+  });
+});
+
+describe("lowercaseFirst", () => {
+  it("lower-cases a stray capital first letter mid-sentence", () => {
+    // Given/When/Then: "Read 1 page" reads "read 1 page" after "I'll"
+    expect(lowercaseFirst("Read 1 page")).toBe("read 1 page");
+    expect(lowercaseFirst("A person who loves AI")).toBe("a person who loves AI");
+  });
+
+  it("preserves an acronym as the first word", () => {
+    // Given/When/Then: "AI prompting" must not become "aI prompting"
+    expect(lowercaseFirst("AI prompting")).toBe("AI prompting");
+  });
+
+  it("preserves a standalone pronoun 'I'", () => {
+    // Given/When/Then: "I pour my coffee" stays grammatical
+    expect(lowercaseFirst("I pour my coffee")).toBe("I pour my coffee");
+  });
+});
+
 describe("composeHabitSentence", () => {
   it("builds the identity-first plan sentence from action, cue and place", () => {
     // Given: a fully filled habit
@@ -93,6 +133,23 @@ describe("composeHabitSentence", () => {
     // When/Then: it starts with the action instead of an empty becoming clause
     expect(composeHabitSentence(sentenceHabit({ identity: "" }))).toBe(
       "I'll read 1 page when I pour my coffee, at my desk.",
+    );
+  });
+
+  it("cleans up messy capitalisation and trailing punctuation from user input", () => {
+    // Given: blanks typed with stray capitals and a trailing full stop
+    // When: composing the summary sentence
+    // Then: mid-sentence clauses are lower-cased, acronyms survive, and there
+    //       is exactly one full stop at the end (no "prompting..")
+    expect(
+      composeHabitSentence({
+        identity: "A person who is amazing at AI",
+        name: "Read 1 page about AI Prompting",
+        loopCue: "At morning",
+        environment: "at my desk.",
+      }),
+    ).toBe(
+      "I'm becoming a person who is amazing at AI — I'll read 1 page about AI Prompting at morning, at my desk.",
     );
   });
 });
