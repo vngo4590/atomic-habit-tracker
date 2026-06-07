@@ -56,6 +56,36 @@ npm run backend:validate       # Prisma, TypeScript, lint, tests, and build
 
 > `npm test -- --run` does not pass flags through reliably. Always use `npm exec vitest run`.
 
+## 3a. End-to-end tests (Playwright)
+
+Playwright is already configured (`playwright.config.ts`, specs in `e2e/`). The
+config spins up its own web server (`npm run dev` locally) and reuses an
+existing one, so you only need a **migrated, seeded database**.
+
+```powershell
+# 1. Ensure local Postgres is up and the dev account exists. Postgres binds to
+#    55432; if a server is already listening there you can skip db:setup and
+#    just (re)seed the dev user:
+npm run db:seed                                   # ensures dev@atomicly.local
+#    (or full bring-up if nothing is running:)
+npm run db:setup
+
+# 2. Run E2E. Two projects run by default: chromium + Mobile Chrome.
+npm run test:e2e                                  # whole suite, both projects
+npx playwright test e2e/main-flow.spec.ts         # one file, both projects
+npx playwright test e2e/main-flow.spec.ts --project=chromium   # focused, fast
+npx playwright test e2e/main-flow.spec.ts --grep "Switching themes"
+npx playwright test --list                        # parse/list without running
+```
+
+- **Auth is automatic.** `e2e/auth.setup.ts` is a `setup` project that logs in as
+  `dev@atomicly.local`, dismisses onboarding, and saves `e2e/.auth/user.json`;
+  the browser projects depend on it via `storageState`. Tests start signed in.
+- **Specs:** `e2e/main-flow.spec.ts` (core journeys) and `e2e/stack.spec.ts`
+  (habit stacking). See the Tier-3 conventions in `atomic-habit-test-tier-policy`.
+- A failed `scripts/__tests__/local-db.test.ts` under the full Vitest run is a
+  known flake (it spawns `tsx`); it passes when run in isolation.
+
 ## 4. Local Kubernetes (Docker Desktop)
 
 Helper at `scripts/local-kube.ps1`:
