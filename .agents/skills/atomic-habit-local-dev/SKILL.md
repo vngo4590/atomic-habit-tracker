@@ -86,6 +86,34 @@ npx playwright test --list                        # parse/list without running
 - A failed `scripts/__tests__/local-db.test.ts` under the full Vitest run is a
   known flake (it spawns `tsx`); it passes when run in isolation.
 
+### Troubleshooting a "broken" E2E run
+
+Most E2E breakage on Windows is **environmental, not a test defect**. The usual
+symptoms and fix:
+
+- `Error: Timed out waiting 120000ms from config.webServer.` — a **stale process
+  is holding port 3000** (a previous `next dev` or Playwright `test-server` that
+  never exited), so Playwright's freshly spawned server can't bind.
+- `Target page, context or browser has been closed` / `browser has been closed`
+  cascading across most tests — the web server **died mid-run**. This happens if
+  you pre-start `npm run dev` in a separate background/async shell that gets torn
+  down; **don't** do that. Let Playwright own its server.
+
+Recovery — kill stray Node servers, confirm port 3000 is free, then re-run clean:
+
+```powershell
+# Find and stop leftover next/playwright node processes
+Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" |
+  Where-Object { $_.CommandLine -match 'next|playwright' } |
+  ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue   # should be empty
+npm run db:seed
+npx playwright test e2e/main-flow.spec.ts --project=chromium   # let Playwright manage the server
+```
+
+A clean chromium run is ~45s; both projects ~1.2m. If those pass, the breakage
+was operational — no code change needed.
+
 ## 4. Local Kubernetes (Docker Desktop)
 
 Helper at `scripts/local-kube.ps1`:
