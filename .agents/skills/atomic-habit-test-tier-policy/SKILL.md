@@ -62,7 +62,10 @@ Before writing any integration test, ask the user:
 
 Before writing any E2E test, ask the user:
 
-> "Would you like end-to-end tests for this? These use a real browser + real database and are not part of the default `npm exec vitest run` suite. The project would need Playwright configured first."
+> "Would you like end-to-end tests for this? These use a real browser + real database and are not part of the default `npm exec vitest run` suite."
+
+> **Playwright is already configured** (`playwright.config.ts`, specs in `e2e/`).
+> No scaffolding needed — write specs directly. Only the database must be up.
 
 **Covers full user journeys through the browser:**
 - Auth: register → login → protected route access → logout.
@@ -71,9 +74,48 @@ Before writing any E2E test, ask the user:
 - Identity: edit statement → vote reflects in ledger.
 - Lessons: complete lesson → progress persists.
 
-**Tooling:** Playwright (`@playwright/test`). If not yet installed, offer to scaffold the config before writing tests.
+**Tooling:** Playwright (`@playwright/test`). Two projects run by default —
+`chromium` and `Mobile Chrome` — both depending on the `setup` project
+(`e2e/auth.setup.ts`), which signs in as `dev@atomicly.local`, dismisses
+onboarding, and saves `storageState`. Tests therefore start authenticated.
+
 **Location:** `e2e/` directory at the repo root.
-**Isolation:** Requires the full Docker + database stack (`npm run db:setup`). Never included in the default Vitest suite.
+**Existing specs:** `e2e/main-flow.spec.ts` (create-habit + summary sentence,
+multi-day check-in history diagram, markdown journal, weekly review, theme
+switching, identity ledger, analytics, stack chaining + drag-reorder) and
+`e2e/stack.spec.ts` (habit stacking in depth).
+
+**Isolation:** Requires a migrated + seeded Postgres (`npm run db:setup`, or
+`npm run db:seed` if a server already listens on **55432**). Never part of the
+default Vitest suite. Note `e2e/` is outside `lint:app`'s scope.
+
+### Conventions (follow the existing specs)
+
+- **Seed state via the API, assert via the UI.** Use `page.request` against
+  `/api/v1/habits`, `/api/v1/habits/:id/check-ins`, and PATCH
+  `/api/v1/habits/:id` (e.g. `{ stackNextId }`) to build state fast, then drive
+  and assert the real UI. Clean up with a `cleanupHabits` helper in
+  `beforeEach` so tests are independent.
+- **Navigate with `page.goto(path)`**, not sidebar clicks — the sidebar is
+  **hidden on mobile**, so a `.sidebar` selector fails under `Mobile Chrome`.
+  Assert "UI intact" with always-rendered elements (headings, page content).
+- **Unique names:** suffix habit/journal names with `Date.now()` + a counter so
+  the two projects never collide.
+- **Date keys:** build `YYYY-MM-DD` offsets from "today" for multi-day history.
+- **Stable selectors:** prefer `data-testid` (stack chips), `aria-label`
+  (history-wall dots are `"<date> done"` / `"<date> missed"`; theme gallery is
+  `[aria-label="Theme"]`), and visible text. Theme state lands on
+  `html[data-theme-variant]` + `html[data-theme]`.
+- **Drag-reorder (framer-motion `Reorder`)** needs several intermediate
+  `page.mouse.move(..., { steps })` calls before `mouse.up()`, then a short
+  settle wait; verify the result via the API. Fall back to `test.skip` if
+  bounding boxes can't be measured.
+
+**Run:**
+```bash
+npx playwright test e2e/main-flow.spec.ts --project=chromium   # focused
+npm run test:e2e                                               # full, both projects
+```
 
 **Specialist:** `atomic-e2e-test-engineer`.
 
