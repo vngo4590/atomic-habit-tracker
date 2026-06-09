@@ -9,6 +9,7 @@ import {
   LineChart,
   Link as LinkIcon,
   Menu,
+  PawPrint,
   Pencil,
   Plus,
   RotateCcw,
@@ -130,4 +131,8 @@ export function IconBook(props: IconProps) {
 
 export function IconMenu(props: IconProps) {
   return <Menu {...iconDefaults} {...props} />;
+}
+
+export function IconPet(props: IconProps) {
+  return <PawPrint {...iconDefaults} {...props} />;
 }

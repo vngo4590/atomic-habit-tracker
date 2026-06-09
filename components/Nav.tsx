@@ -11,6 +11,7 @@ import {
   IconJournal,
   IconList,
   IconMenu,
+  IconPet,
   IconPlus,
   IconSettings,
   IconStar,
@@ -32,6 +33,7 @@ const NAV = [
   { href: "/journal", label: "Journal", icon: IconJournal, key: "J", group: "Reflect" },
   { href: "/review", label: "Weekly review", icon: IconReview, key: "W", group: "Reflect" },
   { href: "/hall-of-fame", label: "Hall of Fame", icon: IconStar, key: "F", group: "Become" },
+  { href: "/pet", label: "Pet", icon: IconPet, key: "P", group: "Become" },
   { href: "/identity", label: "Identity", icon: IconIdentity, key: "I", group: "Become" },
   { href: "/settings", label: "Settings", icon: IconSettings, key: ",", group: "Become" },
 ] as const;
