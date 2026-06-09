@@ -1,0 +1,20 @@
+/* PixelSprite.module.css — draws a character's pixel art as a CSS grid.
+   Column count and cell size are passed in as CSS variables (--pet-cols /
+   --pet-cell) so one stylesheet handles every character at any size. */
+
+/* The sprite grid: a fixed number of equal square cells, centred in its box. */
+.sprite {
+  display: grid;
+  grid-template-columns: repeat(var(--pet-cols), var(--pet-cell));
+  grid-auto-rows: var(--pet-cell);
+  width: max-content;
+  /* Crisp pixel edges — no smoothing between adjacent coloured cells. */
+  image-rendering: pixelated;
+}
+
+/* A single pixel. Transparent by default; filled cells get an inline colour. */
+.cell {
+  width: var(--pet-cell);
+  height: var(--pet-cell);
+  background-color: transparent;
+}
