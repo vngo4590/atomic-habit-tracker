@@ -26,6 +26,7 @@ The app is implemented with Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, 
 | `/journal` | Journal |
 | `/review` | Weekly review |
 | `/hall-of-fame` | 66-day habit formation review |
+| `/pet` | Pet Companion — feed a pixel pet by completing habits |
 | `/identity` | Identity statement and vote ledger |
 | `/settings` | Account, appearance, and data controls |
 
@@ -325,6 +326,8 @@ The styling layer is intentionally modular. There is **no monolithic global styl
 `app/globals.css` is a thin entry file that `@import`s the partials in cascade order (Tailwind preflight → tokens → base → typography → layout → components → animations → themes → responsive).
 
 **Selectable themes.** `lib/themes.ts` is the registry of named themes (Bright, Midnight, Glass, Neon, Fairy, Starlight). The Settings → Appearance gallery lets users pick a theme and a custom accent hue. The selection is persisted as a UI-only `localStorage` mirror under `atomicly:theme-variant` (the base light/dark mode still persists server-side via the `theme` preference) and applied as a `data-theme-variant` attribute on `<html>`. A pre-hydration inline script in `app/layout.tsx` applies the stored theme before paint to avoid a flash. Each theme can declare a signature click effect rendered by `components/ClickFX.tsx` (pure particle logic in `lib/click-fx.ts`).
+
+**Pet Companion.** The `/pet` tab is a small Tamagotchi-style game. Users adopt one of several pixel-art characters (each with a personality) defined in `lib/pet.ts`, which also holds the pure feeding mechanics. Every habit completed today earns one piece of "food"; feeding the pet spends a piece to raise its daily satiety, and hunger resets each day. The chosen character plus per-day feed counts are a UI-only `localStorage` mirror under `atomicly:pet` (following the theme-variant precedent — no DB migration); the food itself is always derived from real, persisted habit completions in the store. `lib/hooks/usePet.ts` exposes the state via `useSyncExternalStore`, and `components/pet/PixelSprite.tsx` renders each character's pixel grid.
 
 **Inline `style={{}}` is reserved for dynamic CSS-variable passthrough** (e.g. `style={{ "--mood-color": item.color }}`) so a generic module class can theme against per-data values. Every such usage is documented inline.
 
