@@ -1,0 +1,206 @@
+/* page.module.css — styles for the Pet Companion tab (picker + stage).
+   Generic card/btn/eyebrow classes come from the global stylesheet; this file
+   only adds the pet-specific layout so the JSX stays style-free. */
+
+/* -------------------------------------------------------------------------- */
+/* Loading placeholder                                                         */
+/* -------------------------------------------------------------------------- */
+
+/* Shown briefly while we read the saved pet from the browser after hydration. */
+.loading {
+  text-align: center;
+  color: var(--muted);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Character picker                                                            */
+/* -------------------------------------------------------------------------- */
+
+/* Intro line above the grid of adoptable creatures. */
+.pickerLede {
+  margin: 6px 0 16px;
+  color: var(--muted);
+  max-width: 52ch;
+}
+
+/* Responsive grid of companion cards. */
+.pickerGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 14px;
+}
+
+/* A single adoptable-companion card (button so the whole tile is clickable). */
+.pickerCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+  cursor: pointer;
+  text-align: center;
+}
+
+/* Fixed-height frame so cards line up regardless of sprite height. */
+.pickerSprite {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 120px;
+  margin-bottom: 6px;
+}
+
+/* Companion name on a picker card. */
+.pickerName {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+/* Personality tag under the name. */
+.pickerPersonality {
+  font-size: 12px;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Short description of the companion's vibe. */
+.pickerBlurb {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 4px 0 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Pet stage                                                                   */
+/* -------------------------------------------------------------------------- */
+
+/* Two-column layout: pet on the left, today's stats on the right. */
+.stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+/* Collapse to a single column on narrow viewports. */
+@media (max-width: 720px) {
+  .stage {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Header row of the pet card: name block on the left, Change button on right. */
+.stageTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+/* The adopted companion's display name. */
+.petName {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 2px 0 0;
+}
+
+/* Personality tag under the pet's name. */
+.petPersonality {
+  font-size: 12px;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Centred frame the sprite bounces inside of. */
+.spriteFrame {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 220px;
+  margin: 12px 0;
+}
+
+/* Mood face + label, centred under the sprite. */
+.moodRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+/* The emoticon-style mood face (monospace so the ASCII stays aligned). */
+.moodFace {
+  font-family: var(--mono, monospace);
+  font-size: 18px;
+}
+
+/* The mood word (Hungry / Content / Full …). */
+.moodLabel {
+  font-weight: 600;
+}
+
+/* Track for the satiety/fullness bar. */
+.satietyTrack {
+  height: 12px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  overflow: hidden;
+}
+
+/* Filled portion of the satiety bar; width is set inline from the ratio. */
+.satietyFill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.35s ease;
+}
+
+/* Numeric satiety caption under the bar. */
+.satietyCaption {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+  text-align: center;
+}
+
+/* Full-width feed action. */
+.feedButton {
+  width: 100%;
+  margin-top: 16px;
+}
+
+/* Right-hand stats card. */
+.statsCard {
+  align-self: stretch;
+}
+
+/* Vertical list of today's pet stats. */
+.statList {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+/* One label/value stat row. */
+.statRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 6px;
+}
+
+/* Closing hint explaining the daily food loop. */
+.statsHint {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 14px 0 0;
+}
