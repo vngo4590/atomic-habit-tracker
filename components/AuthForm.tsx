@@ -7,6 +7,7 @@ import type { AuthFormState } from "@/lib/contracts/auth";
 import { initialAuthFormState } from "@/lib/contracts/auth";
 import { clientLogger } from "@/lib/logger-client";
 
+import { TurnstileWidget } from "./TurnstileWidget";
 import styles from "./AuthForm.module.css";
 
 interface AuthFormProps {
@@ -105,6 +106,8 @@ export function AuthForm({
               {state.message}
             </div>
           )}
+
+          <TurnstileWidget />
 
           <button className="btn btn-primary" type="submit" disabled={pending}>
             {pending ? "Working..." : submitLabel}

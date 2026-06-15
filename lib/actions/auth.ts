@@ -1,6 +1,7 @@
 "use server";
 
 import { AuthError } from "next-auth";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { signIn, signOut } from "@/auth";
@@ -9,6 +10,8 @@ import type { AuthFormState } from "@/lib/contracts/auth";
 import { loginSchema } from "@/lib/contracts/auth";
 import { registerUser } from "@/lib/auth/register";
 import { getCurrentUser } from "@/lib/auth/session";
+import { clientIpFromHeaders } from "@/lib/security/rate-limit";
+import { TURNSTILE_FIELD, verifyTurnstileToken } from "@/lib/security/turnstile";
 import { logger, redactEmail, redactUserId } from "@/lib/logger";
 import { updateUserName, updateUserPassword } from "@/lib/repositories/users";
 
@@ -22,6 +25,16 @@ function formValue(formData: FormData, key: string) {
 function callbackUrl(formData: FormData) {
   const value = formData.get("callbackUrl");
   return typeof value === "string" && value.startsWith("/") ? value : "/";
+}
+
+/**
+ * Verifies the Cloudflare Turnstile bot challenge for an auth submission.
+ * Returns true when verification passes (or Turnstile is not configured).
+ */
+async function passesBotChallenge(formData: FormData): Promise<boolean> {
+  const token = formValue(formData, TURNSTILE_FIELD);
+  const ip = clientIpFromHeaders(await headers());
+  return verifyTurnstileToken(token, ip);
 }
 
 export async function loginAction(_prevState: AuthFormState, formData: FormData): Promise<AuthFormState> {
@@ -41,6 +54,14 @@ export async function loginAction(_prevState: AuthFormState, formData: FormData)
   }
 
   log.info("Login attempted", { event: "auth.login_attempted", email: redactEmail(parsed.data.email) });
+
+  if (!(await passesBotChallenge(formData))) {
+    log.warn("Login blocked — bot challenge failed", {
+      event: "auth.login_bot_challenge_failed",
+      email: redactEmail(parsed.data.email),
+    });
+    return { ok: false, message: "Bot verification failed. Please try again." };
+  }
 
   try {
     await signIn("credentials", {
@@ -65,6 +86,15 @@ export async function loginAction(_prevState: AuthFormState, formData: FormData)
 
 export async function registerAction(_prevState: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const email = formValue(formData, "email");
+
+  if (!(await passesBotChallenge(formData))) {
+    log.warn("Registration blocked — bot challenge failed", {
+      event: "auth.register_bot_challenge_failed",
+      email: redactEmail(email),
+    });
+    return { ok: false, message: "Bot verification failed. Please try again." };
+  }
+
   const result = await registerUser({
     name: formValue(formData, "name"),
     email,

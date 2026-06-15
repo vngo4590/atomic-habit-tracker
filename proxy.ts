@@ -34,6 +34,10 @@ import { clientIpFromHeaders, createRateLimiter } from "@/lib/security/rate-limi
 
 const isDev = process.env.NODE_ENV === "development";
 
+// Turnstile is enabled when a public site key is configured. The proxy only
+// needs to know whether to widen the CSP for the challenge widget/iframe.
+const turnstileEnabled = Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
+
 // Two independent limiters: a strict one for auth attempts and a gentler one for
 // the API. Module-scoped so their state survives between requests on this instance.
 const authLimiter = createRateLimiter(AUTH_RATE_LIMIT);
@@ -56,7 +60,7 @@ export default auth((request: NextRequest & { auth?: unknown }) => {
   // A fresh nonce + CSP per request. The nonce is also forwarded on the request
   // headers so Next.js can stamp it onto its own server-rendered scripts.
   const nonce = generateNonce();
-  const csp = buildContentSecurityPolicy(nonce, isDev);
+  const csp = buildContentSecurityPolicy(nonce, isDev, { turnstile: turnstileEnabled });
 
   // --- 1. Rate limiting -----------------------------------------------------
   // Identify the bucket first so we only spend a counter slot on limited paths.

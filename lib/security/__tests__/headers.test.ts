@@ -56,6 +56,27 @@ describe("buildContentSecurityPolicy", () => {
     expect(csp).toContain("form-action 'self'");
     expect(csp).toContain("upgrade-insecure-requests");
   });
+
+  it("forbids all framing when Turnstile is disabled", () => {
+    // Given Turnstile is off (default)
+    const csp = buildContentSecurityPolicy("nonce", false);
+
+    // Then no frame source is permitted and Cloudflare is not referenced
+    expect(csp).toContain("frame-src 'none'");
+    expect(csp).not.toContain("challenges.cloudflare.com");
+  });
+
+  it("allows the Turnstile widget and iframe only when Turnstile is enabled", () => {
+    // Given a CSP built with Turnstile enabled
+    const csp = buildContentSecurityPolicy("nonce", false, { turnstile: true });
+
+    // Then the challenge host is permitted for frames, scripts, and connections
+    expect(csp).toContain("frame-src https://challenges.cloudflare.com");
+    expect(csp).toContain("script-src 'self' 'nonce-nonce' 'strict-dynamic' https://challenges.cloudflare.com");
+    expect(csp).toContain("connect-src 'self' https://challenges.cloudflare.com");
+    // And framing the app from elsewhere is still forbidden
+    expect(csp).toContain("frame-ancestors 'none'");
+  });
 });
 
 describe("STATIC_SECURITY_HEADERS", () => {

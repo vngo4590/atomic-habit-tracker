@@ -62,15 +62,32 @@ export function generateNonce(): string {
  * @param nonce - the per-request nonce that Next.js will stamp onto its scripts.
  * @param isDev - in development React uses `eval` for richer stack traces, so we
  *   must allow 'unsafe-eval'. It is never enabled in production builds.
+ * @param options.turnstile - when true, allow Cloudflare Turnstile's script and
+ *   challenge iframe. Only enabled when Turnstile is configured, so the policy
+ *   stays maximally strict when the bot challenge is off.
  */
-export function buildContentSecurityPolicy(nonce: string, isDev: boolean): string {
+export function buildContentSecurityPolicy(
+  nonce: string,
+  isDev: boolean,
+  options: { turnstile?: boolean } = {},
+): string {
+  // Cloudflare Turnstile serves its widget script and challenge iframe from this
+  // origin. script-src host allow-lists are ignored by browsers that honour
+  // 'strict-dynamic' (the nonce'd loader transitively trusts it), but listing it
+  // helps older browsers; frame-src/connect-src are NOT governed by
+  // 'strict-dynamic', so they must name the host explicitly.
+  const turnstileHost = "https://challenges.cloudflare.com";
+  const scriptExtra = options.turnstile ? ` ${turnstileHost}` : "";
+  const frameSrc = options.turnstile ? `frame-src ${turnstileHost}` : "frame-src 'none'";
+  const connectExtra = options.turnstile ? ` ${turnstileHost}` : "";
+
   const directives = [
     // Default to same-origin for any resource type not explicitly listed below.
     "default-src 'self'",
     // Scripts: only our nonce'd scripts and whatever they choose to load
     // ('strict-dynamic'). In modern browsers this makes host allow-lists moot,
     // which is exactly what defeats injected <script src=evil> tags.
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""}`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${scriptExtra}${isDev ? " 'unsafe-eval'" : ""}`,
     // Styles: 'unsafe-inline' is required for Framer Motion / Tailwind inline
     // `style` attributes rendered on the server. We intentionally omit a nonce
     // here because a nonce would make the browser ignore 'unsafe-inline'.
@@ -79,17 +96,18 @@ export function buildContentSecurityPolicy(nonce: string, isDev: boolean): strin
     "img-src 'self' blob: data:",
     // Fonts are bundled by next/font; data: covers inlined glyphs.
     "font-src 'self' data:",
-    // XHR/fetch/websocket targets — the app only talks to its own origin.
-    "connect-src 'self'",
+    // XHR/fetch/websocket targets — the app only talks to its own origin (plus
+    // Turnstile when enabled).
+    `connect-src 'self'${connectExtra}`,
     // No <object>/<embed>/<applet>; these are classic injection vectors.
     "object-src 'none'",
     // Lock the document base URL so injected <base> tags cannot hijack relative URLs.
     "base-uri 'self'",
     // Forms may only post back to our own origin (anti-exfiltration).
     "form-action 'self'",
-    // Nobody may frame us (clickjacking) and we frame nobody.
+    // Nobody may frame us (clickjacking) and we frame nobody (except Turnstile).
     "frame-ancestors 'none'",
-    "frame-src 'none'",
+    frameSrc,
     // Transparently upgrade any stray http subresource to https.
     "upgrade-insecure-requests",
   ];
