@@ -54,7 +54,7 @@ describe("PetEcosystem", () => {
   });
 
   it("shows available food earned from completed habits", () => {
-    // Given two habits completed today and no feeds spent yet
+    // Given two habits completed today (each worth 3 food) and no feeds spent yet
     const store = testStoreContext({
       habits: [completedHabit("h1"), completedHabit("h2")],
       pets: [makePet()],
@@ -64,9 +64,64 @@ describe("PetEcosystem", () => {
     // When the ecosystem renders
     renderEcosystem(store);
 
-    // Then the shared food pool shows 2 units available
-    expect(screen.getByText("2")).toBeTruthy();
+    // Then the shared food pool shows 6 units available (2 habits x 3 feeds)
+    expect(screen.getByText("6")).toBeTruthy();
     expect(screen.getByText(/food available today/i)).toBeTruthy();
+  });
+
+  it("earns food from journalling even without completing a habit", () => {
+    // Given no completed habits but two Journal entries written today
+    const store = testStoreContext({
+      habits: [],
+      journal: [
+        { id: "j1", date: todayKey(), title: "Reflection", body: "", mood: "good", tags: [] },
+        { id: "j2", date: todayKey(), title: "Evening", body: "", mood: "good", tags: [] },
+      ],
+      pets: [makePet({ satiety: 0 })],
+      petFeedsUsedToday: 0,
+    });
+
+    // When the ecosystem renders
+    renderEcosystem(store);
+
+    // Then journalling alone funds two units of food and feeding is enabled
+    expect(screen.getByText("2")).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Feed" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("shows the pet's age and lifetime feeds", () => {
+    // Given a freshly-hatched pet that has been fed twice
+    const store = testStoreContext({
+      habits: [],
+      pets: [makePet({ totalFeeds: 2 })],
+      petFeedsUsedToday: 0,
+    });
+
+    // When the ecosystem renders
+    renderEcosystem(store);
+
+    // Then its age and feed count are visible on the card
+    expect(screen.getByText(/just hatched/i)).toBeTruthy();
+    expect(screen.getByText(/2 feeds fed/i)).toBeTruthy();
+  });
+
+  it("releases a living pet when confirmed", () => {
+    // Given a living pet and a user who confirms the release prompt
+    const deletePet = vi.fn();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const store = testStoreContext({
+      habits: [],
+      pets: [makePet()],
+      petFeedsUsedToday: 0,
+      deletePet,
+    });
+
+    // When the user presses Release
+    renderEcosystem(store);
+    fireEvent.click(screen.getByRole("button", { name: /release/i }));
+
+    // Then the store is asked to release that pet
+    expect(deletePet).toHaveBeenCalledWith("pet_1");
   });
 
   it("feeds a living pet using the chosen amount", () => {

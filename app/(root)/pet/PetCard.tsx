@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { MoodSprite } from "@/components/pet/MoodSprite";
-import { getTemperament, satietyCapacity, type PetView } from "@/lib/pet";
+import { formatAge, getTemperament, satietyCapacity, type PetView } from "@/lib/pet";
 
 import styles from "./page.module.css";
 
@@ -19,6 +19,7 @@ export function PetCard({
   availableFood,
   onFeed,
   onBury,
+  onDelete,
 }: {
   /** The fully-derived, render-ready pet (simulated to now).*/
   view: PetView;
@@ -28,6 +29,8 @@ export function PetCard({
   onFeed: (amount: number) => void;
   /** Lay this (dead) pet to rest. */
   onBury: () => void;
+  /** Release this pet (alive or dead) from the ecosystem. */
+  onDelete: () => void;
 }) {
   const temperament = getTemperament(view.genome.temperament);
   // How many units this pet can still take before it is full.
@@ -38,6 +41,13 @@ export function PetCard({
   const [amount, setAmount] = useState(1);
   const feedAmount = Math.min(Math.max(1, amount), Math.max(1, maxFeed));
 
+  // Ask before releasing a living companion — it cannot be undone.
+  const confirmRelease = () => {
+    if (typeof window === "undefined" || window.confirm(`Release ${view.name}? This can't be undone.`)) {
+      onDelete();
+    }
+  };
+
   // ---- Dead pet: a quiet memorial card -----------------------------------
   if (!view.vitals.isAlive) {
     return (
@@ -47,6 +57,9 @@ export function PetCard({
         </div>
         <h3 className={styles.petName}>{view.name}</h3>
         <p className={styles.petGone}>Passed away · reached {view.stageLabel}</p>
+        <p className={styles.petMeta}>
+          Lived {formatAge(view.ageMs)} · {view.totalFeeds} lifetime feeds
+        </p>
         <button type="button" className="btn btn-ghost" onClick={onBury}>
           Lay to rest
         </button>
@@ -64,6 +77,11 @@ export function PetCard({
         </div>
         <span className={styles.stageBadge}>{view.stageLabel}</span>
       </header>
+
+      {/* Age + lifetime feeds give the user a felt sense of time and care. */}
+      <p className={styles.petMeta}>
+        {formatAge(view.ageMs)} · {view.totalFeeds} {view.totalFeeds === 1 ? "feed" : "feeds"} fed
+      </p>
 
       <div className={styles.petSprite}>
         <MoodSprite
@@ -141,6 +159,10 @@ export function PetCard({
             : "Complete a habit to earn food."
           : `${availableFood} food available · ${view.totalFeeds} lifetime feeds`}
       </p>
+
+      <button type="button" className={styles.releaseBtn} onClick={confirmRelease}>
+        Release
+      </button>
     </article>
   );
 }

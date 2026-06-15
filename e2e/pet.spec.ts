@@ -2,8 +2,9 @@ import { test, expect, type Page } from "@playwright/test";
 
 /**
  * pet.spec — end-to-end coverage of the Pet Ecosystem tab. It walks the real
- * user journey that makes the feature meaningful: complete a habit to earn food,
- * adopt a procedurally-generated companion, then spend that food to feed it.
+ * user journey that makes the feature meaningful: complete a habit to earn food
+ * (each completion grants 3 feeds), adopt a procedurally-generated companion,
+ * spend that food to feed it, and release it to free its slot.
  *
  * Like the other E2E specs this drives a real browser against the running app +
  * database, so it guards the user-visible loop, not just the internals. Pets are
@@ -125,5 +126,22 @@ test.describe("Pet ecosystem", () => {
 
     // Then: with no food earned, the Feed button is disabled
     await expect(page.getByRole("button", { name: "Feed" }).first()).toBeDisabled();
+  });
+
+  test("release a companion removes it from the ecosystem", async ({ page }) => {
+    // Given: a freshly-adopted companion (skipped if the ecosystem is full)
+    await page.goto("/pet");
+    const petName = unique("Willow ");
+    await adoptIfPossible(page, "Gentle", petName);
+
+    const card = page.locator("article", { has: page.getByRole("heading", { name: petName }) });
+    test.skip((await card.count()) === 0, "Ecosystem already full — no fresh pet to release.");
+
+    // When: the user confirms releasing that specific companion
+    page.on("dialog", (dialog) => dialog.accept());
+    await card.getByRole("button", { name: /release/i }).click();
+
+    // Then: the companion's card is gone
+    await expect(page.getByRole("heading", { name: petName })).toHaveCount(0);
   });
 });

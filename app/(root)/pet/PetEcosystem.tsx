@@ -8,12 +8,13 @@ import { useNow } from "@/lib/hooks/useNow";
 import { todayKey } from "@/lib/helpers";
 import {
   buildPetView,
+  earnedFoodFrom,
   MAX_ALIVE_PETS,
   type PetRecord,
   type PetView,
   type TemperamentId,
 } from "@/lib/pet";
-import type { Pet } from "@/lib/types";
+import type { CheckIn, Pet } from "@/lib/types";
 
 import { AdoptPanel } from "./AdoptPanel";
 import { PetCard } from "./PetCard";
@@ -43,11 +44,36 @@ function toRecord(pet: Pet): PetRecord {
 }
 
 /**
+ * Was a habit's check-in for today actually marked done? History entries are
+ * either a bare `true` (legacy) or a CheckIn object — both mean "done" only when
+ * truthy / `done === true`.
+ */
+function isDoneToday(entry: boolean | CheckIn | undefined): boolean {
+  if (!entry) return false;
+  return typeof entry === "boolean" ? entry : entry.done;
+}
+
+/** Does today's check-in carry a written journal note (an extra food source)? */
+function hasJournalNote(entry: boolean | CheckIn | undefined): boolean {
+  return typeof entry === "object" && entry !== null && Boolean(entry.journal && entry.journal.trim());
+}
+
+/** Do two timestamps fall on the same local calendar day? */
+function isSameLocalDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+/**
  * PetEcosystem is the heart of the Pet tab: it turns the user's stored pets into
  * living, ticking creatures. It computes today's shared food pool from real
- * habit completions, renders a grid of living companions with feed controls,
- * shows an adopt panel while there's room, and gathers any pets that have passed
- * away into a small graveyard. All decay/mood is derived live from `useNow`.
+ * habit completions and journalling, renders a grid of living companions with
+ * feed controls, shows an adopt panel while there's room, and gathers any pets
+ * that have passed away into a small graveyard. All decay/mood is derived live
+ * from `useNow`.
  */
 export function PetEcosystem() {
   const store = useStoreContext();
@@ -66,11 +92,19 @@ export function PetEcosystem() {
   const alive = views.filter((view) => view.vitals.isAlive);
   const dead = views.filter((view) => !view.vitals.isAlive);
 
-  // Today's shared food pool: one unit per completed habit, minus what's already
-  // been fed to the ecosystem today.
+  // Today's shared food pool. Each completed habit is worth the most; every
+  // reflective act (journal entry, habit note, weekly review saved today) adds a
+  // little extra. We subtract what's already been fed to the ecosystem today.
   const today = todayKey();
-  const completedToday = store.habits.filter((habit) => Boolean(habit.history[today])).length;
-  const availableFood = Math.max(0, completedToday - store.petFeedsUsedToday);
+  const nowDate = new Date(now);
+  const habitsCompleted = store.habits.filter((habit) => isDoneToday(habit.history[today])).length;
+  const habitJournals = store.habits.filter((habit) => hasJournalNote(habit.history[today])).length;
+  const journalEntries = store.journal.filter((entry) => entry.date === today).length;
+  const weeklyReviews = store.weeklyReviews.filter((review) =>
+    isSameLocalDay(new Date(review.updatedAt), nowDate),
+  ).length;
+  const earnedFood = earnedFoodFrom({ habitsCompleted, journalEntries, habitJournals, weeklyReviews });
+  const availableFood = Math.max(0, earnedFood - store.petFeedsUsedToday);
 
   const remainingSlots = Math.max(0, MAX_ALIVE_PETS - alive.length);
 
@@ -84,7 +118,7 @@ export function PetEcosystem() {
       <div className={styles.foodBanner}>
         <span className={styles.foodCount}>{availableFood}</span>
         <span className={styles.foodLabel}>
-          food available today · earn more by completing habits
+          food available today · earn more by completing habits & journalling
         </span>
       </div>
 
@@ -97,6 +131,7 @@ export function PetEcosystem() {
               availableFood={availableFood}
               onFeed={(amount) => store.feedPet(view.id, amount)}
               onBury={() => store.buryPet(view.id)}
+              onDelete={() => store.deletePet(view.id)}
             />
           ))}
         </div>
@@ -124,6 +159,7 @@ export function PetEcosystem() {
                 availableFood={availableFood}
                 onFeed={() => undefined}
                 onBury={() => store.buryPet(view.id)}
+                onDelete={() => store.deletePet(view.id)}
               />
             ))}
           </div>
