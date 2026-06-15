@@ -1,206 +1,358 @@
-/* page.module.css — styles for the Pet Companion tab (picker + stage).
+/* page.module.css — styles for the Pet Ecosystem tab.
    Generic card/btn/eyebrow classes come from the global stylesheet; this file
-   only adds the pet-specific layout so the JSX stays style-free. */
+   only adds the pet-specific layout so the JSX stays free of inline style. */
 
-/* -------------------------------------------------------------------------- */
-/* Loading placeholder                                                         */
-/* -------------------------------------------------------------------------- */
+/* Intro copy under the page title. */
+.subtitle {
+  margin-top: 6px;
+  max-width: 52ch;
+  color: var(--muted);
+  line-height: 1.5;
+}
 
-/* Shown briefly while we read the saved pet from the browser after hydration. */
+/* Placeholder shown during SSR / before the live clock starts ticking. */
 .loading {
   text-align: center;
   color: var(--muted);
+  padding: 32px 0;
 }
 
 /* -------------------------------------------------------------------------- */
-/* Character picker                                                            */
+/* Ecosystem layout                                                            */
 /* -------------------------------------------------------------------------- */
 
-/* Intro line above the grid of adoptable creatures. */
-.pickerLede {
-  margin: 6px 0 16px;
-  color: var(--muted);
-  max-width: 52ch;
-}
-
-/* Responsive grid of companion cards. */
-.pickerGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 14px;
-}
-
-/* A single adoptable-companion card (button so the whole tile is clickable). */
-.pickerCard {
+.ecosystem {
   display: flex;
   flex-direction: column;
+  gap: 20px;
+  margin-top: 16px;
+}
+
+/* The shared food pool banner — the link between habits and pets. */
+.foodBanner {
+  display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 16px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--card);
-  cursor: pointer;
+  gap: 12px;
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-2, var(--surface));
+}
+
+.foodCount {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--accent);
+  min-width: 1.5ch;
   text-align: center;
 }
 
-/* Fixed-height frame so cards line up regardless of sprite height. */
-.pickerSprite {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  height: 120px;
-  margin-bottom: 6px;
-}
-
-/* Companion name on a picker card. */
-.pickerName {
-  font-weight: 600;
-  font-size: 15px;
-}
-
-/* Personality tag under the name. */
-.pickerPersonality {
-  font-size: 12px;
-  color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-/* Short description of the companion's vibe. */
-.pickerBlurb {
-  font-size: 12px;
+.foodLabel {
   color: var(--muted);
-  margin: 4px 0 0;
+  font-size: 0.9rem;
 }
 
-/* -------------------------------------------------------------------------- */
-/* Pet stage                                                                   */
-/* -------------------------------------------------------------------------- */
-
-/* Two-column layout: pet on the left, today's stats on the right. */
-.stage {
+/* Responsive grid of pet cards. */
+.petGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 16px;
-  align-items: start;
 }
 
-/* Collapse to a single column on narrow viewports. */
-@media (max-width: 720px) {
-  .stage {
-    grid-template-columns: 1fr;
-  }
+.emptyState {
+  text-align: center;
+  color: var(--muted);
+  padding: 24px 0;
 }
 
-/* Header row of the pet card: name block on the left, Change button on right. */
-.stageTop {
+/* The graveyard groups pets that have passed away. */
+.graveyard {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  flex-direction: column;
   gap: 12px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
 }
 
-/* The adopted companion's display name. */
+/* -------------------------------------------------------------------------- */
+/* Pet card                                                                    */
+/* -------------------------------------------------------------------------- */
+
+.petCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  align-items: stretch;
+}
+
+/* A dead pet's card is muted to signal the loss. */
+.petCardDead {
+  opacity: 0.85;
+  align-items: center;
+  text-align: center;
+}
+
+.petHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .petName {
-  font-size: 22px;
-  font-weight: 700;
-  margin: 2px 0 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0;
 }
 
-/* Personality tag under the pet's name. */
-.petPersonality {
-  font-size: 12px;
-  color: var(--accent);
+.petTemperament {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* Life-stage badge (egg, hatchling, …). */
+.stageBadge {
+  font-size: 0.72rem;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+  color: var(--accent);
+  white-space: nowrap;
 }
 
-/* Centred frame the sprite bounces inside of. */
-.spriteFrame {
+/* Sprite stage — fixed height keeps the grid tidy as creatures bob/jump. */
+.petSprite {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  height: 220px;
-  margin: 12px 0;
+  min-height: 120px;
+  padding: 8px 0;
 }
 
-/* Mood face + label, centred under the sprite. */
 .moodRow {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: 6px;
 }
 
-/* The emoticon-style mood face (monospace so the ASCII stays aligned). */
 .moodFace {
-  font-family: var(--mono, monospace);
-  font-size: 18px;
+  font-size: 1.1rem;
 }
 
-/* The mood word (Hungry / Content / Full …). */
 .moodLabel {
-  font-weight: 600;
-}
-
-/* Track for the satiety/fullness bar. */
-.satietyTrack {
-  height: 12px;
-  border-radius: 999px;
-  background: var(--accent-soft);
-  overflow: hidden;
-}
-
-/* Filled portion of the satiety bar; width is set inline from the ratio. */
-.satietyFill {
-  height: 100%;
-  background: var(--accent);
-  border-radius: 999px;
-  transition: width 0.35s ease;
-}
-
-/* Numeric satiety caption under the bar. */
-.satietyCaption {
-  font-size: 12px;
+  font-size: 0.85rem;
   color: var(--muted);
-  margin-top: 6px;
-  text-align: center;
 }
 
-/* Full-width feed action. */
-.feedButton {
-  width: 100%;
-  margin-top: 16px;
+.petGone {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0;
 }
 
-/* Right-hand stats card. */
-.statsCard {
-  align-self: stretch;
-}
+/* -------------------------------------------------------------------------- */
+/* Vital bars                                                                  */
+/* -------------------------------------------------------------------------- */
 
-/* Vertical list of today's pet stats. */
-.statList {
-  list-style: none;
-  margin: 10px 0 0;
-  padding: 0;
-  display: grid;
+.barRow {
+  display: flex;
+  align-items: center;
   gap: 8px;
 }
 
-/* One label/value stat row. */
-.statRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 6px;
+.barLabel {
+  width: 64px;
+  font-size: 0.75rem;
+  color: var(--muted);
 }
 
-/* Closing hint explaining the daily food loop. */
-.statsHint {
-  font-size: 12px;
+.barTrack {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+/* Fullness bar — warm accent. Width is set inline from the live ratio. */
+.barFillSatiety {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+
+/* Health bar — green = healthy. Width is set inline from the live ratio. */
+.barFillHealth {
+  height: 100%;
+  border-radius: 999px;
+  background: oklch(68% 0.13 145);
+  transition: width 0.4s ease;
+}
+
+.evolveHint {
+  font-size: 0.78rem;
   color: var(--muted);
-  margin: 14px 0 0;
+  margin: 2px 0 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Feed stepper                                                                */
+/* -------------------------------------------------------------------------- */
+
+.feedRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 2px;
+}
+
+.stepperBtn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fg);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.stepperBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.stepperValue {
+  min-width: 1.5ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.feedHint {
+  font-size: 0.74rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Adopt panel                                                                 */
+/* -------------------------------------------------------------------------- */
+
+.adoptCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+}
+
+.adoptLede {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.adoptBody {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.previewColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.previewSprite {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 110px;
+}
+
+.previewNote {
+  font-size: 0.74rem;
+  color: var(--muted);
+  margin: 0;
+  text-align: center;
+}
+
+.adoptForm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-width: 220px;
+}
+
+.temperamentGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 8px;
+}
+
+.temperamentChip {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--fg);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.temperamentChip:hover {
+  border-color: var(--accent);
+}
+
+.temperamentChipActive {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.temperamentBlurb {
+  font-size: 0.84rem;
+  color: var(--muted);
+  min-height: 2.4em;
+  margin: 0;
+}
+
+.nameLabel {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.nameInput {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--fg);
+  font-size: 0.95rem;
+}
+
+.nameInput:focus {
+  outline: none;
+  border-color: var(--accent);
 }
