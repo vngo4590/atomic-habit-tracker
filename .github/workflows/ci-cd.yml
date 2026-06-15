@@ -291,24 +291,29 @@ jobs:
           POSTGRES_NAME="psql-atomicly-dev-aue-${{ secrets.AZURE_UNIQUE_SUFFIX }}"
           ACR_LOGIN_SERVER="cratomiclydev${{ secrets.AZURE_UNIQUE_SUFFIX }}.azurecr.io"
           DB_URL="postgresql://psqladmin:${{ secrets.POSTGRES_ADMIN_PASSWORD }}@${POSTGRES_NAME}.postgres.database.azure.com:5432/atomicly?schema=public&sslmode=require"
-          # Add GitHub Actions runner IP to PostgreSQL firewall temporarily
+          # Add GitHub Actions runner IP to PostgreSQL firewall temporarily.
+          # Always remove the rule on exit (even if migrations fail) so we never
+          # leave the runner IP whitelisted or a stale rule that breaks the next
+          # run's create.
           RUNNER_IP=$(curl -s https://api.ipify.org)
+          cleanup_firewall() {
+            az postgres flexible-server firewall-rule delete \
+              --server-name "$POSTGRES_NAME" \
+              --resource-group "$RG" \
+              --name "github-actions" \
+              --yes \
+              --output none 2>/dev/null || true
+          }
+          trap cleanup_firewall EXIT
           az postgres flexible-server firewall-rule create \
-            --name "$POSTGRES_NAME" \
+            --server-name "$POSTGRES_NAME" \
             --resource-group "$RG" \
-            --rule-name "github-actions" \
+            --name "github-actions" \
             --start-ip-address "$RUNNER_IP" \
             --end-ip-address "$RUNNER_IP" \
             --output none
           # Run migrations via the migrator image
           docker run --rm -e "DATABASE_URL=$DB_URL" -e "NODE_ENV=production" "${ACR_LOGIN_SERVER}/atomicly-migrator:dev-latest"
-          # Clean up firewall rule
-          az postgres flexible-server firewall-rule delete \
-            --name "$POSTGRES_NAME" \
-            --resource-group "$RG" \
-            --rule-name "github-actions" \
-            --yes \
-            --output none
 
       - name: Verify deployment
         run: |
