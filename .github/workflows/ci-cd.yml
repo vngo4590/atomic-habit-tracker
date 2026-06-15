@@ -264,7 +264,7 @@ jobs:
           # Add GitHub Actions runner IP to PostgreSQL firewall temporarily
           RUNNER_IP=$(curl -s https://api.ipify.org)
           az postgres flexible-server firewall-rule create \
-            --name "$POSTGRES_NAME" \
+            --server-name "$POSTGRES_NAME" \
             --resource-group "$RG" \
             --rule-name "github-actions" \
             --start-ip-address "$RUNNER_IP" \
@@ -274,7 +274,7 @@ jobs:
           docker run --rm -e "DATABASE_URL=$DB_URL" -e "NODE_ENV=production" "${ACR_LOGIN_SERVER}/atomicly-migrator:dev-latest"
           # Clean up firewall rule
           az postgres flexible-server firewall-rule delete \
-            --name "$POSTGRES_NAME" \
+            --server-name "$POSTGRES_NAME" \
             --resource-group "$RG" \
             --rule-name "github-actions" \
             --yes \
