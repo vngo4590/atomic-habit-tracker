@@ -18,6 +18,13 @@ export * from "./sprite";
 export * from "./simulation";
 export * from "./mood";
 
+/**
+ * The ecosystem cap: how many *alive* pets a user may keep at once. Lives in the
+ * engine barrel (not the repository) so both the server-side adoption guard and
+ * the client UI agree on the limit without the client importing server code.
+ */
+export const MAX_ALIVE_PETS = 3;
+
 import { decodeTraits, type Genome } from "./genome";
 import {
   feedsUntilNextStage,

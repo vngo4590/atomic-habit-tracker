@@ -135,7 +135,7 @@ function dimsForStage(stage: Stage): { width: number; height: number } {
 /* -------------------------------------------------------------------------- */
 
 /** Draw a simple speckled egg — the universal "not hatched yet" look. */
-function drawEgg(grid: Grid, traits: Traits): void {
+function drawEgg(grid: Grid): void {
   const height = grid.length;
   const width = grid[0].length;
   const center = Math.floor(width / 2);
@@ -356,7 +356,7 @@ export function generateSprite(genome: Genome, stage: Stage): Sprite {
   const grid = blankGrid(width, height);
 
   if (stage === "egg") {
-    drawEgg(grid, traits);
+    drawEgg(grid);
     return { palette, pixels: toRows(grid) };
   }
 

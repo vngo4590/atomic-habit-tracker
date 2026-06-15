@@ -44,6 +44,8 @@ model User {
   weeklyReviews     WeeklyReview[]
   lessonProgress    LessonProgress[]
   formationVerdicts FormationVerdict[]
+  pets              Pet[]
+  petFeedLogs       PetFeedLog[]
 }
 
 model Account {
@@ -251,4 +253,53 @@ model FormationVerdict {
 
   @@unique([habitId])
   @@index([userId, decision])
+}
+
+// A procedurally generated Tamagotchi-style companion. Its appearance is NOT
+// stored — only the `seed` + `temperament` genome, from which the sprite is
+// always regenerated deterministically. The remaining columns are the
+// time-varying "vital signs" the simulation advances (see lib/pet/simulation.ts):
+// the pet gets hungry over real time and can die permanently if neglected.
+model Pet {
+  id          String    @id @default(cuid())
+  userId      String
+  name        String
+  // Genome: the two values that fully determine the creature's look.
+  temperament String
+  seed        Int
+  // Lifetime feeds drive evolution from egg -> hatchling -> ... -> elder.
+  totalFeeds  Int       @default(0)
+  // Vital signs (advanced by the pure simulation on read and on feed).
+  satiety     Float     @default(4)
+  health      Float     @default(100)
+  bornAt      DateTime  @default(now())
+  lastFedAt   DateTime  @default(now())
+  lastSimAt   DateTime  @default(now())
+  isAlive     Boolean   @default(true)
+  diedAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  feedLogs PetFeedLog[]
+
+  @@index([userId, isAlive])
+}
+
+// One row per feeding event. Summing `amount` for a user on a given dateKey is
+// how we enforce the SHARED daily food pool: food earned from completing habits
+// today is spent across the whole ecosystem, not per-pet.
+model PetFeedLog {
+  id        String   @id @default(cuid())
+  userId    String
+  petId     String
+  dateKey   String
+  amount    Int
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pet  Pet  @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([userId, dateKey])
+  @@index([petId, dateKey])
 }

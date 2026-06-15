@@ -89,6 +89,11 @@ export interface StoreState {
   saveFormationVerdict: (verdict: FormationVerdict) => void;
   preferences: UserPreferences;
   setPreferences: (preferences: Partial<UserPreferences>) => void;
+  pets: Pet[];
+  petFeedsUsedToday: number;
+  adoptPet: (draft: PetDraft) => Promise<void>;
+  feedPet: (petId: string, amount: number) => Promise<void>;
+  buryPet: (petId: string) => Promise<void>;
   toast: ToastState | null;
   showToast: (msg: string, sub?: string) => void;
   streak: (habit: Habit) => number;
@@ -129,6 +134,34 @@ export interface UserPreferences {
   timezone: string;
 }
 
+/**
+ * A persisted pet companion. Its *appearance* is never stored — only the genome
+ * (`temperament` + `seed`), from which the sprite is always regenerated. The
+ * remaining fields are the time-varying vital signs advanced by the simulation.
+ * Timestamps are ISO strings so the snapshot is JSON-serialisable across the
+ * server/client boundary; the client converts them to epoch ms to simulate.
+ */
+export interface Pet {
+  id: string;
+  name: string;
+  temperament: string;
+  seed: number;
+  totalFeeds: number;
+  satiety: number;
+  health: number;
+  bornAt: string;
+  lastFedAt: string;
+  lastSimAt: string;
+  isAlive: boolean;
+  diedAt: string | null;
+}
+
+/** Draft used when adopting a new pet (the user picks a name + temperament). */
+export interface PetDraft {
+  name: string;
+  temperament: string;
+}
+
 export interface StoreSnapshot {
   habits: Habit[];
   journal: JournalEntry[];
@@ -138,4 +171,7 @@ export interface StoreSnapshot {
   completedLessons: number[];
   formationVerdicts: FormationVerdict[];
   preferences: UserPreferences;
+  pets?: Pet[];
+  /** Total feeds spent across the whole ecosystem today (shared food pool). */
+  petFeedsUsedToday?: number;
 }

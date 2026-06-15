@@ -184,9 +184,13 @@ export function randRange(rng: () => number, min: number, max: number): number {
   return min + rng() * (max - min);
 }
 
-/** Generate a fresh random 32-bit seed for a brand-new adoption. */
+/**
+ * Generate a fresh random seed for a brand-new adoption. We keep it inside the
+ * signed 32-bit range so it stores cleanly in a Postgres `Int` column; the PRNG
+ * coerces it back to unsigned internally, so negative seeds work fine.
+ */
 export function randomSeed(): number {
-  return Math.floor(Math.random() * 0xffffffff) >>> 0;
+  return Math.floor(Math.random() * 0x100000000) | 0;
 }
 
 /* -------------------------------------------------------------------------- */
