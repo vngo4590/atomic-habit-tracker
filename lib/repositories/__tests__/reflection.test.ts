@@ -184,6 +184,8 @@ describe("reflection repositories", () => {
       },
       lessonProgress: { findMany: vi.fn(async () => [{ lessonId: 2 }]) },
       formationVerdict: { findMany: vi.fn(async () => []) },
+      pet: { findMany: vi.fn(async () => []) },
+      petFeedLog: { aggregate: vi.fn(async () => ({ _sum: { amount: null } })) },
       userPreference: {
         upsert: vi.fn(async () => ({
           theme: "light",

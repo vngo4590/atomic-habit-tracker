@@ -1,0 +1,38 @@
+/* MoodSprite.module.css — layout + non-animated visual states for a pet sprite.
+   The motion itself lives inline in MoodSprite.tsx (Framer Motion values); this
+   file only handles positioning and the "dead" greyscale treatment. */
+
+/* Positioning context so floating hearts can sit above the sprite. */
+.wrap {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+/* A dead pet reads as faded and colourless, signalling permanence. */
+.dead {
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+
+/* Overlay layer for the floating hearts shown in the "in love" mood. */
+.hearts {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* A single floating heart, tinted with the app accent. */
+.heart {
+  position: absolute;
+  left: 38%;
+  bottom: 60%;
+  color: var(--accent);
+  font-size: 14px;
+}
+
+/* The second heart drifts up from the other side for a livelier effect. */
+.heartRight {
+  left: 58%;
+}

@@ -13,6 +13,8 @@ import {
 } from "@/lib/contracts/domain";
 import { logger, redactUserId } from "@/lib/logger";
 import { listHabits } from "@/lib/repositories/habits";
+import { countFeedsUsedToday, listPets } from "@/lib/repositories/pets";
+import { todayKey } from "@/lib/helpers";
 import type {
   FormationVerdict,
   Identity,
@@ -401,7 +403,12 @@ export async function getStoreSnapshot(userId: string, weekStartKey: string, db:
   });
   validateDatabaseUrl();
 
-  const [habits, journal, identity, weeklyReview, weeklyReviews, completedLessons, formationVerdicts, preferences] = await Promise.all([
+  // The pet ecosystem decays in real time and is funded by today's habit
+  // completions, so we load it against "now" and today's date key.
+  const now = Date.now();
+  const petsDateKey = todayKey();
+
+  const [habits, journal, identity, weeklyReview, weeklyReviews, completedLessons, formationVerdicts, preferences, pets, petFeedsUsedToday] = await Promise.all([
     listHabits(userId, db),
     listJournalEntries(userId, db),
     getIdentity(userId, db),
@@ -410,6 +417,8 @@ export async function getStoreSnapshot(userId: string, weekStartKey: string, db:
     listCompletedLessons(userId, db),
     listFormationVerdicts(userId, db),
     getPreferences(userId, db),
+    listPets(userId, now, db),
+    countFeedsUsedToday(userId, petsDateKey, db),
   ]);
 
   return {
@@ -421,6 +430,8 @@ export async function getStoreSnapshot(userId: string, weekStartKey: string, db:
     completedLessons,
     formationVerdicts,
     preferences,
+    pets,
+    petFeedsUsedToday,
   };
 }
 

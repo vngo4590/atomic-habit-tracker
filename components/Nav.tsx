@@ -11,6 +11,7 @@ import {
   IconJournal,
   IconList,
   IconMenu,
+  IconPet,
   IconPlus,
   IconSettings,
   IconStar,
@@ -32,6 +33,7 @@ const NAV = [
   { href: "/journal", label: "Journal", icon: IconJournal, key: "J", group: "Reflect" },
   { href: "/review", label: "Weekly review", icon: IconReview, key: "W", group: "Reflect" },
   { href: "/hall-of-fame", label: "Hall of Fame", icon: IconStar, key: "F", group: "Become" },
+  { href: "/pet", label: "Pet", icon: IconPet, key: "P", group: "Companion" },
   { href: "/identity", label: "Identity", icon: IconIdentity, key: "I", group: "Become" },
   { href: "/settings", label: "Settings", icon: IconSettings, key: ",", group: "Become" },
 ] as const;
@@ -147,7 +149,7 @@ function SidebarContent({
 
       {/* Grouped nav with stagger animations — same layout on desktop and mobile drawer */}
       <div className="desktop-nav">
-        {(["Practice", "Reflect", "Become"] as const).map((group) => (
+        {(["Practice", "Reflect", "Companion", "Become"] as const).map((group) => (
           <div key={group}>
             <div className="nav-group">{group}</div>
             <motion.div variants={sidebarStagger} initial="hidden" animate="visible">

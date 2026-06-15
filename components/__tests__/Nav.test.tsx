@@ -39,10 +39,11 @@ describe("Nav business logic", () => {
     // When it is rendered
     render(<Nav user={{ name: "Alice", email: "alice@example.com" }} />);
 
-    // Then all three group labels are visible (the legacy "Learn" group was
+    // Then all four group labels are visible (the legacy "Learn" group was
     // removed when the Atomic-Habits-derived lessons feature was retired)
     expect(screen.getByText("Practice")).toBeTruthy();
     expect(screen.getByText("Reflect")).toBeTruthy();
+    expect(screen.getByText("Companion")).toBeTruthy();
     expect(screen.getByText("Become")).toBeTruthy();
     expect(screen.queryByText("Learn")).toBeNull();
 
@@ -380,6 +381,7 @@ describe("Mobile drawer navigation", () => {
     const drawer = screen.getByRole("dialog");
     expect(drawer.textContent).toContain("Practice");
     expect(drawer.textContent).toContain("Reflect");
+    expect(drawer.textContent).toContain("Companion");
     expect(drawer.textContent).toContain("Become");
     expect(drawer.textContent).not.toContain("Learn");
 
