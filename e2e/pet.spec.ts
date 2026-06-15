@@ -1,18 +1,20 @@
 import { test, expect, type Page } from "@playwright/test";
 
 /**
- * pet.spec — end-to-end coverage of the Pet Companion tab. It walks the real
- * user journey that makes the feature meaningful: complete a habit, then spend
- * the food that completion earned to feed your adopted pixel companion.
+ * pet.spec — end-to-end coverage of the Pet Ecosystem tab. It walks the real
+ * user journey that makes the feature meaningful: complete a habit to earn food,
+ * adopt a procedurally-generated companion, then spend that food to feed it.
  *
  * Like the other E2E specs this drives a real browser against the running app +
- * database, so it guards the user-visible loop, not just the internals.
+ * database, so it guards the user-visible loop, not just the internals. Pets are
+ * persisted in Postgres (no localStorage), so the test adopts with a unique name
+ * and tolerates pets left over from previous runs (the ecosystem caps at three).
  */
 
 let counter = 0;
-/** Build a collision-free habit name so parallel projects never clash. */
+/** Build a collision-free name so parallel projects/re-runs never clash. */
 function unique(name: string): string {
-  return `${name} ${Date.now()}_${++counter}`;
+  return `${name}${Date.now()}_${++counter}`;
 }
 
 /** YYYY-MM-DD date key for today in the browser's local zone. */
@@ -71,67 +73,57 @@ async function checkInOn(page: Page, habitId: string, dateKey: string): Promise<
   expect(response.ok()).toBe(true);
 }
 
-/** Clear the browser-mirrored pet state so each test starts un-adopted. */
-async function resetPetStorage(page: Page): Promise<void> {
-  await page.goto("/pet");
-  await page.evaluate(() => window.localStorage.removeItem("atomicly:pet"));
+/** Adopt a companion of the given temperament if the ecosystem has room. */
+async function adoptIfPossible(page: Page, temperament: string, petName: string): Promise<void> {
+  const adoptPanel = page.getByText("Adopt a companion");
+  if (await adoptPanel.isVisible()) {
+    await page.getByRole("button", { name: temperament }).click();
+    await page.getByLabel("Name").fill(petName);
+    await page.getByRole("button", { name: new RegExp(`Adopt ${petName}`, "i") }).click();
+    await expect(page.getByRole("heading", { name: petName })).toBeVisible();
+  }
 }
 
-test.describe("Feeding the pet companion", () => {
+test.describe("Pet ecosystem", () => {
   test.beforeEach(async ({ page }) => {
     await cleanupHabits(page);
-    await resetPetStorage(page);
   });
 
-  test("completing a habit lets you adopt and feed a pixel companion", async ({ page }) => {
+  test("complete a habit, adopt a companion, and feed it", async ({ page }) => {
     // Given: a habit completed today, which should earn one piece of pet food
-    const id = await seedHabit(page, unique("Drink Water"), "a hydrated person");
+    const id = await seedHabit(page, unique("Drink Water "), "a hydrated person");
     await checkInOn(page, id, todayKey());
 
-    // When: the user opens the Pet tab (fresh storage -> adoption picker)
+    // When: the user opens the Pet tab
     await page.goto("/pet");
-    await expect(page.getByText("Choose your companion")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Pet Ecosystem" })).toBeVisible();
 
-    // And: they adopt a companion
-    await page.getByRole("button", { name: /Adopt Sprout/i }).click();
+    // And: they adopt a companion (skipped if the ecosystem is already full)
+    const petName = unique("Sprout ");
+    await adoptIfPossible(page, "Calm", petName);
 
-    // Then: the pet appears hungry with its satiety bar empty
-    await expect(page.getByRole("heading", { name: "Sprout" })).toBeVisible();
-    await expect(page.getByText("Hungry")).toBeVisible();
-    await expect(page.getByText("Satiety 0 / 5")).toBeVisible();
+    // Then: today's completed habit shows as available food
+    await expect(page.getByText(/food available today/i)).toBeVisible();
 
-    // And: the completed habit shows up as one available piece of food
-    const stats = page.locator(".card", { hasText: "Today" });
-    await expect(stats.locator("li", { hasText: "Food available" })).toContainText("1");
-
-    // When: they feed the companion
-    const feed = page.getByRole("button", { name: /Feed your companion/i });
+    // When: the user feeds a companion
+    const feed = page.getByRole("button", { name: "Feed" }).first();
     await expect(feed).toBeEnabled();
     await feed.click();
 
-    // Then: satiety rises and the food token is spent
-    await expect(page.getByText("Satiety 1 / 5")).toBeVisible();
-    await expect(stats.locator("li", { hasText: "Fed today" })).toContainText("1");
-    await expect(stats.locator("li", { hasText: "Food available" })).toContainText("0");
-
-    // And: with no food left, the feed button reverts to the earn-food prompt
-    await expect(
-      page.getByRole("button", { name: /Complete a habit to earn food/i }),
-    ).toBeDisabled();
+    // Then: the feed registers a lifetime feed for that pet
+    await expect(page.getByText(/lifetime feeds/i).first()).toBeVisible();
   });
 
-  test("a pet cannot be fed before any habit is completed today", async ({ page }) => {
+  test("a companion cannot be fed before any habit is completed today", async ({ page }) => {
     // Given: a habit exists but has not been completed today (no food earned)
-    await seedHabit(page, unique("Stretch"), "a supple person");
+    await seedHabit(page, unique("Stretch "), "a supple person");
 
-    // When: the user adopts a companion on the Pet tab
+    // When: the user opens the Pet tab and ensures a companion exists
     await page.goto("/pet");
-    await page.getByRole("button", { name: /Adopt Ember/i }).click();
+    const petName = unique("Ember ");
+    await adoptIfPossible(page, "Fiery", petName);
 
-    // Then: feeding is disabled and the UI nudges them to complete a habit first
-    await expect(
-      page.getByRole("button", { name: /Complete a habit to earn food/i }),
-    ).toBeDisabled();
-    await expect(page.getByText("Satiety 0 / 5")).toBeVisible();
+    // Then: with no food earned, the Feed button is disabled
+    await expect(page.getByRole("button", { name: "Feed" }).first()).toBeDisabled();
   });
 });

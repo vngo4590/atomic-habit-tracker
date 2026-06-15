@@ -133,6 +133,8 @@ export function testStoreSnapshot(patch: Partial<StoreSnapshot> = {}): StoreSnap
     completedLessons: [1],
     formationVerdicts: [testFormationVerdict()],
     preferences: testPreferences(),
+    pets: [],
+    petFeedsUsedToday: 0,
     ...patch,
   };
 }
@@ -164,6 +166,11 @@ export function testStoreContext(patch: Partial<StoreState> = {}): StoreState {
     saveFormationVerdict: () => {},
     preferences: snapshot.preferences,
     setPreferences: () => {},
+    pets: snapshot.pets ?? [],
+    petFeedsUsedToday: snapshot.petFeedsUsedToday ?? 0,
+    adoptPet: async () => {},
+    feedPet: async () => {},
+    buryPet: async () => {},
     toast: null,
     showToast: () => {},
     streak: () => 0,
