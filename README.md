@@ -26,7 +26,7 @@ The app is implemented with Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, 
 | `/journal` | Journal |
 | `/review` | Weekly review |
 | `/hall-of-fame` | 66-day habit formation review |
-| `/pet` | Pet Companion — feed a pixel pet by completing habits |
+| `/pet` | Pet Ecosystem — adopt, feed, and evolve procedural pixel pets by completing habits |
 | `/identity` | Identity statement and vote ledger |
 | `/settings` | Account, appearance, and data controls |
 
@@ -327,7 +327,7 @@ The styling layer is intentionally modular. There is **no monolithic global styl
 
 **Selectable themes.** `lib/themes.ts` is the registry of named themes (Bright, Midnight, Glass, Neon, Fairy, Starlight). The Settings → Appearance gallery lets users pick a theme and a custom accent hue. The selection is persisted as a UI-only `localStorage` mirror under `atomicly:theme-variant` (the base light/dark mode still persists server-side via the `theme` preference) and applied as a `data-theme-variant` attribute on `<html>`. A pre-hydration inline script in `app/layout.tsx` applies the stored theme before paint to avoid a flash. Each theme can declare a signature click effect rendered by `components/ClickFX.tsx` (pure particle logic in `lib/click-fx.ts`).
 
-**Pet Companion.** The `/pet` tab is a small Tamagotchi-style game. Users adopt one of several pixel-art characters (each with a personality) defined in `lib/pet.ts`, which also holds the pure feeding mechanics. Every habit completed today earns one piece of "food"; feeding the pet spends a piece to raise its daily satiety, and hunger resets each day. The chosen character plus per-day feed counts are a UI-only `localStorage` mirror under `atomicly:pet` (following the theme-variant precedent — no DB migration); the food itself is always derived from real, persisted habit completions in the store. `lib/hooks/usePet.ts` exposes the state via `useSyncExternalStore`, and `components/pet/PixelSprite.tsx` renders each character's pixel grid.
+**Pet Ecosystem.** The `/pet` tab is a procedural, evolving, mortal Tamagotchi world. Instead of a fixed roster, every creature is generated deterministically from a genome — a random `seed` plus the `temperament` the user picks at adoption — so two players who both choose "Fiery" still get visibly different pets. The pure engine lives under `lib/pet/`: `genome.ts` (seeded PRNG + temperaments), `sprite.ts` (bilateral-symmetry pixel-art generator), `evolution.ts` (egg → hatchling → juvenile → adult → elder stages that reveal new seed-derived features), `simulation.ts` (real-time satiety/health decay with **permanent death**), and `mood.ts` (mood + Framer Motion idle animation). Pets are persisted in PostgreSQL (`Pet` + `PetFeedLog` models) through `lib/repositories/pets.ts`, mutated via `lib/actions/pets.ts`, and loaded by `getStoreSnapshot`. Food is a **shared daily pool**: each habit completed today earns one unit, spent across all pets via a feed stepper, with the ecosystem capped at three alive pets. `components/pet/MoodSprite.tsx` wraps `components/pet/PixelSprite.tsx` with mood-driven idle loops. Adding/applying the schema requires a running local Postgres (`npm run db:setup`, or `npm run prisma:migrate:deploy` against a configured database).
 
 **Inline `style={{}}` is reserved for dynamic CSS-variable passthrough** (e.g. `style={{ "--mood-color": item.color }}`) so a generic module class can theme against per-data values. Every such usage is documented inline.
 
