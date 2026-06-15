@@ -48,8 +48,16 @@ resource postgres 'Microsoft.DBforPostgreSQL/flexibleServers@2023-12-01-preview'
 }
 
 // ---------------------------------------------------------------------------
-// Firewall rule — allows all Azure services to reach the DB.
-// (0.0.0.0 → 0.0.0.0 is the Azure-services magic range.)
+// Firewall rule — allows Azure services (e.g. the App Service) to reach the DB
+// over the public endpoint. (0.0.0.0 → 0.0.0.0 is the Azure-services magic
+// range.)
+//
+// RESIDUAL RISK (documented in docs/architecture/security.md): the server still
+// has a public endpoint. The hardened end-state is VNet integration + a private
+// endpoint (the networking module already provisions a delegated Postgres
+// subnet for this). That change is deferred because it cannot be validated
+// without a live deployment; until then access is gated by this Azure-services
+// rule + enforced TLS + a strong admin password held in Key Vault.
 // ---------------------------------------------------------------------------
 resource allowAzureServices 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2023-12-01-preview' = {
   name: 'AllowAllAzureServices'
@@ -58,6 +66,25 @@ resource allowAzureServices 'Microsoft.DBforPostgreSQL/flexibleServers/firewallR
     startIpAddress: '0.0.0.0'
     endIpAddress: '0.0.0.0'
   }
+}
+
+// ---------------------------------------------------------------------------
+// Enforce encrypted connections. WHY: data in motion between the app and the
+// database must never travel in clear text. `require_secure_transport = ON`
+// rejects any non-TLS connection at the server (the app already connects with
+// sslmode=require). This is the Flexible Server default; we set it explicitly
+// so the guarantee is captured in source control and cannot silently drift.
+// ---------------------------------------------------------------------------
+resource requireSecureTransport 'Microsoft.DBforPostgreSQL/flexibleServers/configurations@2023-12-01-preview' = {
+  name: 'require_secure_transport'
+  parent: postgres
+  properties: {
+    value: 'ON'
+    source: 'user-override'
+  }
+  dependsOn: [
+    allowAzureServices
+  ]
 }
 
 // ---------------------------------------------------------------------------

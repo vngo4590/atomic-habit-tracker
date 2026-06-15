@@ -166,9 +166,14 @@ jobs:
               imageTag=${{ steps.vars.outputs.tag }} \
             --query properties.outputs \
             -o json)
-          echo "$DEPLOY_OUTPUTS"
+          # NOTE: deployment outputs contain sensitive values (App Insights
+          # connection string), so we do NOT echo $DEPLOY_OUTPUTS to the log.
           APP_INSIGHTS_CONNECTION_STRING=$(echo "$DEPLOY_OUTPUTS" | python -c "import json, sys; print(json.load(sys.stdin)['appInsightsConnectionString']['value'])")
+          FRONT_DOOR_ID=$(echo "$DEPLOY_OUTPUTS" | python -c "import json, sys; print(json.load(sys.stdin)['frontDoorId']['value'])")
+          # Mask both so they can never surface in subsequent step logs.
+          echo "::add-mask::$APP_INSIGHTS_CONNECTION_STRING"
           echo "app_insights_connection_string=$APP_INSIGHTS_CONNECTION_STRING" >> "$GITHUB_OUTPUT"
+          echo "front_door_id=$FRONT_DOOR_ID" >> "$GITHUB_OUTPUT"
 
       - name: Resolve actual Front Door hostname
         id: fd
@@ -254,6 +259,31 @@ jobs:
             --resource-group "$RG" \
             --docker-custom-image-name "$ACR_LOGIN_SERVER/atomicly:${{ steps.vars.outputs.tag }}" \
             --docker-registry-server-url "https://$ACR_LOGIN_SERVER"
+
+      - name: Pin App Service ingress to our Front Door (X-Azure-FDID)
+        run: |
+          # The Bicep template already denies inbound traffic that does not come
+          # from the AzureFrontDoor.Backend service tag. That blocks the public
+          # internet, but ANY Azure Front Door could still reach us. Here we add
+          # an X-Azure-FDID header match so only OUR Front Door instance passes.
+          # This runs post-deploy because the Front Door ID is only known after
+          # the Front Door is created (avoids a Bicep circular dependency).
+          APP_NAME="app-atomicly-dev-aue"
+          RG="rg-atomicly-dev-aue-${{ secrets.AZURE_UNIQUE_SUFFIX }}"
+          FDID="${{ steps.bicep.outputs.front_door_id }}"
+          # Remove any stale rule from a previous run so the update is idempotent.
+          az webapp config access-restriction remove \
+            --name "$APP_NAME" --resource-group "$RG" \
+            --rule-name "Allow-OurFrontDoor" --scm-site false --output none 2>/dev/null || true
+          az webapp config access-restriction add \
+            --name "$APP_NAME" --resource-group "$RG" \
+            --rule-name "Allow-OurFrontDoor" \
+            --priority 90 \
+            --action Allow \
+            --service-tag AzureFrontDoor.Backend \
+            --http-header x-azure-fdid="$FDID" \
+            --scm-site false \
+            --output none
 
       - name: Run database migrations
         run: |
