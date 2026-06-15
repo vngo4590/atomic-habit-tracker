@@ -17,6 +17,8 @@ export * from "./evolution";
 export * from "./sprite";
 export * from "./simulation";
 export * from "./mood";
+export * from "./food";
+export * from "./age";
 
 /**
  * The ecosystem cap: how many *alive* pets a user may keep at once. Lives in the
@@ -82,6 +84,8 @@ export interface PetView {
   satietyRatio: number;
   /** Health as a 0..1 bar ratio. */
   healthRatio: number;
+  /** How long the pet has been alive, in milliseconds (now - bornAt). */
+  ageMs: number;
 }
 
 /**
@@ -109,6 +113,7 @@ export function buildPetView(record: PetRecord, ctx: MoodContext): PetView {
     mood,
     satietyRatio: satietyRatio(vitals.satiety),
     healthRatio: healthRatio(vitals.health),
+    ageMs: Math.max(0, ctx.now - vitals.bornAt),
   };
 }
 

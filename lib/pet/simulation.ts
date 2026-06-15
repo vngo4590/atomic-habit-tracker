@@ -19,23 +19,35 @@
 
 import { getTemperament, type TemperamentId } from "./genome";
 
-/** Maximum satiety a pet can hold. Feeds beyond this are simply capped. */
-export const MAX_SATIETY = 8;
+/**
+ * Maximum satiety a pet can hold, measured roughly in "days of food". A pet can
+ * therefore bank up to MAX_SATIETY days ahead by feeding more when food is
+ * plentiful. Feeds beyond this are simply capped.
+ */
+export const MAX_SATIETY = 3;
 
 /** Maximum (and starting) health. Health only drains through starvation. */
 export const MAX_HEALTH = 100;
 
-/** Base satiety lost per hour at metabolism 1.0 (≈ full -> empty in ~13h). */
-export const BASE_DECAY_PER_HOUR = 0.6;
+/**
+ * Satiety lost per DAY at metabolism 1.0. Kept below 1.0 so that even the
+ * hungriest temperament (metabolism 1.3 -> ~0.91/day) still survives on a single
+ * feed per day — fulfilling the design rule "one feed a day keeps a pet alive".
+ */
+export const SATIETY_DECAY_PER_DAY = 0.7;
 
-/** Health lost per hour of continuous starvation at resilience 1.0. */
-export const HEALTH_DRAIN_PER_HOUR = 4;
+/**
+ * Health lost per DAY of continuous starvation at resilience 1.0. At 25/day a
+ * fully-healthy pet takes ~4 days of empty-belly neglect to die, so death is a
+ * real but forgiving stake rather than an instant punishment.
+ */
+export const HEALTH_DRAIN_PER_DAY = 25;
 
-/** Health recovered per hour while the pet still has food in its belly. */
-export const HEALTH_REGEN_PER_HOUR = 1.5;
+/** Health recovered per DAY while the pet still has food in its belly. */
+export const HEALTH_REGEN_PER_DAY = 30;
 
-/** One hour in milliseconds — the unit our rates are expressed in. */
-const HOUR_MS = 3_600_000;
+/** One day in milliseconds — the unit our rates are expressed in. */
+const DAY_MS = 86_400_000;
 
 /** Clamp a number into the inclusive [min, max] range. */
 function clamp(value: number, min: number, max: number): number {
@@ -106,31 +118,31 @@ export function simulatePet(vitals: PetVitals, tuning: SimTuning, now: number): 
     return vitals;
   }
 
-  const elapsedH = (now - vitals.lastSimAt) / HOUR_MS;
-  const decayRate = BASE_DECAY_PER_HOUR * tuning.metabolism;
-  const drainRate = HEALTH_DRAIN_PER_HOUR / tuning.resilience;
+  const elapsedDays = (now - vitals.lastSimAt) / DAY_MS;
+  const decayRate = SATIETY_DECAY_PER_DAY * tuning.metabolism;
+  const drainRate = HEALTH_DRAIN_PER_DAY / tuning.resilience;
 
-  // Hours of food left before satiety reaches zero.
-  const timeToEmptyH = decayRate > 0 ? vitals.satiety / decayRate : Infinity;
+  // Days of food left before satiety reaches zero.
+  const timeToEmptyDays = decayRate > 0 ? vitals.satiety / decayRate : Infinity;
 
-  if (elapsedH <= timeToEmptyH) {
+  if (elapsedDays <= timeToEmptyDays) {
     // Still fed for the whole interval: satiety drops, health gently recovers.
     return {
       ...vitals,
-      satiety: clamp(vitals.satiety - decayRate * elapsedH, 0, MAX_SATIETY),
-      health: clamp(vitals.health + HEALTH_REGEN_PER_HOUR * elapsedH, 0, MAX_HEALTH),
+      satiety: clamp(vitals.satiety - decayRate * elapsedDays, 0, MAX_SATIETY),
+      health: clamp(vitals.health + HEALTH_REGEN_PER_DAY * elapsedDays, 0, MAX_HEALTH),
       lastSimAt: now,
     };
   }
 
-  // Past the point of emptiness: the pet has been starving for `starvingH` hours.
-  const starvingH = elapsedH - timeToEmptyH;
-  const healthLoss = drainRate * starvingH;
+  // Past the point of emptiness: the pet has been starving for `starvingDays`.
+  const starvingDays = elapsedDays - timeToEmptyDays;
+  const healthLoss = drainRate * starvingDays;
 
   if (vitals.health - healthLoss <= 0) {
-    // Death: compute the precise hour health crossed zero and freeze there.
-    const hoursToDeath = timeToEmptyH + (drainRate > 0 ? vitals.health / drainRate : Infinity);
-    const diedAt = vitals.lastSimAt + hoursToDeath * HOUR_MS;
+    // Death: compute the precise moment health crossed zero and freeze there.
+    const daysToDeath = timeToEmptyDays + (drainRate > 0 ? vitals.health / drainRate : Infinity);
+    const diedAt = vitals.lastSimAt + daysToDeath * DAY_MS;
     return {
       ...vitals,
       satiety: 0,
