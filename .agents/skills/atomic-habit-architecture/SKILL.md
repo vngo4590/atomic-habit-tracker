@@ -20,6 +20,7 @@ app/
     journal/       # /journal
     review/        # /review (weekly review)
     hall-of-fame/  # /hall-of-fame
+    pet/           # /pet — Pet Ecosystem (procedural Tamagotchi) UI
     identity/      # /identity
     settings/      # /settings
   api/v1/          # REST API for mobile/external clients (habits, reflection, session)
@@ -28,11 +29,12 @@ app/
 
 components/        # Reusable client UI components
   motion/          # Framer Motion primitives (FadeIn, SlideIn, HoverLift, etc.)
+  pet/             # MoodSprite + PixelSprite (procedural pet rendering)
   StackCardGroup.tsx  # Apple-Wallet stacked habit card group (Today page)
   StackDiagram.tsx    # Stack chain diagram (habit detail Stack tab)
   Modal.tsx           # Accessible blocking dialog
 lib/
-  actions/         # Server actions (domain.ts, auth.ts)
+  actions/         # Server actions (domain.ts, auth.ts, pets.ts)
   api/             # API response helpers
   animations.ts    # Shared Framer Motion presets, easings, durations, variants
   auth/            # credentials, register, password, session helpers
@@ -40,7 +42,8 @@ lib/
   db/              # Prisma client singleton (client.ts, config.ts)
   generated/prisma/# Generated Prisma 7 client output
   hooks/           # Shared React hooks (e.g., useMotionReduced)
-  repositories/    # User-scoped DB queries (habits.ts, reflection.ts, users.ts)
+  pet/             # Pure pet engine — see atomic-habit-pet-ecosystem
+  repositories/    # User-scoped DB queries (habits.ts, reflection.ts, users.ts, pets.ts)
   date-keys.ts     # UTC/local date-key conversion helpers
   types.ts         # All shared TypeScript types
   store.ts         # In-memory optimistic cache (StoreState)
@@ -86,6 +89,7 @@ k8s/local/         # Docker Desktop Kubernetes manifests
 | `/journal` | Journal entries |
 | `/review` | Weekly review with current review display/edit, top-five past summaries, paged archive |
 | `/hall-of-fame` | 66-day formation review |
+| `/pet` | Pet Ecosystem — adopt, feed, and evolve procedural pixel pets; see `atomic-habit-pet-ecosystem` |
 | `/identity` | Click-to-edit identity statement, core values, and vote ledger |
 | `/settings` | Account, appearance, and data controls |
 
@@ -106,6 +110,7 @@ k8s/local/         # Docker Desktop Kubernetes manifests
 | `lib/auth/register.ts` | Account creation logic |
 | `lib/schedule.ts` | Schedule parsing — see `atomic-habit-schedule-metrics` |
 | `lib/stack.ts` / `lib/stack-errors.ts` | Habit stack helpers — see `atomic-habit-habit-stacking` |
+| `lib/pet/` / `lib/repositories/pets.ts` | Procedural pet engine + persistence — see `atomic-habit-pet-ecosystem` |
 | `lib/animations.ts` | Shared Framer Motion presets — see `atomic-habit-ui-animation` |
 | `lib/repositories/habits.ts` / `reflection.ts` | Prisma data access |
 | `lib/logger.ts` / `lib/logger-client.ts` | Structured logging — see `atomic-habit-logging` |
@@ -122,6 +127,7 @@ k8s/local/         # Docker Desktop Kubernetes manifests
 - **Logging** → `atomic-habit-logging`
 - **Schedule metrics** → `atomic-habit-schedule-metrics`
 - **Habit stacking** → `atomic-habit-habit-stacking`
+- **Pet ecosystem** → `atomic-habit-pet-ecosystem`
 
 ## 6. Reading Next.js docs before editing routing/layouts
 

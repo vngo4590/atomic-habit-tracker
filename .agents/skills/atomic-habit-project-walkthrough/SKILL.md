@@ -33,6 +33,7 @@ For **all** local dev commands (DB lifecycle, seed/demo data, validation, kube o
 | Local setup, DB scripts, validation commands | **`atomic-habit-local-dev`** |
 | Schedule-aware metrics (streak, completionRate) | **`atomic-habit-schedule-metrics`** |
 | Habit stacking (linked-list, mutations, UI) | **`atomic-habit-habit-stacking`** |
+| Pet ecosystem (engine, food, decay, moods, UI) | **`atomic-habit-pet-ecosystem`** |
 | Styling (CSS Modules, partials, inline-style policy) | **`atomic-habit-css-conventions`** |
 | SOLID + GRASP design rules | **`atomic-habit-design-principles`** |
 | Animation primitives and patterns | **`atomic-habit-ui-animation`** |
@@ -58,6 +59,7 @@ For **all** local dev commands (DB lifecycle, seed/demo data, validation, kube o
 | `/journal` | Journal entries |
 | `/review` | Weekly review (current + archive) |
 | `/hall-of-fame` | 66-day formation review |
+| `/pet` | Pet Ecosystem — procedural Tamagotchi: adopt, feed (via habits/journalling), evolve |
 | `/identity` | Identity statement, core values, vote ledger |
 | `/settings` | Account, appearance, data controls |
 
