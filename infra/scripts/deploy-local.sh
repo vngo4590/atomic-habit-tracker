@@ -246,7 +246,7 @@ echo ""
 echo "[6/11] Adding local IP to PostgreSQL firewall ..."
 LOCAL_IP=$(curl -s https://api.ipify.org)
 az postgres flexible-server firewall-rule create \
-  --name "$POSTGRES_NAME" \
+  --server-name "$POSTGRES_NAME" \
   --resource-group "$RG_NAME" \
   --rule-name "local-admin" \
   --start-ip-address "$LOCAL_IP" \
@@ -269,7 +269,7 @@ docker run --rm \
 echo ""
 echo "[8/11] Removing local IP from PostgreSQL firewall ..."
 az postgres flexible-server firewall-rule delete \
-  --name "$POSTGRES_NAME" \
+  --server-name "$POSTGRES_NAME" \
   --resource-group "$RG_NAME" \
   --rule-name "local-admin" \
   --yes \
