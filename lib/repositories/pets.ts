@@ -18,7 +18,7 @@ import { validateDatabaseUrl } from "@/lib/db/config";
 import { petAdoptSchema, type PetAdoptInput } from "@/lib/contracts/pet";
 import { logger, redactUserId } from "@/lib/logger";
 import { didEvolve } from "@/lib/pet/evolution";
-import { MAX_ALIVE_PETS } from "@/lib/pet";
+import { MAX_ALIVE_PETS, earnedFoodFrom } from "@/lib/pet";
 import { randomSeed } from "@/lib/pet/genome";
 import {
   feedVitals,
@@ -123,9 +123,49 @@ export async function countFeedsUsedToday(userId: string, dateKey: string, db: D
   return aggregate._sum.amount ?? 0;
 }
 
-/** Count habits the user completed today — the earned half of the food pool. */
+/** Count habits the user completed today — the primary half of the food pool. */
 async function countCompletedHabitsToday(userId: string, dateKey: string, db: DbClient): Promise<number> {
   return db.habitCheckIn.count({ where: { userId, dateKey, done: true } });
+}
+
+/**
+ * The inclusive local-day window [start, end) that contains `now`, used to count
+ * activities (like weekly reviews) that are stamped by `updatedAt` rather than a
+ * YYYY-MM-DD dateKey.
+ */
+function localDayWindow(now: number): { start: Date; end: Date } {
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return { start, end };
+}
+
+/**
+ * Total food the user has EARNED today across every source: completed habits
+ * (worth the most) plus reflective activities (Journal entries, habit journal
+ * notes, and weekly reviews) — each worth a little extra. This is the authoritative
+ * server-side mirror of the pure `earnedFoodFrom` formula the client also uses.
+ */
+export async function countEarnedFoodToday(
+  userId: string,
+  dateKey: string,
+  now: number,
+  db: DbClient = defaultDb,
+): Promise<number> {
+  validateDatabaseUrl();
+  const { start, end } = localDayWindow(now);
+
+  const [habitsCompleted, journalEntries, habitJournals, weeklyReviews] = await Promise.all([
+    countCompletedHabitsToday(userId, dateKey, db),
+    db.journalEntry.count({ where: { userId, dateKey } }),
+    // A habit check-in counts as journalling only when it actually carries a note.
+    db.habitCheckIn.count({ where: { userId, dateKey, journal: { not: null } } }),
+    // Weekly reviews have no dateKey, so we count those saved within today's window.
+    db.weeklyReview.count({ where: { userId, updatedAt: { gte: start, lt: end } } }),
+  ]);
+
+  return earnedFoodFrom({ habitsCompleted, journalEntries, habitJournals, weeklyReviews });
 }
 
 /**
@@ -150,8 +190,14 @@ export async function listPets(userId: string, now: number, db: DbClient = defau
 }
 
 /**
- * Adopt a new pet. Enforces the ecosystem cap and seeds a unique creature from a
- * fresh random genome. Throws a user-friendly error when the cap is reached.
+ * Adopt a new pet. Enforces two rules and seeds a unique creature from a fresh
+ * random genome:
+ *   1. Ecosystem cap — at most MAX_ALIVE_PETS alive at once.
+ *   2. Monthly adoption limit — only one pet may be *born* per calendar month, so
+ *      adopting is a considered commitment. Deleting a pet frees that month's slot
+ *      immediately (because the born-this-month record is gone), letting the user
+ *      try again straight away.
+ * Throws a user-friendly error when either rule is violated.
  */
 export async function adoptPet(userId: string, input: PetAdoptInput, now: number, db: DbClient = defaultDb): Promise<Pet> {
   log.info("Adopting pet", { event: "repo.pets.adopt", userId: redactUserId(userId), temperament: input.temperament });
@@ -161,6 +207,17 @@ export async function adoptPet(userId: string, input: PetAdoptInput, now: number
   const aliveCount = await db.pet.count({ where: { userId, isAlive: true } });
   if (aliveCount >= MAX_ALIVE_PETS) {
     throw new Error(`You can care for at most ${MAX_ALIVE_PETS} pets at once.`);
+  }
+
+  // Monthly limit: block if any pet was born within the current calendar month.
+  const nowDate = new Date(now);
+  const monthStart = new Date(nowDate.getFullYear(), nowDate.getMonth(), 1);
+  const monthEnd = new Date(nowDate.getFullYear(), nowDate.getMonth() + 1, 1);
+  const bornThisMonth = await db.pet.count({
+    where: { userId, bornAt: { gte: monthStart, lt: monthEnd } },
+  });
+  if (bornThisMonth > 0) {
+    throw new Error("You can only adopt one pet per month. Release a pet to make room for a new one.");
   }
 
   const vitals = initialVitals(now);
@@ -218,8 +275,8 @@ export async function feedPet(
   const vitals = simulatePet(vitalsFromRow(resolved), tuningFor(resolved.temperament), now);
 
   const used = await countFeedsUsedToday(userId, dateKey, db);
-  const completed = await countCompletedHabitsToday(userId, dateKey, db);
-  const available = Math.max(0, completed - used);
+  const earned = await countEarnedFoodToday(userId, dateKey, now, db);
+  const available = Math.max(0, earned - used);
   const capacity = satietyCapacity(vitals.satiety);
   const effective = Math.min(amount, available, capacity);
 
@@ -263,6 +320,25 @@ export async function buryPet(userId: string, petId: string, now: number, db: Db
   const resolved = await persistDeathIfNeeded(row, now, db);
   if (resolved.isAlive) {
     throw new Error("You can only lay a pet to rest after it has passed.");
+  }
+
+  await db.pet.delete({ where: { id: petId } });
+  return true;
+}
+
+/**
+ * Release a pet from the ecosystem, alive or dead. Unlike `buryPet` (which is
+ * reserved for pets that have already passed), this is a deliberate user action
+ * to let go of any pet — for example to make room under the alive cap or to free
+ * up the current month's adoption slot. The cascade also removes its feed logs.
+ */
+export async function deletePet(userId: string, petId: string, db: DbClient = defaultDb): Promise<boolean> {
+  log.info("Releasing pet", { event: "repo.pets.delete", userId: redactUserId(userId), petId });
+  validateDatabaseUrl();
+
+  const row = (await db.pet.findFirst({ where: { id: petId, userId } })) as PetRow | null;
+  if (!row) {
+    return false;
   }
 
   await db.pet.delete({ where: { id: petId } });

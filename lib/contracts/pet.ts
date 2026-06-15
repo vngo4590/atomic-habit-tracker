@@ -30,6 +30,12 @@ export const petBurySchema = z.object({
   petId: z.string().min(1),
 });
 
+/** Releasing (deleting) any pet, alive or dead: just the pet id. */
+export const petDeleteSchema = z.object({
+  petId: z.string().min(1),
+});
+
 export type PetAdoptInput = z.infer<typeof petAdoptSchema>;
 export type PetFeedInput = z.infer<typeof petFeedSchema>;
 export type PetBuryInput = z.infer<typeof petBurySchema>;
+export type PetDeleteInput = z.infer<typeof petDeleteSchema>;

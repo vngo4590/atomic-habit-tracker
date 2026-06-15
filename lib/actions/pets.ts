@@ -3,10 +3,10 @@
 import { revalidatePath } from "next/cache";
 
 import { requireUserId } from "@/lib/auth/session";
-import { petAdoptSchema, petBurySchema, petFeedSchema } from "@/lib/contracts/pet";
+import { petAdoptSchema, petBurySchema, petDeleteSchema, petFeedSchema } from "@/lib/contracts/pet";
 import { todayKey } from "@/lib/helpers";
 import { logger, redactUserId } from "@/lib/logger";
-import { adoptPet, buryPet, feedPet, type FeedResult } from "@/lib/repositories/pets";
+import { adoptPet, buryPet, deletePet, feedPet, type FeedResult } from "@/lib/repositories/pets";
 import type { Pet, PetDraft } from "@/lib/types";
 
 const log = logger.child({ module: "actions.pets" });
@@ -52,4 +52,16 @@ export async function buryPetAction(petId: string): Promise<boolean> {
 
   revalidatePath("/pet");
   return buried;
+}
+
+/** Release any pet (alive or dead) from the ecosystem at the user's request. */
+export async function deletePetAction(petId: string): Promise<boolean> {
+  const userId = await requireUserId();
+  const input = petDeleteSchema.parse({ petId });
+  log.info("Releasing pet", { event: "pet.released", userId: redactUserId(userId), petId: input.petId });
+
+  const deleted = await deletePet(userId, input.petId);
+
+  revalidatePath("/pet");
+  return deleted;
 }
