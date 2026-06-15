@@ -13,7 +13,10 @@ targetScope = 'subscription'
 //     down to Azure services + optional admin IP)
 //   • Azure Key Vault for secret management
 //   • Azure App Service Plan + Web App (Linux container)
-//   • Azure Front Door Standard with WAF for edge security and DDoS protection
+//   • Azure Front Door (Premium by default) with a WAF policy (OWASP managed
+//     rules + Bot Manager + custom rate limiting) for edge, bot and DDoS
+//     protection. The App Service origin is locked to the Front Door so the
+//     WAF cannot be bypassed.
 //
 // Secrets are stored in Key Vault and injected at runtime via a
 // system-assigned managed identity.
@@ -40,6 +43,17 @@ param postgresAdminPassword string
 
 @description('Docker image tag to deploy (e.g. dev-latest or git SHA).')
 param imageTag string = 'dev-latest'
+
+@description('''
+Front Door SKU. Premium (default) enables WAF managed rule sets (OWASP DRS + Bot
+Manager) for the strongest hacking/bot protection. Standard is ~10x cheaper but
+supports only custom WAF rules (rate limiting). See docs/architecture/security.md.
+''')
+@allowed([
+  'Standard_AzureFrontDoor'
+  'Premium_AzureFrontDoor'
+])
+param frontDoorSku string = 'Premium_AzureFrontDoor'
 
 // ---------------------------------------------------------------------------
 // Local naming helpers
@@ -149,7 +163,23 @@ module appService 'modules/appService.bicep' = {
 }
 
 // ---------------------------------------------------------------------------
-// Front Door — global edge, WAF OWASP rules, built-in DDoS protection
+// Web Application Firewall policy — edge OWASP/Bot/rate-limit rules. Deployed
+// before Front Door so its ID can be associated with the endpoint.
+// ---------------------------------------------------------------------------
+module wafPolicy 'modules/wafPolicy.bicep' = {
+  name: 'wafPolicy'
+  scope: rg
+  params: {
+    // WAF policy names must be alphanumeric only (no hyphens).
+    wafPolicyName: 'waf${baseName}'
+    skuName: frontDoorSku
+    mode: 'Prevention'
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Front Door — global edge, WAF (OWASP + Bot Manager on Premium), built-in
+// network-layer DDoS protection. The WAF policy is associated via securityPolicy.
 // ---------------------------------------------------------------------------
 module frontDoor 'modules/frontDoor.bicep' = {
   name: 'frontDoor'
@@ -159,6 +189,8 @@ module frontDoor 'modules/frontDoor.bicep' = {
     endpointName: frontDoorEndpointName
     originHostName: appService.outputs.defaultHostName
     logAnalyticsWorkspaceId: monitoring.outputs.logAnalyticsWorkspaceId
+    skuName: frontDoorSku
+    wafPolicyId: wafPolicy.outputs.policyId
   }
 }
 
@@ -201,3 +233,7 @@ output postgresFqdn string = postgres.outputs.fqdn
 output keyVaultUri string = keyvault.outputs.vaultUri
 output keyVaultName string = keyvault.outputs.vaultName
 output appInsightsConnectionString string = monitoring.outputs.connectionString
+@description('Front Door instance GUID. CI uses this to add an X-Azure-FDID access restriction so the App Service origin only accepts traffic from THIS Front Door.')
+output frontDoorId string = frontDoor.outputs.frontDoorId
+@description('Whether Premium WAF managed rule sets (OWASP DRS + Bot Manager) are active.')
+output wafManagedRulesEnabled bool = wafPolicy.outputs.managedRulesEnabled

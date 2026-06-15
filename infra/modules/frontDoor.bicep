@@ -10,15 +10,30 @@ param originHostName string
 @description('Log Analytics workspace resource ID for diagnostics')
 param logAnalyticsWorkspaceId string
 
+@description('''
+Front Door SKU. Premium is required for WAF managed rule sets (OWASP DRS + Bot
+Manager). Standard supports custom WAF rules (rate limiting) only.
+''')
+@allowed([
+  'Standard_AzureFrontDoor'
+  'Premium_AzureFrontDoor'
+])
+param skuName string = 'Premium_AzureFrontDoor'
+
+@description('Resource ID of the WAF policy to attach to the endpoint. Empty skips WAF.')
+param wafPolicyId string = ''
+
 // ---------------------------------------------------------------------------
-// Front Door Profile — Standard SKU provides global anycast edge, caching,
-// TLS termination, and built-in DDoS protection at the Microsoft network edge.
+// Front Door Profile — global anycast edge, caching, TLS termination, and
+// built-in network-layer (L3/L4) DDoS protection at the Microsoft edge.
+// Premium additionally unlocks the managed WAF rule sets configured in
+// modules/wafPolicy.bicep.
 // ---------------------------------------------------------------------------
 resource profile 'Microsoft.Cdn/profiles@2024-09-01' = {
   name: profileName
   location: 'Global'
   sku: {
-    name: 'Standard_AzureFrontDoor'
+    name: skuName
   }
   properties: {
     originResponseTimeoutSeconds: 60
@@ -142,5 +157,37 @@ resource frontDoorDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-
   }
 }
 
+// ---------------------------------------------------------------------------
+// Security Policy — associates the WAF policy with this endpoint so every
+// request that hits the edge is inspected before being forwarded to the origin.
+// Only created when a WAF policy ID is supplied.
+// ---------------------------------------------------------------------------
+resource securityPolicy 'Microsoft.Cdn/profiles/securityPolicies@2024-09-01' = if (!empty(wafPolicyId)) {
+  name: 'atomicly-waf-association'
+  parent: profile
+  properties: {
+    parameters: {
+      type: 'WebApplicationFirewall'
+      wafPolicy: {
+        id: wafPolicyId
+      }
+      associations: [
+        {
+          domains: [
+            {
+              id: endpoint.id
+            }
+          ]
+          patternsToMatch: [
+            '/*'
+          ]
+        }
+      ]
+    }
+  }
+}
+
 output profileId string = profile.id
 output endpointHostName string = endpoint.properties.hostName
+@description('Front Door instance GUID — used to lock the App Service origin to THIS Front Door via the X-Azure-FDID header.')
+output frontDoorId string = profile.properties.frontDoorId
