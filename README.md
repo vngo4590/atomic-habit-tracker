@@ -302,6 +302,7 @@ Notes:
 - `reference_ui/`: original reference implementation used during the port.
 - `Dockerfile`: multi-stage container build with `runner` and `migrator` targets.
 - `docs/architecture/backend-auth-mobile.md`: backend, auth, database, and deployment architecture notes.
+- `docs/architecture/security.md`: security architecture — threat model, app + infra controls (CSP, rate limiting, timing-safe auth, Front Door WAF, origin lockdown, Postgres TLS), and residual risks.
 - `openspec/changes/`: active OpenSpec changes.
 - `openspec/changes/archive/`: archived OpenSpec changes, including the completed reference UI port and backend/auth/mobile architecture work.
 - `.agents/skills/`: project-local skills shared by all agents.
@@ -354,3 +355,4 @@ See `.agents/skills/atomic-habit-workflow/SKILL.md` for the full styling convent
 - Auth pages (`/login`, `/register`) redirect already-authenticated users to the main app flow.
 - The active OpenSpec change is `settings-account-email-notifications`.
 - Deployment architecture specs live under `openspec/specs/deployment-architecture/`; provider choices and deployment notes are in `docs/architecture/backend-auth-mobile.md`.
+- Security controls (CSP nonce, security headers, rate limiting, same-origin CSRF guard, and timing-safe auth) are enforced in `proxy.ts` + `lib/security/*`; edge protection is Azure Front Door + WAF with the App Service origin locked to the Front Door. See `docs/architecture/security.md`.
