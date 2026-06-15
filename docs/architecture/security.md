@@ -23,10 +23,11 @@ Primary adversaries and attacks we defend against:
 | Cross-site scripting (XSS) | Strict nonce-based CSP |
 | Cross-site request forgery (CSRF) | Auth.js built-ins + same-origin guard in proxy |
 | Clickjacking | `frame-ancestors 'none'` + `X-Frame-Options: DENY` |
-| SQLi / RCE / path traversal | Prisma parameterised queries + OWASP WAF rules |
-| Bots / scrapers | Front Door Bot Manager rule set |
+| SQLi / RCE / path traversal | Prisma parameterised queries + Zod validation (+ OWASP WAF rules on Premium) |
+| Bots / scrapers | Cloudflare Turnstile on auth + scanner-UA WAF block rules (+ Bot Manager on Premium) |
 | Volumetric DDoS (L3/L4) | Front Door global edge absorption |
 | Application DDoS (L7) | WAF rate-limit rules + app rate limiter |
+| Targeted credential brute force | Per-account exponential-backoff login throttle |
 | WAF bypass via direct origin hit | App Service ingress locked to our Front Door |
 | Plaintext data interception | HTTPS-only + HSTS + Postgres `require_secure_transport` |
 | Info leakage | `x-powered-by` disabled, deployment outputs masked in CI |
@@ -87,6 +88,37 @@ CSRF).
 - **72-byte cap:** `lib/contracts/auth.ts` rejects passwords whose UTF-8 byte
   length exceeds 72, because bcrypt silently truncates beyond 72 bytes (longer
   passwords would otherwise share a hash prefix).
+- **Per-account login throttle:** `lib/security/login-throttle.ts` applies
+  exponential backoff (30s → 1m → 2m … capped at 15 min) after repeated failed
+  logins for a **real** account, decaying after 30 min of no failures.
+  `lib/auth/credentials.ts` checks the lock *before* the DB lookup and records a
+  failure only when a known account is given the wrong password. This means an
+  attacker cannot (a) enumerate accounts via lock state, nor (b) lock out
+  arbitrary unknown emails. Progressive backoff (vs a hard lock) bounds the
+  lock-out-the-victim DoS. State is in-memory/per-instance (same caveat as the
+  rate limiter).
+
+### Bot challenge — Cloudflare Turnstile (`lib/security/turnstile.ts`, `components/TurnstileWidget.tsx`)
+
+A free, privacy-friendly CAPTCHA alternative gating login and registration —
+the compensating control for the lack of Front Door **Bot Manager** on the
+Standard SKU.
+
+- `loginAction` / `registerAction` (`lib/actions/auth.ts`) call
+  `verifyTurnstileToken` server-side and reject with "Bot verification failed"
+  when the challenge token is missing or invalid.
+- **Fail-safe-off:** with no `TURNSTILE_SECRET_KEY` set, verification is a no-op
+  that returns `true`, so local/dev/test work keyless. When a secret *is*
+  configured, verification **fails closed** (a missing token, non-OK response,
+  or fetch error all reject).
+- The widget (`<TurnstileWidget />` in `components/AuthForm.tsx`) renders only
+  when `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is set.
+- **CSP coupling:** `buildContentSecurityPolicy(nonce, isDev, { turnstile })`
+  widens the policy to allow `https://challenges.cloudflare.com` on
+  `script-src`/`connect-src`/`frame-src` **only** when Turnstile is enabled, so
+  the CSP stays maximally strict in keyless deployments. (`'strict-dynamic'`
+  already covers the nonce-loaded script transitively, but `frame-src` and
+  `connect-src` are not governed by it, so Cloudflare's host is named there.)
 
 ## Infrastructure Controls (Azure Bicep)
 
@@ -98,16 +130,28 @@ reaches the origin:
 - **Network DDoS (L3/L4):** absorbed by the Front Door anycast edge.
 - **WAF rate limiting (custom rules):** strict auth-endpoint limit
   (40 req / 5 min / IP) + global limit (600 req / min / IP).
-- **OWASP managed rules:** Default Rule Set (DRS) 2.1 in Block mode — SQLi, XSS,
-  RCE, path traversal, etc.
-- **Bot Manager rule set:** classifies and blocks bad bots.
+- **Custom scanner-block rules (any SKU):** `blockScannerUserAgents` blocks
+  offensive-security tool User-Agents (sqlmap, nikto, nmap, masscan, nessus,
+  dirbuster, gobuster, wpscan, acunetix, havij, fimap, zmeu, jorgee, netsparker,
+  w3af) and `blockEmptyUserAgent` blocks requests with no User-Agent. Generic
+  HTTP-library UAs (curl, python-requests, go-http-client) are **deliberately
+  not** blocked because `/api/v1/*` is a versioned API for programmatic/mobile
+  callers.
+- **OWASP managed rules (Premium only):** Default Rule Set (DRS) 2.1 in Block
+  mode — SQLi, XSS, RCE, path traversal, etc.
+- **Bot Manager rule set (Premium only):** classifies and blocks bad bots.
 
-> **SKU tradeoff:** OWASP + Bot Manager managed rule sets are **Premium-only**.
-> The default `frontDoorSku` is `Premium_AzureFrontDoor` (≈ $330/mo) to satisfy
-> the "extremely safe" requirement. Deploying `Standard_AzureFrontDoor`
-> (≈ $35/mo) is still valid — the Bicep derives `enableManagedRules` from the
-> SKU, so a Standard deployment keeps custom rate-limit rules but drops managed
-> rules. Choose per environment: Standard is acceptable for dev/preview.
+> **SKU tradeoff — default is Standard.** The default `frontDoorSku` is
+> `Standard_AzureFrontDoor` (≈ $35/mo) rather than `Premium_AzureFrontDoor`
+> (≈ $330/mo). The Bicep derives `enableManagedRules` from the SKU, so Standard
+> keeps custom rate-limit + scanner-block rules and drops the **managed** OWASP
+> DRS and Bot Manager rule sets. Those managed rules are largely redundant given
+> Prisma parameterised queries + Zod validation + strict CSP; the real loss is
+> Bot Manager's scoring, which we compensate for with **Cloudflare Turnstile**
+> on the auth endpoints. The remaining residual gap is managed-signature /
+> zero-day WAF coverage (see Residual Risks). Set `frontDoorSku` to
+> `Premium_AzureFrontDoor` to re-enable managed rules where the spend is
+> justified (the WAF-policy SKU follows the same param and must match).
 
 ### Origin lockdown (`infra/modules/appService.bicep` + CI)
 
@@ -160,6 +204,19 @@ changes. Track them as hardening follow-ups.
    Tightening to a private endpoint is the same VNet workstream as #1.
 4. **HSTS preload.** Intentionally not preloaded; revisit once a stable apex
    custom domain is in place.
+5. **No managed-signature WAF on Standard SKU.** The default Standard Front Door
+   omits the OWASP DRS managed rules, so there is no signature-based / zero-day
+   WAF coverage at the edge. This is mitigated in depth (parameterised queries,
+   Zod validation, strict CSP, scanner-UA block rules) but not equivalent. Set
+   `frontDoorSku: 'Premium_AzureFrontDoor'` to restore it where justified.
+6. **Turnstile vs Bot Manager.** Turnstile challenges only the auth endpoints,
+   not all traffic, and provides weaker continuous bot scoring than Front Door
+   Bot Manager. It requires `NEXT_PUBLIC_TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY`
+   to be set in the environment; when unset it is a no-op (fail-safe-off).
+7. **In-memory login throttle.** Like the rate limiter, `login-throttle.ts`
+   state is per instance and resets on restart — correct for `numberOfWorkers: 1`
+   and a backstop behind Turnstile + the WAF auth-rate-limit. Scaling out needs a
+   shared store.
 
 ## Validation
 
