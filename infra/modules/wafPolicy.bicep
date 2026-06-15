@@ -9,7 +9,7 @@ Managed rule sets (OWASP/DRS + Bot Manager) are only available on Premium.
   'Standard_AzureFrontDoor'
   'Premium_AzureFrontDoor'
 ])
-param skuName string = 'Premium_AzureFrontDoor'
+param skuName string = 'Standard_AzureFrontDoor'
 
 @description('WAF enforcement mode. Prevention blocks malicious traffic; Detection only logs.')
 @allowed([
@@ -101,6 +101,75 @@ resource wafPolicy 'Microsoft.Network/FrontDoorWebApplicationFirewallPolicies@20
                 '/'
               ]
               transforms: []
+            }
+          ]
+          action: 'Block'
+        }
+        // -------------------------------------------------------------------
+        // Block known offensive-security / scanner tools by User-Agent. WHY:
+        // these are never legitimate clients — blocking them at the edge is a
+        // cheap, high-signal stand-in for some of what the Premium Bot Manager
+        // would catch. We deliberately do NOT block generic HTTP libraries
+        // (curl, python-requests, go-http-client) because the versioned
+        // /api/v1 surface is meant for programmatic/mobile callers.
+        // -------------------------------------------------------------------
+        {
+          name: 'blockScannerUserAgents'
+          priority: 50
+          enabledState: 'Enabled'
+          ruleType: 'MatchRule'
+          matchConditions: [
+            {
+              matchVariable: 'RequestHeader'
+              selector: 'User-Agent'
+              operator: 'Contains'
+              negateCondition: false
+              transforms: [
+                'Lowercase'
+              ]
+              matchValue: [
+                'sqlmap'
+                'nikto'
+                'nmap'
+                'masscan'
+                'nessus'
+                'dirbuster'
+                'gobuster'
+                'wpscan'
+                'acunetix'
+                'havij'
+                'fimap'
+                'zmeu'
+                'jorgee'
+                'netsparker'
+                'w3af'
+              ]
+            }
+          ]
+          action: 'Block'
+        }
+        // -------------------------------------------------------------------
+        // Block requests that send an empty User-Agent header. WHY: legitimate
+        // browsers and our own API clients always send one; an empty UA is a
+        // strong, low-false-positive bot signal. (Note: a fully *absent* header
+        // is not reliably matchable here — covered instead by app-layer rate
+        // limiting and the Turnstile challenge on auth routes.)
+        // -------------------------------------------------------------------
+        {
+          name: 'blockEmptyUserAgent'
+          priority: 60
+          enabledState: 'Enabled'
+          ruleType: 'MatchRule'
+          matchConditions: [
+            {
+              matchVariable: 'RequestHeader'
+              selector: 'User-Agent'
+              operator: 'Equal'
+              negateCondition: false
+              transforms: []
+              matchValue: [
+                ''
+              ]
             }
           ]
           action: 'Block'

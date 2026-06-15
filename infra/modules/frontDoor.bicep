@@ -18,7 +18,7 @@ Manager). Standard supports custom WAF rules (rate limiting) only.
   'Standard_AzureFrontDoor'
   'Premium_AzureFrontDoor'
 ])
-param skuName string = 'Premium_AzureFrontDoor'
+param skuName string = 'Standard_AzureFrontDoor'
 
 @description('Resource ID of the WAF policy to attach to the endpoint. Empty skips WAF.')
 param wafPolicyId string = ''

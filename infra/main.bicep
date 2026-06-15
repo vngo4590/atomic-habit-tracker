@@ -13,10 +13,10 @@ targetScope = 'subscription'
 //     down to Azure services + optional admin IP)
 //   • Azure Key Vault for secret management
 //   • Azure App Service Plan + Web App (Linux container)
-//   • Azure Front Door (Premium by default) with a WAF policy (OWASP managed
-//     rules + Bot Manager + custom rate limiting) for edge, bot and DDoS
-//     protection. The App Service origin is locked to the Front Door so the
-//     WAF cannot be bypassed.
+//   • Azure Front Door (Standard by default) with a WAF policy (custom rate
+//     limiting + bot/UA block rules) for edge, bot and DDoS protection.
+//     Premium optionally adds OWASP + Bot Manager managed rule sets. The App
+//     Service origin is locked to the Front Door so the WAF cannot be bypassed.
 //
 // Secrets are stored in Key Vault and injected at runtime via a
 // system-assigned managed identity.
@@ -45,15 +45,18 @@ param postgresAdminPassword string
 param imageTag string = 'dev-latest'
 
 @description('''
-Front Door SKU. Premium (default) enables WAF managed rule sets (OWASP DRS + Bot
-Manager) for the strongest hacking/bot protection. Standard is ~10x cheaper but
-supports only custom WAF rules (rate limiting). See docs/architecture/security.md.
+Front Door SKU. Standard (default) is ~10x cheaper (~$35/mo vs ~$330/mo) and
+supports custom WAF rules including rate limiting and bot/UA block rules.
+Premium additionally enables WAF managed rule sets (OWASP DRS + Bot Manager).
+We default to Standard and compensate for the missing managed rules with custom
+WAF rules, a Turnstile bot challenge on auth, and app-layer hardening. Switch to
+Premium for managed-signature/zero-day coverage. See docs/architecture/security.md.
 ''')
 @allowed([
   'Standard_AzureFrontDoor'
   'Premium_AzureFrontDoor'
 ])
-param frontDoorSku string = 'Premium_AzureFrontDoor'
+param frontDoorSku string = 'Standard_AzureFrontDoor'
 
 // ---------------------------------------------------------------------------
 // Local naming helpers
