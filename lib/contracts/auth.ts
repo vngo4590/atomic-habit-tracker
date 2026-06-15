@@ -13,7 +13,14 @@ export const passwordSchema = z
   .max(128, "Password must be 128 characters or fewer.")
   .regex(/[A-Za-z]/, "Password must include a letter.")
   .regex(/[0-9]/, "Password must include a number.")
-  .regex(/[^A-Za-z0-9]/, "Password must include a symbol.");
+  .regex(/[^A-Za-z0-9]/, "Password must include a symbol.")
+  // bcrypt only hashes the first 72 bytes of input and silently ignores the
+  // rest, so a longer password would have its tail truncated — weakening it and
+  // letting two different long passwords collide. Reject anything over 72 bytes
+  // (UTF-8) up front so what the user types is exactly what gets hashed.
+  .refine((value) => new TextEncoder().encode(value).length <= 72, {
+    message: "Password is too long (max 72 bytes).",
+  });
 
 export const loginSchema = z.object({
   email: emailSchema,

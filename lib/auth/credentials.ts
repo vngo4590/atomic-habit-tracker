@@ -1,7 +1,7 @@
 import type { AuthUserRecord } from "@/lib/repositories/users";
 import { findAuthUserByEmail } from "@/lib/repositories/users";
 import { loginSchema } from "@/lib/contracts/auth";
-import { verifyPassword } from "@/lib/auth/password";
+import { DUMMY_PASSWORD_HASH, verifyPassword } from "@/lib/auth/password";
 import { logger, redactEmail, redactUserId } from "@/lib/logger";
 
 interface CredentialsDeps {
@@ -36,6 +36,10 @@ export async function authorizeCredentials(
 
   const user = await deps.findUserByEmail(parsed.data.email);
   if (!user?.passwordHash) {
+    // Run a dummy bcrypt comparison so a missing/passwordless account takes the
+    // same time as a real one. This prevents attackers from distinguishing
+    // "no such user" from "wrong password" by measuring the response latency.
+    await deps.verify(parsed.data.password, DUMMY_PASSWORD_HASH);
     log.debug("Credential auth failed — user not found or no password", {
       event: "auth.credentials.no_user",
     });

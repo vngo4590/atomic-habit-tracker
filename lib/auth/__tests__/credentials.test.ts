@@ -63,4 +63,19 @@ describe("authorizeCredentials", () => {
       verify,
     })).resolves.toBeNull();
   });
+
+  it("runs a dummy password comparison for unknown users to resist timing attacks", async () => {
+    // Given a login attempt for an email that does not exist
+    const verify = vi.fn(async () => false);
+
+    await authorizeCredentials(
+      { email: "ghost@example.com", password: "Whatever1!" },
+      { findUserByEmail: async () => null, verify },
+    );
+
+    // Then verify() is still invoked (against the dummy hash) so the response
+    // time matches that of a real account — no user-enumeration oracle.
+    expect(verify).toHaveBeenCalledTimes(1);
+    expect(verify).toHaveBeenCalledWith("Whatever1!", expect.any(String));
+  });
 });
