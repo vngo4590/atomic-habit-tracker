@@ -94,6 +94,7 @@ export interface StoreState {
   adoptPet: (draft: PetDraft) => Promise<void>;
   feedPet: (petId: string, amount: number) => Promise<void>;
   buryPet: (petId: string) => Promise<void>;
+  deletePet: (petId: string) => Promise<void>;
   toast: ToastState | null;
   showToast: (msg: string, sub?: string) => void;
   streak: (habit: Habit) => number;

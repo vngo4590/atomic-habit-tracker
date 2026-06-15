@@ -171,6 +171,7 @@ export function testStoreContext(patch: Partial<StoreState> = {}): StoreState {
     adoptPet: async () => {},
     feedPet: async () => {},
     buryPet: async () => {},
+    deletePet: async () => {},
     toast: null,
     showToast: () => {},
     streak: () => 0,

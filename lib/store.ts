@@ -17,7 +17,7 @@ import {
   updateHabitAction,
   updateJournalEntryAction,
 } from "@/lib/actions/domain";
-import { adoptPetAction, buryPetAction, feedPetAction } from "@/lib/actions/pets";
+import { adoptPetAction, buryPetAction, deletePetAction, feedPetAction } from "@/lib/actions/pets";
 import type { StackMutationInput } from "@/lib/contracts/domain";
 import { dateAdd, todayKey } from "@/lib/helpers";
 import { clientLogger } from "@/lib/logger-client";
@@ -899,6 +899,34 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
     [showToast],
   );
 
+  /**
+   * Release any pet (alive or dead) from the ecosystem at the user's request.
+   * Optimistically removes it from the grid; releasing also frees this month's
+   * adoption slot so the user can adopt a fresh pet immediately.
+   */
+  const deletePet = useCallback(
+    async (petId: string) => {
+      let prevPets: Pet[] = [];
+      setPets((current) => {
+        prevPets = current;
+        return current.filter((pet) => pet.id !== petId);
+      });
+      clientLogger.info("Releasing pet", { event: "store.pet.delete", petId });
+      try {
+        const deleted = await deletePetAction(petId);
+        if (!deleted) {
+          setPets(prevPets);
+          showToast("Couldn't release pet");
+        }
+      } catch (error: unknown) {
+        setPets(prevPets);
+        clientLogger.warn("Pet delete failed", { event: "store.pet.delete_failed", petId, message: errorMessage(error) });
+        showToast("Couldn't release pet", errorMessage(error));
+      }
+    },
+    [showToast],
+  );
+
   return useMemo(
     () => ({
       habits,
@@ -930,6 +958,7 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
       adoptPet,
       feedPet,
       buryPet,
+      deletePet,
       toast,
       showToast,
       streak,
@@ -967,6 +996,7 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
       adoptPet,
       feedPet,
       buryPet,
+      deletePet,
     ],
   );
 }
