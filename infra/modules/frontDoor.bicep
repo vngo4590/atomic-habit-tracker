@@ -102,7 +102,9 @@ resource origin 'Microsoft.Cdn/profiles/originGroups/origins@2024-09-01' = {
 }
 
 // ---------------------------------------------------------------------------
-// Default route — dynamic app content with compression but no CDN caching.
+// Default route — dynamic app content. No explicit cacheConfiguration needed:
+// the origin sends Cache-Control: private, no-cache on HTML (which Front Door
+// respects), and the origin handles compression via Vary: Accept-Encoding.
 // HTML pages contain user-specific data and CSP nonces, so they must not be
 // served from a shared edge cache.
 // ---------------------------------------------------------------------------
@@ -127,31 +129,19 @@ resource route 'Microsoft.Cdn/profiles/afdEndpoints/routes@2024-09-01' = {
     forwardingProtocol: 'HttpsOnly'
     linkToDefaultDomain: 'Enabled'
     httpsRedirect: 'Enabled'
-    cacheConfiguration: {
-      queryStringCachingBehavior: 'IgnoreQueryString'
-      compressionSettings: {
-        isCompressionEnabled: true
-        contentTypesToCompress: [
-          'text/html'
-          'text/css'
-          'text/javascript'
-          'application/javascript'
-          'application/json'
-          'application/xml'
-          'image/svg+xml'
-          'font/woff2'
-        ]
-      }
-    }
   }
 }
 
 // ---------------------------------------------------------------------------
 // Static asset route — Next.js hashes every chunk under /_next/static/, so
 // the filenames are content-addressable and safe to cache at the edge. This
-// keeps JS/CSS/font loads off the origin after the first request. The origin
-// Cache-Control header (set by Next.js: public, max-age=31536000, immutable)
-// controls the edge TTL.
+// keeps JS/CSS/font loads off the origin after the first request.
+//
+// No explicit cacheConfiguration: Front Door Standard honours the origin's
+// Cache-Control header (public, max-age=31536000, immutable) by default.
+// Compression is handled by the origin (Next.js) via Vary: Accept-Encoding.
+// Combining an explicit cacheConfiguration with compression causes Front Door
+// Standard to hang on cached+compressed responses (known platform issue).
 // ---------------------------------------------------------------------------
 resource staticRoute 'Microsoft.Cdn/profiles/afdEndpoints/routes@2024-09-01' = {
   name: 'static-assets-route'
@@ -172,20 +162,6 @@ resource staticRoute 'Microsoft.Cdn/profiles/afdEndpoints/routes@2024-09-01' = {
     forwardingProtocol: 'HttpsOnly'
     linkToDefaultDomain: 'Enabled'
     httpsRedirect: 'Enabled'
-    cacheConfiguration: {
-      queryStringCachingBehavior: 'IgnoreQueryString'
-      compressionSettings: {
-        isCompressionEnabled: true
-        contentTypesToCompress: [
-          'text/css'
-          'text/javascript'
-          'application/javascript'
-          'application/json'
-          'image/svg+xml'
-          'font/woff2'
-        ]
-      }
-    }
   }
 }
 
