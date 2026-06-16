@@ -39,12 +39,12 @@ describe("buildContentSecurityPolicy", () => {
     expect(csp).toContain("'unsafe-eval'");
   });
 
-  it("allows inline styles for Framer Motion / Tailwind", () => {
-    // Then style-src permits inline styles but without a nonce (which would
-    // otherwise make the browser ignore 'unsafe-inline')
+  it("includes nonce in style-src for Next.js 16 stylesheet links", () => {
+    // Next.js 16 stamps nonce on <link rel="stylesheet"> tags, so style-src
+    // must include the nonce for browsers to allow loading the CSS.
+    // 'unsafe-inline' is kept as a fallback for older browsers.
     const csp = buildContentSecurityPolicy("abc123", false);
-    expect(csp).toContain("style-src 'self' 'unsafe-inline'");
-    expect(csp).not.toContain("style-src 'self' 'nonce-abc123'");
+    expect(csp).toContain("style-src 'self' 'nonce-abc123' 'unsafe-inline'");
   });
 
   it("locks down framing, objects, and base URI", () => {

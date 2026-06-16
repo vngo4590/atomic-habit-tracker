@@ -88,10 +88,11 @@ export function buildContentSecurityPolicy(
     // ('strict-dynamic'). In modern browsers this makes host allow-lists moot,
     // which is exactly what defeats injected <script src=evil> tags.
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${scriptExtra}${isDev ? " 'unsafe-eval'" : ""}`,
-    // Styles: 'unsafe-inline' is required for Framer Motion / Tailwind inline
-    // `style` attributes rendered on the server. We intentionally omit a nonce
-    // here because a nonce would make the browser ignore 'unsafe-inline'.
-    "style-src 'self' 'unsafe-inline'",
+    // Styles: nonce is required because Next.js 16 stamps a nonce attribute on
+    // every <link rel="stylesheet"> tag, and browsers check it against style-src.
+    // 'unsafe-inline' is kept as a fallback for older browsers and does NOT weaken
+    // modern browsers (CSP3 ignores 'unsafe-inline' when a nonce is present).
+    `style-src 'self' 'nonce-${nonce}' 'unsafe-inline'`,
     // Images may be self-hosted, data URIs (icons), or blobs (generated sprites).
     "img-src 'self' blob: data:",
     // Fonts are bundled by next/font; data: covers inlined glyphs.
