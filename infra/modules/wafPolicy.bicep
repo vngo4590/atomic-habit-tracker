@@ -112,9 +112,12 @@ resource wafPolicy 'Microsoft.Network/FrontDoorWebApplicationFirewallPolicies@20
         // would catch. We deliberately do NOT block generic HTTP libraries
         // (curl, python-requests, go-http-client) because the versioned
         // /api/v1 surface is meant for programmatic/mobile callers.
+        //
+        // NOTE: Azure Front Door WAF limits a single match condition to 10
+        // values, so the list is split across two rules.
         // -------------------------------------------------------------------
         {
-          name: 'blockScannerUserAgents'
+          name: 'blockScannerUserAgents1'
           priority: 50
           enabledState: 'Enabled'
           ruleType: 'MatchRule'
@@ -138,6 +141,26 @@ resource wafPolicy 'Microsoft.Network/FrontDoorWebApplicationFirewallPolicies@20
                 'wpscan'
                 'acunetix'
                 'havij'
+              ]
+            }
+          ]
+          action: 'Block'
+        }
+        {
+          name: 'blockScannerUserAgents2'
+          priority: 51
+          enabledState: 'Enabled'
+          ruleType: 'MatchRule'
+          matchConditions: [
+            {
+              matchVariable: 'RequestHeader'
+              selector: 'User-Agent'
+              operator: 'Contains'
+              negateCondition: false
+              transforms: [
+                'Lowercase'
+              ]
+              matchValue: [
                 'fimap'
                 'zmeu'
                 'jorgee'
