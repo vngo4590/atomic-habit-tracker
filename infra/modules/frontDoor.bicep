@@ -102,19 +102,24 @@ resource origin 'Microsoft.Cdn/profiles/originGroups/origins@2024-09-01' = {
 }
 
 // ---------------------------------------------------------------------------
-// Default route — dynamic app content. No explicit cacheConfiguration needed:
-// the origin sends Cache-Control: private, no-cache on HTML (which Front Door
-// respects), and the origin handles compression via Vary: Accept-Encoding.
-// HTML pages contain user-specific data and CSP nonces, so they must not be
-// served from a shared edge cache.
+// Default route — single catch-all route for all traffic. Front Door Standard
+// honours origin Cache-Control headers, so:
+// - Static assets (/_next/static/*): origin sends 'public, max-age=31536000,
+//   immutable' → cached at the edge automatically.
+// - HTML pages: origin sends 'private, no-cache' → no edge caching.
+// - Compression: handled by the Next.js origin (compress: true) with
+//   Vary: Accept-Encoding.
+//
+// A separate /_next/static/* route was previously attempted but caused hangs
+// on Front Door Standard when serving compressed cached responses — a known
+// platform issue. A single route avoids this entirely while still getting
+// edge caching for immutable assets.
 // ---------------------------------------------------------------------------
 resource route 'Microsoft.Cdn/profiles/afdEndpoints/routes@2024-09-01' = {
   name: 'default-route'
   parent: endpoint
   dependsOn: [
     origin
-    staticRoute // static route must be created first so its more-specific
-                // pattern takes priority; the default '/*' catches everything else
   ]
   properties: {
     originGroup: {
@@ -125,39 +130,6 @@ resource route 'Microsoft.Cdn/profiles/afdEndpoints/routes@2024-09-01' = {
     ]
     patternsToMatch: [
       '/*'
-    ]
-    forwardingProtocol: 'HttpsOnly'
-    linkToDefaultDomain: 'Enabled'
-    httpsRedirect: 'Enabled'
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Static asset route — Next.js hashes every chunk under /_next/static/, so
-// the filenames are content-addressable and safe to cache at the edge. This
-// keeps JS/CSS/font loads off the origin after the first request.
-//
-// No explicit cacheConfiguration: Front Door Standard honours the origin's
-// Cache-Control header (public, max-age=31536000, immutable) by default.
-// Compression is handled by the origin (Next.js) via Vary: Accept-Encoding.
-// Combining an explicit cacheConfiguration with compression causes Front Door
-// Standard to hang on cached+compressed responses (known platform issue).
-// ---------------------------------------------------------------------------
-resource staticRoute 'Microsoft.Cdn/profiles/afdEndpoints/routes@2024-09-01' = {
-  name: 'static-assets-route'
-  parent: endpoint
-  dependsOn: [
-    origin
-  ]
-  properties: {
-    originGroup: {
-      id: originGroup.id
-    }
-    supportedProtocols: [
-      'Https'
-    ]
-    patternsToMatch: [
-      '/_next/static/*'
     ]
     forwardingProtocol: 'HttpsOnly'
     linkToDefaultDomain: 'Enabled'
