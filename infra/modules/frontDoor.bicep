@@ -102,14 +102,17 @@ resource origin 'Microsoft.Cdn/profiles/originGroups/origins@2024-09-01' = {
 }
 
 // ---------------------------------------------------------------------------
-// Route — maps the endpoint to the origin group with HTTPS redirect,
-// caching disabled for dynamic app content, and compression off.
+// Default route — dynamic app content with compression but no CDN caching.
+// HTML pages contain user-specific data and CSP nonces, so they must not be
+// served from a shared edge cache.
 // ---------------------------------------------------------------------------
 resource route 'Microsoft.Cdn/profiles/afdEndpoints/routes@2024-09-01' = {
   name: 'default-route'
   parent: endpoint
   dependsOn: [
     origin
+    staticRoute // static route must be created first so its more-specific
+                // pattern takes priority; the default '/*' catches everything else
   ]
   properties: {
     originGroup: {
@@ -127,8 +130,60 @@ resource route 'Microsoft.Cdn/profiles/afdEndpoints/routes@2024-09-01' = {
     cacheConfiguration: {
       queryStringCachingBehavior: 'IgnoreQueryString'
       compressionSettings: {
-        isCompressionEnabled: false
-        contentTypesToCompress: []
+        isCompressionEnabled: true
+        contentTypesToCompress: [
+          'text/html'
+          'text/css'
+          'text/javascript'
+          'application/javascript'
+          'application/json'
+          'application/xml'
+          'image/svg+xml'
+          'font/woff2'
+        ]
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Static asset route — Next.js hashes every chunk under /_next/static/, so
+// the filenames are content-addressable and safe to cache at the edge. This
+// keeps JS/CSS/font loads off the origin after the first request. The origin
+// Cache-Control header (set by Next.js: public, max-age=31536000, immutable)
+// controls the edge TTL.
+// ---------------------------------------------------------------------------
+resource staticRoute 'Microsoft.Cdn/profiles/afdEndpoints/routes@2024-09-01' = {
+  name: 'static-assets-route'
+  parent: endpoint
+  dependsOn: [
+    origin
+  ]
+  properties: {
+    originGroup: {
+      id: originGroup.id
+    }
+    supportedProtocols: [
+      'Https'
+    ]
+    patternsToMatch: [
+      '/_next/static/*'
+    ]
+    forwardingProtocol: 'HttpsOnly'
+    linkToDefaultDomain: 'Enabled'
+    httpsRedirect: 'Enabled'
+    cacheConfiguration: {
+      queryStringCachingBehavior: 'IgnoreQueryString'
+      compressionSettings: {
+        isCompressionEnabled: true
+        contentTypesToCompress: [
+          'text/css'
+          'text/javascript'
+          'application/javascript'
+          'application/json'
+          'image/svg+xml'
+          'font/woff2'
+        ]
       }
     }
   }

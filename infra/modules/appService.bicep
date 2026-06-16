@@ -49,7 +49,7 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
     siteConfig: {
       linuxFxVersion: 'DOCKER|${acrLoginServer}/atomicly:${imageTag}'
       acrUseManagedIdentityCreds: true
-      alwaysOn: false
+      alwaysOn: true
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
       scmMinTlsVersion: '1.2'
