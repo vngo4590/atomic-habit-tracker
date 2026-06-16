@@ -76,7 +76,7 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
           priority: 100
           action: 'Allow'
           tag: 'ServiceTag'
-          ipAddressOrTag: 'AzureFrontDoor.Backend'
+          ipAddress: 'AzureFrontDoor.Backend'
         }
       ]
       // Apply the same restrictions to the SCM/Kudu management site.
