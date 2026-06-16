@@ -38,6 +38,7 @@ For **all** local dev commands (DB lifecycle, seed/demo data, validation, kube o
 | SOLID + GRASP design rules | **`atomic-habit-design-principles`** |
 | Animation primitives and patterns | **`atomic-habit-ui-animation`** |
 | Logging conventions and redaction | **`atomic-habit-logging`** |
+| Security controls (auth, CSP, WAF, rate limiting, origin lockdown) | **`atomic-habit-security`** |
 | Test quality bar | **`atomic-habit-test-quality-standard`** |
 | Test tier policy and orchestration | **`atomic-habit-test-tier-policy`** |
 | Test edge-case checklist | **`atomic-habit-test-edge-cases`** |

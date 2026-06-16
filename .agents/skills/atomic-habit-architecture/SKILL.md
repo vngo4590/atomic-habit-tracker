@@ -128,6 +128,7 @@ k8s/local/         # Docker Desktop Kubernetes manifests
 - **Schedule metrics** → `atomic-habit-schedule-metrics`
 - **Habit stacking** → `atomic-habit-habit-stacking`
 - **Pet ecosystem** → `atomic-habit-pet-ecosystem`
+- **Security (auth, CSP, WAF, rate limiting, origin lockdown)** → `atomic-habit-security`
 
 ## 6. Reading Next.js docs before editing routing/layouts
 

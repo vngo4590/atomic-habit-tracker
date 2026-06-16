@@ -90,6 +90,13 @@ This project uses Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, and the Ap
   `npm run build`
 - `npm test -- --run` may not pass flags through correctly in this project; prefer `npm exec vitest run`.
 
+## Security
+
+- Request-level security is enforced in `proxy.ts` (Next.js 16 uses `proxy.ts`, not `middleware.ts`): per-request CSP nonce, security headers, in-memory rate limiting, and a same-origin CSRF guard. Reusable primitives live in `lib/security/*`.
+- Auth is timing-safe (`lib/auth/credentials.ts` always runs a bcrypt compare), passwords are capped at 72 UTF-8 bytes (`lib/contracts/auth.ts`), repeated failed logins for a real account hit a per-account exponential-backoff throttle (`lib/security/login-throttle.ts`), and login/register can require a Cloudflare Turnstile challenge (`lib/security/turnstile.ts`, fail-safe-off when unconfigured).
+- Edge protection is Azure Front Door + a WAF policy (custom rate-limit + scanner-UA block rules on any SKU; OWASP DRS + Bot Manager only on the Premium SKU) in `infra/modules/`; the default `frontDoorSku` is Standard for cost, and the App Service origin is locked to the Front Door so the WAF cannot be bypassed.
+- Before changing auth, headers/CSP, rate limiting, WAF, or ingress/Postgres networking, read the `atomic-habit-security` skill and `docs/architecture/security.md`.
+
 ## Shared Skills
 
 - Edit project skills only under `.agents/skills/`.

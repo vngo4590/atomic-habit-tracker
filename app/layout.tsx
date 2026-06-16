@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import {
   Instrument_Serif,
   Inter_Tight,
@@ -28,11 +29,18 @@ export const metadata: Metadata = {
   description: "Atomic habit tracker",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // The security Proxy (proxy.ts) sets a fresh per-request CSP nonce on the
+  // request headers. We read it here so the inline no-flash script below can
+  // carry the matching nonce — otherwise our strict Content-Security-Policy
+  // (script-src 'nonce-...' 'strict-dynamic') would block it. Reading headers()
+  // opts this layout into dynamic rendering, which nonce-based CSP requires.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   // Runs synchronously before the page paints so the saved theme, variant, and
   // accent are applied to <html> immediately — no flash of the default (light)
   // theme on reload. Mirrors lib/appearance.ts; keep the variant allow-list in
@@ -53,7 +61,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body>
-        <script dangerouslySetInnerHTML={{ __html: noFlashScript }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: noFlashScript }} />
         {children}
       </body>
     </html>

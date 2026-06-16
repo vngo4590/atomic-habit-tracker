@@ -53,6 +53,7 @@ Atomicly-specific deployment facts:
 - **Azure OIDC setup:** Create an Azure AD app registration with federated credentials for `repo:<owner>/<repo>:ref:refs/heads/master`, `:environment:dev`, and `:pull_request`. Assign the service principal Contributor + User Access Administrator + Key Vault Secrets Officer roles.
 - **Azure infrastructure:** Bicep templates in `infra/main.bicep` provision Resource Group, ACR, App Service, PostgreSQL Flexible Server, Key Vault, and Front Door. The unique suffix is stored in `.azure-suffix`.
 - Canonical backend deployment specs live under `openspec/specs/deployment-architecture/spec.md` and related backend/API specs.
+- **Security posture:** edge protection is Azure Front Door (Premium by default) + a WAF policy (OWASP DRS 2.1, Bot Manager, custom rate-limit rules). The App Service origin is locked to the Front Door (service-tag deny-by-default in Bicep + `X-Azure-FDID` pinning in CI) so the WAF cannot be bypassed. App-layer controls (CSP nonce, security headers, in-memory rate limiting, same-origin CSRF guard, timing-safe auth) live in `proxy.ts` and `lib/security/*`. Before changing auth, headers/CSP, rate limiting, WAF, or ingress/Postgres networking, read `atomic-habit-security` and `docs/architecture/security.md`. Known residual risks: Postgres public endpoint and Key Vault public access (both need the VNet + private-endpoint workstream); in-memory rate limiting is per-instance.
 
 ## Pipeline And Infra Principles
 

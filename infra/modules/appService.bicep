@@ -26,6 +26,7 @@ param applicationInsightsConnectionString string = ''
 //   • HTTPS only
 //   • FTPS disabled
 //   • TLS 1.2 minimum
+//   • Inbound restricted to the Azure Front Door service tag (deny by default)
 //   • System-assigned managed identity for ACR pull and Key Vault
 //   • Health check endpoint for load-balancer probes
 //   • Detailed logging enabled for diagnostics
@@ -58,6 +59,28 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
       requestTracingEnabled: true
       numberOfWorkers: 1
       http20Enabled: true
+      // -----------------------------------------------------------------------
+      // Ingress lockdown — only Azure Front Door may reach the origin.
+      // WHY: Without this, the public *.azurewebsites.net hostname is reachable
+      // directly, letting an attacker bypass the Front Door WAF entirely. We
+      // deny by default and allow only the AzureFrontDoor.Backend service tag.
+      // A second, tighter X-Azure-FDID header restriction (pinning to OUR Front
+      // Door instance) is added post-deployment by the CI workflow, because the
+      // Front Door ID is not known until the Front Door is created.
+      // -----------------------------------------------------------------------
+      ipSecurityRestrictionsDefaultAction: 'Deny'
+      ipSecurityRestrictions: [
+        {
+          name: 'Allow-AzureFrontDoor'
+          description: 'Only accept inbound traffic from the Azure Front Door edge.'
+          priority: 100
+          action: 'Allow'
+          tag: 'ServiceTag'
+          ipAddressOrTag: 'AzureFrontDoor.Backend'
+        }
+      ]
+      // Apply the same restrictions to the SCM/Kudu management site.
+      scmIpSecurityRestrictionsUseMain: true
       appSettings: empty(applicationInsightsConnectionString)
         ? []
         : [
