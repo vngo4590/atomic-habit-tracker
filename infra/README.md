@@ -239,8 +239,8 @@ In some Azure subscriptions/regions, Front Door Standard endpoints deployed via 
 - Direct App Service access (`*.azurewebsites.net`) works perfectly
 - Front Door hostname returns HTTP 404
 
-**Workaround (automated in deploy script):**
-The `deploy-local.sh` script now checks `deploymentStatus` after Bicep deployment.  If it is not `Succeeded`, the script falls back to the App Service direct URL for `AUTH_URL` and `NEXT_PUBLIC_APP_URL` and prints a warning.  The app is fully functional without Front Door in dev.
+**Workaround (CI/CD workflow):**
+The CI/CD workflow queries `deploymentStatus` after Bicep deployment.  Because the App Service origin is locked to Front Door traffic only (`ipSecurityRestrictionsDefaultAction: Deny`), the workflow **always uses the Front Door hostname** when it can be resolved — even if `deploymentStatus` is not yet `Succeeded`.  Falling back to the direct App Service URL would set `AUTH_URL` to an inaccessible host and break auth redirects.  If the Front Door hostname cannot be resolved at all, the workflow emits a warning.
 
 **Bicep fix attempt:**
 `infra/modules/frontDoor.bicep` adds `routeId` and `originId` tags to the endpoint resource.  This forces Bicep to update the endpoint **after** the route and origin are created, which can trigger the edge deployment that would otherwise be skipped.

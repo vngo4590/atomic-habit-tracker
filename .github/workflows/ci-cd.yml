@@ -195,16 +195,22 @@ jobs:
 
           APP_HOST=$(az webapp show --name "app-atomicly-dev-aue" --resource-group "$RG" --query defaultHostName -o tsv)
 
-          if [ -n "$ACTUAL_HOSTNAME" ] && [ "$DEPLOYMENT_STATUS" = "Succeeded" ]; then
+          # Always use the Front Door hostname when available, even if
+          # deploymentStatus is not yet 'Succeeded'. The App Service origin is
+          # locked to Front Door traffic only (ipSecurityRestrictionsDefaultAction
+          # = Deny), so falling back to the direct App Service URL would set
+          # AUTH_URL to an inaccessible host and break auth redirects.
+          # The Front Door endpoint usually starts routing within minutes even
+          # when deploymentStatus lags behind.
+          if [ -n "$ACTUAL_HOSTNAME" ]; then
             echo "hostname=$ACTUAL_HOSTNAME" >> "$GITHUB_OUTPUT"
             echo "public_url=https://${ACTUAL_HOSTNAME}" >> "$GITHUB_OUTPUT"
-            echo "Front Door hostname: $ACTUAL_HOSTNAME"
-          else
-            if [ -n "$ACTUAL_HOSTNAME" ]; then
-              echo "WARNING: Front Door endpoint deploymentStatus is '${DEPLOYMENT_STATUS}'. Falling back to App Service URL."
-            else
-              echo "WARNING: Could not resolve Front Door hostname. Falling back to App Service URL."
+            echo "Front Door hostname: $ACTUAL_HOSTNAME (deploymentStatus: ${DEPLOYMENT_STATUS})"
+            if [ "$DEPLOYMENT_STATUS" != "Succeeded" ]; then
+              echo "⚠️  Front Door deploymentStatus is '${DEPLOYMENT_STATUS}' — using Front Door hostname anyway because origin is locked down."
             fi
+          else
+            echo "::warning::Could not resolve Front Door hostname. AUTH_URL will use the App Service URL, but the origin is locked to Front Door traffic — the app may be inaccessible until Front Door is ready."
             echo "hostname=$APP_HOST" >> "$GITHUB_OUTPUT"
             echo "public_url=https://${APP_HOST}" >> "$GITHUB_OUTPUT"
             echo "App Service URL: https://${APP_HOST}"
@@ -320,19 +326,24 @@ jobs:
           APP_NAME="app-atomicly-dev-aue"
           RG="rg-atomicly-dev-aue-${{ secrets.AZURE_UNIQUE_SUFFIX }}"
           PUBLIC_URL="https://${{ steps.fd.outputs.hostname }}"
-          HOSTNAME=$(az webapp show --name "$APP_NAME" --resource-group "$RG" --query defaultHostName -o tsv)
-          echo "Testing App Service: https://$HOSTNAME/api/healthz"
+
+          # The App Service origin is locked to Front Door traffic only
+          # (ipSecurityRestrictionsDefaultAction = Deny), so a direct health
+          # check from the GitHub runner will always return 403. Instead, we
+          # verify via the public (Front Door) URL, retrying to allow time
+          # for the container to start and Front Door to begin routing.
+          echo "Testing public URL: $PUBLIC_URL/api/healthz"
           for i in {1..12}; do
-            if curl -sf "https://$HOSTNAME/api/healthz" > /dev/null 2>&1; then
-              echo "✅ App Service health check passed"
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$PUBLIC_URL/api/healthz" 2>/dev/null || echo "000")
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ Public URL health check passed"
               break
             fi
-            echo "  Waiting for app to be healthy ..."
+            echo "  Attempt $i/12 — HTTP $HTTP_CODE, waiting 10s ..."
             sleep 10
           done
-          echo "Testing public URL: $PUBLIC_URL/api/healthz"
-          if curl -sf "$PUBLIC_URL/api/healthz" > /dev/null 2>&1; then
-            echo "✅ Public URL health check passed"
-          else
-            echo "⚠️  Public URL health check failed"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "⚠️  Public URL health check did not pass after 2 minutes (last HTTP $HTTP_CODE)."
+            echo "  This may be caused by Front Door deploymentStatus: NotStarted."
+            echo "  See infra/README.md § 'Endpoint Stuck in NotStarted' for remediation."
           fi
