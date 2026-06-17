@@ -98,28 +98,43 @@ describe("pet repository", () => {
   describe("adoptPet", () => {
     // Given the ecosystem already holds the maximum number of alive pets,
     // When a user tries to adopt another,
-    // Then the cap is enforced with a friendly error so the world stays bounded.
+    // Then the cap is enforced (reason "cap") so the world stays bounded.
     it("rejects adoption when the alive cap is reached", async () => {
       const db = makeDb({ aliveCount: MAX_ALIVE_PETS });
-      await expect(adoptPet("user_1", { name: "New", temperament: "fiery" }, NOW, db)).rejects.toThrow(/at most/);
+      const result = await adoptPet("user_1", { name: "New", temperament: "fiery" }, NOW, db);
+      expect(result).toMatchObject({ ok: false, reason: "cap" });
     });
 
-    // Given a pet was already born this calendar month,
+    // Given a living pet was already born this calendar month,
     // When the user tries to adopt another,
-    // Then the monthly adoption limit blocks it.
+    // Then the monthly adoption limit blocks it (reason "monthly").
     it("rejects a second adoption within the same month", async () => {
       const db = makeDb({ aliveCount: 0, bornThisMonth: 1 });
-      await expect(adoptPet("user_1", { name: "Two", temperament: "calm" }, NOW, db)).rejects.toThrow(/one pet per month/);
+      const result = await adoptPet("user_1", { name: "Two", temperament: "calm" }, NOW, db);
+      expect(result).toMatchObject({ ok: false, reason: "monthly" });
     });
 
-    // Given room in the ecosystem and no adoption yet this month,
+    // Given room in the ecosystem and no living adoption yet this month,
     // When a user adopts a pet of a chosen temperament,
     // Then a fresh, seeded creature is created and returned.
     it("creates a seeded pet when there is room and no adoption this month", async () => {
       const db = makeDb({ aliveCount: 1, bornThisMonth: 0 });
-      const pet = await adoptPet("user_1", { name: "Ember", temperament: "fiery" }, NOW, db);
-      expect(pet.temperament).toBe("fiery");
-      expect(pet.isAlive).toBe(true);
+      const result = await adoptPet("user_1", { name: "Ember", temperament: "fiery" }, NOW, db);
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.pet.temperament).toBe("fiery");
+        expect(result.pet.isAlive).toBe(true);
+      }
+    });
+
+    // Given the monthly limit now counts only *living* pets,
+    // When the only pet born this month has already died (or been released),
+    // Then the slot is free and a replacement may be adopted the same month.
+    it("frees the monthly slot once the month's pet is no longer alive", async () => {
+      // bornThisMonth defaults to 0 because the alive-filtered count finds none.
+      const db = makeDb({ aliveCount: 0, bornThisMonth: 0 });
+      const result = await adoptPet("user_1", { name: "Fresh", temperament: "calm" }, NOW, db);
+      expect(result.ok).toBe(true);
     });
   });
 

@@ -21,7 +21,7 @@ import { adoptPetAction, buryPetAction, deletePetAction, feedPetAction } from "@
 import type { StackMutationInput } from "@/lib/contracts/domain";
 import { dateAdd, todayKey } from "@/lib/helpers";
 import { clientLogger } from "@/lib/logger-client";
-import { MAX_SATIETY } from "@/lib/pet";
+import { MAX_ALIVE_PETS, feedVitals, simulatePet, tuningFor } from "@/lib/pet";
 import { isScheduledForDate } from "@/lib/schedule";
 import {
   stackInsertPatches as stackInsertPatchesHelper,
@@ -799,9 +799,21 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
     async (draft: PetDraft) => {
       clientLogger.info("Adopting pet", { event: "store.pet.adopt", temperament: draft.temperament });
       try {
-        const pet = await adoptPetAction(draft);
-        setPets((current) => [...current, pet]);
-        showToast(`${pet.name} joined your ecosystem!`, "Keep your habits to help it grow.");
+        const result = await adoptPetAction(draft);
+        if (!result.ok) {
+          // Map the server's reason code to a friendly explanation. We use codes
+          // (not thrown errors) because Next.js strips server-action error
+          // messages in production, which would otherwise hide the real cause.
+          const reasons: Record<typeof result.reason, string> = {
+            cap: `You can care for at most ${MAX_ALIVE_PETS} pets at once.`,
+            monthly: "You can only adopt one pet per month. Release a pet to make room for a new one.",
+          };
+          clientLogger.warn("Pet adoption refused", { event: "store.pet.adopt_refused", reason: result.reason });
+          showToast("Couldn't adopt pet", reasons[result.reason]);
+          return;
+        }
+        setPets((current) => [...current, result.pet]);
+        showToast(`${result.pet.name} joined your ecosystem!`, "Keep your habits to help it grow.");
       } catch (error: unknown) {
         clientLogger.warn("Pet adoption failed", { event: "store.pet.adopt_failed", message: errorMessage(error) });
         showToast("Couldn't adopt pet", errorMessage(error));
@@ -819,21 +831,41 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
     async (petId: string, amount: number) => {
       let prevPets: Pet[] = [];
       let prevFeeds = 0;
-      const nowIso = new Date().toISOString();
+      const nowMs = Date.now();
+      const nowIso = new Date(nowMs).toISOString();
 
       setPets((current) => {
         prevPets = current;
-        return current.map((pet) =>
-          pet.id === petId && pet.isAlive
-            ? {
-                ...pet,
-                satiety: Math.min(MAX_SATIETY, pet.satiety + amount),
-                totalFeeds: pet.totalFeeds + amount,
-                lastFedAt: nowIso,
-                lastSimAt: nowIso,
-              }
-            : pet,
-        );
+        return current.map((pet) => {
+          if (pet.id !== petId || !pet.isAlive) return pet;
+          // Advance the pet's vitals to *now* before applying the feed, exactly
+          // like the server does. Using the stored (possibly days-old) satiety
+          // here would make a hungry pet's bar jump to full and then snap back
+          // once the server's true value arrives. Simulating first keeps the
+          // optimistic bar in step with the authoritative result.
+          const live = simulatePet(
+            {
+              satiety: pet.satiety,
+              health: pet.health,
+              lastSimAt: Date.parse(pet.lastSimAt),
+              lastFedAt: Date.parse(pet.lastFedAt),
+              bornAt: Date.parse(pet.bornAt),
+              isAlive: pet.isAlive,
+              diedAt: pet.diedAt ? Date.parse(pet.diedAt) : null,
+            },
+            tuningFor(pet.temperament),
+            nowMs,
+          );
+          const fed = feedVitals(live, amount, nowMs);
+          return {
+            ...pet,
+            satiety: fed.satiety,
+            health: fed.health,
+            totalFeeds: pet.totalFeeds + amount,
+            lastFedAt: nowIso,
+            lastSimAt: nowIso,
+          };
+        });
       });
       setPetFeedsUsedToday((current) => {
         prevFeeds = current;

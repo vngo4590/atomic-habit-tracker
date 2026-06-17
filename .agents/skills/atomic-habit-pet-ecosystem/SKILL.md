@@ -33,6 +33,7 @@ description: Data model, pure engine, mutation API, store wiring, and UI for the
 1. `getStoreSnapshot` loads `pets` + `petFeedsUsedToday` into the store (`app/(root)/layout.tsx`).
 2. `PetEcosystem` converts each store `Pet` → engine `PetRecord` and calls `buildPetView(record, { now, hour })` every `useNow` tick to simulate vitals forward and derive sprite/mood/stage live.
 3. Mutations go through the store callbacks → server actions → `lib/repositories/pets.ts` → Prisma. The repo is **authoritative**; the store is optimistic.
+   - **Optimistic feed must simulate first:** `store.feedPet` advances the pet's vitals to *now* (`simulatePet` + `feedVitals`) **before** adding the feed, exactly like the server. Adding the feed to the stored (stale) `satiety` instead would make a hungry pet's bar jump to full and then snap back when the authoritative value arrives.
 
 ## 3. The economy (food)
 
@@ -78,7 +79,8 @@ Thresholds use **ratios** (`satiety/MAX_SATIETY`), so changing `MAX_SATIETY` is 
 ## 7. Ecosystem rules (`lib/repositories/pets.ts`)
 
 - **Alive cap:** at most `MAX_ALIVE_PETS = 3` alive pets (defined once in `lib/pet/index.ts`, re-exported from the repo so client & server share it).
-- **Monthly adoption limit:** `adoptPet` blocks if any `Pet.bornAt` falls in the current calendar month (local time). **Releasing/deleting a pet frees that month's slot immediately** — a delete-then-adopt works instantly.
+- **Monthly adoption limit:** `adoptPet` blocks if any **living** `Pet.bornAt` falls in the current calendar month (local time). **Releasing/deleting a pet — or its death — frees that month's slot immediately** (only alive pets are counted), so a delete-then-adopt works instantly and a pet that passes away is a fresh start, not a month-long lockout.
+- **`adoptPet`** returns an `AdoptResult` union: `{ ok: true, pet }` | `{ ok: false, reason: 'cap'|'monthly' }`. It returns a reason code instead of throwing because **Next.js strips thrown server-action error *messages* in production** (replacing them with a generic digest) — the store maps the code to a user-facing message.
 - **`feedPet`** returns a `FeedResult` union: `{ ok: true, pet, fedAmount, evolved }` | `{ ok: false, reason: 'not_found'|'dead'|'no_food'|'full', pet? }`. The fed amount is clamped by both remaining food pool and `satietyCapacity`.
 - **`buryPet`** removes a pet **only after it has died** ("Lay to rest" in the graveyard). **`deletePet`** removes **any** pet, alive or dead ("Release" button on living cards, confirm-gated in `PetCard`).
 - `persistDeathIfNeeded` makes death permanent on read.
