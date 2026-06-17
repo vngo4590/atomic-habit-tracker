@@ -189,35 +189,47 @@ export async function listPets(userId: string, now: number, db: DbClient = defau
   return pets;
 }
 
+/** The outcome of attempting to adopt a pet. */
+export type AdoptResult =
+  | { ok: true; pet: Pet }
+  | { ok: false; reason: "cap" | "monthly" };
+
 /**
  * Adopt a new pet. Enforces two rules and seeds a unique creature from a fresh
  * random genome:
  *   1. Ecosystem cap — at most MAX_ALIVE_PETS alive at once.
- *   2. Monthly adoption limit — only one pet may be *born* per calendar month, so
- *      adopting is a considered commitment. Deleting a pet frees that month's slot
- *      immediately (because the born-this-month record is gone), letting the user
- *      try again straight away.
- * Throws a user-friendly error when either rule is violated.
+ *   2. Monthly adoption limit — only one *living* pet may be born per calendar
+ *      month, so adopting is a considered commitment. Releasing a pet (or its
+ *      passing) frees that month's slot immediately, letting the user adopt a
+ *      fresh companion straight away — we only count pets that are still alive.
+ *
+ * Returns a discriminated result instead of throwing so the specific reason
+ * survives the trip to the browser: Next.js strips thrown error *messages* from
+ * server actions in production (replacing them with a generic digest), which
+ * would otherwise hide why an adoption was refused.
  */
-export async function adoptPet(userId: string, input: PetAdoptInput, now: number, db: DbClient = defaultDb): Promise<Pet> {
+export async function adoptPet(userId: string, input: PetAdoptInput, now: number, db: DbClient = defaultDb): Promise<AdoptResult> {
   log.info("Adopting pet", { event: "repo.pets.adopt", userId: redactUserId(userId), temperament: input.temperament });
   validateDatabaseUrl();
   const data = petAdoptSchema.parse(input);
 
   const aliveCount = await db.pet.count({ where: { userId, isAlive: true } });
   if (aliveCount >= MAX_ALIVE_PETS) {
-    throw new Error(`You can care for at most ${MAX_ALIVE_PETS} pets at once.`);
+    return { ok: false, reason: "cap" };
   }
 
-  // Monthly limit: block if any pet was born within the current calendar month.
+  // Monthly limit: block only if a still-living pet was born within the current
+  // calendar month. Released or departed pets do not hold the slot, so deleting a
+  // pet lets the user adopt again immediately (and a death is a fresh start, not a
+  // month-long lockout).
   const nowDate = new Date(now);
   const monthStart = new Date(nowDate.getFullYear(), nowDate.getMonth(), 1);
   const monthEnd = new Date(nowDate.getFullYear(), nowDate.getMonth() + 1, 1);
   const bornThisMonth = await db.pet.count({
-    where: { userId, bornAt: { gte: monthStart, lt: monthEnd } },
+    where: { userId, isAlive: true, bornAt: { gte: monthStart, lt: monthEnd } },
   });
   if (bornThisMonth > 0) {
-    throw new Error("You can only adopt one pet per month. Release a pet to make room for a new one.");
+    return { ok: false, reason: "monthly" };
   }
 
   const vitals = initialVitals(now);
@@ -237,7 +249,7 @@ export async function adoptPet(userId: string, input: PetAdoptInput, now: number
     },
   })) as PetRow;
 
-  return toPet(record);
+  return { ok: true, pet: toPet(record) };
 }
 
 /** The outcome of attempting to feed a pet. */

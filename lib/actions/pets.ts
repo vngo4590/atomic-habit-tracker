@@ -6,24 +6,26 @@ import { requireUserId } from "@/lib/auth/session";
 import { petAdoptSchema, petBurySchema, petDeleteSchema, petFeedSchema } from "@/lib/contracts/pet";
 import { todayKey } from "@/lib/helpers";
 import { logger, redactUserId } from "@/lib/logger";
-import { adoptPet, buryPet, deletePet, feedPet, type FeedResult } from "@/lib/repositories/pets";
-import type { Pet, PetDraft } from "@/lib/types";
+import { adoptPet, buryPet, deletePet, feedPet, type AdoptResult, type FeedResult } from "@/lib/repositories/pets";
+import type { PetDraft } from "@/lib/types";
 
 const log = logger.child({ module: "actions.pets" });
 
 /**
  * Adopt a brand-new pet from a chosen temperament. The repository seeds a unique
- * creature and enforces the ecosystem cap; we surface its result to the store.
+ * creature and enforces the ecosystem cap + monthly limit; we surface its result
+ * (a discriminated union) so the store can show the exact reason an adoption was
+ * refused — thrown error messages are stripped from server actions in production.
  */
-export async function adoptPetAction(draft: PetDraft): Promise<Pet> {
+export async function adoptPetAction(draft: PetDraft): Promise<AdoptResult> {
   const userId = await requireUserId();
   const input = petAdoptSchema.parse(draft);
   log.info("Adopting pet", { event: "pet.adopted", userId: redactUserId(userId), temperament: input.temperament });
 
-  const pet = await adoptPet(userId, input, Date.now());
+  const result = await adoptPet(userId, input, Date.now());
 
   revalidatePath("/pet");
-  return pet;
+  return result;
 }
 
 /**
