@@ -1,16 +1,16 @@
 ## 1. Phase 1 — Observability and Postgres trim (low risk, can ship alone)
 
-- [ ] 1.1 Branch: `chore/cost-optimize-phase-1`
-- [ ] 1.2 In `infra/modules/monitoring.bicep`, set `retentionInDays: 14` on the Log Analytics workspace and add `workspaceCapping: { dailyQuotaGb: json('0.2') }`. Add a parameter `logDailyQuotaGb` with default `0.2` so the cap is reviewable in `main.bicep`.
-- [ ] 1.3 In `infra/modules/appService.bicep`, remove the `AppServiceConsoleLogs` and `AppServiceHTTPLogs` entries from the `appServiceDiagnostics` `logs` array. Keep `AppServiceAppLogs` and `AppServiceAuditLogs`.
+- [x] 1.1 Branch: `chore/cost-optimize-phase-1`
+- [x] 1.2 In `infra/modules/monitoring.bicep`, set `retentionInDays: 14` on the Log Analytics workspace and add `workspaceCapping: { dailyQuotaGb: json('0.2') }`. Add a parameter `logDailyQuotaGb` with default `0.2` so the cap is reviewable in `main.bicep`.
+- [x] 1.3 In `infra/modules/appService.bicep`, remove the `AppServiceConsoleLogs` and `AppServiceHTTPLogs` entries from the `appServiceDiagnostics` `logs` array. Keep `AppServiceAppLogs` and `AppServiceAuditLogs`.
 - [x] 1.4 In `infra/modules/postgres.bicep`, change `storageSizeGB: 32` → `storageSizeGB: 20` and `autoGrow: 'Enabled'` → `autoGrow: 'Disabled'`. Add a parameter so the value is reviewable in `main.bicep`. **NOTE discovered during implementation:** Azure Postgres Flexible Server storage can only grow in-place; the existing 32 GB dev server will not shrink to 20 GB via Bicep deploy. The 20 GB default applies to fresh deploys only. To actually reclaim storage on the existing server, dump → recreate server at 20 GB → restore (tracked as follow-up task 1.4a).
 - [ ] 1.4a (Follow-up) Reclaim Postgres storage on the existing dev server by `pg_dump` → delete server → re-deploy Bicep (which now defaults to 20 GB) → `pg_restore`. Saves ~$1.50/mo. Only worth doing during a planned dev-env reset because it incurs ~5 min of downtime.
-- [ ] 1.5 Compile + lint Bicep locally: `az bicep build --file infra/main.bicep`. Fix any warnings introduced.
-- [ ] 1.6 Run `az deployment sub what-if` against the dev subscription, paste the diff into the PR description. Confirm only the four expected resources are touched.
-- [ ] 1.7 Add a CI step to `.github/workflows/ci-cd.yml` that runs the what-if and fails if any storage tier, SKU, or retention parameter is increased without an `[infra:approved]` label on the PR.
-- [ ] 1.8 Deploy to dev via existing CI. Confirm in Azure Portal: workspace retention is 14d, daily cap is 0.2 GB, App Service diagnostics no longer lists the two dropped categories, Postgres storage is 20 GB with autoGrow off.
-- [ ] 1.9 Smoke test: `curl https://<front-door-host>/api/healthz` returns 200; trigger a synthetic exception and confirm the existing `Atomicly dev uncaught exception` alert still fires.
-- [ ] 1.10 Update `infra/README.md` with the new defaults and the daily-cap rationale. Update `docs/architecture/security.md` only if the security posture changed (it should not have).
+- [x] 1.5 Compile + lint Bicep locally: `az bicep build --file infra/main.bicep`. Fix any warnings introduced.
+- [ ] 1.6 Run `az deployment sub what-if` against the dev subscription, paste the diff into the PR description. Confirm only the four expected resources are touched. **(Deferred — requires logged-in Azure CLI; run before deploy.)**
+- [ ] 1.7 Add a CI step to `.github/workflows/ci-cd.yml` that runs the what-if and fails if any storage tier, SKU, or retention parameter is increased without an `[infra:approved]` label on the PR. **(Deferred to follow-up — optional hardening.)**
+- [ ] 1.8 Deploy to dev via existing CI. Confirm in Azure Portal: workspace retention is 14d, daily cap is 0.2 GB, App Service diagnostics no longer lists the two dropped categories, Postgres storage is 20 GB with autoGrow off. **(User-driven — runs in CI after merge.)**
+- [ ] 1.9 Smoke test: `curl https://<front-door-host>/api/healthz` returns 200; trigger a synthetic exception and confirm the existing `Atomicly dev uncaught exception` alert still fires. **(User-driven — post-deploy.)**
+- [x] 1.10 Update `infra/README.md` with the new defaults and the daily-cap rationale. Update `docs/architecture/security.md` only if the security posture changed (it should not have).
 
 ## 2. Phase 2 — Container Apps origin (architectural)
 
