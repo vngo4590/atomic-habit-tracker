@@ -16,17 +16,17 @@
 
 ## 3. Phase 1 — `pr-preview.yml` workflow
 
-- [ ] 3.1 Trigger: `pull_request` types `[opened, reopened, synchronize, ready_for_review]`, `branches: [master]`. `concurrency` keyed on PR number, `cancel-in-progress: true`.
-- [ ] 3.2 Top-level skip: `if: github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository`. Else exit with a comment explaining why.
-- [ ] 3.3 Preflight quota check: count active `lifetime=ephemeral` RGs; fail with a clear error if ≥ 10 (Decision 9 hard cap). Reject PR numbers ≥ 10⁶ (KV name length).
-- [ ] 3.4 `validate` job — copy the existing master `validate` job verbatim (typecheck, lint, test:run, build).
-- [ ] 3.5 `build-image` job — build runner + migrator images, tag `pr-<pr>-<sha7>` and `pr-<pr>-latest`, push to the **shared preview ACR**.
-- [ ] 3.6 `deploy` job — pre-deploy cleanup: `az group list --tag pr=<pr>` → delete any RG whose `commit` tag is not the current SHA. Then `CREATED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)`, `az group create` with the five tags applied including `created-at=$CREATED_AT`, then `az deployment group create --template-file infra/preview.bicep --parameters createdAt=$CREATED_AT ...`. Generate `postgresAdminPassword` per-run with `openssl rand -base64 32`. Output the Container App FQDN.
-- [ ] 3.7 `migrate` job — resolve runner IP via `ifconfig.me`, add runner IP to Postgres firewall (`trap EXIT` removes), `docker run --rm` the migrator image with `DATABASE_URL` pointing at the preview Postgres.
-- [ ] 3.8 `wait-healthy` job — add this job's runner IP to the Container App `ipSecurityRestrictions` (trap-removed), then poll `/api/healthz` with exponential backoff for up to **5 minutes**.
-- [ ] 3.9 `playwright` job — add this job's runner IP to the Container App ingress (trap-removed), install Playwright deps, set `BASE_URL` to the Container App FQDN, run `npm run test:e2e`. On failure, upload `playwright-report/` and `test-results/` as workflow artifacts. **This job is the gate.**
-- [ ] 3.10 `report` job — **`if: always()`** — `actions/github-script` posts/updates a single bot comment with: preview URL (or "deploy failed" if earlier jobs failed), Playwright pass/fail count, teardown ETA, link to the run, link to artifacts. Idempotent against the comment-by-marker pattern.
-- [ ] 3.11 OIDC: use `azure/login@v2` with `client-id: ${{ secrets.AZURE_PREVIEW_CLIENT_ID }}`. No inline credentials. No use of the existing `AZURE_CLIENT_ID`.
+- [x] 3.1 Trigger: `pull_request` types `[opened, reopened, synchronize, ready_for_review]`, `branches: [master]`. `concurrency` keyed on PR number, `cancel-in-progress: true`.
+- [x] 3.2 Top-level skip: `if: github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository`. Else exit with a comment explaining why. **(Implemented in the `preflight` job rather than top-level `if:` so draft/fork detection emits a clear notice annotation; downstream jobs gate on `needs.preflight.outputs.should_run`.)**
+- [x] 3.3 Preflight quota check: count active `lifetime=ephemeral` RGs; fail with a clear error if ≥ 10 (Decision 9 hard cap). Reject PR numbers ≥ 10⁶ (KV name length).
+- [x] 3.4 `validate` job — copy the existing master `validate` job verbatim (typecheck, lint, test:run, build).
+- [x] 3.5 `build-image` job — build runner + migrator images, tag `pr-<pr>-<sha7>` and `pr-<pr>-latest`, push to the **shared preview ACR**.
+- [x] 3.6 `deploy` job — pre-deploy cleanup: `az group list --tag pr=<pr>` → delete any RG whose `commit` tag is not the current SHA. Then `CREATED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)`, `az group create` with the five tags applied including `created-at=$CREATED_AT`, then `az deployment group create --template-file infra/preview.bicep --parameters createdAt=$CREATED_AT ...`. Generate `postgresAdminPassword` per-run with `openssl rand -base64 32`. Output the Container App FQDN.
+- [x] 3.7 `migrate` job — resolve runner IP via `ifconfig.me`, add runner IP to Postgres firewall (`trap EXIT` removes), `docker run --rm` the migrator image with `DATABASE_URL` pointing at the preview Postgres. **(Uses `api.ipify.org` instead of `ifconfig.me` — same purpose, more reliable.)**
+- [x] 3.8 `wait-healthy` job — add this job's runner IP to the Container App `ipSecurityRestrictions` (trap-removed), then poll `/api/healthz` with exponential backoff for up to **5 minutes**.
+- [x] 3.9 `playwright` job — add this job's runner IP to the Container App ingress (trap-removed), install Playwright deps, set `BASE_URL` to the Container App FQDN, run `npm run test:e2e`. On failure, upload `playwright-report/` and `test-results/` as workflow artifacts. **This job is the gate.**
+- [x] 3.10 `report` job — **`if: always()`** — `actions/github-script` posts/updates a single bot comment with: preview URL (or "deploy failed" if earlier jobs failed), Playwright pass/fail count, teardown ETA, link to the run, link to artifacts. Idempotent against the comment-by-marker pattern.
+- [x] 3.11 OIDC: use `azure/login@v2` with `client-id: ${{ secrets.AZURE_PREVIEW_CLIENT_ID }}`. No inline credentials. No use of the existing `AZURE_CLIENT_ID`.
 
 ## 4. Phase 1 — `pr-preview-teardown.yml` workflow
 

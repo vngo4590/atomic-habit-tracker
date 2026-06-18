@@ -1,0 +1,636 @@
+# =============================================================================
+# pr-preview.yml — provision + test an ephemeral preview environment per PR
+# =============================================================================
+#
+# WHAT: Every non-draft, non-fork PR opened against `master` gets a dedicated
+# Azure stack — RG `rg-atomicly-pr-<pr>-<sha7>` containing a Container App,
+# Postgres Flexible Server, Key Vault, Log Analytics workspace, and a managed
+# identity with AcrPull on the shared preview ACR. Playwright then runs
+# against the LIVE preview (not localhost) and gates the PR check.
+#
+# WHY THE EXISTING `.github/workflows/ci-cd.yml` IS NOT TOUCHED: master
+# deploys must continue to authenticate as the existing dev/master principal
+# and target the dev RG. Preview workflows authenticate as a SEPARATE
+# `pr-preview-atomicly` principal whose Azure Policy assignments deny any
+# operation outside `rg-atomicly-pr-*` or `rg-atomicly-preview-shared`.
+# Mixing the two pipelines would erode that blast-radius bound.
+#
+# Cost ceiling: ~$1.06/day per preview worst-case. The hourly reaper
+# (`pr-preview-reaper.yml`) bounds a forgotten preview to ~$1.10 total.
+# =============================================================================
+
+name: pr-preview
+
+on:
+  pull_request:
+    branches: [master]
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  id-token: write       # OIDC for azure/login
+  contents: read
+  pull-requests: write  # report job posts/updates a bot comment
+
+# Cancel any in-flight preview for the same PR when a new push arrives.
+# The deploy job's pre-deploy cleanup step removes any partial RG left
+# behind by the cancellation (matched by `pr=<n>` tag, different `commit`).
+concurrency:
+  group: pr-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  LOCATION: australiaeast
+  # Shared preview RG created by pr-preview-bootstrap.yml.
+  SHARED_RG: rg-atomicly-preview-shared
+  # Active preview hard cap from design Decision 9 (half of the 20-server
+  # Postgres quota so cancel-in-progress re-deploys have headroom).
+  PREVIEW_HARD_CAP: '10'
+
+jobs:
+  # -------------------------------------------------------------------------
+  # PREFLIGHT — cheap gating checks BEFORE we touch Azure or build anything.
+  # Skips drafts and forks; enforces the active-preview hard cap; rejects
+  # PR numbers ≥ 1_000_000 (Key Vault name length would overflow).
+  # -------------------------------------------------------------------------
+  preflight:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.gate.outputs.should_run }}
+      pr_number: ${{ steps.gate.outputs.pr_number }}
+      sha7: ${{ steps.gate.outputs.sha7 }}
+      rg_name: ${{ steps.gate.outputs.rg_name }}
+      image_tag: ${{ steps.gate.outputs.image_tag }}
+    steps:
+      - name: Gate (draft, fork, PR-number range)
+        id: gate
+        env:
+          IS_DRAFT: ${{ github.event.pull_request.draft }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          BASE_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$IS_DRAFT" = "true" ]; then
+            echo "::notice::Skipping preview: PR is a draft. Mark ready-for-review to provision."
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$HEAD_REPO" != "$BASE_REPO" ]; then
+            echo "::notice::Skipping preview: PR is from a fork ($HEAD_REPO). Forks cannot obtain the preview OIDC token. Standard CI still runs."
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$PR_NUMBER" -ge 1000000 ]; then
+            echo "::error::PR number $PR_NUMBER is too large (≥ 10^6). Key Vault name `kv-atompr-<pr>-<sha7>` would exceed Azure's 24-char limit."
+            exit 1
+          fi
+          SHA7="${HEAD_SHA:0:7}"
+          RG="rg-atomicly-pr-${PR_NUMBER}-${SHA7}"
+          {
+            echo "should_run=true"
+            echo "pr_number=${PR_NUMBER}"
+            echo "sha7=${SHA7}"
+            echo "rg_name=${RG}"
+            echo "image_tag=pr-${PR_NUMBER}-${SHA7}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Azure login (OIDC, pr-preview principal)
+        if: steps.gate.outputs.should_run == 'true'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_PREVIEW_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Enforce active-preview hard cap
+        if: steps.gate.outputs.should_run == 'true'
+        run: |
+          set -euo pipefail
+          ACTIVE=$(az group list --tag lifetime=ephemeral \
+            --query "length([?starts_with(name, 'rg-atomicly-pr-')])" -o tsv)
+          echo "Active previews: $ACTIVE (hard cap: $PREVIEW_HARD_CAP)"
+          if [ "$ACTIVE" -ge "$PREVIEW_HARD_CAP" ]; then
+            echo "::error::Active preview cap ($PREVIEW_HARD_CAP) reached. $ACTIVE previews are live. Close or merge older PRs, or wait for the reaper."
+            exit 1
+          fi
+
+  # -------------------------------------------------------------------------
+  # VALIDATE — same gates as master CI (typecheck, lint, test, build). Cheap
+  # local checks that fail before we touch Azure.
+  # -------------------------------------------------------------------------
+  validate:
+    needs: [preflight]
+    if: needs.preflight.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+        timeout-minutes: 5
+      - run: npm run prisma:generate
+        timeout-minutes: 2
+      - run: npm run typecheck
+        timeout-minutes: 5
+      - run: npm run lint:app
+        timeout-minutes: 5
+      - run: npm run test:run
+        timeout-minutes: 5
+      - run: npm run build
+        timeout-minutes: 10
+
+  # -------------------------------------------------------------------------
+  # BUILD-IMAGE — build runner + migrator images and push to the SHARED
+  # preview ACR. Tags: pr-<pr>-<sha7> (immutable) + pr-<pr>-latest (moving).
+  # -------------------------------------------------------------------------
+  build-image:
+    needs: [preflight, validate]
+    if: needs.preflight.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      acr_login_server: ${{ steps.acr.outputs.login_server }}
+      acr_name: ${{ steps.acr.outputs.name }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Azure login (OIDC, pr-preview principal)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_PREVIEW_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Resolve shared preview ACR
+        id: acr
+        run: |
+          set -euo pipefail
+          ACR_LOGIN_SERVER='${{ vars.PREVIEW_ACR_LOGIN_SERVER }}'
+          if [ -z "$ACR_LOGIN_SERVER" ]; then
+            echo "::error::Repository variable PREVIEW_ACR_LOGIN_SERVER is not set. Run pr-preview-bootstrap.yml first and set the variable."
+            exit 1
+          fi
+          ACR_NAME="${ACR_LOGIN_SERVER%%.*}"
+          echo "login_server=$ACR_LOGIN_SERVER" >> "$GITHUB_OUTPUT"
+          echo "name=$ACR_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: ACR login
+        run: az acr login --name '${{ steps.acr.outputs.name }}'
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build and push runner image
+        env:
+          ACR: ${{ steps.acr.outputs.login_server }}
+          TAG: ${{ needs.preflight.outputs.image_tag }}
+          PR: ${{ needs.preflight.outputs.pr_number }}
+        run: |
+          set -euo pipefail
+          docker build \
+            --target runner \
+            --tag "$ACR/atomicly:$TAG" \
+            --tag "$ACR/atomicly:pr-$PR-latest" \
+            --build-arg DEPLOYMENT_VERSION="$TAG" \
+            --cache-to type=inline \
+            --cache-from "type=registry,ref=$ACR/atomicly:pr-$PR-latest" \
+            --push \
+            .
+
+      - name: Build and push migrator image
+        env:
+          ACR: ${{ steps.acr.outputs.login_server }}
+          TAG: ${{ needs.preflight.outputs.image_tag }}
+          PR: ${{ needs.preflight.outputs.pr_number }}
+        run: |
+          set -euo pipefail
+          docker build \
+            --target migrator \
+            --tag "$ACR/atomicly-migrator:$TAG" \
+            --tag "$ACR/atomicly-migrator:pr-$PR-latest" \
+            --push \
+            .
+
+  # -------------------------------------------------------------------------
+  # DEPLOY — pre-deploy stale-cleanup, create RG with canonical tags, run
+  # `az deployment group create` against infra/preview.bicep. Outputs the
+  # Container App FQDN.
+  # -------------------------------------------------------------------------
+  deploy:
+    needs: [preflight, build-image]
+    if: needs.preflight.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      fqdn: ${{ steps.outputs.outputs.fqdn }}
+      container_app_name: ${{ steps.outputs.outputs.container_app_name }}
+      postgres_fqdn: ${{ steps.outputs.outputs.postgres_fqdn }}
+      postgres_server_name: ${{ steps.outputs.outputs.postgres_server_name }}
+      key_vault_name: ${{ steps.outputs.outputs.key_vault_name }}
+      database_name: ${{ steps.outputs.outputs.database_name }}
+      postgres_password: ${{ steps.password.outputs.password }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Azure login (OIDC, pr-preview principal)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_PREVIEW_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Pre-deploy stale-RG cleanup
+        env:
+          PR: ${{ needs.preflight.outputs.pr_number }}
+          CURRENT_SHA: ${{ needs.preflight.outputs.sha7 }}
+        run: |
+          set -euo pipefail
+          # Find every preview RG tagged with this PR. Delete any whose
+          # `commit` tag is NOT the current SHA — those are partial RGs
+          # from a previous cancel-in-progress run.
+          STALE=$(az group list --tag "pr=$PR" \
+            --query "[?starts_with(name, 'rg-atomicly-pr-') && tags.commit != '$CURRENT_SHA'].name" \
+            -o tsv || true)
+          if [ -z "$STALE" ]; then
+            echo "No stale RGs for PR $PR."
+          else
+            echo "$STALE" | while IFS= read -r rg; do
+              [ -z "$rg" ] && continue
+              echo "Deleting stale RG: $rg"
+              az group delete --name "$rg" --yes --no-wait || true
+            done
+          fi
+
+      - name: Generate per-run Postgres password
+        id: password
+        run: |
+          set -euo pipefail
+          # 32 random bytes → ~43 base64 chars. Strong enough for B1ms's
+          # AAD-less password auth. Stored ONLY in the preview RG's Bicep
+          # @secure() parameter — never written to a GitHub secret, never
+          # echoed. ::add-mask:: prevents it from leaking into logs.
+          PASS=$(openssl rand -base64 32 | tr -d '=+/' | cut -c1-32)
+          echo "::add-mask::$PASS"
+          echo "password=$PASS" >> "$GITHUB_OUTPUT"
+
+      - name: Create resource group with canonical tags
+        env:
+          RG: ${{ needs.preflight.outputs.rg_name }}
+          PR: ${{ needs.preflight.outputs.pr_number }}
+          SHA7: ${{ needs.preflight.outputs.sha7 }}
+        run: |
+          set -euo pipefail
+          # `created-at` is computed ONCE here and re-used on every deploy
+          # to this RG so the reaper's 24 h clock does not reset on
+          # re-deploys.
+          CREATED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "CREATED_AT=$CREATED_AT" >> "$GITHUB_ENV"
+          az group create \
+            --name "$RG" \
+            --location "$LOCATION" \
+            --tags \
+              pr="$PR" \
+              commit="$SHA7" \
+              lifetime=ephemeral \
+              created-by=github-actions \
+              created-at="$CREATED_AT" \
+              project=atomicly
+
+      - name: Deploy preview stack
+        id: deploy
+        env:
+          RG: ${{ needs.preflight.outputs.rg_name }}
+          PR: ${{ needs.preflight.outputs.pr_number }}
+          SHA7: ${{ needs.preflight.outputs.sha7 }}
+          TAG: ${{ needs.preflight.outputs.image_tag }}
+          ACR_LOGIN_SERVER: ${{ needs.build-image.outputs.acr_login_server }}
+          ACR_NAME: ${{ needs.build-image.outputs.acr_name }}
+          PG_PASS: ${{ steps.password.outputs.password }}
+        run: |
+          set -euo pipefail
+          az deployment group create \
+            --resource-group "$RG" \
+            --name "preview-${PR}-${SHA7}-${GITHUB_RUN_ID}" \
+            --template-file infra/preview.bicep \
+            --parameters \
+              prNumber="$PR" \
+              commitSha="$SHA7" \
+              postgresAdminPassword="$PG_PASS" \
+              imageTag="$TAG" \
+              acrLoginServer="$ACR_LOGIN_SERVER" \
+              acrName="$ACR_NAME" \
+              sharedAcrResourceGroup="$SHARED_RG" \
+              createdAt="$CREATED_AT" \
+            --output none
+
+      - name: Read deployment outputs
+        id: outputs
+        env:
+          RG: ${{ needs.preflight.outputs.rg_name }}
+          PR: ${{ needs.preflight.outputs.pr_number }}
+          SHA7: ${{ needs.preflight.outputs.sha7 }}
+        run: |
+          set -euo pipefail
+          OUTS=$(az deployment group show \
+            --resource-group "$RG" \
+            --name "preview-${PR}-${SHA7}-${GITHUB_RUN_ID}" \
+            --query properties.outputs -o json)
+          jq_get() { echo "$OUTS" | jq -r ".$1.value"; }
+          {
+            echo "fqdn=$(jq_get containerAppFqdn)"
+            echo "container_app_name=$(jq_get containerAppName)"
+            echo "postgres_fqdn=$(jq_get postgresFqdn)"
+            echo "postgres_server_name=$(jq_get postgresServerName)"
+            echo "key_vault_name=$(jq_get keyVaultName)"
+            echo "database_name=$(jq_get databaseName)"
+          } >> "$GITHUB_OUTPUT"
+
+  # -------------------------------------------------------------------------
+  # MIGRATE — add runner IP to Postgres firewall (trap-removed), then run
+  # the migrator container against the freshly provisioned Postgres.
+  # -------------------------------------------------------------------------
+  migrate:
+    needs: [preflight, build-image, deploy]
+    if: needs.preflight.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Azure login (OIDC, pr-preview principal)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_PREVIEW_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: ACR login
+        run: az acr login --name '${{ needs.build-image.outputs.acr_name }}'
+
+      - name: Run migrations
+        env:
+          RG: ${{ needs.preflight.outputs.rg_name }}
+          PG_SERVER: ${{ needs.deploy.outputs.postgres_server_name }}
+          PG_FQDN: ${{ needs.deploy.outputs.postgres_fqdn }}
+          PG_DB: ${{ needs.deploy.outputs.database_name }}
+          PG_PASS: ${{ needs.deploy.outputs.postgres_password }}
+          ACR: ${{ needs.build-image.outputs.acr_login_server }}
+          TAG: ${{ needs.preflight.outputs.image_tag }}
+        run: |
+          set -euo pipefail
+          RUNNER_IP=$(curl -fsS https://api.ipify.org)
+          RULE_NAME="migrate-runner-$(echo "$RUNNER_IP" | tr '.' '-')-${GITHUB_RUN_ID}"
+          echo "Runner IP: $RUNNER_IP"
+          # Ensure the firewall rule is removed even if migrations fail.
+          cleanup() {
+            az postgres flexible-server firewall-rule delete \
+              --resource-group "$RG" \
+              --name "$PG_SERVER" \
+              --rule-name "$RULE_NAME" \
+              --yes >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          az postgres flexible-server firewall-rule create \
+            --resource-group "$RG" \
+            --name "$PG_SERVER" \
+            --rule-name "$RULE_NAME" \
+            --start-ip-address "$RUNNER_IP" \
+            --end-ip-address "$RUNNER_IP" \
+            --output none
+
+          DATABASE_URL="postgresql://psqladmin:$(printf %s "$PG_PASS" | jq -sRr @uri)@${PG_FQDN}:5432/${PG_DB}?sslmode=require"
+          echo "::add-mask::$DATABASE_URL"
+
+          docker run --rm \
+            -e DATABASE_URL="$DATABASE_URL" \
+            "$ACR/atomicly-migrator:$TAG"
+
+  # -------------------------------------------------------------------------
+  # WAIT-HEALTHY — add the runner's IP to the Container App ingress (trap-
+  # removed), then poll /api/healthz with exponential backoff for up to
+  # 5 minutes. Cold start on a fresh Container Apps Environment + image
+  # pull can take 2-3 min; 60s was not enough during testing.
+  # -------------------------------------------------------------------------
+  wait-healthy:
+    needs: [preflight, deploy, migrate]
+    if: needs.preflight.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Azure login (OIDC, pr-preview principal)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_PREVIEW_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Poll /api/healthz with runner-IP allowlist
+        env:
+          RG: ${{ needs.preflight.outputs.rg_name }}
+          APP: ${{ needs.deploy.outputs.container_app_name }}
+          FQDN: ${{ needs.deploy.outputs.fqdn }}
+        run: |
+          set -euo pipefail
+          RUNNER_IP=$(curl -fsS https://api.ipify.org)
+          RULE_NAME="healthz-runner-$(echo "$RUNNER_IP" | tr '.' '-')"
+          cleanup() {
+            az containerapp ingress access-restriction remove \
+              --resource-group "$RG" \
+              --name "$APP" \
+              --rule-name "$RULE_NAME" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          az containerapp ingress access-restriction set \
+            --resource-group "$RG" \
+            --name "$APP" \
+            --rule-name "$RULE_NAME" \
+            --ip-address "$RUNNER_IP/32" \
+            --action Allow \
+            --output none
+
+          # Exponential backoff: 5, 10, 20, 40, 60, 60, 60, ... ≤ 300s total.
+          DEADLINE=$(( $(date +%s) + 300 ))
+          DELAY=5
+          while true; do
+            if curl -fsS --max-time 10 "https://$FQDN/api/healthz" >/dev/null; then
+              echo "Preview is healthy at https://$FQDN/api/healthz"
+              break
+            fi
+            NOW=$(date +%s)
+            if [ "$NOW" -ge "$DEADLINE" ]; then
+              echo "::error::Preview did not become healthy within 5 minutes."
+              exit 1
+            fi
+            echo "Not ready yet — sleeping $DELAY s..."
+            sleep "$DELAY"
+            DELAY=$(( DELAY < 60 ? DELAY * 2 : 60 ))
+          done
+
+  # -------------------------------------------------------------------------
+  # PLAYWRIGHT — add runner IP to the Container App ingress, run the e2e
+  # suite against the LIVE preview, and upload traces + reports on failure.
+  # This job is the PR check gate.
+  # -------------------------------------------------------------------------
+  playwright:
+    needs: [preflight, deploy, wait-healthy]
+    if: needs.preflight.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      pass: ${{ steps.run.outputs.pass }}
+      fail: ${{ steps.run.outputs.fail }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps
+
+      - name: Azure login (OIDC, pr-preview principal)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_PREVIEW_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Allow runner IP on Container App ingress
+        id: allowlist
+        env:
+          RG: ${{ needs.preflight.outputs.rg_name }}
+          APP: ${{ needs.deploy.outputs.container_app_name }}
+        run: |
+          set -euo pipefail
+          RUNNER_IP=$(curl -fsS https://api.ipify.org)
+          RULE_NAME="playwright-runner-$(echo "$RUNNER_IP" | tr '.' '-')"
+          echo "rule_name=$RULE_NAME" >> "$GITHUB_OUTPUT"
+          echo "runner_ip=$RUNNER_IP" >> "$GITHUB_OUTPUT"
+          az containerapp ingress access-restriction set \
+            --resource-group "$RG" \
+            --name "$APP" \
+            --rule-name "$RULE_NAME" \
+            --ip-address "$RUNNER_IP/32" \
+            --action Allow \
+            --output none
+
+      - name: Run Playwright against live preview
+        id: run
+        env:
+          BASE_URL: https://${{ needs.deploy.outputs.fqdn }}
+        run: |
+          set +e
+          npm run test:e2e
+          STATUS=$?
+          # Best-effort pass/fail extraction from results.json if Playwright
+          # writes one. Falls back to "?" if the file is missing.
+          if [ -f playwright-report/results.json ]; then
+            PASS=$(jq '[.suites[]?.specs[]?.tests[]? | select(.results[]?.status == "passed")] | length' playwright-report/results.json 2>/dev/null || echo "?")
+            FAIL=$(jq '[.suites[]?.specs[]?.tests[]? | select(.results[]?.status == "failed")] | length' playwright-report/results.json 2>/dev/null || echo "?")
+          else
+            PASS="?"
+            FAIL="?"
+          fi
+          echo "pass=$PASS" >> "$GITHUB_OUTPUT"
+          echo "fail=$FAIL" >> "$GITHUB_OUTPUT"
+          exit $STATUS
+
+      - name: Remove runner IP from Container App ingress
+        if: always()
+        env:
+          RG: ${{ needs.preflight.outputs.rg_name }}
+          APP: ${{ needs.deploy.outputs.container_app_name }}
+          RULE_NAME: ${{ steps.allowlist.outputs.rule_name }}
+        run: |
+          az containerapp ingress access-restriction remove \
+            --resource-group "$RG" \
+            --name "$APP" \
+            --rule-name "$RULE_NAME" >/dev/null 2>&1 || true
+
+      - name: Upload Playwright report (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-pr-${{ needs.preflight.outputs.pr_number }}-${{ needs.preflight.outputs.sha7 }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: warn
+
+  # -------------------------------------------------------------------------
+  # REPORT — always runs (success / failure / cancelled). Posts or updates a
+  # single bot comment on the PR with the preview URL, Playwright counts,
+  # teardown ETA, and links to the run + artifacts.
+  # -------------------------------------------------------------------------
+  report:
+    needs: [preflight, deploy, playwright]
+    if: always() && needs.preflight.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post or update PR preview comment
+        uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ needs.preflight.outputs.pr_number }}
+          SHA7: ${{ needs.preflight.outputs.sha7 }}
+          FQDN: ${{ needs.deploy.outputs.fqdn }}
+          PASS: ${{ needs.playwright.outputs.pass }}
+          FAIL: ${{ needs.playwright.outputs.fail }}
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
+          PLAYWRIGHT_RESULT: ${{ needs.playwright.result }}
+        with:
+          script: |
+            const marker = '<!-- atomicly-pr-preview -->';
+            const { PR_NUMBER, SHA7, FQDN, PASS, FAIL, DEPLOY_RESULT, PLAYWRIGHT_RESULT } = process.env;
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            let body;
+            if (DEPLOY_RESULT !== 'success') {
+              body = [
+                marker,
+                `### 🛑 Preview deploy failed for \`${SHA7}\``,
+                ``,
+                `The preview environment could not be provisioned. See the [workflow run](${runUrl}) for details.`,
+                ``,
+                `Teardown ETA: ≤24 h (hourly reaper) or immediately on PR close.`,
+              ].join('\n');
+            } else {
+              const playwrightLine = PLAYWRIGHT_RESULT === 'success'
+                ? `✅ Playwright: ${PASS} passed`
+                : `❌ Playwright: ${PASS} passed, ${FAIL} failed — see artifacts on the [workflow run](${runUrl})`;
+              body = [
+                marker,
+                `### 🚀 Preview environment for PR #${PR_NUMBER} (\`${SHA7}\`)`,
+                ``,
+                `🔗 https://${FQDN}`,
+                ``,
+                playwrightLine,
+                ``,
+                `📋 [Workflow run](${runUrl}) — Teardown on PR close, or ≤24 h via the hourly reaper.`,
+              ].join('\n');
+            }
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: Number(PR_NUMBER),
+            });
+            const existing = comments.find(c => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: Number(PR_NUMBER),
+                body,
+              });
+            }
