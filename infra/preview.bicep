@@ -58,6 +58,11 @@ param location string = resourceGroup().location
 @minLength(16)
 param postgresAdminPassword string
 
+@description('NextAuth.js secret used to sign session JWTs. Generated per workflow run, passed via @secure(), and stored as a Container Apps secret (not a GitHub secret).')
+@secure()
+@minLength(32)
+param authSecret string
+
 @description('Postgres admin username.')
 param postgresAdminUsername string = 'psqladmin'
 
@@ -295,6 +300,20 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
     managedEnvironmentId: containerAppEnv.id
     configuration: {
       activeRevisionsMode: 'Single'
+      secrets: [
+        {
+          // Composed from the same admin password the workflow generated
+          // and passed to the Postgres resource above. Container Apps
+          // secrets are encrypted at rest and never appear in resource
+          // properties or logs.
+          name: 'database-url'
+          value: 'postgresql://${postgresAdminUsername}:${postgresAdminPassword}@${postgresServerName}.postgres.database.azure.com:5432/${databaseName}?sslmode=require'
+        }
+        {
+          name: 'auth-secret'
+          value: authSecret
+        }
+      ]
       ingress: {
         external: true
         targetPort: 3000
@@ -345,6 +364,22 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
             {
               name: 'DEPLOYMENT_VERSION'
               value: 'preview-pr-${prNumber}-${commitSha}'
+            }
+            {
+              // Tell NextAuth to trust the preview hostname (we do not set
+              // NEXTAUTH_URL; AUTH_TRUST_HOST=true is the supported way to
+              // accept the request Host header in v5 when running behind a
+              // proxy/ingress with a dynamic hostname).
+              name: 'AUTH_TRUST_HOST'
+              value: 'true'
+            }
+            {
+              name: 'AUTH_SECRET'
+              secretRef: 'auth-secret'
+            }
+            {
+              name: 'DATABASE_URL'
+              secretRef: 'database-url'
             }
           ]
           probes: [

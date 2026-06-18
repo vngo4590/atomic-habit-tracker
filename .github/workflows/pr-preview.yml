@@ -316,6 +316,12 @@ jobs:
           PASS=$(openssl rand -base64 32 | tr -d '=+/' | cut -c1-32)
           echo "::add-mask::$PASS"
           echo "password=$PASS" >> "$GITHUB_OUTPUT"
+          # Same generator for the NextAuth signing secret. 32 chars meets
+          # the bicep @minLength(32). Passed via @secure() and stored as a
+          # Container Apps secret (encrypted at rest, not a GitHub secret).
+          AUTH=$(openssl rand -base64 48 | tr -d '=+/' | cut -c1-48)
+          echo "::add-mask::$AUTH"
+          echo "auth_secret=$AUTH" >> "$GITHUB_OUTPUT"
 
       - name: Create resource group with canonical tags
         env:
@@ -350,6 +356,7 @@ jobs:
           ACR_LOGIN_SERVER: ${{ needs.build-image.outputs.acr_login_server }}
           ACR_NAME: ${{ needs.build-image.outputs.acr_name }}
           PG_PASS: ${{ steps.password.outputs.password }}
+          AUTH_SECRET_VAL: ${{ steps.password.outputs.auth_secret }}
         run: |
           set -euo pipefail
           az deployment group create \
@@ -360,6 +367,7 @@ jobs:
               prNumber="$PR" \
               commitSha="$SHA7" \
               postgresAdminPassword="$PG_PASS" \
+              authSecret="$AUTH_SECRET_VAL" \
               imageTag="$TAG" \
               acrLoginServer="$ACR_LOGIN_SERVER" \
               acrName="$ACR_NAME" \
