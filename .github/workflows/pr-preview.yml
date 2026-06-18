@@ -444,8 +444,12 @@ jobs:
           # Seed the dev user (dev@atomicly.local / Atomicly1!) so the
           # Playwright auth.setup.ts can sign in. The migrator image has
           # the full repo source, so we just override CMD to run the seed.
+          # NODE_ENV must be overridden because the seed script refuses to
+          # run in production; ephemeral previews are not real production
+          # and they deliberately want the dev user.
           docker run --rm \
             -e DATABASE_URL="$DATABASE_URL" \
+            -e NODE_ENV=development \
             "$ACR/atomicly-migrator:$TAG" \
             npm run db:seed
 
