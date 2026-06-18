@@ -441,6 +441,14 @@ jobs:
             -e DATABASE_URL="$DATABASE_URL" \
             "$ACR/atomicly-migrator:$TAG"
 
+          # Seed the dev user (dev@atomicly.local / Atomicly1!) so the
+          # Playwright auth.setup.ts can sign in. The migrator image has
+          # the full repo source, so we just override CMD to run the seed.
+          docker run --rm \
+            -e DATABASE_URL="$DATABASE_URL" \
+            "$ACR/atomicly-migrator:$TAG" \
+            npm run db:seed
+
   # -------------------------------------------------------------------------
   # MIGRATE — deprecated. Migrations now run inline at the end of the
   # `deploy` job. Kept here as a no-op (skipped) so existing branch
