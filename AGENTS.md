@@ -96,6 +96,7 @@ This project uses Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, and the Ap
 - Auth is timing-safe (`lib/auth/credentials.ts` always runs a bcrypt compare), passwords are capped at 72 UTF-8 bytes (`lib/contracts/auth.ts`), repeated failed logins for a real account hit a per-account exponential-backoff throttle (`lib/security/login-throttle.ts`), and login/register can require a Cloudflare Turnstile challenge (`lib/security/turnstile.ts`, fail-safe-off when unconfigured).
 - Edge protection is Azure Front Door + a WAF policy (custom rate-limit + scanner-UA block rules on any SKU; OWASP DRS + Bot Manager only on the Premium SKU) in `infra/modules/`; the default `frontDoorSku` is Standard for cost, and the App Service origin is locked to the Front Door so the WAF cannot be bypassed.
 - Before changing auth, headers/CSP, rate limiting, WAF, or ingress/Postgres networking, read the `atomic-habit-security` skill and `docs/architecture/security.md`.
+- Deployment surfaces: master CI/CD lives in `.github/workflows/ci-cd.yml` and targets the shared dev RG. **PR previews** are provisioned by four additional, additive workflows (`pr-preview.yml`, `pr-preview-teardown.yml`, `pr-preview-reaper.yml`, `pr-preview-open.yml`) using `infra/preview.bicep`; they authenticate as a SEPARATE `pr-preview-atomicly` Azure AD app via `AZURE_PREVIEW_CLIENT_ID` and cannot touch the dev RG. See the `atomic-habit-pr-preview-env` skill before editing any preview workflow or `infra/preview*`.
 
 ## Shared Skills
 

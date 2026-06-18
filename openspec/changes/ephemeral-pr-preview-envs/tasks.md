@@ -69,10 +69,10 @@
 
 ## 9. Documentation and skills
 
-- [ ] 9.1 Add a "Preview environments" section to `infra/README.md` covering: bootstrap commands, how to read a preview URL, how to extend the IP allowlist via `pr-preview-open.yml`, how to inspect `az group list` for active previews, how to run the reaper manually, fork-PR limitations.
-- [ ] 9.2 Create `.agents/skills/atomic-habit-pr-preview-env/SKILL.md` (see plan-mode design) describing the naming scheme, tag contract, workflow topology, teardown contract, cost ceiling, and the `pr-preview` principal model.
-- [ ] 9.3 Update `.agents/skills/atomic-habit-forward-deploy-engineer/SKILL.md` to mention the preview-env workflows as additional deployment surfaces and to call out the dedicated `pr-preview` principal.
-- [ ] 9.4 Update `AGENTS.md` deployment paragraph to reference the new preview workflows and the `pr-preview-atomicly` AAD app.
+- [x] 9.1 Add a "Preview environments" section to `infra/README.md` covering: bootstrap commands, how to read a preview URL, how to extend the IP allowlist via `pr-preview-open.yml`, how to inspect `az group list` for active previews, how to run the reaper manually, fork-PR limitations. **(Added in phase 0 commit; complete.)**
+- [x] 9.2 Create `.agents/skills/atomic-habit-pr-preview-env/SKILL.md` (see plan-mode design) describing the naming scheme, tag contract, workflow topology, teardown contract, cost ceiling, and the `pr-preview` principal model.
+- [x] 9.3 Update `.agents/skills/atomic-habit-forward-deploy-engineer/SKILL.md` to mention the preview-env workflows as additional deployment surfaces and to call out the dedicated `pr-preview` principal.
+- [x] 9.4 Update `AGENTS.md` deployment paragraph to reference the new preview workflows and the `pr-preview-atomicly` AAD app.
 
 ## 10. Archive
 
