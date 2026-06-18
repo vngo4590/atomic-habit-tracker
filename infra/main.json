@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "5471413103847022655"
+      "templateHash": "16260869283711414915"
     }
   },
   "parameters": {
@@ -473,7 +473,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "8227968345824122841"
+              "templateHash": "12979818078140495652"
             }
           },
           "parameters": {
@@ -508,6 +508,26 @@
               "metadata": {
                 "description": "Initial database name"
               }
+            },
+            "storageSizeGB": {
+              "type": "int",
+              "defaultValue": 20,
+              "minValue": 20,
+              "maxValue": 16384,
+              "metadata": {
+                "description": "Provisioned storage in GB. 20 GB is the minimum supported tier on Burstable\nFlexible Server and is comfortably above current usage (well under 1 GB).\nA storage increase MUST be a deliberate, reviewed Bicep change — never an\nautomatic upgrade — so the bill stays predictable. Raise this number only\nwhen actual usage justifies it.\n"
+              }
+            },
+            "storageAutoGrow": {
+              "type": "string",
+              "defaultValue": "Disabled",
+              "allowedValues": [
+                "Enabled",
+                "Disabled"
+              ],
+              "metadata": {
+                "description": "Whether the server is allowed to silently grow its disk. Disabled so a\nrunaway write workload cannot quietly double the storage bill — instead it\nfails loudly when disk is full, which is the signal we want at this scale.\n"
+              }
             }
           },
           "resources": [
@@ -525,8 +545,8 @@
                 "administratorLogin": "[parameters('adminUsername')]",
                 "administratorLoginPassword": "[parameters('adminPassword')]",
                 "storage": {
-                  "storageSizeGB": 32,
-                  "autoGrow": "Enabled"
+                  "storageSizeGB": "[parameters('storageSizeGB')]",
+                  "autoGrow": "[parameters('storageAutoGrow')]"
                 },
                 "backup": {
                   "backupRetentionDays": 7,

@@ -14,6 +14,28 @@ param adminPassword string
 @description('Initial database name')
 param databaseName string = 'atomicly'
 
+@description('''
+Provisioned storage in GB. 20 GB is the minimum supported tier on Burstable
+Flexible Server and is comfortably above current usage (well under 1 GB).
+A storage increase MUST be a deliberate, reviewed Bicep change — never an
+automatic upgrade — so the bill stays predictable. Raise this number only
+when actual usage justifies it.
+''')
+@minValue(20)
+@maxValue(16384)
+param storageSizeGB int = 20
+
+@description('''
+Whether the server is allowed to silently grow its disk. Disabled so a
+runaway write workload cannot quietly double the storage bill — instead it
+fails loudly when disk is full, which is the signal we want at this scale.
+''')
+@allowed([
+  'Enabled'
+  'Disabled'
+])
+param storageAutoGrow string = 'Disabled'
+
 // ---------------------------------------------------------------------------
 // PostgreSQL Flexible Server — Burstable B1ms keeps dev cost low.
 // Public access is enabled but locked down to Azure services and an
@@ -31,8 +53,8 @@ resource postgres 'Microsoft.DBforPostgreSQL/flexibleServers@2023-12-01-preview'
     administratorLogin: adminUsername
     administratorLoginPassword: adminPassword
     storage: {
-      storageSizeGB: 32
-      autoGrow: 'Enabled'
+      storageSizeGB: storageSizeGB
+      autoGrow: storageAutoGrow
     }
     backup: {
       backupRetentionDays: 7
