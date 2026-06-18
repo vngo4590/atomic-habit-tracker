@@ -277,6 +277,172 @@ If you need Front Door working and the endpoint is stuck:
 
 ---
 
+## 🧪 Preview environments (ephemeral per-PR stacks)
+
+Every PR opened against `master` from a non-fork branch gets its own fully
+isolated Azure stack — `rg-atomicly-pr-<pr>-<sha7>` — automatically deployed
+by `.github/workflows/pr-preview.yml` and torn down by
+`.github/workflows/pr-preview-teardown.yml` when the PR closes. An hourly
+reaper (`.github/workflows/pr-preview-reaper.yml`) cleans anything older
+than 24 h regardless of webhook state. Cost ceiling per active preview is
+**~$1.06/day worst-case**; the reaper bounds a forgotten preview to ~$1.10
+total. See `openspec/changes/ephemeral-pr-preview-envs/design.md` for the
+full decision log.
+
+### Naming + tag contract
+
+| Resource | Template | Notes |
+| --- | --- | --- |
+| Resource group | `rg-atomicly-pr-<pr>-<sha7>` | Regex `^rg-atomicly-pr-[0-9]+-[a-f0-9]{7}$`. |
+| Container Apps Environment | `cae-atomicly-pr-<pr>` | One per PR; reused across re-deploys. |
+| Container App | `ca-atomicly-pr-<pr>` | Image tag carries the SHA. |
+| Postgres Flexible Server | `psql-atomicly-pr-<pr>-<sha7>` | Globally DNS-unique. |
+| Key Vault | `kv-atompr-<pr>-<sha7>` | 22 chars at PR=9999; max safe PR < 10⁶. |
+| Container image | `cratomiclypreview<suffix>.azurecr.io/atomicly:pr-<pr>-<sha7>` | Shared preview ACR. |
+
+Every preview resource MUST carry these five tags (the reaper + Azure Policy
+both rely on them):
+
+```
+pr=<pr_number>
+commit=<sha7>
+lifetime=ephemeral
+created-by=github-actions
+created-at=<ISO-8601 UTC, set ONCE per deploy>
+```
+
+### Phase 0 bootstrap — one-time human + workflow setup
+
+**Step 1 — Create the dedicated `pr-preview-atomicly` Azure AD app and
+federated credentials.** This MUST be a separate app from the existing
+dev/master principal so the dev RG remains unreachable from preview workflows.
+
+```bash
+# Run as a subscription Owner. Set REPO to vngo4590/atomic-habit-tracker.
+REPO=vngo4590/atomic-habit-tracker
+SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+TENANT_ID=$(az account show --query tenantId -o tsv)
+
+# 1a. Create the AAD app + service principal.
+APP=$(az ad app create --display-name pr-preview-atomicly --query '{appId:appId,id:id}' -o json)
+APP_ID=$(echo "$APP" | jq -r .appId)
+APP_OBJ_ID=$(echo "$APP" | jq -r .id)
+az ad sp create --id "$APP_ID"
+SP_OBJ_ID=$(az ad sp show --id "$APP_ID" --query id -o tsv)
+
+# 1b. Add the two federated credential subjects.
+#     pull_request — used by pr-preview.yml + pr-preview-teardown.yml.
+#     ref:refs/heads/master — used by pr-preview-reaper.yml (cron has no PR claim).
+az ad app federated-credential create --id "$APP_OBJ_ID" --parameters '{
+  "name": "github-pull-request",
+  "issuer": "https://token.actions.githubusercontent.com",
+  "subject": "repo:'"$REPO"':pull_request",
+  "audiences": ["api://AzureADTokenExchange"]
+}'
+az ad app federated-credential create --id "$APP_OBJ_ID" --parameters '{
+  "name": "github-master-branch",
+  "issuer": "https://token.actions.githubusercontent.com",
+  "subject": "repo:'"$REPO"':ref:refs/heads/master",
+  "audiences": ["api://AzureADTokenExchange"]
+}'
+
+# 1c. Subscription-scoped Contributor. The Azure Policy assignments below are
+#     the blast-radius bound that keeps this from being too permissive.
+az role assignment create \
+  --assignee-object-id "$SP_OBJ_ID" \
+  --assignee-principal-type ServicePrincipal \
+  --role Contributor \
+  --scope "/subscriptions/$SUBSCRIPTION_ID"
+
+echo "APP_ID=$APP_ID"
+echo "SP_OBJ_ID=$SP_OBJ_ID"
+```
+
+**Step 2 — Assign the two preview-scoped Azure Policy definitions** from
+`infra/policies/`. The dev RG MUST be excluded via `--not-scopes` so the
+`deny-non-preview-rg` policy doesn't break the master pipeline.
+
+```bash
+# Replace <DEV_RG_ID> with the resourceId of the existing dev RG (e.g.
+# /subscriptions/.../resourceGroups/rg-atomicly-dev-aue-XXXXXX).
+DEV_RG_ID=$(az group show --name rg-atomicly-dev-aue-XXXXXX --query id -o tsv)
+SHARED_RG_ID="/subscriptions/$SUBSCRIPTION_ID/resourceGroups/rg-atomicly-preview-shared"
+
+# Create the policy definitions.
+DENY_RG_DEF_ID=$(az policy definition create \
+  --name atomicly-deny-non-preview-rg \
+  --rules infra/policies/deny-non-preview-rg.json \
+  --mode All \
+  --query id -o tsv)
+
+DENY_ROLE_DEF_ID=$(az policy definition create \
+  --name atomicly-deny-cross-rg-role-assignments \
+  --rules infra/policies/deny-cross-rg-role-assignments.json \
+  --mode All \
+  --query id -o tsv)
+
+# Assign the deny-non-preview-rg policy at subscription scope, excluding the
+# dev RG and the shared preview RG (both legitimately do not match the
+# rg-atomicly-pr-* prefix).
+az policy assignment create \
+  --name atomicly-deny-non-preview-rg \
+  --policy "$DENY_RG_DEF_ID" \
+  --scope "/subscriptions/$SUBSCRIPTION_ID" \
+  --not-scopes "$DEV_RG_ID" "$SHARED_RG_ID"
+
+# Assign the deny-cross-rg-role-assignments policy, parameterised with the
+# pr-preview principal's object ID.
+az policy assignment create \
+  --name atomicly-deny-cross-rg-role-assignments \
+  --policy "$DENY_ROLE_DEF_ID" \
+  --scope "/subscriptions/$SUBSCRIPTION_ID" \
+  --params "{\"prPreviewPrincipalId\":{\"value\":\"$SP_OBJ_ID\"}}"
+```
+
+**Step 3 — Run the bootstrap workflow.** `gh workflow run
+pr-preview-bootstrap.yml -f location=australiaeast -f acr_suffix=<unique>`
+(or via the Actions UI) creates `rg-atomicly-preview-shared` and the
+shared `cratomiclypreview<suffix>` ACR. Idempotent.
+
+**Step 4 — Store the GitHub Actions secrets:**
+
+| Secret | Value | Notes |
+| --- | --- | --- |
+| `AZURE_PREVIEW_CLIENT_ID` | `$APP_ID` from step 1a | NEW — preview-only. Do NOT reuse `AZURE_CLIENT_ID`. |
+| `AZURE_TENANT_ID` | `$TENANT_ID` | Already present for master CI. |
+| `AZURE_SUBSCRIPTION_ID` | `$SUBSCRIPTION_ID` | Already present for master CI. |
+| `PREVIEW_ACR_LOGIN_SERVER` (variable, not secret) | `cratomiclypreview<suffix>.azurecr.io` | Set as a repo variable, not a secret. |
+
+### Operator runbook
+
+- **List active previews:**
+  ```bash
+  az group list --tag lifetime=ephemeral \
+    --query "[?starts_with(name, 'rg-atomicly-pr-')].{name:name, pr:tags.pr, commit:tags.commit, created:tags.\"created-at\"}" \
+    -o table
+  ```
+- **Read a preview URL:** The deploy job posts the Container App FQDN to
+  the bot comment on the PR. To re-fetch:
+  ```bash
+  az containerapp show -n ca-atomicly-pr-<pr> -g rg-atomicly-pr-<pr>-<sha7> \
+    --query properties.configuration.ingress.fqdn -o tsv
+  ```
+- **Add your reviewer IP to a preview** for 4 h:
+  ```bash
+  gh workflow run pr-preview-open.yml \
+    -f pr_number=<pr> -f reviewer_ip=<your.public.ip>
+  ```
+  Revoke early with `-f revoke=true`.
+- **Run the reaper manually (dry-run):**
+  `gh workflow run pr-preview-reaper.yml -f dryRun=true`. Inspect the
+  summary; non-zero quarantine count signals tag drift.
+- **Fork-PR limitation:** PRs from forked repositories CANNOT obtain the
+  OIDC token with the preview scope. `pr-preview.yml` detects this and
+  exits with a skipped status. Fork contributors get standard CI only;
+  they cannot get a preview environment.
+
+---
+
 ## 📚 Related Documentation
 
 - [`AGENTS.md`](../AGENTS.md) — Agent workflow conventions

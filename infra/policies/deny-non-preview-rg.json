@@ -1,0 +1,56 @@
+{
+  "properties": {
+    "displayName": "Deny resource groups outside the PR-preview naming + tag contract",
+    "policyType": "Custom",
+    "mode": "All",
+    "description": "Denies creation of any resource group whose name does not match the PR-preview prefix pattern `rg-atomicly-pr-*` or which lacks the mandatory ephemeral-preview tags (lifetime=ephemeral, created-by=github-actions). NOTE on naming: Azure Policy field operators `like` / `notLike` use glob wildcards (`*` = any sequence, `?` = any single char) — they cannot express the full regex `^rg-atomicly-pr-[0-9]+-[a-f0-9]{7}$`. This policy enforces the prefix; finer-grained name validation (digit-only PR number, 7-hex-char SHA) is enforced by the workflow preflight (`pr-preview.yml`) and by the `pr-preview` principal's narrow access pattern (it only ever issues `az group create` with names it constructs itself). The dev resource group `rg-atomicly-dev-*` does NOT match `rg-atomicly-pr-*` and would be denied — so the assignment MUST exclude the dev RG via `notScopes` at assignment time (see infra/README.md Phase 0 bootstrap docs).",
+    "metadata": {
+      "category": "Atomicly Preview Environments",
+      "version": "1.0.0"
+    },
+    "parameters": {
+      "effect": {
+        "type": "String",
+        "metadata": {
+          "displayName": "Effect",
+          "description": "Enable or disable the policy effect."
+        },
+        "allowedValues": [
+          "Deny",
+          "Audit",
+          "Disabled"
+        ],
+        "defaultValue": "Deny"
+      }
+    },
+    "policyRule": {
+      "if": {
+        "allOf": [
+          {
+            "field": "type",
+            "equals": "Microsoft.Resources/subscriptions/resourceGroups"
+          },
+          {
+            "anyOf": [
+              {
+                "field": "name",
+                "notLike": "rg-atomicly-pr-*"
+              },
+              {
+                "field": "tags['lifetime']",
+                "notEquals": "ephemeral"
+              },
+              {
+                "field": "tags['created-by']",
+                "notEquals": "github-actions"
+              }
+            ]
+          }
+        ]
+      },
+      "then": {
+        "effect": "[parameters('effect')]"
+      }
+    }
+  }
+}
