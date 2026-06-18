@@ -102,14 +102,13 @@ resource appServiceDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01
   properties: {
     workspaceId: logAnalyticsWorkspaceId
     logs: [
-      {
-        category: 'AppServiceHTTPLogs'
-        enabled: true
-      }
-      {
-        category: 'AppServiceConsoleLogs'
-        enabled: true
-      }
+      // AppServiceConsoleLogs and AppServiceHTTPLogs were intentionally removed
+      // in the cost-optimize-azure-infra change: Application Insights (via the
+      // SDK) already captures application traces and per-request telemetry, so
+      // streaming the same data through Log Analytics on top of that was pure
+      // duplicate ingestion cost. AppLogs + AuditLogs stay because they are
+      // not covered by the Insights SDK and we still need them to debug
+      // platform-level failures and audit configuration changes.
       {
         category: 'AppServiceAppLogs'
         enabled: true

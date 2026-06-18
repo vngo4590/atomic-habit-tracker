@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "11522245249062752247"
+      "templateHash": "5471413103847022655"
     }
   },
   "parameters": {
@@ -822,7 +822,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "6835538892643832657"
+              "templateHash": "5212701119092721012"
             }
           },
           "parameters": {
@@ -925,14 +925,6 @@
               "properties": {
                 "workspaceId": "[parameters('logAnalyticsWorkspaceId')]",
                 "logs": [
-                  {
-                    "category": "AppServiceHTTPLogs",
-                    "enabled": true
-                  },
-                  {
-                    "category": "AppServiceConsoleLogs",
-                    "enabled": true
-                  },
                   {
                     "category": "AppServiceAppLogs",
                     "enabled": true
