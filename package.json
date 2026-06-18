@@ -25,6 +25,7 @@
     "db:reset": "docker compose down -v && docker compose up -d postgres && prisma migrate deploy && tsx prisma/seed.ts",
     "db:setup": "docker compose up -d postgres && prisma migrate deploy && tsx prisma/seed.ts",
     "db:seed": "tsx prisma/seed.ts",
+    "db:reset-dev-data": "tsx prisma/reset-dev-data.ts",
     "db:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-db.ps1",
     "db:clean": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-db.ps1 clean",
     "db:random": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-db.ps1 random-data --%",

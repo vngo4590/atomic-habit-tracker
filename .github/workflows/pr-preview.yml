@@ -449,17 +449,23 @@ jobs:
             -e DATABASE_URL="$DATABASE_URL" \
             "$ACR/atomicly-migrator:$TAG"
 
-          # Seed the dev user (dev@atomicly.local / Atomicly1!) so the
-          # Playwright auth.setup.ts can sign in. The migrator image has
-          # the full repo source, so we just override CMD to run the seed.
-          # NODE_ENV must be overridden because the seed script refuses to
-          # run in production; ephemeral previews are not real production
-          # and they deliberately want the dev user.
+          # Reset the dev user (dev@atomicly.local / Atomicly1!) so Playwright
+          # E2E tests start every CI run with a truly clean slate. The DB
+          # persists across runs for the same PR, so simply re-seeding leaves
+          # residue from earlier runs (e.g. journal entries / weekly reviews
+          # made "today") that pet.spec.ts and other specs assume is absent.
+          # `db:reset-dev-data` deletes the user (cascading all owned rows via
+          # Prisma onDelete: Cascade) and re-creates them via seedDevUser.
+          # The migrator image has the full repo source, so we just override
+          # CMD to run the reset. NODE_ENV must be overridden because both the
+          # reset and seed scripts refuse to run in production; ephemeral
+          # previews are not real production and deliberately want the dev
+          # user.
           docker run --rm \
             -e DATABASE_URL="$DATABASE_URL" \
             -e NODE_ENV=development \
             "$ACR/atomicly-migrator:$TAG" \
-            npm run db:seed
+            npm run db:reset-dev-data
 
   # -------------------------------------------------------------------------
   # MIGRATE — deprecated. Migrations now run inline at the end of the
