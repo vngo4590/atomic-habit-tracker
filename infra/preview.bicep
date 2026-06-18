@@ -115,7 +115,7 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
     sku: {
       name: 'PerGB2018'
     }
-    retentionInDays: 7
+    retentionInDays: 30
     workspaceCapping: {
       dailyQuotaGb: json('0.1')
     }
@@ -143,7 +143,10 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     enableRbacAuthorization: true
     enableSoftDelete: true
     softDeleteRetentionInDays: 7
-    enablePurgeProtection: false
+    // NOTE: enablePurgeProtection is intentionally omitted. The Azure KV API
+    // rejects an explicit `false` ("cannot be set to false") and the default
+    // is false, which is what we want for ephemeral previews so teardown can
+    // `az keyvault purge` and the next push reuse the name.
     publicNetworkAccess: 'Enabled'
     networkAcls: {
       defaultAction: 'Allow'
@@ -170,7 +173,9 @@ resource postgres 'Microsoft.DBforPostgreSQL/flexibleServers@2023-12-01-preview'
     administratorLogin: postgresAdminUsername
     administratorLoginPassword: postgresAdminPassword
     storage: {
-      storageSizeGB: 20
+      // 32 GB is the minimum allowed size for Burstable B1ms Postgres
+      // Flexible Server. autoGrow off so previews never silently scale up.
+      storageSizeGB: 32
       autoGrow: 'Disabled'
     }
     backup: {
