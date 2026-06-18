@@ -7,12 +7,12 @@
 
 ## 2. Phase 1 — Bicep template for a preview stack
 
-- [ ] 2.1 Branch: `feat/ephemeral-pr-preview-envs-phase-1`.
-- [ ] 2.2 Author `infra/preview.bicep` as a **resource-group-scoped** template (`targetScope = 'resourceGroup'`). Required parameters: `prNumber`, `commitSha`, `location`, `postgresAdminPassword` (`@secure`), `imageTag`, `acrLoginServer`, `createdAt`. No `utcNow()` calls anywhere.
-- [ ] 2.3 Compose modules: `containerApp` (consumption, `minReplicas: 0`, `maxReplicas: 2`, target port 3000, `ipSecurityRestrictions.defaultAction: 'Deny'`), `postgres` (B1ms, 20 GB, autoGrow off, no HA, 7-day backup, `psql-atomicly-pr-<pr>-<sha7>`), `keyvault` (Standard, soft-delete on, **purge protection off**), `monitoring` (0.1 GB/day cap, 7-day retention), `acrPull` (granting the Container App's managed identity `AcrPull` on the shared preview ACR — scope is `rg-atomicly-preview-shared`, NOT the dev RG).
-- [ ] 2.4 Apply the five required tags to every resource via a shared `commonTags` variable. Use the `createdAt` parameter, not `utcNow()`.
-- [ ] 2.5 Output the Container App FQDN and the Postgres FQDN.
-- [ ] 2.6 `az bicep build --file infra/preview.bicep` exits 0 with no warnings.
+- [x] 2.1 Branch: `feat/ephemeral-pr-preview-envs-phase-1`. **(Working on `feat/ephemeral-pr-preview-envs` — the OpenSpec proposal + Phase 1 implementation share one branch by user instruction; original Phase 1 sub-branch is unnecessary.)**
+- [x] 2.2 Author `infra/preview.bicep` as a **resource-group-scoped** template (`targetScope = 'resourceGroup'`). Required parameters: `prNumber`, `commitSha`, `location`, `postgresAdminPassword` (`@secure`), `imageTag`, `acrLoginServer`, `createdAt`. No `utcNow()` calls anywhere.
+- [x] 2.3 Compose modules: `containerApp` (consumption, `minReplicas: 0`, `maxReplicas: 2`, target port 3000, `ipSecurityRestrictions.defaultAction: 'Deny'`), `postgres` (B1ms, 20 GB, autoGrow off, no HA, 7-day backup, `psql-atomicly-pr-<pr>-<sha7>`), `keyvault` (Standard, soft-delete on, **purge protection off**), `monitoring` (0.1 GB/day cap, 7-day retention), `acrPull` (granting the Container App's managed identity `AcrPull` on the shared preview ACR — scope is `rg-atomicly-preview-shared`, NOT the dev RG). **(Resources are inlined in `preview.bicep` rather than re-using `infra/modules/*` because (a) existing modules require VNet integration / purge protection / App Insights that the preview shape does not want, and (b) the task constraints forbid editing `infra/modules/`. AcrPull lives in `infra/preview-modules/previewAcrPull.bicep` to keep the cross-RG grant out of the shared modules dir.)**
+- [x] 2.4 Apply the five required tags to every resource via a shared `commonTags` variable. Use the `createdAt` parameter, not `utcNow()`.
+- [x] 2.5 Output the Container App FQDN and the Postgres FQDN.
+- [x] 2.6 `az bicep build --file infra/preview.bicep` exits 0 with no warnings.
 
 ## 3. Phase 1 — `pr-preview.yml` workflow
 

@@ -1,0 +1,461 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.43.8.12551",
+      "templateHash": "13480968866457739806"
+    }
+  },
+  "parameters": {
+    "prNumber": {
+      "type": "string",
+      "minLength": 1,
+      "metadata": {
+        "description": "Pull request number. Used in every resource name and tag."
+      }
+    },
+    "commitSha": {
+      "type": "string",
+      "minLength": 7,
+      "maxLength": 7,
+      "metadata": {
+        "description": "Short commit SHA (7 lowercase hex chars)."
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Azure region. Defaults to the RG location."
+      }
+    },
+    "postgresAdminPassword": {
+      "type": "securestring",
+      "minLength": 16,
+      "metadata": {
+        "description": "Postgres admin password. Generated per workflow run by `openssl rand -base64 32`; passed via @secure() and never echoed or stored as a long-lived credential."
+      }
+    },
+    "postgresAdminUsername": {
+      "type": "string",
+      "defaultValue": "psqladmin",
+      "metadata": {
+        "description": "Postgres admin username."
+      }
+    },
+    "imageTag": {
+      "type": "string",
+      "metadata": {
+        "description": "Container image tag to deploy, e.g. pr-1234-abcdef0."
+      }
+    },
+    "acrLoginServer": {
+      "type": "string",
+      "metadata": {
+        "description": "Shared preview ACR login server, e.g. cratomiclypreview<suffix>.azurecr.io."
+      }
+    },
+    "sharedAcrResourceGroup": {
+      "type": "string",
+      "defaultValue": "rg-atomicly-preview-shared",
+      "metadata": {
+        "description": "Resource group containing the shared preview ACR (typically `rg-atomicly-preview-shared`). The AcrPull role assignment is created in this RG, NOT in the preview RG."
+      }
+    },
+    "acrName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the shared preview ACR (without `.azurecr.io`)."
+      }
+    },
+    "createdAt": {
+      "type": "string",
+      "metadata": {
+        "description": "ISO-8601 UTC timestamp of the preview creation. Set ONCE by the workflow on the first deploy of this PR + SHA and passed unchanged on every re-deploy so the reaper does not see a refreshed clock. NEVER set via utcNow() here."
+      }
+    }
+  },
+  "variables": {
+    "caeName": "[format('cae-atomicly-pr-{0}', parameters('prNumber'))]",
+    "appName": "[format('ca-atomicly-pr-{0}', parameters('prNumber'))]",
+    "identityName": "[format('{0}-identity', variables('appName'))]",
+    "postgresServerName": "[format('psql-atomicly-pr-{0}-{1}', parameters('prNumber'), parameters('commitSha'))]",
+    "keyVaultName": "[format('kv-atompr-{0}-{1}', parameters('prNumber'), parameters('commitSha'))]",
+    "logAnalyticsName": "[format('law-atomicly-pr-{0}', parameters('prNumber'))]",
+    "databaseName": "atomicly",
+    "commonTags": {
+      "pr": "[parameters('prNumber')]",
+      "commit": "[parameters('commitSha')]",
+      "lifetime": "ephemeral",
+      "created-by": "github-actions",
+      "created-at": "[parameters('createdAt')]"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "apiVersion": "2023-09-01",
+      "name": "[variables('logAnalyticsName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('commonTags')]",
+      "properties": {
+        "sku": {
+          "name": "PerGB2018"
+        },
+        "retentionInDays": 7,
+        "workspaceCapping": {
+          "dailyQuotaGb": "[json('0.1')]"
+        },
+        "features": {
+          "enableLogAccessUsingOnlyResourcePermissions": true
+        }
+      }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2023-07-01",
+      "name": "[variables('keyVaultName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('commonTags')]",
+      "properties": {
+        "sku": {
+          "family": "A",
+          "name": "standard"
+        },
+        "tenantId": "[subscription().tenantId]",
+        "enableRbacAuthorization": true,
+        "enableSoftDelete": true,
+        "softDeleteRetentionInDays": 7,
+        "enablePurgeProtection": false,
+        "publicNetworkAccess": "Enabled",
+        "networkAcls": {
+          "defaultAction": "Allow",
+          "bypass": "AzureServices"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers",
+      "apiVersion": "2023-12-01-preview",
+      "name": "[variables('postgresServerName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('commonTags')]",
+      "sku": {
+        "name": "Standard_B1ms",
+        "tier": "Burstable"
+      },
+      "properties": {
+        "version": "16",
+        "administratorLogin": "[parameters('postgresAdminUsername')]",
+        "administratorLoginPassword": "[parameters('postgresAdminPassword')]",
+        "storage": {
+          "storageSizeGB": 20,
+          "autoGrow": "Disabled"
+        },
+        "backup": {
+          "backupRetentionDays": 7,
+          "geoRedundantBackup": "Disabled"
+        },
+        "highAvailability": {
+          "mode": "Disabled"
+        },
+        "network": {
+          "publicNetworkAccess": "Enabled"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/firewallRules",
+      "apiVersion": "2023-12-01-preview",
+      "name": "[format('{0}/{1}', variables('postgresServerName'), 'AllowAllAzureServices')]",
+      "properties": {
+        "startIpAddress": "0.0.0.0",
+        "endIpAddress": "0.0.0.0"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('postgresServerName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/configurations",
+      "apiVersion": "2023-12-01-preview",
+      "name": "[format('{0}/{1}', variables('postgresServerName'), 'require_secure_transport')]",
+      "properties": {
+        "value": "ON",
+        "source": "user-override"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('postgresServerName'))]",
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers/firewallRules', variables('postgresServerName'), 'AllowAllAzureServices')]"
+      ]
+    },
+    {
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/databases",
+      "apiVersion": "2023-12-01-preview",
+      "name": "[format('{0}/{1}', variables('postgresServerName'), variables('databaseName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('postgresServerName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2023-07-31-preview",
+      "name": "[variables('identityName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('commonTags')]"
+    },
+    {
+      "type": "Microsoft.App/managedEnvironments",
+      "apiVersion": "2024-03-01",
+      "name": "[variables('caeName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('commonTags')]",
+      "properties": {
+        "appLogsConfiguration": {
+          "destination": "log-analytics",
+          "logAnalyticsConfiguration": {
+            "customerId": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName')), '2023-09-01').customerId]",
+            "sharedKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName')), '2023-09-01').primarySharedKey]"
+          }
+        },
+        "workloadProfiles": [
+          {
+            "name": "Consumption",
+            "workloadProfileType": "Consumption"
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "[variables('appName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('commonTags')]",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName')))]": {}
+        }
+      },
+      "properties": {
+        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('caeName'))]",
+        "configuration": {
+          "activeRevisionsMode": "Single",
+          "ingress": {
+            "external": true,
+            "targetPort": 3000,
+            "transport": "auto",
+            "allowInsecure": false,
+            "ipSecurityRestrictions": [],
+            "traffic": [
+              {
+                "weight": 100,
+                "latestRevision": true
+              }
+            ]
+          },
+          "registries": [
+            {
+              "server": "[parameters('acrLoginServer')]",
+              "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName'))]"
+            }
+          ]
+        },
+        "template": {
+          "scale": {
+            "minReplicas": 0,
+            "maxReplicas": 2,
+            "rules": []
+          },
+          "containers": [
+            {
+              "name": "web",
+              "image": "[format('{0}/atomicly:{1}', parameters('acrLoginServer'), parameters('imageTag'))]",
+              "resources": {
+                "cpu": "[json('0.5')]",
+                "memory": "1Gi"
+              },
+              "env": [
+                {
+                  "name": "NODE_ENV",
+                  "value": "production"
+                },
+                {
+                  "name": "HOSTNAME",
+                  "value": "0.0.0.0"
+                },
+                {
+                  "name": "PORT",
+                  "value": "3000"
+                },
+                {
+                  "name": "DEPLOYMENT_VERSION",
+                  "value": "[format('preview-pr-{0}-{1}', parameters('prNumber'), parameters('commitSha'))]"
+                }
+              ],
+              "probes": [
+                {
+                  "type": "Liveness",
+                  "httpGet": {
+                    "path": "/api/healthz",
+                    "port": 3000
+                  },
+                  "initialDelaySeconds": 30,
+                  "periodSeconds": 10,
+                  "timeoutSeconds": 5,
+                  "failureThreshold": 6
+                },
+                {
+                  "type": "Readiness",
+                  "httpGet": {
+                    "path": "/api/healthz",
+                    "port": 3000
+                  },
+                  "initialDelaySeconds": 10,
+                  "periodSeconds": 5,
+                  "timeoutSeconds": 5,
+                  "failureThreshold": 12
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('sharedAcrResourceGroup')), 'Microsoft.Resources/deployments', format('preview-acr-pull-{0}-{1}', parameters('prNumber'), parameters('commitSha')))]",
+        "[resourceId('Microsoft.App/managedEnvironments', variables('caeName'))]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('preview-acr-pull-{0}-{1}', parameters('prNumber'), parameters('commitSha'))]",
+      "resourceGroup": "[parameters('sharedAcrResourceGroup')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "acrName": {
+            "value": "[parameters('acrName')]"
+          },
+          "principalId": {
+            "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName')), '2023-07-31-preview').principalId]"
+          },
+          "roleAssignmentNameSeed": {
+            "value": "[format('{0}-{1}-{2}', parameters('prNumber'), parameters('commitSha'), variables('appName'))]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "2370153109318733942"
+            }
+          },
+          "parameters": {
+            "acrName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the shared preview ACR (without `.azurecr.io`)."
+              }
+            },
+            "principalId": {
+              "type": "string",
+              "metadata": {
+                "description": "Principal ID of the preview Container App managed identity (user-assigned)."
+              }
+            },
+            "roleAssignmentNameSeed": {
+              "type": "string",
+              "metadata": {
+                "description": "Stable seed used to derive the role-assignment GUID. Should include the PR number, commit SHA, and Container App name so a re-deploy with the same identity is idempotent but a new identity gets a fresh assignment."
+              }
+            }
+          },
+          "variables": {
+            "acrPullRoleId": "7f951dda-4ed3-4680-a7ca-43fe172d538d"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName'))]",
+              "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName')), parameters('principalId'), variables('acrPullRoleId'), parameters('roleAssignmentNameSeed'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('acrPullRoleId'))]",
+                "principalId": "[parameters('principalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "containerAppFqdn": {
+      "type": "string",
+      "metadata": {
+        "description": "Container App FQDN; the workflow writes this to $GITHUB_OUTPUT and to the PR bot comment."
+      },
+      "value": "[reference(resourceId('Microsoft.App/containerApps', variables('appName')), '2024-03-01').configuration.ingress.fqdn]"
+    },
+    "containerAppName": {
+      "type": "string",
+      "metadata": {
+        "description": "Container App name (for `az containerapp ingress access-restriction` calls)."
+      },
+      "value": "[variables('appName')]"
+    },
+    "postgresFqdn": {
+      "type": "string",
+      "metadata": {
+        "description": "Postgres FQDN; used to build the DATABASE_URL passed to the migrator container."
+      },
+      "value": "[reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('postgresServerName')), '2023-12-01-preview').fullyQualifiedDomainName]"
+    },
+    "postgresServerName": {
+      "type": "string",
+      "metadata": {
+        "description": "Postgres server name (for `az postgres flexible-server firewall-rule` calls)."
+      },
+      "value": "[variables('postgresServerName')]"
+    },
+    "keyVaultUri": {
+      "type": "string",
+      "metadata": {
+        "description": "Key Vault URI; preview app reads runtime secrets from here."
+      },
+      "value": "[reference(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), '2023-07-01').vaultUri]"
+    },
+    "keyVaultName": {
+      "type": "string",
+      "metadata": {
+        "description": "Key Vault name (used by teardown for `az keyvault purge`)."
+      },
+      "value": "[variables('keyVaultName')]"
+    },
+    "databaseName": {
+      "type": "string",
+      "metadata": {
+        "description": "Database name (always `atomicly`)."
+      },
+      "value": "[variables('databaseName')]"
+    }
+  }
+}
