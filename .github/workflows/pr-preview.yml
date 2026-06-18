@@ -561,6 +561,21 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
+      # Phase-2 enhancement (§8.2): also upload a lightweight report on
+      # SUCCESS so reviewers can step through the trace during code review
+      # without re-running the suite. Distinct artifact name keeps the
+      # failure-only retention rules separate.
+      - name: Upload Playwright report (on success)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-success-pr-${{ needs.preflight.outputs.pr_number }}-${{ needs.preflight.outputs.sha7 }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 3
+          if-no-files-found: ignore
+
   # -------------------------------------------------------------------------
   # REPORT — always runs (success / failure / cancelled). Posts or updates a
   # single bot comment on the PR with the preview URL, Playwright counts,

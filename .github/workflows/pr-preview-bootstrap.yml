@@ -46,6 +46,30 @@ on:
           alphanumeric only). Pick once and never change.
         required: true
         type: string
+      deploy_policies:
+        description: >-
+          (Owner-only) Also deploy the Azure Policy definitions + assignments
+          from infra/policies/main.bicep. Requires the workflow principal to
+          have Resource Policy Contributor + User Access Administrator on the
+          subscription, which the pr-preview principal does NOT have by
+          default. Leave 'false' and run the policy deploy manually as an
+          Owner unless you have explicitly granted these roles.
+        required: false
+        default: false
+        type: boolean
+      pr_preview_principal_object_id:
+        description: >-
+          Object ID (not appId) of the pr-preview-atomicly service principal.
+          Only required when deploy_policies=true.
+        required: false
+        type: string
+      dev_resource_group_name:
+        description: >-
+          Exact name of the existing dev RG (rg-atomicly-dev-aue-<suffix>).
+          Required when deploy_policies=true so the deny-non-preview-rg
+          assignment excludes it via notScopes.
+        required: false
+        type: string
 
 permissions:
   id-token: write   # OIDC for azure/login
@@ -146,3 +170,31 @@ jobs:
             echo ""
             echo "Next step: set the repository variable \`PREVIEW_ACR_LOGIN_SERVER\` to \`$LOGIN_SERVER\`."
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # ----------------------------------------------------------------------
+      # Optional: deploy the Azure Policy guardrails (task §8.4). Disabled by
+      # default because the pr-preview principal only has Contributor — policy
+      # operations need Resource Policy Contributor + User Access
+      # Administrator. An Owner who has temporarily granted these roles to
+      # the principal (or who is invoking via a more-privileged identity)
+      # may flip deploy_policies=true.
+      # ----------------------------------------------------------------------
+      - name: Deploy preview policy guardrails
+        if: inputs.deploy_policies == true
+        env:
+          SP_OBJ_ID: ${{ inputs.pr_preview_principal_object_id }}
+          DEV_RG: ${{ inputs.dev_resource_group_name }}
+        run: |
+          set -euo pipefail
+          if [ -z "$SP_OBJ_ID" ] || [ -z "$DEV_RG" ]; then
+            echo "::error::deploy_policies=true requires both pr_preview_principal_object_id and dev_resource_group_name."
+            exit 1
+          fi
+          az deployment sub create \
+            --name "atomicly-preview-policies-${GITHUB_RUN_ID}" \
+            --location '${{ inputs.location }}' \
+            --template-file infra/policies/main.bicep \
+            --parameters \
+              prPreviewPrincipalId="$SP_OBJ_ID" \
+              devResourceGroupName="$DEV_RG" \
+            --output none

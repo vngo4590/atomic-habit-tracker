@@ -51,21 +51,21 @@
 
 ## 7. Phase 1 — Validation gate (run before push)
 
-- [ ] 7.1 `npm exec vitest run`
-- [ ] 7.2 `npm run typecheck`
-- [ ] 7.3 `npm run lint:app`
-- [ ] 7.4 `npm run build`
-- [ ] 7.5 `az bicep build --file infra/preview.bicep`
-- [ ] 7.6 Self-test PR: open a PR with the `preview` label, confirm the workflow provisions, deploys, runs Playwright (intentionally fail one test to verify the gate stays red), then close the PR and confirm teardown deletes the RG within 5 minutes.
-- [ ] 7.7 Manually run `pr-preview-reaper.yml` with `dryRun: true` and confirm the summary lists zero quarantined items.
-- [ ] 7.8 Verify that during a self-test deploy, the Azure Activity Log for `rg-atomicly-dev-*` shows no operations attributable to `AZURE_PREVIEW_CLIENT_ID` (proves the isolation requirement).
+- [x] 7.1 `npm exec vitest run` **(835 passed, 2 skipped — clean.)**
+- [x] 7.2 `npm run typecheck` **(7 pre-existing errors under `.next/dev/types/` that also exist on master; no new errors introduced by this change.)**
+- [x] 7.3 `npm run lint:app` **(exit 0, no warnings.)**
+- [x] 7.4 `npm run build` **(`Compiled successfully in 5.9s`; subsequent tsc gate fails on the same `.next/dev/types/routes.d.ts:90` baseline issue present on master.)**
+- [x] 7.5 `az bicep build --file infra/preview.bicep` **(exit 0, zero warnings.)**
+- [ ] 7.6 (DEFERRED: requires Azure write + a real PR + Playwright run) Self-test PR: open a PR with the `preview` label, confirm the workflow provisions, deploys, runs Playwright (intentionally fail one test to verify the gate stays red), then close the PR and confirm teardown deletes the RG within 5 minutes.
+- [ ] 7.7 (DEFERRED: requires Azure read against live preview state) Manually run `pr-preview-reaper.yml` with `dryRun: true` and confirm the summary lists zero quarantined items.
+- [ ] 7.8 (DEFERRED: requires a real deploy + Activity Log inspection) Verify that during a self-test deploy, the Azure Activity Log for `rg-atomicly-dev-*` shows no operations attributable to `AZURE_PREVIEW_CLIENT_ID` (proves the isolation requirement).
 
 ## 8. Phase 2 — Hardening (follow-up)
 
-- [ ] 8.1 Add an Azure subscription budget at $50/mo with email notifications at 50 % / 80 % / 100 %.
-- [ ] 8.2 Add a Playwright trace + screenshot artifact upload to the `playwright` job on success too (currently only on failure), for review during code review.
-- [ ] 8.3 Add an ACR-tag housekeeping step to the reaper that lists `cratomiclypreview*.azurecr.io/atomicly:pr-*` tags older than 24 h with no live preview and deletes them.
-- [ ] 8.4 Move the policy assignments into Bicep under `infra/policies/main.bicep` deployed by `pr-preview-bootstrap.yml`.
+- [ ] 8.1 (DEFERRED: requires Azure write — subscription budget create) Add an Azure subscription budget at $50/mo with email notifications at 50 % / 80 % / 100 %.
+- [x] 8.2 Add a Playwright trace + screenshot artifact upload to the `playwright` job on success too (currently only on failure), for review during code review.
+- [x] 8.3 Add an ACR-tag housekeeping step to the reaper that lists `cratomiclypreview*.azurecr.io/atomicly:pr-*` tags older than 24 h with no live preview and deletes them. **(Reads `vars.PREVIEW_ACR_NAME` — operator must set this repo variable after the bootstrap workflow runs.)**
+- [x] 8.4 Move the policy assignments into Bicep under `infra/policies/main.bicep` deployed by `pr-preview-bootstrap.yml`. **(Bicep authored; `pr-preview-bootstrap.yml` gains a `deploy_policies` input that drives `az deployment sub create`. The pr-preview principal lacks the role to actually run this — see workflow comment. Operator with Owner/User-Access-Administrator must invoke.)**
 
 ## 9. Documentation and skills
 

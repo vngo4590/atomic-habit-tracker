@@ -441,6 +441,34 @@ shared `cratomiclypreview<suffix>` ACR. Idempotent.
   exits with a skipped status. Fork contributors get standard CI only;
   they cannot get a preview environment.
 
+### Phase 2 hardening — budget alert (manual)
+
+The `$50/mo` subscription budget called out in design Decision 6 is NOT
+provisioned by any workflow because the `pr-preview` principal cannot
+write to `Microsoft.Consumption/budgets`. Run as an Owner:
+
+```bash
+# Azure CLI does not have a first-class `az budget create` for subscription-
+# scope budgets — use the REST API. Replace <ACTION_GROUP_ID> with the
+# resource ID of an action group that emails the on-call.
+SUB=$(az account show --query id -o tsv)
+az rest --method PUT \
+  --uri "https://management.azure.com/subscriptions/$SUB/providers/Microsoft.Consumption/budgets/atomicly-monthly?api-version=2024-08-01" \
+  --body '{
+    "properties": {
+      "category": "Cost",
+      "amount": 50,
+      "timeGrain": "Monthly",
+      "timePeriod": {"startDate": "2026-07-01T00:00:00Z"},
+      "notifications": {
+        "ngo-50":  {"enabled": true, "operator": "GreaterThan", "threshold": 50,  "thresholdType": "Actual", "contactEmails": ["owner@example.com"]},
+        "ngo-80":  {"enabled": true, "operator": "GreaterThan", "threshold": 80,  "thresholdType": "Actual", "contactEmails": ["owner@example.com"]},
+        "ngo-100": {"enabled": true, "operator": "GreaterThan", "threshold": 100, "thresholdType": "Actual", "contactEmails": ["owner@example.com"]}
+      }
+    }
+  }'
+```
+
 ---
 
 ## 📚 Related Documentation

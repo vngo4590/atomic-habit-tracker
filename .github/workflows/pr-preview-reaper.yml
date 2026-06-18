@@ -182,6 +182,63 @@ jobs:
             fi
           done
 
+          # ----- Phase-2 enhancement (§8.3): ACR tag housekeeping. -------
+          # Walk every `atomicly:pr-*` tag in the shared preview ACR. If the
+          # tag is older than 24 h AND no live preview RG references it,
+          # delete it. ACR is cheap but tags accumulate without bound.
+          ACR_NAME='${{ vars.PREVIEW_ACR_NAME }}'
+          ACR_TAG_AGE=$((24 * 3600))
+          ACR_DELETED=0
+          if [ -n "$ACR_NAME" ]; then
+            # Collect the set of (pr, sha7) pairs that are still live so we
+            # never delete a tag a current preview needs.
+            LIVE_TAGS=$(echo "$RGS_JSON" \
+              | jq -r '.[] | (.tags.pr // "") + "-" + (.tags.commit // "")' \
+              | sort -u || true)
+
+            for REPO_NAME in atomicly atomicly-migrator; do
+              TAGS_JSON=$(az acr repository show-tags \
+                --name "$ACR_NAME" \
+                --repository "$REPO_NAME" \
+                --detail \
+                -o json 2>/dev/null || echo '[]')
+              T_COUNT=$(echo "$TAGS_JSON" | jq 'length')
+              for k in $(seq 0 $((T_COUNT - 1))); do
+                T_ROW=$(echo "$TAGS_JSON" | jq ".[$k]")
+                T_NAME=$(echo "$T_ROW" | jq -r '.name')
+                T_CREATED=$(echo "$T_ROW" | jq -r '.createdTime // ""')
+                # Only consider per-PR immutable tags `pr-<n>-<sha7>` —
+                # NEVER the moving `pr-<n>-latest`, which the next deploy
+                # to that PR still uses for cache lookup.
+                if ! [[ "$T_NAME" =~ ^pr-([0-9]+)-([a-f0-9]{7})$ ]]; then
+                  continue
+                fi
+                T_PR="${BASH_REMATCH[1]}"
+                T_SHA="${BASH_REMATCH[2]}"
+                if echo "$LIVE_TAGS" | grep -qx "${T_PR}-${T_SHA}"; then
+                  continue
+                fi
+                T_EPOCH=$(date -u -d "$T_CREATED" +%s 2>/dev/null || echo 0)
+                [ "$T_EPOCH" -eq 0 ] && continue
+                AGE=$((NOW_EPOCH - T_EPOCH))
+                if [ "$AGE" -lt "$ACR_TAG_AGE" ]; then
+                  continue
+                fi
+                if [ "$DRY_RUN" = "true" ]; then
+                  echo "[dry-run] would delete ACR tag $REPO_NAME:$T_NAME (age=$AGE s, no live preview)"
+                else
+                  echo "Deleting ACR tag $REPO_NAME:$T_NAME (age=$AGE s, no live preview)"
+                  az acr repository delete \
+                    --name "$ACR_NAME" \
+                    --image "$REPO_NAME:$T_NAME" \
+                    --yes >/dev/null 2>&1 || true
+                  ACR_DELETED=$((ACR_DELETED + 1))
+                fi
+              done
+            done
+          fi
+          # ------------------------------------------------------------------
+
           {
             echo "## PR Preview Reaper"
             echo ""
@@ -193,6 +250,7 @@ jobs:
             echo "| Skipped | $SKIPPED |"
             echo "| Quarantined | $QUARANTINED |"
             echo "| KV purges | $KV_PURGED |"
+            echo "| ACR tags deleted | $ACR_DELETED |"
           } >> "$GITHUB_STEP_SUMMARY"
 
           # Quarantined items signal tag drift — operator attention required.
