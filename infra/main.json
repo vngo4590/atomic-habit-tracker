@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "16260869283711414915"
+      "templateHash": "1519438527430051149"
     }
   },
   "parameters": {
@@ -473,7 +473,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "12979818078140495652"
+              "templateHash": "5453965786783760150"
             }
           },
           "parameters": {
@@ -515,7 +515,7 @@
               "minValue": 20,
               "maxValue": 16384,
               "metadata": {
-                "description": "Provisioned storage in GB. 20 GB is the minimum supported tier on Burstable\nFlexible Server and is comfortably above current usage (well under 1 GB).\nA storage increase MUST be a deliberate, reviewed Bicep change — never an\nautomatic upgrade — so the bill stays predictable. Raise this number only\nwhen actual usage justifies it.\n"
+                "description": "Provisioned storage in GB. 20 GB is the minimum supported tier on Burstable\nFlexible Server and is comfortably above current usage (well under 1 GB).\nA storage increase MUST be a deliberate, reviewed Bicep change — never an\nautomatic upgrade — so the bill stays predictable. Raise this number only\nwhen actual usage justifies it.\n\nIMPORTANT: Azure Postgres Flexible Server storage can ONLY GROW in place;\nit cannot be shrunk on an existing server. Lowering this value below the\nserver's current size will be rejected by the Azure API at deploy time. To\nactually reclaim storage you must dump → recreate the server at the lower\ntier → restore. The 20 GB default applies to fresh deploys; for the\nexisting dev server, pass the current size (or higher) from main.bicep\nuntil you are ready to do the recreate dance.\n"
               }
             },
             "storageAutoGrow": {
