@@ -1,0 +1,202 @@
+# =============================================================================
+# pr-preview-reaper.yml — hourly safety-net cleanup of stale previews
+# =============================================================================
+#
+# Runs every hour from `master`. Lists every `lifetime=ephemeral` RG and:
+#   * DELETES it if it matches the canonical preview-RG name AND
+#     (createdAt > 24 h ago OR the named PR is closed).
+#   * QUARANTINES + FAILS THE RUN if it has the lifetime tag but is missing
+#     other required tags or has a non-matching name (tag drift signal).
+#   * SKIPS if the RG is < 24 h old and the PR is still open.
+#
+# After each deletion, purges any matching soft-deleted KV older than 6 days
+# (last-chance purge before the 7-day soft-delete window expires).
+#
+# Hourly (not daily) because the requirement is "torn down within 24 h" and
+# a daily cron has a 47-58 h worst-case window. The federated credential
+# subject is `ref:refs/heads/master` because scheduled and workflow_dispatch
+# runs do NOT have the `pull_request` subject claim.
+# =============================================================================
+
+name: pr-preview-reaper
+
+on:
+  schedule:
+    # Top of every hour, UTC.
+    - cron: '0 * * * *'
+  workflow_dispatch:
+    inputs:
+      dryRun:
+        description: 'Dry-run (true: log only, no deletions). Default true on manual runs.'
+        required: true
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: pr-preview-reaper
+  cancel-in-progress: false
+
+jobs:
+  reap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Decide effective dry-run mode
+        id: mode
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_DRY: ${{ github.event.inputs.dryRun }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "schedule" ]; then
+            # Schedule always runs for real.
+            echo "dry_run=false" >> "$GITHUB_OUTPUT"
+          else
+            # workflow_dispatch defaults to true; user can override.
+            echo "dry_run=${INPUT_DRY:-true}" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Effective dry-run: ${INPUT_DRY:-true} (event: $EVENT_NAME)"
+
+      - name: Azure login (OIDC, pr-preview principal, master subject)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_PREVIEW_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Reap
+        env:
+          DRY_RUN: ${{ steps.mode.outputs.dry_run }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          INSPECTED=0
+          DELETED=0
+          SKIPPED=0
+          QUARANTINED=0
+          KV_PURGED=0
+
+          # Pull every ephemeral RG once.
+          RGS_JSON=$(az group list --tag lifetime=ephemeral -o json)
+          COUNT=$(echo "$RGS_JSON" | jq 'length')
+          echo "Inspecting $COUNT ephemeral RGs..."
+
+          # Helper: check PR closed via GitHub REST.
+          pr_is_closed() {
+            local pr="$1"
+            local state
+            state=$(gh api "repos/$REPO/pulls/$pr" --jq .state 2>/dev/null || echo "unknown")
+            [ "$state" = "closed" ]
+          }
+
+          NOW_EPOCH=$(date -u +%s)
+          AGE_THRESHOLD=$((24 * 3600))
+          KV_PURGE_AGE=$((6 * 24 * 3600))
+
+          for i in $(seq 0 $((COUNT - 1))); do
+            INSPECTED=$((INSPECTED + 1))
+            ROW=$(echo "$RGS_JSON" | jq ".[$i]")
+            NAME=$(echo "$ROW" | jq -r '.name')
+            PR_TAG=$(echo "$ROW" | jq -r '.tags.pr // ""')
+            COMMIT_TAG=$(echo "$ROW" | jq -r '.tags.commit // ""')
+            CREATED_BY=$(echo "$ROW" | jq -r '.tags."created-by" // ""')
+            CREATED_AT=$(echo "$ROW" | jq -r '.tags."created-at" // ""')
+
+            # Quarantine if name does not match the canonical preview prefix
+            # pattern OR any required tag is missing/wrong.
+            if ! [[ "$NAME" =~ ^rg-atomicly-pr-[0-9]+-[a-f0-9]{7}$ ]] \
+               || [ -z "$PR_TAG" ] || [ -z "$COMMIT_TAG" ] \
+               || [ "$CREATED_BY" != "github-actions" ] || [ -z "$CREATED_AT" ]; then
+              echo "::error::Quarantine: $NAME (pr=$PR_TAG commit=$COMMIT_TAG created-by=$CREATED_BY created-at=$CREATED_AT)"
+              QUARANTINED=$((QUARANTINED + 1))
+              continue
+            fi
+
+            # Parse createdAt; age in seconds.
+            CREATED_EPOCH=$(date -u -d "$CREATED_AT" +%s 2>/dev/null || echo 0)
+            if [ "$CREATED_EPOCH" -eq 0 ]; then
+              echo "::error::Quarantine (unparseable created-at): $NAME ($CREATED_AT)"
+              QUARANTINED=$((QUARANTINED + 1))
+              continue
+            fi
+            AGE=$((NOW_EPOCH - CREATED_EPOCH))
+
+            SHOULD_DELETE=false
+            if [ "$AGE" -ge "$AGE_THRESHOLD" ]; then
+              SHOULD_DELETE=true
+              REASON="age=$AGE s (>= 24 h)"
+            elif pr_is_closed "$PR_TAG"; then
+              SHOULD_DELETE=true
+              REASON="PR #$PR_TAG is closed"
+            fi
+
+            if [ "$SHOULD_DELETE" = "true" ]; then
+              KV="kv-atompr-${PR_TAG}-${COMMIT_TAG}"
+              if [ "$DRY_RUN" = "true" ]; then
+                echo "[dry-run] would delete $NAME ($REASON) and purge $KV"
+              else
+                echo "Deleting $NAME ($REASON)"
+                az group delete --name "$NAME" --yes --no-wait || true
+                echo "Purging $KV"
+                az keyvault purge --name "$KV" --no-wait 2>&1 \
+                  | grep -v 'KeyVaultNotFound' || true
+                KV_PURGED=$((KV_PURGED + 1))
+              fi
+              DELETED=$((DELETED + 1))
+            else
+              echo "Skip $NAME (age=$AGE s, PR #$PR_TAG still open)"
+              SKIPPED=$((SKIPPED + 1))
+            fi
+          done
+
+          # Orphan KV purge: any soft-deleted preview KV older than 6 days
+          # (last-chance before the 7-day soft-delete window expires).
+          DEL_KVS=$(az keyvault list-deleted --query "[?starts_with(name, 'kv-atompr-')]" -o json)
+          DEL_COUNT=$(echo "$DEL_KVS" | jq 'length')
+          for j in $(seq 0 $((DEL_COUNT - 1))); do
+            ROW=$(echo "$DEL_KVS" | jq ".[$j]")
+            KVN=$(echo "$ROW" | jq -r '.name')
+            DEL_DATE=$(echo "$ROW" | jq -r '.properties.deletionDate // ""')
+            [ -z "$DEL_DATE" ] && continue
+            DEL_EPOCH=$(date -u -d "$DEL_DATE" +%s 2>/dev/null || echo 0)
+            [ "$DEL_EPOCH" -eq 0 ] && continue
+            AGE=$((NOW_EPOCH - DEL_EPOCH))
+            if [ "$AGE" -ge "$KV_PURGE_AGE" ]; then
+              if [ "$DRY_RUN" = "true" ]; then
+                echo "[dry-run] would purge orphan KV $KVN (deleted $AGE s ago)"
+              else
+                echo "Purging orphan KV $KVN (deleted $AGE s ago)"
+                az keyvault purge --name "$KVN" --no-wait 2>&1 \
+                  | grep -v 'KeyVaultNotFound' || true
+                KV_PURGED=$((KV_PURGED + 1))
+              fi
+            fi
+          done
+
+          {
+            echo "## PR Preview Reaper"
+            echo ""
+            echo "| Metric | Value |"
+            echo "| --- | --- |"
+            echo "| Mode | $( [ \"$DRY_RUN\" = \"true\" ] && echo dry-run || echo live ) |"
+            echo "| Inspected | $INSPECTED |"
+            echo "| Deleted | $DELETED |"
+            echo "| Skipped | $SKIPPED |"
+            echo "| Quarantined | $QUARANTINED |"
+            echo "| KV purges | $KV_PURGED |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Quarantined items signal tag drift — operator attention required.
+          if [ "$QUARANTINED" -gt 0 ]; then
+            echo "::error::$QUARANTINED quarantined RG(s) require operator attention. The reaper did NOT delete them."
+            exit 1
+          fi

@@ -1,0 +1,93 @@
+# =============================================================================
+# pr-preview-teardown.yml — tear down a preview when its PR closes
+# =============================================================================
+#
+# Runs whether the PR was merged, abandoned, or force-closed. The hourly
+# reaper (`pr-preview-reaper.yml`) is the safety net if this workflow
+# fails to fire (GitHub Actions outage, fork-PR auth, etc.).
+#
+# Idempotent: the RG may not exist; the KV may not be in soft-delete; both
+# cases are tolerated.
+#
+# Authenticates as the dedicated pr-preview principal so a misbehaving
+# teardown can NEVER touch the dev RG (Azure Policy denies any RG operation
+# outside `rg-atomicly-pr-*` for this principal).
+# =============================================================================
+
+name: pr-preview-teardown
+
+on:
+  pull_request:
+    branches: [master]
+    types: [closed]
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: pr-preview-teardown-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  teardown:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Fork PRs cannot obtain the preview OIDC token. Skip silently — the
+    # reaper still cleans up if a fork-PR preview somehow exists (it can
+    # only exist if the bootstrap was misconfigured).
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Azure login (OIDC, pr-preview principal)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_PREVIEW_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Tear down all preview RGs for this PR
+        env:
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          # Resolve to EXACT names first — `az group delete` does not accept
+          # wildcards. We need the names anyway so we can compute the
+          # corresponding KV names for the post-delete purge.
+          RGS=$(az group list --tag "pr=$PR" \
+            --query "[?starts_with(name, 'rg-atomicly-pr-')].name" \
+            -o tsv)
+          if [ -z "$RGS" ]; then
+            echo "No preview RGs found for PR $PR. Nothing to tear down."
+            exit 0
+          fi
+
+          # Compute KV names BEFORE deletion so we can purge them after.
+          # KV name template: kv-atompr-<pr>-<sha7>. The sha7 is the suffix
+          # of the RG name after `rg-atomicly-pr-<pr>-`.
+          KVS=()
+          while IFS= read -r rg; do
+            [ -z "$rg" ] && continue
+            SHA7="${rg##*-}"
+            KV="kv-atompr-${PR}-${SHA7}"
+            KVS+=("$KV")
+            echo "Will delete RG: $rg (KV to purge: $KV)"
+          done <<< "$RGS"
+
+          # Delete each RG with --no-wait so we don't block on the slow
+          # Postgres + Container App teardown.
+          while IFS= read -r rg; do
+            [ -z "$rg" ] && continue
+            echo "Deleting RG $rg..."
+            az group delete --name "$rg" --yes --no-wait
+          done <<< "$RGS"
+
+          # Purge each KV (tolerate not-found) so the next PR can re-use
+          # the name immediately. Soft-delete is mandatory in Azure; purge
+          # protection is OFF on previews specifically so this works.
+          for kv in "${KVS[@]}"; do
+            echo "Purging KV $kv..."
+            az keyvault purge --name "$kv" --no-wait 2>&1 \
+              | grep -v 'KeyVaultNotFound' || true
+          done
+
+          echo "Teardown initiated. RG deletes run async; expect completion within ~5 minutes."

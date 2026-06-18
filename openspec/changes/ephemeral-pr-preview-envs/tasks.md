@@ -30,24 +30,24 @@
 
 ## 4. Phase 1 — `pr-preview-teardown.yml` workflow
 
-- [ ] 4.1 Trigger: `pull_request` types `[closed]`, `branches: [master]`.
-- [ ] 4.2 Single job: OIDC login as `pr-preview` principal, `az group list --tag pr=${{ github.event.pull_request.number }} --query "[?starts_with(name, 'rg-atomicly-pr-')].name" -o tsv`, then for each name `az group delete --name "$RG" --yes --no-wait`.
-- [ ] 4.3 After RG deletion: `az keyvault purge --name kv-atompr-<pr>-<sha7> --no-wait` for each `<sha7>` that appeared on this PR (read from the deleted RG names before deletion). Tolerate `not found`.
-- [ ] 4.4 Workflow runs even when the PR is closed without merge. Idempotent.
+- [x] 4.1 Trigger: `pull_request` types `[closed]`, `branches: [master]`.
+- [x] 4.2 Single job: OIDC login as `pr-preview` principal, `az group list --tag pr=${{ github.event.pull_request.number }} --query "[?starts_with(name, 'rg-atomicly-pr-')].name" -o tsv`, then for each name `az group delete --name "$RG" --yes --no-wait`.
+- [x] 4.3 After RG deletion: `az keyvault purge --name kv-atompr-<pr>-<sha7> --no-wait` for each `<sha7>` that appeared on this PR (read from the deleted RG names before deletion). Tolerate `not found`.
+- [x] 4.4 Workflow runs even when the PR is closed without merge. Idempotent.
 
 ## 5. Phase 1 — `pr-preview-reaper.yml` hourly cron
 
-- [ ] 5.1 Trigger: `schedule: cron: '0 * * * *'` (hourly) and `workflow_dispatch` with a `dryRun: boolean` input (default `true` on manual, `false` on schedule).
-- [ ] 5.2 OIDC login uses subject `repo:...:ref:refs/heads/master` (not `pull_request`); the workflow lives on `master`.
-- [ ] 5.3 Job: list every RG with `--tag lifetime=ephemeral`. For each, classify per Decision 5: **delete** / **quarantine+fail** / **skip**.
-- [ ] 5.4 For each deleted RG: also `az keyvault purge` any matching soft-deleted KV older than 6 days.
-- [ ] 5.5 Summary step: count inspected / deleted / skipped / quarantined. **Fail the run** if any quarantined items were found (signals tag drift).
+- [x] 5.1 Trigger: `schedule: cron: '0 * * * *'` (hourly) and `workflow_dispatch` with a `dryRun: boolean` input (default `true` on manual, `false` on schedule).
+- [x] 5.2 OIDC login uses subject `repo:...:ref:refs/heads/master` (not `pull_request`); the workflow lives on `master`.
+- [x] 5.3 Job: list every RG with `--tag lifetime=ephemeral`. For each, classify per Decision 5: **delete** / **quarantine+fail** / **skip**.
+- [x] 5.4 For each deleted RG: also `az keyvault purge` any matching soft-deleted KV older than 6 days.
+- [x] 5.5 Summary step: count inspected / deleted / skipped / quarantined. **Fail the run** if any quarantined items were found (signals tag drift).
 
 ## 6. Phase 1 — Reviewer-IP workflow (`pr-preview-open.yml`)
 
-- [ ] 6.1 Trigger: `workflow_dispatch` with inputs `pr_number: string`, `reviewer_ip: string`, `revoke: boolean` (default false).
-- [ ] 6.2 Locate the Container App via `az containerapp list --tag pr=<pr_number>`. Add or remove the reviewer IP from `ipSecurityRestrictions`. Idempotent.
-- [ ] 6.3 If adding, schedule a follow-up cleanup at +4 h (either via a sidecar job that `sleep`s, or by writing a tag and letting the reaper clear it). Document the lifetime in the workflow log.
+- [x] 6.1 Trigger: `workflow_dispatch` with inputs `pr_number: string`, `reviewer_ip: string`, `revoke: boolean` (default false).
+- [x] 6.2 Locate the Container App via `az containerapp list --tag pr=<pr_number>`. Add or remove the reviewer IP from `ipSecurityRestrictions`. Idempotent.
+- [x] 6.3 If adding, schedule a follow-up cleanup at +4 h (either via a sidecar job that `sleep`s, or by writing a tag and letting the reaper clear it). Document the lifetime in the workflow log. **(Implemented as a tag `reviewer-ip-<ip>-expires=<iso>` on the Container App; the reaper's Phase-2 enhancement will sweep these. Documented in the workflow notice output.)**
 
 ## 7. Phase 1 — Validation gate (run before push)
 

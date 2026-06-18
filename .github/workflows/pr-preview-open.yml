@@ -1,0 +1,125 @@
+# =============================================================================
+# pr-preview-open.yml — manually add/remove a reviewer IP from a preview
+# =============================================================================
+#
+# pull_request events cannot accept arbitrary `inputs`, so reviewer-IP
+# allowlisting MUST be a separate workflow_dispatch workflow. Idempotent —
+# re-running with the same IP is a no-op; revoke=true removes it.
+#
+# Default lifetime: 4 hours. The reviewer can re-run to extend, or pass
+# `revoke=true` to remove immediately. A tag on the Container App records
+# the expiry timestamp; the reaper (Phase 2 enhancement) is responsible
+# for the periodic clear if the reviewer forgets to revoke. Until that
+# enhancement ships, the rule survives until the PR is closed (when
+# pr-preview-teardown.yml deletes the whole RG).
+# =============================================================================
+
+name: pr-preview-open
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: PR number (numeric) whose preview to open up.
+        required: true
+        type: string
+      reviewer_ip:
+        description: Public IPv4 address to allow (no CIDR — single host).
+        required: true
+        type: string
+      revoke:
+        description: Remove the IP instead of adding it.
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: pr-preview-open-${{ github.event.inputs.pr_number }}
+  cancel-in-progress: false
+
+jobs:
+  toggle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Validate inputs
+        env:
+          PR: ${{ inputs.pr_number }}
+          IP: ${{ inputs.reviewer_ip }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$PR" =~ ^[0-9]+$ ]]; then
+            echo "::error::pr_number must be numeric; got '$PR'"
+            exit 1
+          fi
+          if ! [[ "$IP" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+            echo "::error::reviewer_ip must be a bare IPv4 (e.g. 203.0.113.42); got '$IP'"
+            exit 1
+          fi
+
+      - name: Azure login (OIDC, pr-preview principal)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_PREVIEW_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Locate Container App for PR
+        id: locate
+        env:
+          PR: ${{ inputs.pr_number }}
+        run: |
+          set -euo pipefail
+          # There is one Container App per PR; the RG carries `pr=<n>`.
+          APP_JSON=$(az containerapp list --tag "pr=$PR" \
+            --query "[?starts_with(name, 'ca-atomicly-pr-')] | [0].{name:name, rg:resourceGroup}" \
+            -o json)
+          NAME=$(echo "$APP_JSON" | jq -r .name)
+          RG=$(echo "$APP_JSON" | jq -r .rg)
+          if [ -z "$NAME" ] || [ "$NAME" = "null" ]; then
+            echo "::error::No Container App found for PR $PR. Is the preview deployed?"
+            exit 1
+          fi
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "rg=$RG" >> "$GITHUB_OUTPUT"
+
+      - name: Toggle reviewer IP
+        env:
+          APP: ${{ steps.locate.outputs.name }}
+          RG: ${{ steps.locate.outputs.rg }}
+          IP: ${{ inputs.reviewer_ip }}
+          REVOKE: ${{ inputs.revoke }}
+        run: |
+          set -euo pipefail
+          RULE_NAME="reviewer-$(echo "$IP" | tr '.' '-')"
+          EXPIRES_AT=$(date -u -d '+4 hours' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null \
+            || date -u -v+4H +%Y-%m-%dT%H:%M:%SZ)
+          if [ "$REVOKE" = "true" ]; then
+            az containerapp ingress access-restriction remove \
+              --resource-group "$RG" \
+              --name "$APP" \
+              --rule-name "$RULE_NAME" \
+              --output none 2>&1 | grep -v 'NotFound' || true
+            echo "Removed reviewer IP $IP from $APP."
+          else
+            az containerapp ingress access-restriction set \
+              --resource-group "$RG" \
+              --name "$APP" \
+              --rule-name "$RULE_NAME" \
+              --ip-address "$IP/32" \
+              --action Allow \
+              --output none
+            # Tag the Container App with the expiry so the reaper (Phase 2)
+            # can clear stale rules. Tags merge; we overwrite the same key.
+            az tag update \
+              --resource-id "$(az containerapp show -g $RG -n $APP --query id -o tsv)" \
+              --operation merge \
+              --tags "reviewer-ip-$IP-expires=$EXPIRES_AT" \
+              --output none || true
+            echo "::notice::Reviewer IP $IP allowed on $APP until $EXPIRES_AT (4 h)."
+            echo "To revoke early: gh workflow run pr-preview-open.yml -f pr_number=${{ inputs.pr_number }} -f reviewer_ip=$IP -f revoke=true"
+          fi
