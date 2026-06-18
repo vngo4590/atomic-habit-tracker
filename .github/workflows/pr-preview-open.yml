@@ -61,6 +61,24 @@ jobs:
             exit 1
           fi
 
+      - name: Verify Phase 0 bootstrap is complete
+        # Fail fast with an actionable message if AZURE_PREVIEW_CLIENT_ID is
+        # missing. See pr-preview.yml preflight for the full rationale.
+        env:
+          PREVIEW_CLIENT_ID: ${{ secrets.AZURE_PREVIEW_CLIENT_ID }}
+          TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+          MISSING=()
+          [ -z "${PREVIEW_CLIENT_ID:-}" ] && MISSING+=("AZURE_PREVIEW_CLIENT_ID")
+          [ -z "${TENANT_ID:-}"         ] && MISSING+=("AZURE_TENANT_ID")
+          [ -z "${SUBSCRIPTION_ID:-}"   ] && MISSING+=("AZURE_SUBSCRIPTION_ID")
+          if [ ${#MISSING[@]} -gt 0 ]; then
+            echo "::error title=Preview env Phase 0 bootstrap not complete::Missing required GitHub secret(s): ${MISSING[*]}. See infra/README.md → 'Preview environments → Phase 0 bootstrap'."
+            exit 1
+          fi
+
       - name: Azure login (OIDC, pr-preview principal)
         uses: azure/login@v2
         with:

@@ -95,6 +95,43 @@ jobs:
             echo "image_tag=pr-${PR_NUMBER}-${SHA7}"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Verify Phase 0 bootstrap is complete
+        # WHY: azure/login fails with a cryptic "Not all values are present"
+        # message if the AZURE_PREVIEW_CLIENT_ID secret is missing. That
+        # happens before any operator has run Phase 0 bootstrap (creating the
+        # `pr-preview-atomicly` AAD app and storing its client ID). Catch it
+        # here so the failing check tells the operator exactly what to do.
+        # All other jobs depend on `preflight`, so failing here stops the
+        # entire workflow with a single clear error rather than 6 cryptic ones.
+        if: steps.gate.outputs.should_run == 'true'
+        env:
+          PREVIEW_CLIENT_ID: ${{ secrets.AZURE_PREVIEW_CLIENT_ID }}
+          TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+          MISSING=()
+          [ -z "${PREVIEW_CLIENT_ID:-}" ] && MISSING+=("AZURE_PREVIEW_CLIENT_ID")
+          [ -z "${TENANT_ID:-}"         ] && MISSING+=("AZURE_TENANT_ID")
+          [ -z "${SUBSCRIPTION_ID:-}"   ] && MISSING+=("AZURE_SUBSCRIPTION_ID")
+          if [ ${#MISSING[@]} -gt 0 ]; then
+            echo "::error title=Preview env Phase 0 bootstrap not complete::Missing required GitHub secret(s): ${MISSING[*]}"
+            echo ""
+            echo "This PR cannot get a preview environment until an operator completes"
+            echo "the one-time Phase 0 bootstrap. See infra/README.md → 'Preview"
+            echo "environments → Phase 0 bootstrap' for the exact commands."
+            echo ""
+            echo "Summary of what Phase 0 does:"
+            echo "  1. Creates the 'pr-preview-atomicly' Azure AD app + service principal."
+            echo "  2. Adds two federated credentials (pull_request, ref:refs/heads/master)."
+            echo "  3. Grants Contributor at subscription scope."
+            echo "  4. Assigns the two Azure Policy 'Deny' rules under infra/policies/."
+            echo "  5. Runs the pr-preview-bootstrap workflow to create the shared ACR."
+            echo "  6. Stores AZURE_PREVIEW_CLIENT_ID as a GitHub Actions secret."
+            echo "  7. Stores PREVIEW_ACR_LOGIN_SERVER and PREVIEW_ACR_NAME as GitHub variables."
+            exit 1
+          fi
+
       - name: Azure login (OIDC, pr-preview principal)
         if: steps.gate.outputs.should_run == 'true'
         uses: azure/login@v2
