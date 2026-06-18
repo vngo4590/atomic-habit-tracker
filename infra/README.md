@@ -204,17 +204,30 @@ az webapp log tail --name app-atomicly-dev-aue \
 
 ## 💰 Cost Estimate (Dev)
 
-| Resource | SKU | ~AUD/Month |
-|----------|-----|------------|
-| App Service Plan | B1 | ~$13 |
-| PostgreSQL Flexible Server | B1ms Burstable | ~$15 |
+| Resource | SKU / config | ~AUD/Month |
+|----------|--------------|------------|
+| App Service Plan | B1 Linux, always-on | ~$13 |
+| PostgreSQL Flexible Server | B1ms Burstable, **20 GB** storage, autoGrow **disabled**, 7-day backup | ~$13 |
 | Container Registry | Basic | ~$6 |
-| Front Door Standard | Pay-as-you-go | ~$5–10 |
+| Front Door Standard | Pay-as-you-go (custom WAF rules, no managed ruleset) | ~$5–10 |
 | Key Vault | Standard | ~$0.10 |
-| Log Analytics | Pay-as-you-go | ~$3–5 |
-| **Total** | | **~$40–50** |
+| Log Analytics + App Insights | PerGB2018, **0.2 GB/day cap**, **14-day retention**, AppLogs + AuditLogs only | ~$2–3 |
+| **Total** | | **~$40** |
 
-> Stop the App Service when not in use to save ~$13/month.
+### Phase 1 cost-floor levers (already applied)
+
+The following defaults were tuned by the `cost-optimize-azure-infra` OpenSpec change. Each is a parameter so a raise is a reviewable Bicep diff, not a silent drift:
+
+- **`logDailyQuotaGb = 0.2`** (`infra/modules/monitoring.bicep`) — workspace stops accepting new logs for the day once 0.2 GB is hit. Protects against a runaway log emitter generating unbounded ingestion cost. Raise deliberately if real traffic exceeds it.
+- **`logRetentionInDays = 14`** — half the previous 30-day setting, roughly half the per-GB storage cost. Still enough to investigate a week-old incident.
+- **App Service diagnostics dropped `AppServiceConsoleLogs` and `AppServiceHTTPLogs`** — Application Insights already captures application traces and per-request telemetry via the SDK, so streaming the same data through Log Analytics was pure duplicate cost. `AppLogs` (platform issues) and `AuditLogs` (config changes) stay because Insights does not cover them.
+- **`storageSizeGB = 20`, `storageAutoGrow = 'Disabled'`** (`infra/modules/postgres.bicep`) — 20 GB is the Burstable minimum and is well above current usage. autoGrow off means a runaway write workload fails loudly instead of silently doubling the storage bill. **Note:** Azure Postgres Flexible Server storage can only grow in-place; an existing 32 GB server will not shrink via Bicep — reclaim it by dump → recreate at 20 GB → restore during a planned dev-env reset.
+
+### Further cost-cutting (deferred to Phase 2 of the OpenSpec change)
+
+Phase 2 swaps App Service for Azure Container Apps (scale-to-zero, ~$0 idle) and replaces Front Door + Azure WAF with Cloudflare Free (managed WAF, DDoS, rate limiting at $0/mo base). Target floor: **~$5–10/mo at zero traffic**. See `openspec/changes/cost-optimize-azure-infra/` for the design and migration plan.
+
+> Tactical lever (any phase): stop the Postgres Flexible Server overnight via a scheduled GitHub Action. Storage still bills, compute does not. Saves ~30% on the Postgres line for an env that nobody uses outside working hours.
 
 ---
 
