@@ -1,0 +1,251 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.43.8.12551",
+      "templateHash": "15794780502567088135"
+    }
+  },
+  "parameters": {
+    "prPreviewPrincipalId": {
+      "type": "string",
+      "metadata": {
+        "description": "Object ID (NOT appId) of the pr-preview-atomicly service principal. Used by the deny-cross-rg-role-assignments policy to gate that principal specifically."
+      }
+    },
+    "devResourceGroupName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the dev resource group that must be excluded from the deny-non-preview-rg policy assignment (its name does not match the rg-atomicly-pr-* pattern by design)."
+      }
+    },
+    "sharedPreviewResourceGroup": {
+      "type": "string",
+      "defaultValue": "rg-atomicly-preview-shared",
+      "metadata": {
+        "description": "Name of the shared preview resource group. Excluded for the same reason as the dev RG."
+      }
+    },
+    "effect": {
+      "type": "string",
+      "defaultValue": "Deny",
+      "allowedValues": [
+        "Deny",
+        "Audit",
+        "Disabled"
+      ],
+      "metadata": {
+        "description": "Policy assignment effect override. Use Audit during initial roll-out to confirm the policy fires without blocking legitimate operations; switch to Deny once verified."
+      }
+    }
+  },
+  "variables": {
+    "$fxv#0": {
+      "properties": {
+        "displayName": "Deny resource groups outside the PR-preview naming + tag contract",
+        "policyType": "Custom",
+        "mode": "All",
+        "description": "Denies creation of any resource group whose name does not match the PR-preview prefix pattern `rg-atomicly-pr-*` or which lacks the mandatory ephemeral-preview tags (lifetime=ephemeral, created-by=github-actions). NOTE on naming: Azure Policy field operators `like` / `notLike` use glob wildcards (`*` = any sequence, `?` = any single char) — they cannot express the full regex `^rg-atomicly-pr-[0-9]+-[a-f0-9]{7}$`. This policy enforces the prefix; finer-grained name validation (digit-only PR number, 7-hex-char SHA) is enforced by the workflow preflight (`pr-preview.yml`) and by the `pr-preview` principal's narrow access pattern (it only ever issues `az group create` with names it constructs itself). The dev resource group `rg-atomicly-dev-*` does NOT match `rg-atomicly-pr-*` and would be denied — so the assignment MUST exclude the dev RG via `notScopes` at assignment time (see infra/README.md Phase 0 bootstrap docs).",
+        "metadata": {
+          "category": "Atomicly Preview Environments",
+          "version": "1.0.0"
+        },
+        "parameters": {
+          "effect": {
+            "type": "String",
+            "metadata": {
+              "displayName": "Effect",
+              "description": "Enable or disable the policy effect."
+            },
+            "allowedValues": [
+              "Deny",
+              "Audit",
+              "Disabled"
+            ],
+            "defaultValue": "Deny"
+          }
+        },
+        "policyRule": {
+          "if": {
+            "allOf": [
+              {
+                "field": "type",
+                "equals": "Microsoft.Resources/subscriptions/resourceGroups"
+              },
+              {
+                "anyOf": [
+                  {
+                    "field": "name",
+                    "notLike": "rg-atomicly-pr-*"
+                  },
+                  {
+                    "field": "tags['lifetime']",
+                    "notEquals": "ephemeral"
+                  },
+                  {
+                    "field": "tags['created-by']",
+                    "notEquals": "github-actions"
+                  }
+                ]
+              }
+            ]
+          },
+          "then": {
+            "effect": "[[parameters('effect')]"
+          }
+        }
+      }
+    },
+    "$fxv#1": {
+      "properties": {
+        "displayName": "Deny role-assignment writes by pr-preview principal outside preview resource groups",
+        "policyType": "Custom",
+        "mode": "All",
+        "description": "Denies any `Microsoft.Authorization/roleAssignments` create/update whose scope is NOT inside an `rg-atomicly-pr-*` resource group or the shared `rg-atomicly-preview-shared` resource group, when initiated by the `pr-preview-atomicly` service principal. The assignment passes the principal object ID via the `prPreviewPrincipalId` parameter at assignment time. Effect: blast-radius bound — even with subscription-scoped Contributor the preview principal cannot escalate by creating role assignments on the dev RG, the subscription, or any other tenant resource. The principal CAN still create role assignments inside its own preview RGs (e.g. the AcrPull grant on the shared preview ACR, which lives in `rg-atomicly-preview-shared`).",
+        "metadata": {
+          "category": "Atomicly Preview Environments",
+          "version": "1.0.0"
+        },
+        "parameters": {
+          "effect": {
+            "type": "String",
+            "metadata": {
+              "displayName": "Effect",
+              "description": "Enable or disable the policy effect."
+            },
+            "allowedValues": [
+              "Deny",
+              "Audit",
+              "Disabled"
+            ],
+            "defaultValue": "Deny"
+          },
+          "prPreviewPrincipalId": {
+            "type": "String",
+            "metadata": {
+              "displayName": "PR-preview service principal object ID",
+              "description": "Object ID (not appId) of the pr-preview-atomicly service principal. Resolved at policy assignment time."
+            }
+          }
+        },
+        "policyRule": {
+          "if": {
+            "allOf": [
+              {
+                "field": "type",
+                "equals": "Microsoft.Authorization/roleAssignments"
+              },
+              {
+                "field": "Microsoft.Authorization/roleAssignments/principalId",
+                "equals": "[[parameters('prPreviewPrincipalId')]"
+              },
+              {
+                "allOf": [
+                  {
+                    "field": "Microsoft.Authorization/roleAssignments/scope",
+                    "notLike": "*/resourceGroups/rg-atomicly-pr-*"
+                  },
+                  {
+                    "field": "Microsoft.Authorization/roleAssignments/scope",
+                    "notLike": "*/resourceGroups/rg-atomicly-preview-shared*"
+                  }
+                ]
+              }
+            ]
+          },
+          "then": {
+            "effect": "[[parameters('effect')]"
+          }
+        }
+      }
+    },
+    "subId": "[subscription().subscriptionId]",
+    "devRgId": "[format('/subscriptions/{0}/resourceGroups/{1}', variables('subId'), parameters('devResourceGroupName'))]",
+    "sharedRgId": "[format('/subscriptions/{0}/resourceGroups/{1}', variables('subId'), parameters('sharedPreviewResourceGroup'))]",
+    "denyNonPreviewRgDef": "[variables('$fxv#0')]",
+    "denyCrossRgRoleDef": "[variables('$fxv#1')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Authorization/policyDefinitions",
+      "apiVersion": "2023-04-01",
+      "name": "atomicly-deny-non-preview-rg",
+      "properties": {
+        "displayName": "[variables('denyNonPreviewRgDef').properties.displayName]",
+        "description": "[variables('denyNonPreviewRgDef').properties.description]",
+        "policyType": "Custom",
+        "mode": "[variables('denyNonPreviewRgDef').properties.mode]",
+        "metadata": "[variables('denyNonPreviewRgDef').properties.metadata]",
+        "parameters": "[variables('denyNonPreviewRgDef').properties.parameters]",
+        "policyRule": "[variables('denyNonPreviewRgDef').properties.policyRule]"
+      }
+    },
+    {
+      "type": "Microsoft.Authorization/policyDefinitions",
+      "apiVersion": "2023-04-01",
+      "name": "atomicly-deny-cross-rg-role-assignments",
+      "properties": {
+        "displayName": "[variables('denyCrossRgRoleDef').properties.displayName]",
+        "description": "[variables('denyCrossRgRoleDef').properties.description]",
+        "policyType": "Custom",
+        "mode": "[variables('denyCrossRgRoleDef').properties.mode]",
+        "metadata": "[variables('denyCrossRgRoleDef').properties.metadata]",
+        "parameters": "[variables('denyCrossRgRoleDef').properties.parameters]",
+        "policyRule": "[variables('denyCrossRgRoleDef').properties.policyRule]"
+      }
+    },
+    {
+      "type": "Microsoft.Authorization/policyAssignments",
+      "apiVersion": "2023-04-01",
+      "name": "atomicly-deny-non-preview-rg",
+      "properties": {
+        "displayName": "Atomicly — deny non-preview resource groups",
+        "policyDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/policyDefinitions', 'atomicly-deny-non-preview-rg')]",
+        "notScopes": [
+          "[variables('devRgId')]",
+          "[variables('sharedRgId')]"
+        ],
+        "parameters": {
+          "effect": {
+            "value": "[parameters('effect')]"
+          }
+        }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Authorization/policyDefinitions', 'atomicly-deny-non-preview-rg')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/policyAssignments",
+      "apiVersion": "2023-04-01",
+      "name": "atomicly-deny-cross-rg-role-assignments",
+      "properties": {
+        "displayName": "Atomicly — deny cross-RG role assignments by pr-preview principal",
+        "policyDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/policyDefinitions', 'atomicly-deny-cross-rg-role-assignments')]",
+        "parameters": {
+          "effect": {
+            "value": "[parameters('effect')]"
+          },
+          "prPreviewPrincipalId": {
+            "value": "[parameters('prPreviewPrincipalId')]"
+          }
+        }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Authorization/policyDefinitions', 'atomicly-deny-cross-rg-role-assignments')]"
+      ]
+    }
+  ],
+  "outputs": {
+    "denyNonPreviewRgDefinitionId": {
+      "type": "string",
+      "value": "[subscriptionResourceId('Microsoft.Authorization/policyDefinitions', 'atomicly-deny-non-preview-rg')]"
+    },
+    "denyCrossRgRoleDefinitionId": {
+      "type": "string",
+      "value": "[subscriptionResourceId('Microsoft.Authorization/policyDefinitions', 'atomicly-deny-cross-rg-role-assignments')]"
+    }
+  }
+}

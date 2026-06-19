@@ -12,6 +12,25 @@ param uniqueSuffix string
 @description('Resource ID of the App Service that emits application telemetry.')
 param appServiceId string
 
+@description('''
+Daily ingestion cap (GB) for the Log Analytics workspace. Once reached, the
+workspace stops accepting new data for the day — protecting us from a runaway
+log emitter generating thousands of dollars of ingestion. 0.2 GB/day is ~10x
+the current zero-user baseline; raise it deliberately (as a reviewed Bicep
+diff) if real traffic outgrows it. Default is intentionally low so the cost
+floor cannot drift silently.
+''')
+param logDailyQuotaGb string = '0.2'
+
+@description('''
+Log retention in days. 14 days is enough to investigate a typical incident
+and triage a week-old support question, while being half the previous
+30-day setting and therefore roughly half the per-GB storage cost.
+''')
+@minValue(7)
+@maxValue(730)
+param logRetentionInDays int = 14
+
 var logAnalyticsName = 'law-atomicly-${environment}-aue-${uniqueSuffix}'
 var appInsightsName = 'appi-atomicly-${environment}-aue-${uniqueSuffix}'
 var errorRateAlertName = 'alert-errors-atomicly-${environment}-aue-${uniqueSuffix}'
@@ -35,7 +54,13 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
     sku: {
       name: 'PerGB2018'
     }
-    retentionInDays: 30
+    retentionInDays: logRetentionInDays
+    // Hard ceiling on daily ingestion so a misbehaving log source cannot run
+    // up an unbounded bill. Once the cap is hit, new logs are dropped for the
+    // rest of the day; existing data and alerts continue to work.
+    workspaceCapping: {
+      dailyQuotaGb: json(logDailyQuotaGb)
+    }
     features: {
       enableLogAccessUsingOnlyResourcePermissions: true
     }

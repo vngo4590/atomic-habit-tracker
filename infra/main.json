@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "8233352553265584043"
+      "templateHash": "1519438527430051149"
     }
   },
   "parameters": {
@@ -54,6 +54,17 @@
       "defaultValue": "dev-latest",
       "metadata": {
         "description": "Docker image tag to deploy (e.g. dev-latest or git SHA)."
+      }
+    },
+    "frontDoorSku": {
+      "type": "string",
+      "defaultValue": "Standard_AzureFrontDoor",
+      "allowedValues": [
+        "Standard_AzureFrontDoor",
+        "Premium_AzureFrontDoor"
+      ],
+      "metadata": {
+        "description": "Front Door SKU. Standard (default) is ~10x cheaper (~$35/mo vs ~$330/mo) and\nsupports custom WAF rules including rate limiting and bot/UA block rules.\nPremium additionally enables WAF managed rule sets (OWASP DRS + Bot Manager).\nWe default to Standard and compensate for the missing managed rules with custom\nWAF rules, a Turnstile bot challenge on auth, and app-layer hardening. Switch to\nPremium for managed-signature/zero-day coverage. See docs/architecture/security.md.\n"
       }
     }
   },
@@ -107,7 +118,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "11295464318262597311"
+              "templateHash": "7942491579356456278"
             }
           },
           "parameters": {
@@ -135,6 +146,22 @@
               "metadata": {
                 "description": "Resource ID of the App Service that emits application telemetry."
               }
+            },
+            "logDailyQuotaGb": {
+              "type": "string",
+              "defaultValue": "0.2",
+              "metadata": {
+                "description": "Daily ingestion cap (GB) for the Log Analytics workspace. Once reached, the\nworkspace stops accepting new data for the day — protecting us from a runaway\nlog emitter generating thousands of dollars of ingestion. 0.2 GB/day is ~10x\nthe current zero-user baseline; raise it deliberately (as a reviewed Bicep\ndiff) if real traffic outgrows it. Default is intentionally low so the cost\nfloor cannot drift silently.\n"
+              }
+            },
+            "logRetentionInDays": {
+              "type": "int",
+              "defaultValue": 14,
+              "minValue": 7,
+              "maxValue": 730,
+              "metadata": {
+                "description": "Log retention in days. 14 days is enough to investigate a typical incident\nand triage a week-old support question, while being half the previous\n30-day setting and therefore roughly half the per-GB storage cost.\n"
+              }
             }
           },
           "variables": {
@@ -160,7 +187,10 @@
                 "sku": {
                   "name": "PerGB2018"
                 },
-                "retentionInDays": 30,
+                "retentionInDays": "[parameters('logRetentionInDays')]",
+                "workspaceCapping": {
+                  "dailyQuotaGb": "[json(parameters('logDailyQuotaGb'))]"
+                },
                 "features": {
                   "enableLogAccessUsingOnlyResourcePermissions": true
                 }
@@ -203,7 +233,7 @@
                 "criteria": {
                   "allOf": [
                     {
-                      "query": "AppExceptions | where TimeGenerated >= ago(5m)",
+                      "query": "union isfuzzy=true (datatable(TimeGenerated:datetime)[]), AppExceptions | where TimeGenerated >= ago(5m)",
                       "timeAggregation": "Count",
                       "operator": "GreaterThan",
                       "threshold": 10,
@@ -215,7 +245,7 @@
                   ]
                 },
                 "autoMitigate": true,
-                "skipQueryValidation": false,
+                "skipQueryValidation": true,
                 "actions": {
                   "actionGroups": []
                 }
@@ -244,7 +274,7 @@
                 "criteria": {
                   "allOf": [
                     {
-                      "query": "AppEvents | where TimeGenerated >= ago(5m) | where Name == \"auth.login_failed\"",
+                      "query": "union isfuzzy=true (datatable(TimeGenerated:datetime, Name:string)[]), AppEvents | where TimeGenerated >= ago(5m) | where Name == \"auth.login_failed\"",
                       "timeAggregation": "Count",
                       "operator": "GreaterThan",
                       "threshold": 20,
@@ -256,7 +286,7 @@
                   ]
                 },
                 "autoMitigate": true,
-                "skipQueryValidation": false,
+                "skipQueryValidation": true,
                 "actions": {
                   "actionGroups": []
                 }
@@ -285,7 +315,7 @@
                 "criteria": {
                   "allOf": [
                     {
-                      "query": "union isfuzzy=true (AppExceptions | where TimeGenerated >= ago(5m) | where tolower(tostring(column_ifexists(\"HandledAt\", \"\"))) == \"unhandled\"), (AppTraces | where TimeGenerated >= ago(5m) | where Message has \"Unhandled exception\" or Message has \"uncaught exception\")",
+                      "query": "union isfuzzy=true (datatable(TimeGenerated:datetime)[]), AppExceptions, AppTraces | where TimeGenerated >= ago(5m) | where (tolower(tostring(column_ifexists(\"HandledAt\", \"\"))) == \"unhandled\") or (column_ifexists(\"Message\", \"\") has \"Unhandled exception\") or (column_ifexists(\"Message\", \"\") has \"uncaught exception\")",
                       "timeAggregation": "Count",
                       "operator": "GreaterThan",
                       "threshold": 0,
@@ -297,7 +327,7 @@
                   ]
                 },
                 "autoMitigate": true,
-                "skipQueryValidation": false,
+                "skipQueryValidation": true,
                 "actions": {
                   "actionGroups": []
                 }
@@ -443,7 +473,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "9662200574251493820"
+              "templateHash": "5453965786783760150"
             }
           },
           "parameters": {
@@ -478,6 +508,26 @@
               "metadata": {
                 "description": "Initial database name"
               }
+            },
+            "storageSizeGB": {
+              "type": "int",
+              "defaultValue": 20,
+              "minValue": 20,
+              "maxValue": 16384,
+              "metadata": {
+                "description": "Provisioned storage in GB. 20 GB is the minimum supported tier on Burstable\nFlexible Server and is comfortably above current usage (well under 1 GB).\nA storage increase MUST be a deliberate, reviewed Bicep change — never an\nautomatic upgrade — so the bill stays predictable. Raise this number only\nwhen actual usage justifies it.\n\nIMPORTANT: Azure Postgres Flexible Server storage can ONLY GROW in place;\nit cannot be shrunk on an existing server. Lowering this value below the\nserver's current size will be rejected by the Azure API at deploy time. To\nactually reclaim storage you must dump → recreate the server at the lower\ntier → restore. The 20 GB default applies to fresh deploys; for the\nexisting dev server, pass the current size (or higher) from main.bicep\nuntil you are ready to do the recreate dance.\n"
+              }
+            },
+            "storageAutoGrow": {
+              "type": "string",
+              "defaultValue": "Disabled",
+              "allowedValues": [
+                "Enabled",
+                "Disabled"
+              ],
+              "metadata": {
+                "description": "Whether the server is allowed to silently grow its disk. Disabled so a\nrunaway write workload cannot quietly double the storage bill — instead it\nfails loudly when disk is full, which is the signal we want at this scale.\n"
+              }
             }
           },
           "resources": [
@@ -495,8 +545,8 @@
                 "administratorLogin": "[parameters('adminUsername')]",
                 "administratorLoginPassword": "[parameters('adminPassword')]",
                 "storage": {
-                  "storageSizeGB": 32,
-                  "autoGrow": "Enabled"
+                  "storageSizeGB": "[parameters('storageSizeGB')]",
+                  "autoGrow": "[parameters('storageAutoGrow')]"
                 },
                 "backup": {
                   "backupRetentionDays": 7,
@@ -519,6 +569,19 @@
                 "endIpAddress": "0.0.0.0"
               },
               "dependsOn": [
+                "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('serverName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.DBforPostgreSQL/flexibleServers/configurations",
+              "apiVersion": "2023-12-01-preview",
+              "name": "[format('{0}/{1}', parameters('serverName'), 'require_secure_transport')]",
+              "properties": {
+                "value": "ON",
+                "source": "user-override"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers/firewallRules', parameters('serverName'), 'AllowAllAzureServices')]",
                 "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('serverName'))]"
               ]
             },
@@ -779,7 +842,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "639339990776756176"
+              "templateHash": "5212701119092721012"
             }
           },
           "parameters": {
@@ -847,7 +910,7 @@
                 "siteConfig": {
                   "linuxFxVersion": "[format('DOCKER|{0}/atomicly:{1}', parameters('acrLoginServer'), parameters('imageTag'))]",
                   "acrUseManagedIdentityCreds": true,
-                  "alwaysOn": false,
+                  "alwaysOn": true,
                   "ftpsState": "Disabled",
                   "minTlsVersion": "1.2",
                   "scmMinTlsVersion": "1.2",
@@ -857,6 +920,18 @@
                   "requestTracingEnabled": true,
                   "numberOfWorkers": 1,
                   "http20Enabled": true,
+                  "ipSecurityRestrictionsDefaultAction": "Deny",
+                  "ipSecurityRestrictions": [
+                    {
+                      "name": "Allow-AzureFrontDoor",
+                      "description": "Only accept inbound traffic from the Azure Front Door edge.",
+                      "priority": 100,
+                      "action": "Allow",
+                      "tag": "ServiceTag",
+                      "ipAddress": "AzureFrontDoor.Backend"
+                    }
+                  ],
+                  "scmIpSecurityRestrictionsUseMain": true,
                   "appSettings": "[if(empty(parameters('applicationInsightsConnectionString')), createArray(), createArray(createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', parameters('applicationInsightsConnectionString'))))]"
                 }
               }
@@ -870,14 +945,6 @@
               "properties": {
                 "workspaceId": "[parameters('logAnalyticsWorkspaceId')]",
                 "logs": [
-                  {
-                    "category": "AppServiceHTTPLogs",
-                    "enabled": true
-                  },
-                  {
-                    "category": "AppServiceConsoleLogs",
-                    "enabled": true
-                  },
                   {
                     "category": "AppServiceAppLogs",
                     "enabled": true
@@ -929,6 +996,234 @@
     {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2025-04-01",
+      "name": "wafPolicy",
+      "resourceGroup": "[variables('rgName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "wafPolicyName": {
+            "value": "[format('waf{0}', variables('baseName'))]"
+          },
+          "skuName": {
+            "value": "[parameters('frontDoorSku')]"
+          },
+          "mode": {
+            "value": "Prevention"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "1197111758461607643"
+            }
+          },
+          "parameters": {
+            "wafPolicyName": {
+              "type": "string",
+              "metadata": {
+                "description": "Globally unique WAF policy name (alphanumeric only)."
+              }
+            },
+            "skuName": {
+              "type": "string",
+              "defaultValue": "Standard_AzureFrontDoor",
+              "allowedValues": [
+                "Standard_AzureFrontDoor",
+                "Premium_AzureFrontDoor"
+              ],
+              "metadata": {
+                "description": "Front Door SKU the WAF policy attaches to. MUST match the Front Door profile SKU.\nManaged rule sets (OWASP/DRS + Bot Manager) are only available on Premium.\n"
+              }
+            },
+            "mode": {
+              "type": "string",
+              "defaultValue": "Prevention",
+              "allowedValues": [
+                "Prevention",
+                "Detection"
+              ],
+              "metadata": {
+                "description": "WAF enforcement mode. Prevention blocks malicious traffic; Detection only logs."
+              }
+            }
+          },
+          "variables": {
+            "enableManagedRules": "[equals(parameters('skuName'), 'Premium_AzureFrontDoor')]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/FrontDoorWebApplicationFirewallPolicies",
+              "apiVersion": "2024-02-01",
+              "name": "[parameters('wafPolicyName')]",
+              "location": "Global",
+              "sku": {
+                "name": "[parameters('skuName')]"
+              },
+              "properties": {
+                "policySettings": {
+                  "enabledState": "Enabled",
+                  "mode": "[parameters('mode')]",
+                  "requestBodyCheck": "Enabled",
+                  "customBlockResponseStatusCode": 403
+                },
+                "customRules": {
+                  "rules": [
+                    {
+                      "name": "authRateLimit",
+                      "priority": 90,
+                      "enabledState": "Enabled",
+                      "ruleType": "RateLimitRule",
+                      "rateLimitDurationInMinutes": 5,
+                      "rateLimitThreshold": 40,
+                      "matchConditions": [
+                        {
+                          "matchVariable": "RequestUri",
+                          "operator": "Contains",
+                          "negateCondition": false,
+                          "matchValue": [
+                            "/api/auth/",
+                            "/login",
+                            "/register"
+                          ],
+                          "transforms": [
+                            "Lowercase"
+                          ]
+                        }
+                      ],
+                      "action": "Block"
+                    },
+                    {
+                      "name": "globalRateLimit",
+                      "priority": 100,
+                      "enabledState": "Enabled",
+                      "ruleType": "RateLimitRule",
+                      "rateLimitDurationInMinutes": 1,
+                      "rateLimitThreshold": 600,
+                      "matchConditions": [
+                        {
+                          "matchVariable": "RequestUri",
+                          "operator": "Contains",
+                          "negateCondition": false,
+                          "matchValue": [
+                            "/"
+                          ],
+                          "transforms": []
+                        }
+                      ],
+                      "action": "Block"
+                    },
+                    {
+                      "name": "blockScannerUserAgents1",
+                      "priority": 50,
+                      "enabledState": "Enabled",
+                      "ruleType": "MatchRule",
+                      "matchConditions": [
+                        {
+                          "matchVariable": "RequestHeader",
+                          "selector": "User-Agent",
+                          "operator": "Contains",
+                          "negateCondition": false,
+                          "transforms": [
+                            "Lowercase"
+                          ],
+                          "matchValue": [
+                            "sqlmap",
+                            "nikto",
+                            "nmap",
+                            "masscan",
+                            "nessus",
+                            "dirbuster",
+                            "gobuster",
+                            "wpscan",
+                            "acunetix",
+                            "havij"
+                          ]
+                        }
+                      ],
+                      "action": "Block"
+                    },
+                    {
+                      "name": "blockScannerUserAgents2",
+                      "priority": 51,
+                      "enabledState": "Enabled",
+                      "ruleType": "MatchRule",
+                      "matchConditions": [
+                        {
+                          "matchVariable": "RequestHeader",
+                          "selector": "User-Agent",
+                          "operator": "Contains",
+                          "negateCondition": false,
+                          "transforms": [
+                            "Lowercase"
+                          ],
+                          "matchValue": [
+                            "fimap",
+                            "zmeu",
+                            "jorgee",
+                            "netsparker",
+                            "w3af"
+                          ]
+                        }
+                      ],
+                      "action": "Block"
+                    },
+                    {
+                      "name": "blockEmptyUserAgent",
+                      "priority": 60,
+                      "enabledState": "Enabled",
+                      "ruleType": "MatchRule",
+                      "matchConditions": [
+                        {
+                          "matchVariable": "RequestHeader",
+                          "selector": "User-Agent",
+                          "operator": "Equal",
+                          "negateCondition": false,
+                          "transforms": [],
+                          "matchValue": [
+                            ""
+                          ]
+                        }
+                      ],
+                      "action": "Block"
+                    }
+                  ]
+                },
+                "managedRules": "[if(variables('enableManagedRules'), createObject('managedRuleSets', createArray(createObject('ruleSetType', 'Microsoft_DefaultRuleSet', 'ruleSetVersion', '2.1', 'ruleSetAction', 'Block', 'ruleGroupOverrides', createArray(), 'exclusions', createArray()), createObject('ruleSetType', 'Microsoft_BotManagerRuleSet', 'ruleSetVersion', '1.0', 'ruleGroupOverrides', createArray(), 'exclusions', createArray()))), createObject('managedRuleSets', createArray()))]"
+              }
+            }
+          ],
+          "outputs": {
+            "policyId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the WAF policy, used to associate it with a Front Door endpoint."
+              },
+              "value": "[resourceId('Microsoft.Network/FrontDoorWebApplicationFirewallPolicies', parameters('wafPolicyName'))]"
+            },
+            "managedRulesEnabled": {
+              "type": "bool",
+              "metadata": {
+                "description": "Whether managed OWASP/Bot rule sets were enabled (Premium only)."
+              },
+              "value": "[variables('enableManagedRules')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', variables('rgName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
       "name": "frontDoor",
       "resourceGroup": "[variables('rgName')]",
       "properties": {
@@ -948,6 +1243,12 @@
           },
           "logAnalyticsWorkspaceId": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'monitoring'), '2025-04-01').outputs.logAnalyticsWorkspaceId.value]"
+          },
+          "skuName": {
+            "value": "[parameters('frontDoorSku')]"
+          },
+          "wafPolicyId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'wafPolicy'), '2025-04-01').outputs.policyId.value]"
           }
         },
         "template": {
@@ -957,7 +1258,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "7008888194632173148"
+              "templateHash": "16389332521867679056"
             }
           },
           "parameters": {
@@ -984,6 +1285,24 @@
               "metadata": {
                 "description": "Log Analytics workspace resource ID for diagnostics"
               }
+            },
+            "skuName": {
+              "type": "string",
+              "defaultValue": "Standard_AzureFrontDoor",
+              "allowedValues": [
+                "Standard_AzureFrontDoor",
+                "Premium_AzureFrontDoor"
+              ],
+              "metadata": {
+                "description": "Front Door SKU. Premium is required for WAF managed rule sets (OWASP DRS + Bot\nManager). Standard supports custom WAF rules (rate limiting) only.\n"
+              }
+            },
+            "wafPolicyId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Resource ID of the WAF policy to attach to the endpoint. Empty skips WAF."
+              }
             }
           },
           "resources": [
@@ -993,7 +1312,7 @@
               "name": "[parameters('profileName')]",
               "location": "Global",
               "sku": {
-                "name": "Standard_AzureFrontDoor"
+                "name": "[parameters('skuName')]"
               },
               "properties": {
                 "originResponseTimeoutSeconds": 60
@@ -1067,14 +1386,7 @@
                 ],
                 "forwardingProtocol": "HttpsOnly",
                 "linkToDefaultDomain": "Enabled",
-                "httpsRedirect": "Enabled",
-                "cacheConfiguration": {
-                  "queryStringCachingBehavior": "IgnoreQueryString",
-                  "compressionSettings": {
-                    "isCompressionEnabled": false,
-                    "contentTypesToCompress": []
-                  }
-                }
+                "httpsRedirect": "Enabled"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('profileName'), parameters('endpointName'))]",
@@ -1105,6 +1417,36 @@
               "dependsOn": [
                 "[resourceId('Microsoft.Cdn/profiles', parameters('profileName'))]"
               ]
+            },
+            {
+              "condition": "[not(empty(parameters('wafPolicyId')))]",
+              "type": "Microsoft.Cdn/profiles/securityPolicies",
+              "apiVersion": "2024-09-01",
+              "name": "[format('{0}/{1}', parameters('profileName'), 'atomicly-waf-association')]",
+              "properties": {
+                "parameters": {
+                  "type": "WebApplicationFirewall",
+                  "wafPolicy": {
+                    "id": "[parameters('wafPolicyId')]"
+                  },
+                  "associations": [
+                    {
+                      "domains": [
+                        {
+                          "id": "[resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('profileName'), parameters('endpointName'))]"
+                        }
+                      ],
+                      "patternsToMatch": [
+                        "/*"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('profileName'), parameters('endpointName'))]",
+                "[resourceId('Microsoft.Cdn/profiles', parameters('profileName'))]"
+              ]
             }
           ],
           "outputs": {
@@ -1115,6 +1457,13 @@
             "endpointHostName": {
               "type": "string",
               "value": "[reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('profileName'), parameters('endpointName')), '2024-09-01').hostName]"
+            },
+            "frontDoorId": {
+              "type": "string",
+              "metadata": {
+                "description": "Front Door instance GUID — used to lock the App Service origin to THIS Front Door via the X-Azure-FDID header."
+              },
+              "value": "[reference(resourceId('Microsoft.Cdn/profiles', parameters('profileName')), '2024-09-01').frontDoorId]"
             }
           }
         }
@@ -1122,7 +1471,8 @@
       "dependsOn": [
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'appService')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'monitoring')]",
-        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', variables('rgName'))]"
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', variables('rgName'))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'wafPolicy')]"
       ]
     },
     {
@@ -1298,6 +1648,20 @@
     "appInsightsConnectionString": {
       "type": "string",
       "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'monitoring'), '2025-04-01').outputs.connectionString.value]"
+    },
+    "frontDoorId": {
+      "type": "string",
+      "metadata": {
+        "description": "Front Door instance GUID. CI uses this to add an X-Azure-FDID access restriction so the App Service origin only accepts traffic from THIS Front Door."
+      },
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'frontDoor'), '2025-04-01').outputs.frontDoorId.value]"
+    },
+    "wafManagedRulesEnabled": {
+      "type": "bool",
+      "metadata": {
+        "description": "Whether Premium WAF managed rule sets (OWASP DRS + Bot Manager) are active."
+      },
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'wafPolicy'), '2025-04-01').outputs.managedRulesEnabled.value]"
     }
   }
 }

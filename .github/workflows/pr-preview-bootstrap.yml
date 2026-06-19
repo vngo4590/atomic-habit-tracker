@@ -1,0 +1,218 @@
+# =============================================================================
+# pr-preview-bootstrap.yml — one-time setup for the PR preview ecosystem
+# =============================================================================
+#
+# WHAT THIS DOES (idempotent, safe to re-run):
+#   1. Ensures the shared resource group `rg-atomicly-preview-shared` exists
+#      with the canonical tags. This RG hosts cross-PR shared infrastructure
+#      that must not be torn down with individual PR previews.
+#   2. Ensures a Basic-SKU Azure Container Registry named
+#      `cratomiclypreview<suffix>` exists inside that RG. Preview workflows
+#      push images here under tags `atomicly:pr-<pr>-<sha7>` and a moving
+#      `atomicly:pr-<pr>-latest`. The shared registry exists so that
+#      preview workflows NEVER touch the dev RG (which would violate the
+#      "no dev RG modification" requirement from
+#      openspec/specs/deployment-architecture/spec.md).
+#
+# WHAT THIS DOES NOT DO (must be done manually by an Owner — see
+# infra/README.md "Preview environments → Phase 0 bootstrap"):
+#   • Create the `pr-preview-atomicly` Azure AD app + service principal.
+#   • Add the two federated credential subjects.
+#   • Grant the principal `Contributor` at subscription scope.
+#   • Assign the two Azure Policy definitions from infra/policies/.
+#   • Set the `AZURE_PREVIEW_CLIENT_ID` GitHub Actions secret.
+#
+# WHY workflow_dispatch only: this workflow runs against the SUBSCRIPTION-scope
+# `pr-preview` principal and creates the shared RG/ACR. We never want it firing
+# on every push — it would either be a no-op (idempotent path) or, if something
+# in the params changed, an unexpected mutation of shared infra. Manual trigger
+# forces an operator-in-the-loop.
+# =============================================================================
+
+name: pr-preview-bootstrap
+
+on:
+  workflow_dispatch:
+    inputs:
+      location:
+        description: Azure region for the shared preview resources.
+        required: true
+        default: australiaeast
+        type: string
+      acr_suffix:
+        description: >-
+          Globally-unique alphanumeric suffix for the shared preview ACR.
+          Final name will be `cratomiclypreview<suffix>` (must be ≤ 50 chars,
+          alphanumeric only). Pick once and never change.
+        required: true
+        type: string
+      deploy_policies:
+        description: >-
+          (Owner-only) Also deploy the Azure Policy definitions + assignments
+          from infra/policies/main.bicep. Requires the workflow principal to
+          have Resource Policy Contributor + User Access Administrator on the
+          subscription, which the pr-preview principal does NOT have by
+          default. Leave 'false' and run the policy deploy manually as an
+          Owner unless you have explicitly granted these roles.
+        required: false
+        default: false
+        type: boolean
+      pr_preview_principal_object_id:
+        description: >-
+          Object ID (not appId) of the pr-preview-atomicly service principal.
+          Only required when deploy_policies=true.
+        required: false
+        type: string
+      dev_resource_group_name:
+        description: >-
+          Exact name of the existing dev RG (rg-atomicly-dev-aue-<suffix>).
+          Required when deploy_policies=true so the deny-non-preview-rg
+          assignment excludes it via notScopes.
+        required: false
+        type: string
+
+permissions:
+  id-token: write   # OIDC for azure/login
+  contents: read
+
+concurrency:
+  # Only one bootstrap run at a time so two concurrent dispatches cannot race
+  # on the same RG create.
+  group: pr-preview-bootstrap
+  cancel-in-progress: false
+
+env:
+  SHARED_RG_NAME: rg-atomicly-preview-shared
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate ACR suffix
+        run: |
+          set -euo pipefail
+          SUFFIX='${{ inputs.acr_suffix }}'
+          if ! [[ "$SUFFIX" =~ ^[a-z0-9]{3,30}$ ]]; then
+            echo "::error::acr_suffix must be 3-30 lowercase alphanumeric chars; got '$SUFFIX'"
+            exit 1
+          fi
+          ACR_NAME="cratomiclypreview${SUFFIX}"
+          if [ ${#ACR_NAME} -gt 50 ]; then
+            echo "::error::Resulting ACR name '$ACR_NAME' exceeds Azure's 50-char limit"
+            exit 1
+          fi
+          echo "ACR_NAME=$ACR_NAME" >> "$GITHUB_ENV"
+
+      - name: Verify Phase 0 bootstrap is complete
+        # Fail fast with an actionable message if AZURE_PREVIEW_CLIENT_ID is
+        # missing. See pr-preview.yml preflight for the full rationale.
+        env:
+          PREVIEW_CLIENT_ID: ${{ secrets.AZURE_PREVIEW_CLIENT_ID }}
+          TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+          MISSING=()
+          [ -z "${PREVIEW_CLIENT_ID:-}" ] && MISSING+=("AZURE_PREVIEW_CLIENT_ID")
+          [ -z "${TENANT_ID:-}"         ] && MISSING+=("AZURE_TENANT_ID")
+          [ -z "${SUBSCRIPTION_ID:-}"   ] && MISSING+=("AZURE_SUBSCRIPTION_ID")
+          if [ ${#MISSING[@]} -gt 0 ]; then
+            echo "::error title=Preview env Phase 0 bootstrap not complete::Missing required GitHub secret(s): ${MISSING[*]}. See infra/README.md → 'Preview environments → Phase 0 bootstrap'."
+            exit 1
+          fi
+
+      - name: Azure login (OIDC, pr-preview principal)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_PREVIEW_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Ensure shared preview resource group exists
+        run: |
+          set -euo pipefail
+          # `az group create` is idempotent: it returns 200 and updates tags
+          # if the RG already exists. Tags are the canonical preview-RG
+          # contract so the deny-non-preview-rg policy doesn't trip.
+          #
+          # NOTE: this RG is NOT tagged lifetime=ephemeral on purpose — the
+          # reaper would otherwise delete the shared ACR. The deny-non-preview
+          # policy excludes this RG via notScopes at assignment time.
+          az group create \
+            --name "$SHARED_RG_NAME" \
+            --location '${{ inputs.location }}' \
+            --tags \
+              project=atomicly \
+              lifetime=shared-preview \
+              created-by=github-actions \
+              managedBy=pr-preview-bootstrap
+
+      - name: Ensure shared preview ACR exists
+        run: |
+          set -euo pipefail
+          # Basic SKU: cheapest, supports the small image volume of previews.
+          # admin-enabled=false: registries are pulled via managed identity
+          # (AcrPull role) — no admin credentials anywhere.
+          if az acr show --name "$ACR_NAME" --resource-group "$SHARED_RG_NAME" >/dev/null 2>&1; then
+            echo "ACR $ACR_NAME already exists — skipping create."
+          else
+            az acr create \
+              --name "$ACR_NAME" \
+              --resource-group "$SHARED_RG_NAME" \
+              --sku Basic \
+              --admin-enabled false \
+              --location '${{ inputs.location }}'
+          fi
+          # Always re-apply the canonical tags (cheap; ensures drift is fixed).
+          az acr update \
+            --name "$ACR_NAME" \
+            --resource-group "$SHARED_RG_NAME" \
+            --tags \
+              project=atomicly \
+              lifetime=shared-preview \
+              created-by=github-actions \
+              managedBy=pr-preview-bootstrap
+
+      - name: Summary
+        run: |
+          set -euo pipefail
+          LOGIN_SERVER=$(az acr show --name "$ACR_NAME" --resource-group "$SHARED_RG_NAME" --query loginServer -o tsv)
+          {
+            echo "## PR Preview Bootstrap"
+            echo ""
+            echo "| Item | Value |"
+            echo "| --- | --- |"
+            echo "| Shared RG | \`$SHARED_RG_NAME\` |"
+            echo "| Shared ACR | \`$ACR_NAME\` |"
+            echo "| Login server | \`$LOGIN_SERVER\` |"
+            echo ""
+            echo "Next step: set the repository variable \`PREVIEW_ACR_LOGIN_SERVER\` to \`$LOGIN_SERVER\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ----------------------------------------------------------------------
+      # Optional: deploy the Azure Policy guardrails (task §8.4). Disabled by
+      # default because the pr-preview principal only has Contributor — policy
+      # operations need Resource Policy Contributor + User Access
+      # Administrator. An Owner who has temporarily granted these roles to
+      # the principal (or who is invoking via a more-privileged identity)
+      # may flip deploy_policies=true.
+      # ----------------------------------------------------------------------
+      - name: Deploy preview policy guardrails
+        if: inputs.deploy_policies == true
+        env:
+          SP_OBJ_ID: ${{ inputs.pr_preview_principal_object_id }}
+          DEV_RG: ${{ inputs.dev_resource_group_name }}
+        run: |
+          set -euo pipefail
+          if [ -z "$SP_OBJ_ID" ] || [ -z "$DEV_RG" ]; then
+            echo "::error::deploy_policies=true requires both pr_preview_principal_object_id and dev_resource_group_name."
+            exit 1
+          fi
+          az deployment sub create \
+            --name "atomicly-preview-policies-${GITHUB_RUN_ID}" \
+            --location '${{ inputs.location }}' \
+            --template-file infra/policies/main.bicep \
+            --parameters \
+              prPreviewPrincipalId="$SP_OBJ_ID" \
+              devResourceGroupName="$DEV_RG" \
+            --output none

@@ -1,0 +1,63 @@
+{
+  "properties": {
+    "displayName": "Deny role-assignment writes by pr-preview principal outside preview resource groups",
+    "policyType": "Custom",
+    "mode": "All",
+    "description": "Denies any `Microsoft.Authorization/roleAssignments` create/update whose scope is NOT inside an `rg-atomicly-pr-*` resource group or the shared `rg-atomicly-preview-shared` resource group, when initiated by the `pr-preview-atomicly` service principal. The assignment passes the principal object ID via the `prPreviewPrincipalId` parameter at assignment time. Effect: blast-radius bound — even with subscription-scoped Contributor the preview principal cannot escalate by creating role assignments on the dev RG, the subscription, or any other tenant resource. The principal CAN still create role assignments inside its own preview RGs (e.g. the AcrPull grant on the shared preview ACR, which lives in `rg-atomicly-preview-shared`).",
+    "metadata": {
+      "category": "Atomicly Preview Environments",
+      "version": "1.0.0"
+    },
+    "parameters": {
+      "effect": {
+        "type": "String",
+        "metadata": {
+          "displayName": "Effect",
+          "description": "Enable or disable the policy effect."
+        },
+        "allowedValues": [
+          "Deny",
+          "Audit",
+          "Disabled"
+        ],
+        "defaultValue": "Deny"
+      },
+      "prPreviewPrincipalId": {
+        "type": "String",
+        "metadata": {
+          "displayName": "PR-preview service principal object ID",
+          "description": "Object ID (not appId) of the pr-preview-atomicly service principal. Resolved at policy assignment time."
+        }
+      }
+    },
+    "policyRule": {
+      "if": {
+        "allOf": [
+          {
+            "field": "type",
+            "equals": "Microsoft.Authorization/roleAssignments"
+          },
+          {
+            "field": "Microsoft.Authorization/roleAssignments/principalId",
+            "equals": "[parameters('prPreviewPrincipalId')]"
+          },
+          {
+            "allOf": [
+              {
+                "field": "Microsoft.Authorization/roleAssignments/scope",
+                "notLike": "*/resourceGroups/rg-atomicly-pr-*"
+              },
+              {
+                "field": "Microsoft.Authorization/roleAssignments/scope",
+                "notLike": "*/resourceGroups/rg-atomicly-preview-shared*"
+              }
+            ]
+          }
+        ]
+      },
+      "then": {
+        "effect": "[parameters('effect')]"
+      }
+    }
+  }
+}

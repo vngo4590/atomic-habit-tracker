@@ -204,17 +204,30 @@ az webapp log tail --name app-atomicly-dev-aue \
 
 ## 💰 Cost Estimate (Dev)
 
-| Resource | SKU | ~AUD/Month |
-|----------|-----|------------|
-| App Service Plan | B1 | ~$13 |
-| PostgreSQL Flexible Server | B1ms Burstable | ~$15 |
+| Resource | SKU / config | ~AUD/Month |
+|----------|--------------|------------|
+| App Service Plan | B1 Linux, always-on | ~$13 |
+| PostgreSQL Flexible Server | B1ms Burstable, **20 GB** storage, autoGrow **disabled**, 7-day backup | ~$13 |
 | Container Registry | Basic | ~$6 |
-| Front Door Standard | Pay-as-you-go | ~$5–10 |
+| Front Door Standard | Pay-as-you-go (custom WAF rules, no managed ruleset) | ~$5–10 |
 | Key Vault | Standard | ~$0.10 |
-| Log Analytics | Pay-as-you-go | ~$3–5 |
-| **Total** | | **~$40–50** |
+| Log Analytics + App Insights | PerGB2018, **0.2 GB/day cap**, **14-day retention**, AppLogs + AuditLogs only | ~$2–3 |
+| **Total** | | **~$40** |
 
-> Stop the App Service when not in use to save ~$13/month.
+### Phase 1 cost-floor levers (already applied)
+
+The following defaults were tuned by the `cost-optimize-azure-infra` OpenSpec change. Each is a parameter so a raise is a reviewable Bicep diff, not a silent drift:
+
+- **`logDailyQuotaGb = 0.2`** (`infra/modules/monitoring.bicep`) — workspace stops accepting new logs for the day once 0.2 GB is hit. Protects against a runaway log emitter generating unbounded ingestion cost. Raise deliberately if real traffic exceeds it.
+- **`logRetentionInDays = 14`** — half the previous 30-day setting, roughly half the per-GB storage cost. Still enough to investigate a week-old incident.
+- **App Service diagnostics dropped `AppServiceConsoleLogs` and `AppServiceHTTPLogs`** — Application Insights already captures application traces and per-request telemetry via the SDK, so streaming the same data through Log Analytics was pure duplicate cost. `AppLogs` (platform issues) and `AuditLogs` (config changes) stay because Insights does not cover them.
+- **`storageSizeGB = 20`, `storageAutoGrow = 'Disabled'`** (`infra/modules/postgres.bicep`) — 20 GB is the Burstable minimum and is well above current usage. autoGrow off means a runaway write workload fails loudly instead of silently doubling the storage bill. **Note:** Azure Postgres Flexible Server storage can only grow in-place; an existing 32 GB server will not shrink via Bicep — reclaim it by dump → recreate at 20 GB → restore during a planned dev-env reset.
+
+### Further cost-cutting (deferred to Phase 2 of the OpenSpec change)
+
+Phase 2 swaps App Service for Azure Container Apps (scale-to-zero, ~$0 idle) and replaces Front Door + Azure WAF with Cloudflare Free (managed WAF, DDoS, rate limiting at $0/mo base). Target floor: **~$5–10/mo at zero traffic**. See `openspec/changes/cost-optimize-azure-infra/` for the design and migration plan.
+
+> Tactical lever (any phase): stop the Postgres Flexible Server overnight via a scheduled GitHub Action. Storage still bills, compute does not. Saves ~30% on the Postgres line for an env that nobody uses outside working hours.
 
 ---
 
@@ -261,6 +274,200 @@ If you need Front Door working and the endpoint is stuck:
 - [ ] **Custom domain** — add your own domain with managed TLS certificates
 - [ ] **Blue/Green deploys** — use deployment slots for zero-downtime releases
 - [ ] **Backup & DR** — enable geo-redundant backups for PostgreSQL
+
+---
+
+## 🧪 Preview environments (ephemeral per-PR stacks)
+
+Every PR opened against `master` from a non-fork branch gets its own fully
+isolated Azure stack — `rg-atomicly-pr-<pr>-<sha7>` — automatically deployed
+by `.github/workflows/pr-preview.yml` and torn down by
+`.github/workflows/pr-preview-teardown.yml` when the PR closes. An hourly
+reaper (`.github/workflows/pr-preview-reaper.yml`) cleans anything older
+than 24 h regardless of webhook state. Cost ceiling per active preview is
+**~$1.06/day worst-case**; the reaper bounds a forgotten preview to ~$1.10
+total. See `openspec/changes/ephemeral-pr-preview-envs/design.md` for the
+full decision log.
+
+### Naming + tag contract
+
+| Resource | Template | Notes |
+| --- | --- | --- |
+| Resource group | `rg-atomicly-pr-<pr>-<sha7>` | Regex `^rg-atomicly-pr-[0-9]+-[a-f0-9]{7}$`. |
+| Container Apps Environment | `cae-atomicly-pr-<pr>` | One per PR; reused across re-deploys. |
+| Container App | `ca-atomicly-pr-<pr>` | Image tag carries the SHA. |
+| Postgres Flexible Server | `psql-atomicly-pr-<pr>-<sha7>` | Globally DNS-unique. |
+| Key Vault | `kv-atompr-<pr>-<sha7>` | 22 chars at PR=9999; max safe PR < 10⁶. |
+| Container image | `cratomiclypreview<suffix>.azurecr.io/atomicly:pr-<pr>-<sha7>` | Shared preview ACR. |
+
+Every preview resource MUST carry these five tags (the reaper + Azure Policy
+both rely on them):
+
+```
+pr=<pr_number>
+commit=<sha7>
+lifetime=ephemeral
+created-by=github-actions
+created-at=<ISO-8601 UTC, set ONCE per deploy>
+```
+
+### Phase 0 bootstrap — one-time human + workflow setup
+
+**Step 1 — Create the dedicated `pr-preview-atomicly` Azure AD app and
+federated credentials.** This MUST be a separate app from the existing
+dev/master principal so the dev RG remains unreachable from preview workflows.
+
+```bash
+# Run as a subscription Owner. Set REPO to vngo4590/atomic-habit-tracker.
+REPO=vngo4590/atomic-habit-tracker
+SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+TENANT_ID=$(az account show --query tenantId -o tsv)
+
+# 1a. Create the AAD app + service principal.
+APP=$(az ad app create --display-name pr-preview-atomicly --query '{appId:appId,id:id}' -o json)
+APP_ID=$(echo "$APP" | jq -r .appId)
+APP_OBJ_ID=$(echo "$APP" | jq -r .id)
+az ad sp create --id "$APP_ID"
+SP_OBJ_ID=$(az ad sp show --id "$APP_ID" --query id -o tsv)
+
+# 1b. Add the two federated credential subjects.
+#     pull_request — used by pr-preview.yml + pr-preview-teardown.yml.
+#     ref:refs/heads/master — used by pr-preview-reaper.yml (cron has no PR claim).
+az ad app federated-credential create --id "$APP_OBJ_ID" --parameters '{
+  "name": "github-pull-request",
+  "issuer": "https://token.actions.githubusercontent.com",
+  "subject": "repo:'"$REPO"':pull_request",
+  "audiences": ["api://AzureADTokenExchange"]
+}'
+az ad app federated-credential create --id "$APP_OBJ_ID" --parameters '{
+  "name": "github-master-branch",
+  "issuer": "https://token.actions.githubusercontent.com",
+  "subject": "repo:'"$REPO"':ref:refs/heads/master",
+  "audiences": ["api://AzureADTokenExchange"]
+}'
+
+# 1c. Subscription-scoped Contributor. The Azure Policy assignments below are
+#     the blast-radius bound that keeps this from being too permissive.
+az role assignment create \
+  --assignee-object-id "$SP_OBJ_ID" \
+  --assignee-principal-type ServicePrincipal \
+  --role Contributor \
+  --scope "/subscriptions/$SUBSCRIPTION_ID"
+
+echo "APP_ID=$APP_ID"
+echo "SP_OBJ_ID=$SP_OBJ_ID"
+```
+
+**Step 2 — Assign the two preview-scoped Azure Policy definitions** from
+`infra/policies/`. The dev RG MUST be excluded via `--not-scopes` so the
+`deny-non-preview-rg` policy doesn't break the master pipeline.
+
+```bash
+# Replace <DEV_RG_ID> with the resourceId of the existing dev RG (e.g.
+# /subscriptions/.../resourceGroups/rg-atomicly-dev-aue-XXXXXX).
+DEV_RG_ID=$(az group show --name rg-atomicly-dev-aue-XXXXXX --query id -o tsv)
+SHARED_RG_ID="/subscriptions/$SUBSCRIPTION_ID/resourceGroups/rg-atomicly-preview-shared"
+
+# Create the policy definitions.
+DENY_RG_DEF_ID=$(az policy definition create \
+  --name atomicly-deny-non-preview-rg \
+  --rules infra/policies/deny-non-preview-rg.json \
+  --mode All \
+  --query id -o tsv)
+
+DENY_ROLE_DEF_ID=$(az policy definition create \
+  --name atomicly-deny-cross-rg-role-assignments \
+  --rules infra/policies/deny-cross-rg-role-assignments.json \
+  --mode All \
+  --query id -o tsv)
+
+# Assign the deny-non-preview-rg policy at subscription scope, excluding the
+# dev RG and the shared preview RG (both legitimately do not match the
+# rg-atomicly-pr-* prefix).
+az policy assignment create \
+  --name atomicly-deny-non-preview-rg \
+  --policy "$DENY_RG_DEF_ID" \
+  --scope "/subscriptions/$SUBSCRIPTION_ID" \
+  --not-scopes "$DEV_RG_ID" "$SHARED_RG_ID"
+
+# Assign the deny-cross-rg-role-assignments policy, parameterised with the
+# pr-preview principal's object ID.
+az policy assignment create \
+  --name atomicly-deny-cross-rg-role-assignments \
+  --policy "$DENY_ROLE_DEF_ID" \
+  --scope "/subscriptions/$SUBSCRIPTION_ID" \
+  --params "{\"prPreviewPrincipalId\":{\"value\":\"$SP_OBJ_ID\"}}"
+```
+
+**Step 3 — Run the bootstrap workflow.** `gh workflow run
+pr-preview-bootstrap.yml -f location=australiaeast -f acr_suffix=<unique>`
+(or via the Actions UI) creates `rg-atomicly-preview-shared` and the
+shared `cratomiclypreview<suffix>` ACR. Idempotent.
+
+**Step 4 — Store the GitHub Actions secrets:**
+
+| Secret | Value | Notes |
+| --- | --- | --- |
+| `AZURE_PREVIEW_CLIENT_ID` | `$APP_ID` from step 1a | NEW — preview-only. Do NOT reuse `AZURE_CLIENT_ID`. |
+| `AZURE_TENANT_ID` | `$TENANT_ID` | Already present for master CI. |
+| `AZURE_SUBSCRIPTION_ID` | `$SUBSCRIPTION_ID` | Already present for master CI. |
+| `PREVIEW_ACR_LOGIN_SERVER` (variable, not secret) | `cratomiclypreview<suffix>.azurecr.io` | Set as a repo variable, not a secret. |
+
+### Operator runbook
+
+- **List active previews:**
+  ```bash
+  az group list --tag lifetime=ephemeral \
+    --query "[?starts_with(name, 'rg-atomicly-pr-')].{name:name, pr:tags.pr, commit:tags.commit, created:tags.\"created-at\"}" \
+    -o table
+  ```
+- **Read a preview URL:** The deploy job posts the Container App FQDN to
+  the bot comment on the PR. To re-fetch:
+  ```bash
+  az containerapp show -n ca-atomicly-pr-<pr> -g rg-atomicly-pr-<pr>-<sha7> \
+    --query properties.configuration.ingress.fqdn -o tsv
+  ```
+- **Add your reviewer IP to a preview** for 4 h:
+  ```bash
+  gh workflow run pr-preview-open.yml \
+    -f pr_number=<pr> -f reviewer_ip=<your.public.ip>
+  ```
+  Revoke early with `-f revoke=true`.
+- **Run the reaper manually (dry-run):**
+  `gh workflow run pr-preview-reaper.yml -f dryRun=true`. Inspect the
+  summary; non-zero quarantine count signals tag drift.
+- **Fork-PR limitation:** PRs from forked repositories CANNOT obtain the
+  OIDC token with the preview scope. `pr-preview.yml` detects this and
+  exits with a skipped status. Fork contributors get standard CI only;
+  they cannot get a preview environment.
+
+### Phase 2 hardening — budget alert (manual)
+
+The `$50/mo` subscription budget called out in design Decision 6 is NOT
+provisioned by any workflow because the `pr-preview` principal cannot
+write to `Microsoft.Consumption/budgets`. Run as an Owner:
+
+```bash
+# Azure CLI does not have a first-class `az budget create` for subscription-
+# scope budgets — use the REST API. Replace <ACTION_GROUP_ID> with the
+# resource ID of an action group that emails the on-call.
+SUB=$(az account show --query id -o tsv)
+az rest --method PUT \
+  --uri "https://management.azure.com/subscriptions/$SUB/providers/Microsoft.Consumption/budgets/atomicly-monthly?api-version=2024-08-01" \
+  --body '{
+    "properties": {
+      "category": "Cost",
+      "amount": 50,
+      "timeGrain": "Monthly",
+      "timePeriod": {"startDate": "2026-07-01T00:00:00Z"},
+      "notifications": {
+        "ngo-50":  {"enabled": true, "operator": "GreaterThan", "threshold": 50,  "thresholdType": "Actual", "contactEmails": ["owner@example.com"]},
+        "ngo-80":  {"enabled": true, "operator": "GreaterThan", "threshold": 80,  "thresholdType": "Actual", "contactEmails": ["owner@example.com"]},
+        "ngo-100": {"enabled": true, "operator": "GreaterThan", "threshold": 100, "thresholdType": "Actual", "contactEmails": ["owner@example.com"]}
+      }
+    }
+  }'
+```
 
 ---
 
