@@ -26,6 +26,18 @@ function stripPrismaParams(url: string): string {
   }
 }
 
+/**
+ * Reads a positive integer from the environment, falling back to a default.
+ * Used to make the pg pool tunable per-environment without changing the safe
+ * production defaults baked in below.
+ */
+function envInt(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 function createPrismaClient() {
   // The @prisma/adapter-pg sends concurrent queries within implicit
   // transactions (for relation includes). In pg@8.20+ this triggers a
@@ -33,12 +45,21 @@ function createPrismaClient() {
   // state. Setting maxUses: 1 ensures each connection is destroyed after
   // a single checkout-release cycle, preventing corrupted connections from
   // being reused and causing subsequent requests to hang.
+  //
+  // maxUses: 1 is safe but recycles a connection after every query. Under a
+  // sustained burst (the full Playwright E2E suite against a small preview
+  // Postgres) that connection churn can outpace the server's ability to accept
+  // new connections, surfacing as "Connection terminated due to connection
+  // timeout". Both knobs are therefore env-tunable: production keeps the safe
+  // defaults (maxUses 1, 5s connect timeout), while the ephemeral preview sets
+  // DB_POOL_MAX_USES high (reuse connections, slashing churn) and a longer
+  // DB_POOL_CONNECTION_TIMEOUT_MS — see infra/preview.bicep.
   const pool = new Pool({
     connectionString: stripPrismaParams(getDatabaseUrl()),
     max: 20,
-    connectionTimeoutMillis: 5000,
+    connectionTimeoutMillis: envInt("DB_POOL_CONNECTION_TIMEOUT_MS", 5000),
     idleTimeoutMillis: 10000,
-    maxUses: 1,
+    maxUses: envInt("DB_POOL_MAX_USES", 1),
     allowExitOnIdle: true,
   });
 

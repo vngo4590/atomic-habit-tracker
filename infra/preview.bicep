@@ -381,6 +381,20 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
               value: 'true'
             }
             {
+              // Let pg connections be reused instead of recycled after every
+              // query (the production default of maxUses:1). The full E2E suite
+              // otherwise churns connections faster than this small Postgres can
+              // accept them, surfacing as "Connection terminated due to
+              // connection timeout" 500s. Reuse + a longer connect timeout keep
+              // the preview stable. See lib/db/client.ts.
+              name: 'DB_POOL_MAX_USES'
+              value: '500'
+            }
+            {
+              name: 'DB_POOL_CONNECTION_TIMEOUT_MS'
+              value: '15000'
+            }
+            {
               // Tell NextAuth to trust the preview hostname (we do not set
               // NEXTAUTH_URL; AUTH_TRUST_HOST=true is the supported way to
               // accept the request Host header in v5 when running behind a
