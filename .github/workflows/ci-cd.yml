@@ -218,10 +218,40 @@ jobs:
 
       - name: Update Key Vault secrets
         run: |
+          set -euo pipefail
           KV_NAME="kv-atomiclydev${{ secrets.AZURE_UNIQUE_SUFFIX }}"
+          RG="rg-atomicly-dev-aue-${{ secrets.AZURE_UNIQUE_SUFFIX }}"
           DB_URL="postgresql://psqladmin:${{ secrets.POSTGRES_ADMIN_PASSWORD }}@psql-atomicly-dev-aue-${{ secrets.AZURE_UNIQUE_SUFFIX }}.postgres.database.azure.com:5432/atomicly?schema=public&sslmode=require"
-          az keyvault secret set --vault-name "$KV_NAME" --name database-url --value "$DB_URL"
-          az keyvault secret set --vault-name "$KV_NAME" --name auth-secret --value '${{ secrets.AUTH_SECRET }}'
+
+          # The Key Vault uses RBAC authorization, where the management-plane
+          # Contributor role does NOT grant secret read/write — a data-plane role
+          # is required. Self-grant "Key Vault Secrets Officer" to the deploying
+          # CI principal before writing secrets (idempotent; mirrors the App
+          # Service self-grant below). Without this the step fails with
+          # ForbiddenByRbac once the bootstrap assignment drifts away.
+          KV_ID=$(az keyvault show --name "$KV_NAME" --resource-group "$RG" --query id -o tsv)
+          az role assignment create \
+            --assignee "${{ secrets.AZURE_CLIENT_ID }}" \
+            --role "Key Vault Secrets Officer" \
+            --scope "$KV_ID" --output none 2>/dev/null || true
+
+          # A freshly created data-plane role assignment can take a minute or two
+          # to propagate, so retry the secret writes rather than failing the whole
+          # deploy on a transient ForbiddenByRbac.
+          set_secret() {
+            local name="$1" value="$2"
+            for attempt in 1 2 3 4 5 6; do
+              if az keyvault secret set --vault-name "$KV_NAME" --name "$name" --value "$value" --output none; then
+                return 0
+              fi
+              echo "secret set '$name' failed (attempt $attempt) — waiting for RBAC propagation..."
+              sleep 20
+            done
+            echo "::error::Failed to set Key Vault secret '$name' after retries"
+            return 1
+          }
+          set_secret database-url "$DB_URL"
+          set_secret auth-secret '${{ secrets.AUTH_SECRET }}'
 
       - name: Grant App Service access to ACR and Key Vault
         run: |
