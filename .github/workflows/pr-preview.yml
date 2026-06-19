@@ -624,6 +624,24 @@ jobs:
             --name "$APP" \
             --rule-name "$RULE_NAME" >/dev/null 2>&1 || true
 
+      # When Playwright fails, the browser-side artifact often only shows the
+      # app's error boundary ("A server error occurred. ERROR <id>"). The real
+      # stack trace lives in the Container App's console log, keyed by that same
+      # correlation id. Capture both console + system logs so a 500 can be root-
+      # caused from the uploaded artifact without re-running the pipeline.
+      - name: Capture preview container logs (on failure)
+        if: failure()
+        env:
+          RG: ${{ needs.preflight.outputs.rg_name }}
+          APP: ${{ needs.deploy.outputs.container_app_name }}
+        run: |
+          mkdir -p container-logs
+          az containerapp logs show --name "$APP" --resource-group "$RG" \
+            --type console --tail 600 > container-logs/console.log 2>&1 || true
+          az containerapp logs show --name "$APP" --resource-group "$RG" \
+            --type system --tail 200 > container-logs/system.log 2>&1 || true
+          echo "=== captured $(wc -l < container-logs/console.log) console lines ==="
+
       - name: Upload Playwright report (on failure)
         if: failure()
         uses: actions/upload-artifact@v4
@@ -632,6 +650,7 @@ jobs:
           path: |
             playwright-report/
             test-results/
+            container-logs/
           retention-days: 7
           if-no-files-found: warn
 

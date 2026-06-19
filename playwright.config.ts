@@ -21,7 +21,16 @@ export default defineConfig({
   forbidOnly: isCI,
   retries: isCI ? 2 : 0,
   workers: 1,
-  reporter: "list",
+  // Emit a human list, a machine-readable results.json (consumed by the
+  // pr-preview workflow to surface pass/fail counts), and a self-contained
+  // HTML report so a CI failure can be inspected without re-running the suite.
+  reporter: isCI
+    ? [
+        ["list"],
+        ["json", { outputFile: "playwright-report/results.json" }],
+        ["html", { open: "never", outputFolder: "playwright-report/html" }],
+      ]
+    : "list",
   // Increase per-test timeout in CI to account for cold-start page loads and the
   // small (1 vCPU) ephemeral preview instance, which renders pages more slowly
   // than a dev machine. The expect/action/navigation timeouts are likewise
@@ -30,7 +39,12 @@ export default defineConfig({
   expect: { timeout: isCI ? 15_000 : 5_000 },
   use: {
     baseURL: externalBaseURL ?? "http://localhost:3000",
-    trace: "on-first-retry",
+    // Capture a trace and a screenshot for every failed attempt (not just the
+    // first retry) so CI failures are fully diagnosable from the uploaded
+    // artifact. retain-on-failure keeps artifacts only for failures, so the
+    // green path pays no storage cost.
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
     actionTimeout: isCI ? 20_000 : 0,
     navigationTimeout: isCI ? 30_000 : 0,
   },
