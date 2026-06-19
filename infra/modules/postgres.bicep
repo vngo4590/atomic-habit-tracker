@@ -15,8 +15,10 @@ param adminPassword string
 param databaseName string = 'atomicly'
 
 @description('''
-Provisioned storage in GB. 20 GB is the minimum supported tier on Burstable
-Flexible Server and is comfortably above current usage (well under 1 GB).
+Provisioned storage in GB. 32 GB is the smallest valid size Azure Database for
+PostgreSQL Flexible Server accepts (the storage tiers are a fixed set starting
+at 32 GB — 20 GB is rejected with "Invalid value given for parameter
+StorageSizeGB"). It is comfortably above current usage (well under 1 GB).
 A storage increase MUST be a deliberate, reviewed Bicep change — never an
 automatic upgrade — so the bill stays predictable. Raise this number only
 when actual usage justifies it.
@@ -25,13 +27,13 @@ IMPORTANT: Azure Postgres Flexible Server storage can ONLY GROW in place;
 it cannot be shrunk on an existing server. Lowering this value below the
 server's current size will be rejected by the Azure API at deploy time. To
 actually reclaim storage you must dump → recreate the server at the lower
-tier → restore. The 20 GB default applies to fresh deploys; for the
+tier → restore. The 32 GB default applies to fresh deploys; for the
 existing dev server, pass the current size (or higher) from main.bicep
 until you are ready to do the recreate dance.
 ''')
-@minValue(20)
+@minValue(32)
 @maxValue(16384)
-param storageSizeGB int = 20
+param storageSizeGB int = 32
 
 @description('''
 Whether the server is allowed to silently grow its disk. Disabled so a

@@ -23,13 +23,15 @@ floor cannot drift silently.
 param logDailyQuotaGb string = '0.2'
 
 @description('''
-Log retention in days. 14 days is enough to investigate a typical incident
-and triage a week-old support question, while being half the previous
-30-day setting and therefore roughly half the per-GB storage cost.
+Log retention in days. The PerGB2018 SKU enforces a minimum workspace
+retention of 30 days, and the first 31 days of retention are free, so 30 is
+both the lowest value Azure will accept ("'RetentionInDays' property doesn't
+match the SKU limits") and effectively free. Going lower saves nothing and is
+rejected at deploy time.
 ''')
-@minValue(7)
+@minValue(30)
 @maxValue(730)
-param logRetentionInDays int = 14
+param logRetentionInDays int = 30
 
 var logAnalyticsName = 'law-atomicly-${environment}-aue-${uniqueSuffix}'
 var appInsightsName = 'appi-atomicly-${environment}-aue-${uniqueSuffix}'
