@@ -34,6 +34,14 @@ import { clientIpFromHeaders, createRateLimiter } from "@/lib/security/rate-limi
 
 const isDev = process.env.NODE_ENV === "development";
 
+// Escape hatch for ephemeral PR-preview environments only. The full E2E suite
+// hammers the versioned API from a single runner IP, which legitimately blows
+// past the per-IP API budget and yields spurious 429s. Preview stacks set
+// RATE_LIMIT_DISABLED=true (see infra/preview.bicep) to turn the in-process
+// limiter off. Production never sets this, so the WAF + in-process backstop stay
+// fully active there.
+const rateLimitDisabled = process.env.RATE_LIMIT_DISABLED === "true";
+
 // Turnstile is enabled when a public site key is configured. The proxy only
 // needs to know whether to widen the CSP for the challenge widget/iframe.
 const turnstileEnabled = Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
@@ -65,7 +73,7 @@ export default auth((request: NextRequest & { auth?: unknown }) => {
   // --- 1. Rate limiting -----------------------------------------------------
   // Identify the bucket first so we only spend a counter slot on limited paths.
   const bucket = classifyRateLimit(pathname, method);
-  if (bucket) {
+  if (bucket && !rateLimitDisabled) {
     const ip = clientIpFromHeaders(request.headers);
     const limiter = bucket === "auth" ? authLimiter : apiLimiter;
     const decision = limiter.check(`${bucket}:${ip}`);

@@ -366,6 +366,16 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
               value: 'preview-pr-${prNumber}-${commitSha}'
             }
             {
+              // Ephemeral previews exist to run the full Playwright E2E suite,
+              // which drives the versioned API from a single CI runner IP. That
+              // burst legitimately exceeds the per-IP API rate-limit budget and
+              // produces spurious 429s, so we disable the in-process limiter
+              // here. Production never sets this flag (see proxy.ts), so its WAF
+              // + in-process rate-limit backstop remain fully active.
+              name: 'RATE_LIMIT_DISABLED'
+              value: 'true'
+            }
+            {
               // Tell NextAuth to trust the preview hostname (we do not set
               // NEXTAUTH_URL; AUTH_TRUST_HOST=true is the supported way to
               // accept the request Host header in v5 when running behind a
