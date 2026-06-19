@@ -453,7 +453,7 @@ jobs:
           # E2E tests start every CI run with a truly clean slate. The DB
           # persists across runs for the same PR, so simply re-seeding leaves
           # residue from earlier runs (e.g. journal entries / weekly reviews
-          # made "today") that pet.spec.ts and other specs assume is absent.
+          # made "today") that the pet specs assume is absent.
           # `db:reset-dev-data` deletes the user (cascading all owned rows via
           # Prisma onDelete: Cascade) and re-creates them via seedDevUser.
           # The migrator image has the full repo source, so we just override
