@@ -107,10 +107,10 @@ test.describe("Creating a habit", () => {
     await page.goto("/habits/new");
 
     const blanks = page.locator(".input");
-    await blanks.nth(0).fill("A person who is amazing at AI"); // identity
-    await blanks.nth(1).fill(action); // action (name)
-    await blanks.nth(2).fill("At morning"); // cue
-    await blanks.nth(3).fill("at my desk."); // place
+    await blanks.nth(0).fill(action); // action (name)
+    await blanks.nth(1).fill("At morning"); // cue
+    await blanks.nth(2).fill("at my desk."); // place
+    await blanks.nth(3).fill("A person who is amazing at AI"); // identity
 
     // When: they create the habit
     await page.click('button:has-text("Create habit")');

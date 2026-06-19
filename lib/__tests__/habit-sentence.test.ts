@@ -39,6 +39,18 @@ describe("withCueConnector", () => {
     // Given/When/Then: whitespace-only input yields nothing to render
     expect(withCueConnector("   ")).toBe("");
   });
+
+  it("honours a caller-supplied default connector for a bare clause", () => {
+    // Given: the create-habit builder passes the connector the user picked
+    // When/Then: a bare clause gets that connector instead of the default "when"
+    expect(withCueConnector("I pour my coffee", "after")).toBe("after I pour my coffee");
+    expect(withCueConnector("I pour my coffee", "before")).toBe("before I pour my coffee");
+  });
+
+  it("never doubles a connector even when a custom default is supplied", () => {
+    // Given/When/Then: a cue that already starts with a connector is untouched
+    expect(withCueConnector("at 7am", "after")).toBe("at 7am");
+  });
 });
 
 describe("withCravingConnector", () => {

@@ -52,16 +52,39 @@ describe("NewHabitPage", () => {
     expect(screen.getByText("Off")).toBeTruthy();
   });
 
-  it("does not render a time-block selector under the Schedule section", () => {
-    // Given: the new habit page (Time block control was removed in PR1)
+  it("renders only the cue-connector select (no time-block selector) under the Schedule section", () => {
+    // Given: the new habit page (the Time block control was removed in PR1;
+    // the only <select> is the inline cue-connector dropdown)
     const { container } = render(<NewHabitPage />);
 
-    // When: looking for a <select> in the page
-    const timeSelect = container.querySelector("select");
+    // When: looking for <select> elements in the page
+    const selects = container.querySelectorAll("select");
 
-    // Then: there is none — time-of-day still comes from the inline sentence input
-    expect(timeSelect).toBeNull();
+    // Then: the only select is the cue connector, and no Time block exists
+    expect(selects.length).toBe(1);
+    expect(selects[0].getAttribute("aria-label")).toBe("Cue connector");
     expect(screen.queryByText("Time block")).toBeNull();
+  });
+
+  it("stores the chosen connector as the leading word of the law cue", () => {
+    // Given: a fresh page with the action, cue and identity blanks filled
+    storeMock.habits = [];
+    storeMock.addHabit.mockClear();
+    render(<NewHabitPage />);
+    fireEvent.change(screen.getByPlaceholderText("read one page"), { target: { value: "read one page" } });
+    fireEvent.change(screen.getByPlaceholderText("I pour my coffee"), { target: { value: "I pour my coffee" } });
+    fireEvent.change(screen.getByPlaceholderText("a reader"), { target: { value: "a reader" } });
+
+    // When: the user picks "Before" from the connector dropdown and submits
+    fireEvent.change(screen.getByLabelText("Cue connector"), { target: { value: "Before" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create habit" }));
+
+    // Then: the synthesised law cue leads with the chosen connector
+    expect(storeMock.addHabit).toHaveBeenCalledTimes(1);
+    const created = storeMock.addHabit.mock.calls[0][0];
+    expect(created.cue).toBe("Before I pour my coffee.");
+    // And: the loop cue stays the bare phrase the diagram expects
+    expect(created.loopCue).toBe("I pour my coffee");
   });
 
   it("shows habit-derived identities as chips but excludes core values from the Identity page", () => {

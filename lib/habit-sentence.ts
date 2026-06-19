@@ -83,14 +83,21 @@ export function lowercaseFirst(text: string): string {
 
 /**
  * Make a cue read as a trigger clause. A bare clause such as "I pour my coffee"
- * becomes "when I pour my coffee", while phrases that already begin with a
- * temporal/locational connector ("after coffee", "at 7am") are returned as-is.
- * Returns an empty string for empty input so callers can omit the cue entirely.
+ * becomes "<defaultConnector> I pour my coffee" (e.g. "when I pour my coffee"
+ * or "after I pour my coffee"), while phrases that already begin with a
+ * temporal/locational connector ("after coffee", "at 7am") are returned as-is
+ * so a connector is never doubled. Returns an empty string for empty input so
+ * callers can omit the cue entirely.
+ *
+ * `defaultConnector` lets the create-habit builder honour the connector the
+ * user picked from the inline dropdown (after / before / when / at / every)
+ * instead of always assuming "when". It defaults to "when" so existing callers
+ * (e.g. the habit-detail summary) keep their previous behaviour.
  */
-export function withCueConnector(cue: string): string {
+export function withCueConnector(cue: string, defaultConnector = "when"): string {
   const trimmed = cue.trim();
   if (!trimmed) return "";
-  return startsWithWord(trimmed, CUE_CONNECTORS) ? trimmed : `when ${trimmed}`;
+  return startsWithWord(trimmed, CUE_CONNECTORS) ? trimmed : `${defaultConnector} ${trimmed}`;
 }
 
 /**

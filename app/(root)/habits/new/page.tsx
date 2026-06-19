@@ -23,6 +23,16 @@ const PRESETS = {
 type Preset = keyof typeof PRESETS;
 
 /**
+ * Selectable cue connectors shown as an inline dropdown in the sentence. The
+ * first entry is the default. Every word here is one withCueConnector() treats
+ * as a trigger leader, so the chosen word is stored as the leading token of the
+ * cue with no schema change. "After"/"Before" enable habit stacking
+ * ("After I pour my coffee, I'll ..."), the canonical Atomic Habits pattern.
+ */
+const CONNECTORS = ["After", "Before", "When", "At", "Every"] as const;
+type Connector = (typeof CONNECTORS)[number];
+
+/**
  * MLInput — auto-resizing inline input used inside the Mad-Libs sentence.
  *
  * Measures the typed text in a hidden span so the input width matches the
@@ -89,16 +99,42 @@ function MLChip({ children, onClick }: { children: string; onClick: () => void }
 }
 
 /**
+ * MLSelect — the inline connector dropdown (after / before / when / at /
+ * every) used inside the Mad-Libs sentence. It keeps the cue connector
+ * explicit and flexible instead of a single hardcoded word, so a user can
+ * express habit stacking ("after I pour my coffee") or a time trigger
+ * ("at 7am") from the same blank.
+ */
+function MLSelect({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return (
+    <select
+      className={styles.mlSelect}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      aria-label="Cue connector"
+    >
+      {CONNECTORS.map((option) => (
+        <option key={option} value={option}>
+          {option.toLowerCase()}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+/**
  * NewHabitPage — the create-habit sentence builder. Users fill in inline
- * blanks ("I'm becoming [identity] — I'll [action] when [cue], [place].")
- * and pick a schedule. The submit handler synthesises the full habit
- * (the four laws, the loop, environment, craving and reward) from those
+ * blanks ("I'll [action] [after ▾] [cue], [place] — so I can become
+ * [identity].") and pick a schedule. The submit handler synthesises the full
+ * habit (the four laws, the loop, environment, craving and reward) from those
  * blanks so the user doesn't have to think about the loop on day one.
  *
- * The wording is intentionally identity-first ("I'm becoming ... I'll ...
- * when ...") rather than an implementation-intention template, and the cue
- * (when) and place (where) are separate, clearly-labelled blanks so the
- * place never ends up holding a time phrase.
+ * The cue connector is a dropdown (after / before / when / at / every) rather
+ * than a single fixed word, so the sentence reads naturally for both habit
+ * stacking ("after I pour my coffee") and time triggers ("at 7am"). Identity
+ * comes last ("so I can become ...") to frame the habit as a vote for who you
+ * want to become. The cue (when) and place (where) stay separate, clearly
+ * labelled blanks so the place never ends up holding a time phrase.
  */
 export default function NewHabitPage() {
   const router = useRouter();
@@ -107,6 +143,7 @@ export default function NewHabitPage() {
   const [cue, setCue] = useState("");
   const [location, setLocation] = useState("");
   const [identity, setIdentity] = useState("");
+  const [connector, setConnector] = useState<Connector>("After");
   const [preset, setPreset] = useState<Preset>("daily");
   const [customDays, setCustomDays] = useState<string[]>([]);
 
@@ -166,9 +203,12 @@ export default function NewHabitPage() {
     const cleanLocation = location.trim();
 
     // Law 1 ("make it obvious") reads as a trigger statement, e.g.
-    // "When I pour my coffee, at my desk." We add the connector and place
-    // here so the standalone law card and the habit row preview read well.
-    const cueClause = cleanCue ? capitalizeFirst(withCueConnector(cleanCue)) : "When the moment is right";
+    // "After I pour my coffee, at my desk." The connector comes from the inline
+    // dropdown: we pass it to withCueConnector as the default so a bare cue
+    // ("I pour my coffee") becomes "after I pour my coffee", while a cue the
+    // user already prefixed ("at 7am") is left untouched — never doubled.
+    const cueWithConnector = withCueConnector(cleanCue, connector.toLowerCase());
+    const cueClause = cueWithConnector ? capitalizeFirst(cueWithConnector) : "When the moment is right";
     const lawCue = cleanLocation ? `${cueClause}, ${cleanLocation}.` : `${cueClause}.`;
 
     addHabit({
@@ -208,14 +248,14 @@ export default function NewHabitPage() {
 
       <div className={`card card-pad ${styles.sentenceCard}`}>
         <div className={styles.sentence}>
-          I&apos;m becoming
-          <MLInput value={identity} onChange={setIdentity} placeholder="a reader" wide />
-          — I&apos;ll
-          <MLInput value={name} onChange={setName} placeholder="read 1 page" wide />
-          when
+          I&apos;ll
+          <MLInput value={name} onChange={setName} placeholder="read one page" wide />
+          <MLSelect value={connector} onChange={(value) => setConnector(value as Connector)} />
           <MLInput value={cue} onChange={setCue} placeholder="I pour my coffee" wide />
           ,
           <MLInput value={location} onChange={setLocation} placeholder="at my desk" wide />
+          — so I can become
+          <MLInput value={identity} onChange={setIdentity} placeholder="a reader" wide />
           .
         </div>
         <div className={styles.identityChips}>
