@@ -8,11 +8,35 @@ function unique(name: string) {
   return `${name} ${Date.now()}_${++counter}`;
 }
 
+/**
+ * Run an API request, retrying on a transient non-OK response. The ephemeral PR
+ * preview runs on a deliberately tiny (Burstable B1ms + Consumption) stack, so
+ * the app can occasionally return a transient 5xx under cold-start/CPU pressure.
+ * A user would simply see a hiccup and try again, so the E2E API setup helpers
+ * do the same rather than failing the whole journey on a one-off blip.
+ */
+async function requestOk<T extends { ok(): boolean; status(): number }>(
+  send: () => Promise<T>,
+  attempts = 4,
+): Promise<T> {
+  let last: T | undefined;
+  for (let i = 0; i < attempts; i += 1) {
+    last = await send();
+    if (last.ok()) return last;
+    // Back off briefly before retrying a transient failure.
+    await new Promise((resolve) => setTimeout(resolve, 400 * (i + 1)));
+  }
+  // Exhausted retries — assert so the failure surfaces with a clear message.
+  expect(last?.ok(), `request failed after ${attempts} attempts (last status ${last?.status()})`).toBe(true);
+  return last as T;
+}
+
 async function setStackNextId(page: import("@playwright/test").Page, habitId: string, targetId: string | null) {
-  const res = await page.request.patch(`/api/v1/habits/${habitId}`, {
-    data: { stackNextId: targetId },
-  });
-  expect(res.ok()).toBe(true);
+  await requestOk(() =>
+    page.request.patch(`/api/v1/habits/${habitId}`, {
+      data: { stackNextId: targetId },
+    }),
+  );
 }
 
 async function cleanupHabits(page: import("@playwright/test").Page) {
@@ -26,35 +50,45 @@ async function cleanupHabits(page: import("@playwright/test").Page) {
 }
 
 async function seedHabit(page: import("@playwright/test").Page, name: string, identity: string) {
-  const response = await page.request.post("/api/v1/habits", {
-    data: {
-      name,
-      identity,
-      emoji: "•",
-      cue: "",
-      craving: "",
-      response: name,
-      reward: "",
-      loopCue: "",
-      loopCraving: "",
-      loopResponse: name,
-      loopReward: "",
-      twoMin: "",
-      environment: "",
-      schedule: "Daily",
-      time: "Morning",
-      contract: "",
-      contractPartners: [],
-    },
-  });
-  expect(response.ok()).toBe(true);
+  const response = await requestOk(() =>
+    page.request.post("/api/v1/habits", {
+      data: {
+        name,
+        identity,
+        emoji: "•",
+        cue: "",
+        craving: "",
+        response: name,
+        reward: "",
+        loopCue: "",
+        loopCraving: "",
+        loopResponse: name,
+        loopReward: "",
+        twoMin: "",
+        environment: "",
+        schedule: "Daily",
+        time: "Morning",
+        contract: "",
+        contractPartners: [],
+      },
+    }),
+  );
   const body = await response.json();
   return body.data.habit.id as string;
 }
 
 async function openHabitDetail(page: import("@playwright/test").Page, habitId: string) {
-  await page.goto(`/habits/${habitId}`);
-  await page.waitForSelector('button:has-text("Stack")', { timeout: 10000 });
+  // The preview instance can be slow to render a detail page under cold start,
+  // so allow a generous timeout and retry the navigation once before giving up.
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    await page.goto(`/habits/${habitId}`);
+    try {
+      await page.waitForSelector('button:has-text("Stack")', { timeout: 20000 });
+      return;
+    } catch (error) {
+      if (attempt === 1) throw error;
+    }
+  }
 }
 
 async function openStackTab(page: import("@playwright/test").Page, habitId: string) {
