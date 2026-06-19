@@ -337,7 +337,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
     template: {
       scale: {
         minReplicas: 0
-        maxReplicas: 2
+        maxReplicas: 1
         rules: []
       }
       containers: [
@@ -345,8 +345,13 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
           name: 'web'
           image: '${acrLoginServer}/atomicly:${imageTag}'
           resources: {
-            cpu: json('0.5')
-            memory: '1Gi'
+            // The preview exists to run the full Playwright E2E suite. 0.5 vCPU
+            // rendered pages slowly enough that interactions raced and tests hit
+            // their timeouts, so we give it 1 vCPU / 2Gi. minReplicas stays at 0
+            // (scale-to-zero), so this larger size is only billed during the
+            // short E2E burst, keeping the preview within its cost ceiling.
+            cpu: json('1.0')
+            memory: '2Gi'
           }
           env: [
             {

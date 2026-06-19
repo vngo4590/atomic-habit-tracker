@@ -9,11 +9,12 @@ function unique(name: string) {
 }
 
 /**
- * Run an API request, retrying on a transient non-OK response. The ephemeral PR
- * preview runs on a deliberately tiny (Burstable B1ms + Consumption) stack, so
- * the app can occasionally return a transient 5xx under cold-start/CPU pressure.
- * A user would simply see a hiccup and try again, so the E2E API setup helpers
- * do the same rather than failing the whole journey on a one-off blip.
+ * Run an API request, retrying only on a *transient* non-OK response (429 or a
+ * 5xx). The ephemeral PR preview runs on a deliberately small Container App, so
+ * the app can occasionally return a transient 5xx under cold-start/CPU pressure;
+ * a user would simply retry, so the E2E API setup helpers do the same. A 4xx
+ * (e.g. a 422 stack-validation error) is deterministic, so we surface it
+ * immediately rather than wasting retries that cannot succeed.
  */
 async function requestOk<T extends { ok(): boolean; status(): number }>(
   send: () => Promise<T>,
@@ -23,11 +24,13 @@ async function requestOk<T extends { ok(): boolean; status(): number }>(
   for (let i = 0; i < attempts; i += 1) {
     last = await send();
     if (last.ok()) return last;
+    const transient = last.status() === 429 || last.status() >= 500;
+    if (!transient) break;
     // Back off briefly before retrying a transient failure.
     await new Promise((resolve) => setTimeout(resolve, 400 * (i + 1)));
   }
-  // Exhausted retries — assert so the failure surfaces with a clear message.
-  expect(last?.ok(), `request failed after ${attempts} attempts (last status ${last?.status()})`).toBe(true);
+  // No success — assert so the failure surfaces with a clear status in the message.
+  expect(last?.ok(), `request failed (status ${last?.status()})`).toBe(true);
   return last as T;
 }
 

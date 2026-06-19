@@ -22,11 +22,17 @@ export default defineConfig({
   retries: isCI ? 2 : 0,
   workers: 1,
   reporter: "list",
-  // Increase per-test timeout in CI to account for cold-start page loads.
-  timeout: isCI ? 60_000 : 30_000,
+  // Increase per-test timeout in CI to account for cold-start page loads and the
+  // small (1 vCPU) ephemeral preview instance, which renders pages more slowly
+  // than a dev machine. The expect/action/navigation timeouts are likewise
+  // widened so a slow-but-correct render is not mistaken for a failure.
+  timeout: isCI ? 90_000 : 30_000,
+  expect: { timeout: isCI ? 15_000 : 5_000 },
   use: {
     baseURL: externalBaseURL ?? "http://localhost:3000",
     trace: "on-first-retry",
+    actionTimeout: isCI ? 20_000 : 0,
+    navigationTimeout: isCI ? 30_000 : 0,
   },
   projects: [
     { name: "setup", testMatch: /auth\.setup\.ts/ },
