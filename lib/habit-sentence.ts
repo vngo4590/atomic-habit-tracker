@@ -117,6 +117,13 @@ export function withCravingConnector(craving: string): string {
  * after inline edits) rather than stored, which also means it degrades
  * gracefully for older habits and for habits missing a cue or place.
  *
+ * The sentence uses exactly the same shape as the create-habit builder —
+ * "I'll <action> <cue>, <place> — so I can become <identity>." — so what the
+ * user typed when designing the habit is what they see back on the detail page.
+ * The cue is shown verbatim (the user now types the whole cue clause, e.g.
+ * "after I pour my coffee"); for older habits whose cue was stored as a bare
+ * phrase we fall back to prepending "when" so it still reads as a trigger.
+ *
  * Casing is preserved (we only add lowercase connectors) so acronyms like "AI"
  * survive intact.
  */
@@ -136,7 +143,8 @@ export function composeHabitSentence(
   let body = `I'll ${action}`;
   if (cue) body += ` ${cue}`;
   if (place) body += `, ${place}`;
+  if (identity) body += ` — so I can become ${identity}`;
   body += ".";
 
-  return identity ? `I'm becoming ${identity} — ${body}` : body;
+  return body;
 }

@@ -1,140 +1,32 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useLayoutEffect, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { HabitSentenceFields } from "@/components/HabitSentenceFields";
+import {
+  SchedulePicker,
+  scheduleLabelFromState,
+  type Preset,
+} from "@/components/SchedulePicker";
 import { useStoreContext } from "@/components/StoreProvider";
 import { capitalizeFirst, withCueConnector } from "@/lib/habit-sentence";
 import { clientLogger } from "@/lib/logger-client";
-import { formatScheduleLabel } from "@/lib/schedule";
 
 import styles from "./page.module.css";
 
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
-/** Schedule presets. Each maps to a list of weekday tokens. */
-const PRESETS = {
-  daily: { label: "Every day", days: [...DAYS] },
-  weekdays: { label: "Weekdays", days: ["Mon", "Tue", "Wed", "Thu", "Fri"] },
-  weekends: { label: "Weekends", days: ["Sun", "Sat"] },
-  three: { label: "3x a week", days: ["Mon", "Wed", "Fri"] },
-  custom: { label: "Custom", days: [] },
-} as const;
-type Preset = keyof typeof PRESETS;
-
-/**
- * Selectable cue connectors shown as an inline dropdown in the sentence. The
- * first entry is the default. Every word here is one withCueConnector() treats
- * as a trigger leader, so the chosen word is stored as the leading token of the
- * cue with no schema change. "After"/"Before" enable habit stacking
- * ("After I pour my coffee, I'll ..."), the canonical Atomic Habits pattern.
- */
-const CONNECTORS = ["After", "Before", "When", "At", "Every"] as const;
-type Connector = (typeof CONNECTORS)[number];
-
-/**
- * MLInput — auto-resizing inline input used inside the Mad-Libs sentence.
- *
- * Measures the typed text in a hidden span so the input width matches the
- * content (within min/max bounds). The width is exposed to CSS via the
- * --ml-width and --ml-max-width custom properties so the wrapper stays
- * style-free.
- */
-function MLInput({
-  value,
-  onChange,
-  placeholder,
-  wide = false,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder: string;
-  wide?: boolean;
-}) {
-  const minWidth = wide ? 160 : 110;
-  const maxWidth = wide ? 320 : 260;
-  const maxChars = 60;
-  const text = value || placeholder;
-  // Measure the text in a hidden span so the input container grows with content.
-  const measureRef = useRef<HTMLSpanElement>(null);
-  const [textWidth, setTextWidth] = useState(minWidth);
-
-  useLayoutEffect(() => {
-    if (measureRef.current) {
-      setTextWidth(Math.min(maxWidth, Math.max(minWidth, measureRef.current.offsetWidth + 24)));
-    }
-  }, [text, minWidth, maxWidth]);
-
-  return (
-    <span
-      className={styles.mlWrap}
-      style={
-        {
-          "--ml-width": `${textWidth}px`,
-          "--ml-max-width": `${maxWidth}px`,
-        } as React.CSSProperties
-      }
-    >
-      <input
-        className={`input ${styles.mlInput}`}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        maxLength={maxChars}
-      />
-      <span ref={measureRef} aria-hidden="true" className={styles.mlMeasure}>
-        {text}
-      </span>
-    </span>
-  );
-}
-
-/** Small clickable chip that fills in a suggested identity into MLInput. */
-function MLChip({ children, onClick }: { children: string; onClick: () => void }) {
-  return (
-    <button className="chip identity-chip" type="button" onClick={onClick}>
-      {children}
-    </button>
-  );
-}
-
-/**
- * MLSelect — the inline connector dropdown (after / before / when / at /
- * every) used inside the Mad-Libs sentence. It keeps the cue connector
- * explicit and flexible instead of a single hardcoded word, so a user can
- * express habit stacking ("after I pour my coffee") or a time trigger
- * ("at 7am") from the same blank.
- */
-function MLSelect({ value, onChange }: { value: string; onChange: (value: string) => void }) {
-  return (
-    <select
-      className={styles.mlSelect}
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      aria-label="Cue connector"
-    >
-      {CONNECTORS.map((option) => (
-        <option key={option} value={option}>
-          {option.toLowerCase()}
-        </option>
-      ))}
-    </select>
-  );
-}
-
 /**
  * NewHabitPage — the create-habit sentence builder. Users fill in inline
- * blanks ("I'll [action] [after ▾] [cue], [place] — so I can become
- * [identity].") and pick a schedule. The submit handler synthesises the full
- * habit (the four laws, the loop, environment, craving and reward) from those
- * blanks so the user doesn't have to think about the loop on day one.
+ * blanks ("I'll [action] [cue], [place] — so I can become [identity].") and
+ * pick a schedule. The submit handler synthesises the full habit (the four
+ * laws, the loop, environment, craving and reward) from those blanks so the
+ * user doesn't have to think about the loop on day one.
  *
- * The cue connector is a dropdown (after / before / when / at / every) rather
- * than a single fixed word, so the sentence reads naturally for both habit
- * stacking ("after I pour my coffee") and time triggers ("at 7am"). Identity
- * comes last ("so I can become ...") to frame the habit as a vote for who you
- * want to become. The cue (when) and place (where) stay separate, clearly
- * labelled blanks so the place never ends up holding a time phrase.
+ * The cue is a single free-text blank: the user types the whole cue clause
+ * ("after I pour my coffee" or "at 7am") instead of choosing a connector word
+ * from a dropdown. Identity comes last ("so I can become ...") to frame the
+ * habit as a vote for who you want to become.
  */
 export default function NewHabitPage() {
   const router = useRouter();
@@ -143,7 +35,6 @@ export default function NewHabitPage() {
   const [cue, setCue] = useState("");
   const [location, setLocation] = useState("");
   const [identity, setIdentity] = useState("");
-  const [connector, setConnector] = useState<Connector>("After");
   const [preset, setPreset] = useState<Preset>("daily");
   const [customDays, setCustomDays] = useState<string[]>([]);
 
@@ -171,11 +62,7 @@ export default function NewHabitPage() {
     return allIdentities.filter((id) => id.toLowerCase().includes(query));
   }, [allIdentities, identity]);
 
-  const activeDays: readonly string[] = preset === "custom" ? customDays : PRESETS[preset].days;
-  const schedule =
-    preset === "custom"
-      ? formatScheduleLabel(customDays.join(", ") || "Custom")
-      : formatScheduleLabel(PRESETS[preset].label);
+  const schedule = scheduleLabelFromState(preset, customDays);
 
   const toggleDay = (day: string) => {
     setPreset("custom");
@@ -187,7 +74,7 @@ export default function NewHabitPage() {
   // Synthesise the full habit record from the blanks then navigate to the
   // habits list so the user can see their creation. We set the loop fields
   // explicitly (rather than letting the store inherit them from the law
-  // sentences) so the "loop in a sentence" recap reads grammatically.
+  // sentences) so the summary sentence on the detail page reads grammatically.
   const finalize = () => {
     clientLogger.info("New habit submission attempted", {
       page: "habit-new",
@@ -203,11 +90,11 @@ export default function NewHabitPage() {
     const cleanLocation = location.trim();
 
     // Law 1 ("make it obvious") reads as a trigger statement, e.g.
-    // "After I pour my coffee, at my desk." The connector comes from the inline
-    // dropdown: we pass it to withCueConnector as the default so a bare cue
-    // ("I pour my coffee") becomes "after I pour my coffee", while a cue the
-    // user already prefixed ("at 7am") is left untouched — never doubled.
-    const cueWithConnector = withCueConnector(cleanCue, connector.toLowerCase());
+    // "After I pour my coffee, at my desk." The user usually types a full cue
+    // clause; withCueConnector only supplies a "when" for a bare clause that
+    // lacks a leading connector, so a cue like "after I pour my coffee" is
+    // never doubled.
+    const cueWithConnector = withCueConnector(cleanCue);
     const cueClause = cueWithConnector ? capitalizeFirst(cueWithConnector) : "When the moment is right";
     const lawCue = cleanLocation ? `${cueClause}, ${cleanLocation}.` : `${cueClause}.`;
 
@@ -223,8 +110,8 @@ export default function NewHabitPage() {
       craving: `To become ${cleanIdentity}.`,
       reward: "A visible win I can see and feel.",
       environment: cleanLocation,
-      // Bare phrases for the loop diagram so its recap can supply the
-      // connectors ("when ...", "I want ...") and read naturally.
+      // Store the cue exactly as the user typed it so the summary sentence on
+      // the detail page reads back identically to what they entered here.
       loopCue: cleanCue,
       loopCraving: `to become ${cleanIdentity}`,
       loopResponse: cleanName,
@@ -247,72 +134,26 @@ export default function NewHabitPage() {
       </div>
 
       <div className={`card card-pad ${styles.sentenceCard}`}>
-        <div className={styles.sentence}>
-          I&apos;ll
-          <MLInput value={name} onChange={setName} placeholder="read one page" wide />
-          <MLSelect value={connector} onChange={(value) => setConnector(value as Connector)} />
-          <MLInput value={cue} onChange={setCue} placeholder="I pour my coffee" wide />
-          ,
-          <MLInput value={location} onChange={setLocation} placeholder="at my desk" wide />
-          — so I can become
-          <MLInput value={identity} onChange={setIdentity} placeholder="a reader" wide />
-          .
-        </div>
-        <div className={styles.identityChips}>
-          {visibleIdentities.map((item) => (
-            <MLChip key={item} onClick={() => setIdentity(item)}>
-              {item}
-            </MLChip>
-          ))}
-        </div>
+        <HabitSentenceFields
+          name={name}
+          cue={cue}
+          location={location}
+          identity={identity}
+          onNameChange={setName}
+          onCueChange={setCue}
+          onLocationChange={setLocation}
+          onIdentityChange={setIdentity}
+          identitySuggestions={visibleIdentities}
+        />
       </div>
 
       <div className={styles.sections}>
-        <section className="card card-pad">
-          <div className="eyebrow">Schedule</div>
-          <div className={styles.presetRow}>
-            {(Object.keys(PRESETS) as Preset[]).map((key) => (
-              <motion.button
-                key={key}
-                className={`chip ${preset === key ? "active" : ""}`}
-                type="button"
-                onClick={() => setPreset(key)}
-                whileTap={{ scale: 0.95 }}
-              >
-                {PRESETS[key].label}
-              </motion.button>
-            ))}
-          </div>
-          {/* Day-of-week toggles. Uses the .day-grid global class so the
-              mobile layout override does not force each day onto its own row. */}
-          <div className={`day-grid ${styles.dayGridSpacer}`}>
-            {DAYS.map((day) => (
-              <motion.button
-                key={day}
-                className={`btn btn-sm ${activeDays.includes(day) ? "btn-primary" : ""}`}
-                type="button"
-                onClick={() => toggleDay(day)}
-                whileTap={{ scale: 0.95 }}
-              >
-                {day}
-              </motion.button>
-            ))}
-          </div>
-          {/* Legend so the meaning of the selected vs. unselected day pills
-              is explicit. We render miniature pills styled the same way as
-              the day buttons so the legend stays correct in both light and
-              dark themes (no colour names baked into copy). */}
-          <div className={styles.dayLegend} aria-label="Day selector legend">
-            <span className={styles.dayLegendItem}>
-              <span className={`btn btn-sm btn-primary ${styles.dayLegendSwatch}`} aria-hidden="true" />
-              <span className={styles.dayLegendLabel}>Scheduled</span>
-            </span>
-            <span className={styles.dayLegendItem}>
-              <span className={`btn btn-sm ${styles.dayLegendSwatch}`} aria-hidden="true" />
-              <span className={styles.dayLegendLabel}>Off</span>
-            </span>
-          </div>
-        </section>
+        <SchedulePicker
+          preset={preset}
+          customDays={customDays}
+          onPresetChange={setPreset}
+          onToggleDay={toggleDay}
+        />
       </div>
 
       <div className={styles.footer}>

@@ -125,16 +125,16 @@ test.describe("Creating a habit", () => {
     const id = await findHabitIdByName(page, action);
     await page.goto(`/habits/${id}`);
     const sentence = page.locator("p", {
-      hasText: "I'm becoming a person who is amazing at AI",
+      hasText: "so I can become a person who is amazing at AI",
     });
     await expect(sentence).toBeVisible();
     const text = (await sentence.first().textContent())?.trim() ?? "";
     expect(text).toBe(
-      `I'm becoming a person who is amazing at AI — I'll ${action.charAt(0).toLowerCase()}${action.slice(1)} at morning, at my desk.`,
+      `I'll ${action.charAt(0).toLowerCase()}${action.slice(1)} at morning, at my desk — so I can become a person who is amazing at AI.`,
     );
     // Guard the specific regressions the user reported.
     expect(text).not.toContain("..");
-    expect(text).not.toContain("— I'll Read");
+    expect(text.startsWith("I'll read")).toBe(true);
     expect(text).not.toContain("At morning");
   });
 });
