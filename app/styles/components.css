@@ -559,7 +559,6 @@ textarea.input {
   border-color: var(--rule);
 }
 .habit-library-tabs .tab.active {
-  border-bottom: 1px solid var(--rule-strong);
   border-color: var(--rule-strong);
   background: var(--bg-elev);
   box-shadow: var(--shadow);
