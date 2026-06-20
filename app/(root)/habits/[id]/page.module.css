@@ -72,6 +72,27 @@
   justify-content: flex-end;
 }
 
+/* ---- Edit-habit panel (inline create-style editor) ------------------- */
+
+/* Wraps the sentence builder + schedule + actions when editing a habit.
+   Takes the full header width so the large serif sentence has room. */
+.editPanel {
+  width: 100%;
+}
+
+/* Spacing above the schedule picker inside the edit panel. */
+.editSchedule {
+  margin-top: 18px;
+}
+
+/* Cancel / Save changes button row beneath the edit panel. */
+.editActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
 /* Icon size inside action buttons. */
 .actionIcon {
   width: 14px;

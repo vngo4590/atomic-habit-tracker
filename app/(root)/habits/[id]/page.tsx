@@ -9,7 +9,14 @@ import { ContractSheet } from "@/components/ContractSheet";
 import { EditableLaw } from "@/components/EditableLaw";
 import { EditableLine } from "@/components/EditableLine";
 import { HabitJournalStream } from "@/components/HabitJournalStream";
+import { HabitSentenceFields } from "@/components/HabitSentenceFields";
 import { HistoryWall } from "@/components/HistoryWall";
+import {
+  SchedulePicker,
+  scheduleLabelFromState,
+  scheduleStateFromLabel,
+  type Preset,
+} from "@/components/SchedulePicker";
 import { StackDiagram } from "@/components/StackDiagram";
 import { TabUnderline } from "@/components/TabUnderline";
 import {
@@ -115,6 +122,16 @@ export default function HabitDetailPage() {
   const [showContract, setShowContract] = useState(false);
   const [showMood, setShowMood] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Edit-habit mode: when on, the header sentence is replaced by the same
+  // Mad-Libs builder used on the create page so the user can change the
+  // habit's wording and schedule at any time.
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editCue, setEditCue] = useState("");
+  const [editLocation, setEditLocation] = useState("");
+  const [editIdentity, setEditIdentity] = useState("");
+  const [editPreset, setEditPreset] = useState<Preset>("daily");
+  const [editCustomDays, setEditCustomDays] = useState<string[]>([]);
   const today = todayKey();
   const habitId = params.id;
   const viewedHabitIdRef = useRef(habitId);
@@ -135,6 +152,24 @@ export default function HabitDetailPage() {
       total: Object.keys(habit.history).length,
     };
   }, [habit, store]);
+
+  // Habit-derived identity suggestions shown as chips in the edit sentence,
+  // most-used first (same shape as the create page). Computed before the early
+  // return so the hook order stays stable.
+  const identitySuggestions = useMemo(() => {
+    const counts = new Map<string, number>();
+    store.habits.forEach((item) => {
+      if (item.identity) {
+        counts.set(item.identity, (counts.get(item.identity) ?? 0) + 1);
+      }
+    });
+    const ranked = Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([id]) => id);
+    const query = editIdentity.trim().toLowerCase();
+    if (!query) return ranked.slice(0, 5);
+    return ranked.filter((id) => id.toLowerCase().includes(query));
+  }, [store.habits, editIdentity]);
 
   if (!habit || !stats) {
     return (
@@ -183,6 +218,44 @@ export default function HabitDetailPage() {
     router.push("/habits");
   };
 
+  // Open the edit panel, seeding the draft fields from the live habit so the
+  // user edits exactly what they currently have.
+  const startEditing = () => {
+    const scheduleState = scheduleStateFromLabel(habit.schedule);
+    setEditName(habit.name);
+    setEditCue(habit.loopCue);
+    setEditLocation(habit.environment);
+    setEditIdentity(habit.identity);
+    setEditPreset(scheduleState.preset);
+    setEditCustomDays(scheduleState.customDays);
+    setEditing(true);
+    clientLogger.info("Habit edit started", { page: "habit-detail", habitId: habit.id });
+  };
+
+  const toggleEditDay = (day: string) => {
+    setEditPreset("custom");
+    setEditCustomDays((current) =>
+      current.includes(day) ? current.filter((item) => item !== day) : [...current, day],
+    );
+  };
+
+  // Persist the edited sentence + schedule. We only patch the fields the
+  // sentence owns (name, identity, cue, place, schedule) so any inline edits
+  // the user made to the 4 laws or the loop are never clobbered.
+  const saveEdit = () => {
+    const trimmedName = editName.trim();
+    if (!trimmedName) return;
+    store.updateHabit(habit.id, {
+      name: trimmedName,
+      identity: editIdentity.trim(),
+      loopCue: editCue.trim(),
+      environment: editLocation.trim(),
+      schedule: scheduleLabelFromState(editPreset, editCustomDays),
+    });
+    clientLogger.info("Habit edit saved", { page: "habit-detail", habitId: habit.id });
+    setEditing(false);
+  };
+
   const saveHabitPatch = (field: string, patch: Partial<Habit>) => {
     clientLogger.info("Habit detail saved", { page: "habit-detail", habitId: habit.id, field });
     store.updateHabit(habit.id, patch);
@@ -224,83 +297,141 @@ export default function HabitDetailPage() {
 
       <div className={`page-header ${styles.header}`}>
         <div className={styles.headerTop}>
-          <div>
-            <div className="eyebrow">{formatScheduleLabel(habit.schedule)} · {habit.time}</div>
-            <h1 className={`h1 ${styles.headerName}`}>{habit.name}</h1>
-            {/* The habit summarised as one plain sentence, rebuilt from the
-                live fields so it stays accurate after inline edits. Shown up
-                top so the user sees exactly what they committed to. */}
-            <p className={styles.headerSentence}>{composeHabitSentence(habit)}</p>
-            <p className={`lede ${styles.headerLede}`}>
-              I am <em className={styles.identityEm}>{habit.identity}</em>. Each check-in is a vote for that.
-            </p>
-          </div>
-          <div className={styles.headerActions}>
-            <motion.button
-              className={`btn btn-lg ${doneToday ? "btn-accent" : "btn-primary"}`}
-              onClick={() => {
-                // Clicking the primary button always toggles the day. If the
-                // user just marked it done, also open the mood sheet so they
-                // can capture mood + a quick note.
-                if (doneToday) {
-                  store.toggleHabit(habit.id);
-                } else {
-                  store.toggleHabit(habit.id);
-                  setShowMood(true);
-                }
-              }}
-              whileHover={{ y: -1 }}
-              whileTap={{ scale: 0.97 }}
-            >
-              {doneToday ? (
-                <>
-                  <IconCheck className={styles.actionIcon} /> Done today · tap to unmark
-                </>
-              ) : (
-                "Mark done"
-              )}
-            </motion.button>
-            {doneToday && (
-              <motion.button
-                className="btn btn-lg btn-ghost"
-                onClick={() => setShowMood(true)}
-                whileHover={{ y: -1 }}
-                whileTap={{ scale: 0.97 }}
-              >
-                Edit entry
-              </motion.button>
-            )}
-            {confirmDelete ? (
-              <>
-                <motion.button className="btn btn-lg btn-danger" onClick={deleteHabit} whileTap={{ scale: 0.97 }}>
-                  <IconTrash className={styles.actionIcon} /> Confirm delete
-                </motion.button>
+          {editing ? (
+            <div className={styles.editPanel}>
+              {/* Same Mad-Libs sentence + schedule controls as the create page,
+                  so editing a habit feels identical to designing one. */}
+              <HabitSentenceFields
+                name={editName}
+                cue={editCue}
+                location={editLocation}
+                identity={editIdentity}
+                onNameChange={setEditName}
+                onCueChange={setEditCue}
+                onLocationChange={setEditLocation}
+                onIdentityChange={setEditIdentity}
+                identitySuggestions={identitySuggestions}
+              />
+              <div className={styles.editSchedule}>
+                <SchedulePicker
+                  preset={editPreset}
+                  customDays={editCustomDays}
+                  onPresetChange={setEditPreset}
+                  onToggleDay={toggleEditDay}
+                />
+              </div>
+              <div className={styles.editActions}>
                 <motion.button
-                  className="btn btn-lg btn-ghost"
-                  onClick={() => setConfirmDelete(false)}
+                  className="btn"
+                  type="button"
+                  onClick={() => setEditing(false)}
                   whileTap={{ scale: 0.97 }}
                 >
                   Cancel
                 </motion.button>
-              </>
-            ) : (
-              <motion.button
-                className="btn btn-lg btn-ghost btn-danger-ghost"
-                onClick={() => setConfirmDelete(true)}
-                whileTap={{ scale: 0.97 }}
-              >
-                <IconTrash className={styles.actionIcon} /> Delete habit
-              </motion.button>
-            )}
-          </div>
+                <motion.button
+                  className="btn btn-primary"
+                  type="button"
+                  disabled={!editName.trim()}
+                  onClick={saveEdit}
+                  whileHover={{ y: -1 }}
+                  whileTap={{ scale: 0.97 }}
+                >
+                  Save changes
+                </motion.button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div>
+                <div className="eyebrow">{formatScheduleLabel(habit.schedule)} · {habit.time}</div>
+                <h1 className={`h1 ${styles.headerName}`}>{habit.name}</h1>
+                {/* The habit summarised as one plain sentence, rebuilt from the
+                    live fields so it stays accurate after inline edits. Shown up
+                    top so the user sees exactly what they committed to. */}
+                <p className={styles.headerSentence}>{composeHabitSentence(habit)}</p>
+                <p className={`lede ${styles.headerLede}`}>
+                  I am <em className={styles.identityEm}>{habit.identity}</em>. Each check-in is a vote for that.
+                </p>
+              </div>
+              <div className={styles.headerActions}>
+                <motion.button
+                  className={`btn btn-lg ${doneToday ? "btn-accent" : "btn-primary"}`}
+                  onClick={() => {
+                    // Clicking the primary button always toggles the day. If the
+                    // user just marked it done, also open the mood sheet so they
+                    // can capture mood + a quick note.
+                    if (doneToday) {
+                      store.toggleHabit(habit.id);
+                    } else {
+                      store.toggleHabit(habit.id);
+                      setShowMood(true);
+                    }
+                  }}
+                  whileHover={{ y: -1 }}
+                  whileTap={{ scale: 0.97 }}
+                >
+                  {doneToday ? (
+                    <>
+                      <IconCheck className={styles.actionIcon} /> Done today · tap to unmark
+                    </>
+                  ) : (
+                    "Mark done"
+                  )}
+                </motion.button>
+                {doneToday && (
+                  <motion.button
+                    className="btn btn-lg btn-ghost"
+                    onClick={() => setShowMood(true)}
+                    whileHover={{ y: -1 }}
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    Edit entry
+                  </motion.button>
+                )}
+                <motion.button
+                  className="btn btn-lg btn-ghost"
+                  onClick={startEditing}
+                  whileHover={{ y: -1 }}
+                  whileTap={{ scale: 0.97 }}
+                >
+                  Edit habit
+                </motion.button>
+                {confirmDelete ? (
+                  <>
+                    <motion.button className="btn btn-lg btn-danger" onClick={deleteHabit} whileTap={{ scale: 0.97 }}>
+                      <IconTrash className={styles.actionIcon} /> Confirm delete
+                    </motion.button>
+                    <motion.button
+                      className="btn btn-lg btn-ghost"
+                      onClick={() => setConfirmDelete(false)}
+                      whileTap={{ scale: 0.97 }}
+                    >
+                      Cancel
+                    </motion.button>
+                  </>
+                ) : (
+                  <motion.button
+                    className="btn btn-lg btn-ghost btn-danger-ghost"
+                    onClick={() => setConfirmDelete(true)}
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    <IconTrash className={styles.actionIcon} /> Delete habit
+                  </motion.button>
+                )}
+              </div>
+            </>
+          )}
         </div>
 
-        <div className={styles.statsRow}>
-          <Stat label="Active streak" value={`${stats.active}d`} />
-          <Stat label="Best streak" value={`${stats.best}d`} />
-          <Stat label="30-day rate" value={`${stats.rate}%`} />
-          <Stat label="Total check-ins" value={stats.total} />
-        </div>
+        {!editing && (
+          <div className={styles.statsRow}>
+            <Stat label="Active streak" value={`${stats.active}d`} />
+            <Stat label="Best streak" value={`${stats.best}d`} />
+            <Stat label="30-day rate" value={`${stats.rate}%`} />
+            <Stat label="Total check-ins" value={stats.total} />
+          </div>
+        )}
       </div>
 
       <div className="tabs">

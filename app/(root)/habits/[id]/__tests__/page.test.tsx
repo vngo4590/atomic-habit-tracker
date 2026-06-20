@@ -124,8 +124,30 @@ describe("HabitDetailPage", () => {
 
     // Then: the user's full plan is summarised in one readable sentence up top
     expect(
-      screen.getByText("I'm becoming a reader — I'll read 1 page when I pour my coffee, at my desk."),
+      screen.getByText("I'll read 1 page when I pour my coffee, at my desk — so I can become a reader."),
     ).toBeTruthy();
+  });
+
+  it("lets the user edit the habit sentence and saves the changed fields", () => {
+    // Given: an existing habit on the detail page
+    storeMock.habits = [
+      makeHabit({ name: "Read", identity: "reader", loopCue: "I pour my coffee", environment: "at my desk" }),
+    ];
+    render(<HabitDetailPage />);
+
+    // When: the user opens the edit panel, changes the action, and saves
+    fireEvent.click(screen.getByRole("button", { name: "Edit habit" }));
+    fireEvent.change(screen.getByDisplayValue("Read"), { target: { value: "Read two pages" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    // Then: only the sentence + schedule fields are patched (laws/loop untouched)
+    expect(storeMock.updateHabit).toHaveBeenCalledWith("habit_1", {
+      name: "Read two pages",
+      identity: "reader",
+      loopCue: "I pour my coffee",
+      environment: "at my desk",
+      schedule: "Daily",
+    });
   });
 
   it("labels the post-completion primary button 'Done today · tap to unmark'", () => {
