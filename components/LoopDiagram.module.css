@@ -6,31 +6,6 @@
   font-style: italic;
 }
 
-/* "The loop in a sentence" recap card beneath the four cells. */
-.recap {
-  margin-top: 24px;
-  background: var(--bg-sunk);
-}
-.recapTitle {
-  margin-bottom: 8px;
-}
-.recapSentence {
-  margin: 0;
-  font-family: var(--serif);
-  font-size: 20px;
-  font-style: italic;
-  color: var(--ink-2);
-  line-height: 1.4;
-}
-/* The filled-in cue/craving/response value spans inside the sentence. */
-.recapValue {
-  color: var(--ink);
-}
-/* The reward value uses the accent colour. */
-.recapReward {
-  color: var(--accent);
-}
-
 /* ---- LoopEditableValue (inline edit) ---------------------------------- */
 
 /* Cancel/Save button row beneath the textarea. */

@@ -27,7 +27,7 @@ The system SHALL display Cue, Craving, Response, and Reward fields. Clicking any
 - **THEN** the habit in the store is updated and the new value renders
 
 ### Requirement: Loop tab shows the four-step habit loop diagram
-The system SHALL render a four-cell grid (Cue, Craving, Response, Reward) with connecting arrows and a "loop in a sentence" paragraph at the bottom.
+The system SHALL render a four-cell grid (Cue, Craving, Response, Reward) with connecting arrows. Each cell is editable inline.
 
 #### Scenario: Loop cells display the habit's actual values
 - **WHEN** the Loop tab is active

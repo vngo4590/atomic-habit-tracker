@@ -113,13 +113,22 @@ describe("lowercaseFirst", () => {
 });
 
 describe("composeHabitSentence", () => {
-  it("builds the identity-first plan sentence from action, cue and place", () => {
+  it("builds the create-page-format plan sentence from action, cue and place", () => {
     // Given: a fully filled habit
     // When: composing the summary sentence
-    // Then: it reads as one natural plan with a supplied 'when' connector
+    // Then: it reads in the same order as the create-habit sentence, with a
+    //       supplied 'when' connector for the bare cue
     expect(composeHabitSentence(sentenceHabit())).toBe(
-      "I'm becoming a reader — I'll read 1 page when I pour my coffee, at my desk.",
+      "I'll read 1 page when I pour my coffee, at my desk — so I can become a reader.",
     );
+  });
+
+  it("shows the cue verbatim when the user already typed a connector", () => {
+    // Given: a habit whose cue was typed as a full clause (no dropdown now)
+    // When/Then: the chosen connector survives instead of being forced to 'when'
+    expect(
+      composeHabitSentence(sentenceHabit({ loopCue: "after I pour my coffee" })),
+    ).toBe("I'll read 1 page after I pour my coffee, at my desk — so I can become a reader.");
   });
 
   it("preserves acronym casing in the action and identity", () => {
@@ -129,20 +138,20 @@ describe("composeHabitSentence", () => {
       composeHabitSentence(
         sentenceHabit({ identity: "amazing at AI", name: "read 1 page about AI", loopCue: "I open my laptop" }),
       ),
-    ).toBe("I'm becoming amazing at AI — I'll read 1 page about AI when I open my laptop, at my desk.");
+    ).toBe("I'll read 1 page about AI when I open my laptop, at my desk — so I can become amazing at AI.");
   });
 
   it("omits the cue and place when they are empty", () => {
     // Given: a habit with only identity + action
     // When/Then: the sentence still reads grammatically
     expect(composeHabitSentence(sentenceHabit({ loopCue: "", environment: "" }))).toBe(
-      "I'm becoming a reader — I'll read 1 page.",
+      "I'll read 1 page — so I can become a reader.",
     );
   });
 
   it("drops the identity clause when there is no identity", () => {
     // Given: a habit without an identity
-    // When/Then: it starts with the action instead of an empty becoming clause
+    // When/Then: it ends after the cue/place with no dangling 'so I can become'
     expect(composeHabitSentence(sentenceHabit({ identity: "" }))).toBe(
       "I'll read 1 page when I pour my coffee, at my desk.",
     );
@@ -161,7 +170,7 @@ describe("composeHabitSentence", () => {
         environment: "at my desk.",
       }),
     ).toBe(
-      "I'm becoming a person who is amazing at AI — I'll read 1 page about AI Prompting at morning, at my desk.",
+      "I'll read 1 page about AI Prompting at morning, at my desk — so I can become a person who is amazing at AI.",
     );
   });
 });
