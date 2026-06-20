@@ -3,7 +3,6 @@
 import { useState } from "react";
 
 import type { Habit } from "@/lib/types";
-import { capitalizeFirst, withCravingConnector, withCueConnector } from "@/lib/habit-sentence";
 
 import styles from "./LoopDiagram.module.css";
 
@@ -97,8 +96,6 @@ function LoopEditableValue({
 /**
  * LoopDiagram — visualises a habit as the four-step Atomic Habits loop
  * (cue → craving → response → reward). Each step is editable inline.
- * Beneath the grid, the same values are recapped as a single sentence
- * for a quick scan.
  */
 export function LoopDiagram({
   habit,
@@ -107,21 +104,6 @@ export function LoopDiagram({
   habit: Habit;
   onUpdate: (patch: Partial<Pick<Habit, LoopField>>) => void;
 }) {
-  // Sentence-form recap below the grid. We supply the connective words
-  // ("when ...", "I want ...") via small grammar helpers so the sentence
-  // reads correctly whatever short phrase the user typed — and so older
-  // habits whose craving was stored as "become X" still read "to become X".
-  // Falls back to placeholder copy so the sentence is grammatical even
-  // before the four fields are filled.
-  const cueRaw = habit.loopCue.trim().toLowerCase();
-  const cravingRaw = habit.loopCraving.trim().toLowerCase();
-  const loopSentence = {
-    cue: cueRaw ? capitalizeFirst(withCueConnector(cueRaw)) : "When the cue appears",
-    craving: cravingRaw ? withCravingConnector(cravingRaw) : "to feel the payoff",
-    response: habit.loopResponse.trim().toLowerCase() || "take the smallest next step",
-    reward: habit.loopReward.trim().toLowerCase() || "a vote for my identity",
-  };
-
   return (
     <div>
       <p className={`lede ${styles.intro}`}>
@@ -140,15 +122,6 @@ export function LoopDiagram({
             <div className="loop-arrow" />
           </div>
         ))}
-      </div>
-      <div className={`card card-pad ${styles.recap}`}>
-        <h3 className={`h3 ${styles.recapTitle}`}>The loop in a sentence</h3>
-        <p className={styles.recapSentence}>
-          <span className={styles.recapValue}>{loopSentence.cue}</span>, I want{" "}
-          <span className={styles.recapValue}>{loopSentence.craving}</span>, so I{" "}
-          <span className={styles.recapValue}>{loopSentence.response}</span>, and the reward is{" "}
-          <span className={styles.recapReward}>{loopSentence.reward}</span>.
-        </p>
       </div>
     </div>
   );
