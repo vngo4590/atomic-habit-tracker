@@ -54,7 +54,12 @@ function Assert-LocalDatabaseUrl {
     throw "DATABASE_URL is not set. Create .env from .env.example first."
   }
 
-  if ($env:DATABASE_URL -notmatch "localhost:55432|127\.0\.0\.1:55432") {
+  # The safety boundary is the host: only ever mutate a database on this
+  # machine (localhost / 127.0.0.1), never a remote or production server. The
+  # port is intentionally not pinned to 55432 because local setups may remap it
+  # (e.g. to 15432 when WinNAT reserves 55432). We still require the "atomicly"
+  # database name so we don't clobber some other local Postgres database.
+  if ($env:DATABASE_URL -notmatch "(localhost|127\.0\.0\.1):\d+/atomicly\b") {
     throw "Refusing to modify a non-local Atomicly database: $env:DATABASE_URL"
   }
 }
