@@ -84,6 +84,19 @@
   margin-top: 8px;
 }
 
+/* The file <input> is opened programmatically by the Choose-file button, so the
+   native control itself is kept out of the layout. */
+.hiddenFileInput {
+  display: none;
+}
+
+/* Explanatory text shown in the import confirmation step. */
+.importHint {
+  font-size: 13px;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
 /* Tiny icon inside the theme toggle buttons. */
 .iconSm {
   width: 13px;
