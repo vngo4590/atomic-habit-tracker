@@ -31,6 +31,10 @@ vi.mock("@/lib/actions/auth", () => ({
   changePasswordAction: vi.fn(),
 }));
 
+vi.mock("@/lib/actions/backup", () => ({
+  importDataAction: vi.fn(),
+}));
+
 beforeEach(() => {
   resetUiStateMocks();
 });

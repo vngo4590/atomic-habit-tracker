@@ -1,11 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 
 import { IconMoon, IconSun } from "@/components/Icons";
 import { HuePicker } from "@/components/HuePicker";
 import { useStoreContext } from "@/components/StoreProvider";
+import { importDataAction } from "@/lib/actions/backup";
 import { changePasswordAction, updateProfileAction } from "@/lib/actions/auth";
 import type { ProfileFormState } from "@/lib/actions/auth";
 import { applyAppearance, readStoredVariant } from "@/lib/appearance";
@@ -47,6 +48,13 @@ export default function SettingsPage() {
 
   // Password change state
   const [changingPassword, setChangingPassword] = useState(false);
+
+  // Data import state. `pendingImport` holds the chosen file's text + name while
+  // we ask the user to confirm the merge; `importPending` blocks the UI while
+  // the server restores. The hidden <input> is opened programmatically.
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+  const [pendingImport, setPendingImport] = useState<{ name: string; text: string } | null>(null);
+  const [importPending, startImport] = useTransition();
 
   // Trailing-debounce timer for persisting accent-hue changes (see commitAccent).
   const accentSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -145,26 +153,50 @@ export default function SettingsPage() {
     }, 250);
   };
 
-  // Build a JSON blob with the user's data and trigger a download.
+  // Trigger a download of the authoritative server-side backup. We hit the
+  // export endpoint (which builds the file from the database) rather than
+  // serialising the in-memory store, so the saved file is always complete.
   const exportJson = () => {
     clientLogger.info("Data export started", { page: "settings", habitCount: store.habits.length });
-    const payload = JSON.stringify(
-      {
-        habits: store.habits,
-        journal: store.journal,
-        identity: store.identity,
-        exportedAt: new Date().toISOString(),
-      },
-      null,
-      2,
-    );
-    const blob = new Blob([payload], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.href = url;
-    link.download = "atomic-habits-export.json";
+    link.href = "/api/v1/export";
+    // The endpoint sets Content-Disposition, but naming the anchor helps too.
+    link.download = "atomicly-backup.json";
     link.click();
-    URL.revokeObjectURL(url);
+  };
+
+  // When the user picks a file, read it as text and stage it for confirmation
+  // (we never import without an explicit second click, since it writes data).
+  const onImportFileChosen = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    // Reset the input so choosing the same file again still fires onChange.
+    event.target.value = "";
+    if (!file) return;
+    file
+      .text()
+      .then((text) => setPendingImport({ name: file.name, text }))
+      .catch((error) => {
+        clientLogger.error("Backup file read failed", { page: "settings", error });
+        store.showToast("Could not read that file");
+      });
+  };
+
+  // Confirmed: send the file to the server action. On success we reload so the
+  // freshly-restored data is loaded into the store from the server snapshot.
+  const confirmImport = () => {
+    if (!pendingImport) return;
+    const text = pendingImport.text;
+    clientLogger.info("Data import submitted", { page: "settings" });
+    startImport(async () => {
+      const result = await importDataAction(text);
+      setPendingImport(null);
+      store.showToast(result.message);
+      if (result.ok) {
+        // The store seeds from the server snapshot on mount, so a reload is the
+        // simplest reliable way to surface imported data everywhere at once.
+        window.setTimeout(() => window.location.reload(), 600);
+      }
+    });
   };
 
   return (
@@ -406,6 +438,55 @@ export default function SettingsPage() {
               Download JSON
             </motion.button>
           </SettingRow>
+
+          {/* Import — restore a previously downloaded backup. Merge-only: it
+              adds or refreshes data but never deletes what you already have. */}
+          <SettingRow label="Import" value="Restore a backup">
+            {/* Hidden picker, opened by the visible button below. */}
+            <input
+              ref={importInputRef}
+              type="file"
+              accept="application/json,.json"
+              onChange={onImportFileChosen}
+              className={styles.hiddenFileInput}
+            />
+            <motion.button
+              className="btn btn-sm"
+              onClick={() => importInputRef.current?.click()}
+              disabled={importPending}
+              whileTap={{ scale: 0.97 }}
+            >
+              Choose file
+            </motion.button>
+          </SettingRow>
+
+          {/* Confirmation step — shown only after a file is chosen. */}
+          {pendingImport && (
+            <div className={styles.editFormShell}>
+              <div className={`muted ${styles.importHint}`}>
+                Merge <strong>{pendingImport.name}</strong> into your account? This adds or updates
+                data and never deletes anything.
+              </div>
+              <div className={styles.formActions}>
+                <motion.button
+                  className="btn btn-sm btn-primary"
+                  onClick={confirmImport}
+                  disabled={importPending}
+                  whileTap={{ scale: 0.97 }}
+                >
+                  {importPending ? "Importing..." : "Import"}
+                </motion.button>
+                <motion.button
+                  className="btn btn-sm"
+                  onClick={() => setPendingImport(null)}
+                  disabled={importPending}
+                  whileTap={{ scale: 0.97 }}
+                >
+                  Cancel
+                </motion.button>
+              </div>
+            </div>
+          )}
         </SettingGroup>
       </div>
     </motion.div>
