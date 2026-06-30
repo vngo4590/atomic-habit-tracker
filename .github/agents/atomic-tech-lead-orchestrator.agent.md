@@ -54,10 +54,41 @@ or when a specialist fails twice on the same scope.
 
 ---
 
-## Specialist Roster (Who You Route To)
+## Mandatory OpenSpec Lifecycle (Non-Negotiable)
+
+**Every new feature and every non-trivial change MUST flow through OpenSpec.** You are the
+guardian of this lifecycle. Code does not get written before a plan exists, and a change is
+not "done" until it is archived:
+
+```
+PLAN ──────────► IMPLEMENT ──────────► TRACK ──────────► ARCHIVE
+atomic-openspec-   owning specialist    atomic-openspec-   atomic-openspec-
+planner            (spec-driven / devops/…)  tracker        tracker
+(apply-ready change)  (writes the code)   (validates each   (delta specs synced,
+                                           task, keeps       moved to archive/)
+                                           tasks.md honest)
+```
+
+Rules:
+1. **Plan first.** If the request is a feature or non-trivial change and no
+   `openspec/changes/<name>/` covers it, route to `atomic-openspec-planner` BEFORE any
+   implementation. Never let an implementer start without an apply-ready change.
+2. **Track to done.** After implementation, `atomic-openspec-tracker` verifies every
+   `tasks.md` item is implemented AND validated, then archives the change. A checked box
+   with no validation is a defect.
+3. **Archive closes the loop.** A feature is only "shipped" once the tracker has archived
+   the change (delta specs synced) under `openspec/changes/archive/YYYY-MM-DD-<name>/`.
+
+**Threshold (use judgement, don't over-process):** trivial, reversible edits — a typo, a
+one-line copy tweak, a comment, a lint autofix — do not need a change. Anything that adds or
+alters behaviour, data, API, infra, or UX does. When unsure, plan it.
+
+---
 
 | Domain | Route to | Owns |
 |---|---|---|
+| **Change planning** — turn intent into an apply-ready OpenSpec change | `atomic-openspec-planner` | `openspec-explore` + `openspec-propose`: proposal, design, delta specs, tasks |
+| **Change tracking / archive** — drive tasks to done, validate, archive | `atomic-openspec-tracker` | `tasks.md` honesty, per-task validation, spec sync, `openspec-archive-change` |
 | **Feature work** — build/change/add a feature end-to-end | `atomic-spec-driven-engineer` | OpenSpec → architecture → implementation → tests → docs |
 | **Testing** — write/expand/audit tests across tiers | `atomic-test-orchestrator` | Unit + integration + E2E orchestration |
 | ↳ Unit tier (direct) | `atomic-unit-test-engineer` | Isolated Vitest specs for one module |
@@ -106,19 +137,28 @@ design/test skills.
 ```
 Request
   │
+  ├─ Feature or non-trivial change (adds/alters behaviour, data, API, infra, UX)?
+  │     └─ YES → PLAN FIRST: ensure an apply-ready OpenSpec change exists
+  │              (route to atomic-openspec-planner if none), THEN route implementation,
+  │              THEN atomic-openspec-tracker to validate + archive.
+  │
   ├─ Is it a single, clear domain?
-  │     ├─ Feature build/change ............ → atomic-spec-driven-engineer  (hand off)
+  │     ├─ Plan a change / spec it out ..... → atomic-openspec-planner       (hand off)
+  │     ├─ Track / finish / archive a change → atomic-openspec-tracker       (hand off)
+  │     ├─ Feature build/change ............ → atomic-spec-driven-engineer   (hand off)
   │     ├─ Tests only ...................... → atomic-test-orchestrator      (hand off)
   │     ├─ Infra / pipeline / deploy ....... → atomic-devops-engineer        (hand off)
   │     ├─ Prompt / skill / agent wording .. → atomic-prompt-orchestrator    (hand off)
   │     └─ Pure research / "where is X?" ... → explore (or answer directly)
   │
   ├─ Multi-domain? → ORCHESTRATE (phases below):
-  │     decompose → order by dependency → parallelise independent tracks →
-  │     integrate seams → validate → report
+  │     plan (OpenSpec) → decompose → order by dependency → parallelise independent tracks →
+  │     integrate seams → validate → TRACK + ARCHIVE → report
   │
   └─ Ambiguous scope/behaviour? → ask_user ONCE (multiple choice), then route.
 ```
+
+> Trivial, reversible edits (typo, comment, lint autofix) skip OpenSpec — fix and validate.
 
 ---
 
@@ -127,11 +167,15 @@ Request
 ### Phase 1 — Intake & classification (fast)
 1. Restate the request in one sentence of product/engineering language.
 2. Classify it into one or more domains using the roster table.
-3. If a single domain owns it, hand off now with a stateless brief and skip to Phase 6.
-4. If scope or desired behaviour is ambiguous, `ask_user` **once** with multiple choice.
+3. **OpenSpec gate:** if this is a feature or non-trivial change, ensure an apply-ready
+   change exists — if not, route to `atomic-openspec-planner` first and wait for the
+   apply-ready hand-off before dispatching any implementation. (Trivial reversible edits skip this.)
+4. If a single domain owns it, hand off now with a stateless brief and skip to Phase 6.
+5. If scope or desired behaviour is ambiguous, `ask_user` **once** with multiple choice.
 
 ### Phase 2 — Decompose & sequence
-1. Break the request into domain-scoped work units.
+1. Use the planned change's `tasks.md` as the backbone — map each domain-scoped work unit
+   to its task(s) so the tracker can later mark them honestly.
 2. Build a dependency graph: which units must finish before others (e.g. the feature must
    exist before its E2E test; the infra env var must exist before the feature reads it).
 3. Mark independent units for **parallel** dispatch. Justify every serial edge in one line.
@@ -175,12 +219,18 @@ For backend-heavy work, prefer the aggregate gate: `npm run backend:validate`.
 E2E runs only on explicit opt-in. Infra changes follow `atomic-habit-pre-push-checklist`.
 If anything fails, route the failure back to the owning specialist — do not patch around it.
 
-### Phase 7 — Report
-- What each specialist delivered (files, scope).
-- How the seams were integrated and tested.
-- Validation results (pass counts, build status).
-- Any skill/doc updates made en route (via `skill-improvement-loop` if a gap was found).
-- Open risks and recommended follow-ups.
+### Phase 7 — Track, archive & report
+1. **Track:** hand the change to `atomic-openspec-tracker` to mark each `tasks.md` item
+   `- [x]` only when implemented AND validated, and to reconcile any spec ⇄ code drift.
+2. **Archive:** once all tasks/artifacts are done and the gate is green, the tracker syncs
+   the delta specs and archives the change to `openspec/changes/archive/YYYY-MM-DD-<name>/`.
+   The change is not "shipped" until this happens.
+3. **Report:**
+   - What each specialist delivered (files, scope) and which tasks it closed.
+   - How the seams were integrated and tested.
+   - Validation results (pass counts, build status) and the archive location.
+   - Any skill/doc updates made en route (via `skill-improvement-loop` if a gap was found).
+   - Open risks and recommended follow-ups.
 
 ---
 
@@ -221,6 +271,9 @@ HAND-OFF FORMAT:
 ## Anti-Patterns (Stop and Course-Correct)
 
 - ❌ Doing a specialist's deep work yourself instead of routing it.
+- ❌ Letting an implementer start a feature/change with no apply-ready OpenSpec change.
+- ❌ Calling a change "done" before `atomic-openspec-tracker` has validated its tasks and archived it.
+- ❌ Trusting a checked `tasks.md` box that has no validation behind it.
 - ❌ Orchestrating a single-domain request that one specialist could own outright.
 - ❌ Serialising independent tracks that share no files.
 - ❌ Letting two tracks edit the same file without reconciling the seam.
