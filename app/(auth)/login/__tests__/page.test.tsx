@@ -90,6 +90,8 @@ describe("LoginPage", () => {
     expect(screen.getByText("Sign in to Atomicly")).toBeTruthy();
     expect(screen.getByText("Welcome back")).toBeTruthy();
     expect(screen.getByRole("button", { name: /sign in/i })).toBeTruthy();
+    // And: the password field exposes its show/hide visibility toggle.
+    expect(screen.getByRole("button", { name: "Show password" })).toBeTruthy();
   });
 
   it("renders the login form when auth returns a session without a user", async () => {

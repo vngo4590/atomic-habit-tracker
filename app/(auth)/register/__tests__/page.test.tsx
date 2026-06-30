@@ -92,6 +92,8 @@ describe("RegisterPage", () => {
     expect(screen.getByText("Create your account")).toBeTruthy();
     expect(screen.getByText("Start clean")).toBeTruthy();
     expect(screen.getByRole("button", { name: /create account/i })).toBeTruthy();
+    // And: the password field exposes its show/hide visibility toggle.
+    expect(screen.getByRole("button", { name: "Show password" })).toBeTruthy();
   });
 
   it("renders the registration form when auth returns a session without a user", async () => {
