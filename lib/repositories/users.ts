@@ -10,6 +10,8 @@ export interface AuthUserRecord {
   email: string;
   image: string | null;
   passwordHash: string | null;
+  /** Global session revocation cutoff; null means no sessions have been revoked. */
+  sessionsValidFrom: Date | null;
 }
 
 export interface CreateUserInput {
@@ -24,6 +26,7 @@ const authUserSelect = {
   email: true,
   image: true,
   passwordHash: true,
+  sessionsValidFrom: true,
 } as const;
 
 const log = logger.child({ module: "repo.users" });
@@ -96,5 +99,21 @@ export async function updateUserPassword(id: string, passwordHash: string, clien
     where: { id },
     data: { passwordHash },
     select: authUserSelect,
+  });
+}
+
+/**
+ * Revokes every existing session for a user by advancing their revocation
+ * cutoff to now. Any session whose `authTime` predates this instant is rejected
+ * on its next server request. Powers "sign out of all devices" and the
+ * automatic revocation performed after a password change.
+ */
+export async function revokeUserSessions(id: string, client: DbClient = db): Promise<void> {
+  log.debug("Revoking all user sessions", { event: "repo.user.revokeSessions", userId: redactUserId(id) });
+  validateDatabaseUrl();
+
+  await client.user.update({
+    where: { id },
+    data: { sessionsValidFrom: new Date() },
   });
 }

@@ -28,6 +28,7 @@ export function testAuthUserRecord(patch: Partial<AuthUserRecord> = {}): AuthUse
     email: "ada@example.com",
     image: null,
     passwordHash: "hash",
+    sessionsValidFrom: null,
     ...patch,
   };
 }

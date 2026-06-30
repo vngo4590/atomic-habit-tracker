@@ -28,7 +28,7 @@ describe("user repository updates", () => {
     expect(db.user.update).toHaveBeenCalledWith({
       where: { id: "user_1" },
       data: { name: "New Name" },
-      select: { id: true, name: true, email: true, image: true, passwordHash: true },
+      select: { id: true, name: true, email: true, image: true, passwordHash: true, sessionsValidFrom: true },
     });
     expect(result.name).toBe("New Name");
     expect(result.email).toBe("test@example.com");
@@ -55,7 +55,7 @@ describe("user repository updates", () => {
     expect(db.user.update).toHaveBeenCalledWith({
       where: { id: "user_1" },
       data: { passwordHash: "new_hash" },
-      select: { id: true, name: true, email: true, image: true, passwordHash: true },
+      select: { id: true, name: true, email: true, image: true, passwordHash: true, sessionsValidFrom: true },
     });
     expect(result.passwordHash).toBe("new_hash");
   });

@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 const getCurrentUserMock = vi.hoisted(() => vi.fn());
 const updateUserNameMock = vi.hoisted(() => vi.fn());
 const updateUserPasswordMock = vi.hoisted(() => vi.fn());
+const revokeUserSessionsMock = vi.hoisted(() => vi.fn());
 const hashPasswordMock = vi.hoisted(() => vi.fn());
 const verifyPasswordMock = vi.hoisted(() => vi.fn());
 
@@ -20,6 +21,7 @@ vi.mock("@/lib/repositories/users", () => ({
   createUserWithDefaults: vi.fn(),
   updateUserName: updateUserNameMock,
   updateUserPassword: updateUserPasswordMock,
+  revokeUserSessions: revokeUserSessionsMock,
 }));
 
 vi.mock("@/lib/auth/password", () => ({
@@ -170,7 +172,7 @@ describe("changePasswordAction", () => {
     expect(result.message).toBe("New password must include a symbol.");
   });
 
-  it("changes the password when everything is valid", async () => {
+  it("changes the password and revokes existing sessions when everything is valid", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user_1", name: "Alex", email: "alex@example.com", passwordHash: "hash" });
     verifyPasswordMock.mockResolvedValue(true);
     hashPasswordMock.mockResolvedValue("new_hash");
@@ -184,7 +186,9 @@ describe("changePasswordAction", () => {
     expect(verifyPasswordMock).toHaveBeenCalledWith("oldpass", "hash");
     expect(hashPasswordMock).toHaveBeenCalledWith("NewPass1!");
     expect(updateUserPasswordMock).toHaveBeenCalledWith("user_1", "new_hash");
+    // Security: a password change invalidates every previously-issued session.
+    expect(revokeUserSessionsMock).toHaveBeenCalledWith("user_1");
     expect(result.ok).toBe(true);
-    expect(result.message).toBe("Password changed.");
+    expect(result.message).toBe("Password changed. Please sign in again on your devices.");
   });
 });

@@ -9,6 +9,7 @@ const createdUser: AuthUserRecord = {
   email: "ada@example.com",
   image: null,
   passwordHash: "hashed",
+  sessionsValidFrom: null,
 };
 
 describe("registerUser", () => {
