@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
+import { isSessionRevoked } from "@/lib/auth/session-policy";
 import { logger, redactUserId } from "@/lib/logger";
 import { findAuthUserById, type AuthUserRecord } from "@/lib/repositories/users";
 
@@ -36,6 +37,17 @@ export async function getCurrentUser(): Promise<AuthUserRecord | null> {
     log.debug("Auth user lookup returned no user", {
       event: "auth.session.not_found",
       userId: redactUserId(userId),
+    });
+    return null;
+  }
+
+  // Server-side revocation gate. A "sign out everywhere" / password change bumps
+  // the user's revocation cutoff; any session issued before that is rejected
+  // here even though its JWT cookie is still otherwise valid.
+  if (isSessionRevoked(session?.authTime, user.sessionsValidFrom)) {
+    log.info("Rejected revoked session", {
+      event: "auth.session.revoked",
+      userId: redactUserId(user.id),
     });
     return null;
   }

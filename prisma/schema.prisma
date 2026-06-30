@@ -31,6 +31,9 @@ model User {
   passwordHash  String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  // Global session revocation cutoff. Any session issued before this instant is
+  // rejected server-side ("sign out of all devices" / revoke-on-password-change).
+  sessionsValidFrom DateTime?
 
   accounts          Account[]
   sessions          Session[]

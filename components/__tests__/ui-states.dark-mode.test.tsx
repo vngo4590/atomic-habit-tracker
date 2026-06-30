@@ -27,6 +27,7 @@ vi.mock("@/components/StoreProvider", () => ({
 
 vi.mock("@/lib/actions/auth", () => ({
   logoutAction: vi.fn(),
+  signOutEverywhereAction: vi.fn(),
   updateProfileAction: vi.fn(),
   changePasswordAction: vi.fn(),
 }));

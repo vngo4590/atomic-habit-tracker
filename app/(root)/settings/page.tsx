@@ -7,7 +7,7 @@ import { IconMoon, IconSun } from "@/components/Icons";
 import { HuePicker } from "@/components/HuePicker";
 import { useStoreContext } from "@/components/StoreProvider";
 import { importDataAction } from "@/lib/actions/backup";
-import { changePasswordAction, updateProfileAction } from "@/lib/actions/auth";
+import { changePasswordAction, updateProfileAction, signOutEverywhereAction } from "@/lib/actions/auth";
 import type { ProfileFormState } from "@/lib/actions/auth";
 import { applyAppearance, readStoredVariant } from "@/lib/appearance";
 import { clientLogger } from "@/lib/logger-client";
@@ -362,6 +362,25 @@ export default function SettingsPage() {
               )}
             </div>
           )}
+
+          {/* Sign out of all devices — advances the session revocation cutoff so
+              every existing session (this device and any others) is invalidated. */}
+          <div className={styles.row}>
+            <div className="habit-name">Active sessions</div>
+            <div className={`muted ${styles.rowValue}`}>Sign out everywhere</div>
+            <div>
+              <form action={signOutEverywhereAction}>
+                <motion.button
+                  className="btn btn-sm"
+                  type="submit"
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => clientLogger.info("Sign out everywhere submitted", { page: "settings" })}
+                >
+                  Sign out all devices
+                </motion.button>
+              </form>
+            </div>
+          </div>
         </SettingGroup>
 
         <SettingGroup title="Appearance">

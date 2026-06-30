@@ -13,7 +13,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { clientIpFromHeaders } from "@/lib/security/rate-limit";
 import { TURNSTILE_FIELD, verifyTurnstileToken } from "@/lib/security/turnstile";
 import { logger, redactEmail, redactUserId } from "@/lib/logger";
-import { updateUserName, updateUserPassword } from "@/lib/repositories/users";
+import { updateUserName, updateUserPassword, revokeUserSessions } from "@/lib/repositories/users";
 
 const log = logger.child({ module: "actions.auth" });
 
@@ -138,6 +138,24 @@ export async function logoutAction() {
   redirect("/login");
 }
 
+/**
+ * Signs the user out of every device. Advances their session revocation cutoff
+ * so all previously-issued sessions are rejected on their next request, then
+ * clears the current cookie. Use this for "lost device" / account-security flows.
+ */
+export async function signOutEverywhereAction() {
+  const user = await getCurrentUser();
+  if (user) {
+    await revokeUserSessions(user.id);
+    log.info("User signed out of all devices", {
+      event: "auth.signout_all",
+      userId: redactUserId(user.id),
+    });
+  }
+  await signOut({ redirectTo: "/login" });
+  redirect("/login");
+}
+
 export interface ProfileFormState {
   ok: boolean;
   message: string;
@@ -206,6 +224,9 @@ export async function changePasswordAction(_prevState: ProfileFormState, formDat
 
   const newHash = await hashPassword(newPassword);
   await updateUserPassword(user.id, newHash);
+  // Revoke every existing session so a stolen or stale cookie cannot outlive the
+  // password it was created under. The user signs in again with the new password.
+  await revokeUserSessions(user.id);
   log.info("Password changed", { event: "auth.password_changed", userId: redactUserId(user.id) });
-  return { ok: true, message: "Password changed." };
+  return { ok: true, message: "Password changed. Please sign in again on your devices." };
 }
