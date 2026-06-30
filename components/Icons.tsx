@@ -4,6 +4,8 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Eye,
+  EyeOff,
   Flame,
   LayoutList,
   LineChart,
@@ -135,4 +137,16 @@ export function IconMenu(props: IconProps) {
 
 export function IconPet(props: IconProps) {
   return <PawPrint {...iconDefaults} {...props} />;
+}
+
+// "Open eye" — shown on a password toggle when the password is hidden; clicking
+// it reveals the characters. Pairs with IconEyeOff below.
+export function IconEye(props: IconProps) {
+  return <Eye {...iconDefaults} {...props} />;
+}
+
+// "Crossed-out eye" — shown on a password toggle when the password is visible;
+// clicking it hides the characters again.
+export function IconEyeOff(props: IconProps) {
+  return <EyeOff {...iconDefaults} {...props} />;
 }
