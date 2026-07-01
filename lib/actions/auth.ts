@@ -9,7 +9,7 @@ import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import type { AuthFormState } from "@/lib/contracts/auth";
 import { loginSchema } from "@/lib/contracts/auth";
 import { registerUser } from "@/lib/auth/register";
-import { getCurrentUser } from "@/lib/auth/session";
+import { getCurrentSession, getCurrentUser } from "@/lib/auth/session";
 import { clientIpFromHeaders } from "@/lib/security/rate-limit";
 import { TURNSTILE_FIELD, verifyTurnstileToken } from "@/lib/security/turnstile";
 import { logger, redactEmail, redactUserId } from "@/lib/logger";
@@ -224,42 +224,29 @@ export async function changePasswordAction(_prevState: ProfileFormState, formDat
 
   const newHash = await hashPassword(newPassword);
   await updateUserPassword(user.id, newHash);
-  // Revoke every existing session so a stolen or stale cookie cannot outlive the
-  // password it was created under. This advances the user's `sessionsValidFrom`
-  // cutoff to "now", which would ALSO revoke the current device.
-  await revokeUserSessions(user.id);
-  // Ordering is load-bearing: keep THIS device signed in by minting a brand-new
-  // session through the exact same credentials sign-in path the login form uses,
-  // AFTER the revoke above. `signIn` deterministically re-issues the session
-  // cookie with a fresh `authTime` of "now" (>= the cutoff we just set), so the
-  // `isSessionRevoked` gate keeps the current device while every other device
-  // (whose older `authTime` predates the cutoff) stays revoked. We mint via
-  // `signIn` rather than a lighter session "update" because on a real HTTPS
-  // deployment the update's re-issued cookie can lose a race with the request
-  // that immediately follows a rapid, back-to-back change — stranding the user on
-  // /login (the reported "keeps saying not authenticated" bug). `signIn` is the
-  // battle-tested cookie path (login and registration rely on it), so it sets the
-  // cookie reliably even under high latency and repeated changes.
-  try {
-    await signIn("credentials", {
-      email: user.email,
-      password: newPassword,
-      redirect: false,
-    });
-  } catch (error) {
-    // A genuine Next.js redirect (NEXT_REDIRECT) must bubble up untouched. Any
-    // AuthError here means the re-mint failed even though the password was already
-    // changed; the truthful outcome is still "changed" — the user will simply be
-    // asked to sign in again on their next protected navigation.
-    if (error instanceof AuthError) {
-      log.warn("Password changed but session re-mint failed", {
-        event: "auth.password_change_remint_failed",
-        userId: redactUserId(user.id),
-      });
-    } else {
-      throw error;
-    }
-  }
+
+  // Keep THIS device signed in without re-issuing any cookie. We read the current
+  // session's own `authTime` (the epoch-ms instant this device's token was minted)
+  // and use it as the revocation cutoff. The gate is `authTime < sessionsValidFrom`
+  // (strict), so the current device — whose `authTime` EQUALS the cutoff — survives,
+  // while every OLDER session (a stale or stolen cookie minted before this instant)
+  // is revoked on its next request.
+  //
+  // Why this over re-minting the cookie: a fresh `signIn`/`updateSession` cookie must
+  // reach the browser and be replayed on the NEXT navigation. On a real HTTPS
+  // deployment a rapid, back-to-back change lets that navigation race ahead of the
+  // Set-Cookie, so the server still sees the OLD (now-revoked) cookie, `getCurrentUser`
+  // returns null, and /settings redirects to /login — the reported "keeps saying not
+  // authenticated" bug. Anchoring the cutoff to the existing cookie's `authTime`
+  // removes the cookie round-trip entirely, so there is no race to lose.
+  const session = await getCurrentSession();
+  const currentAuthTime = typeof session?.authTime === "number" ? session.authTime : null;
+  // Fall back to "now" only for the degenerate case of a legacy token with no
+  // `authTime`; that device cannot be deterministically preserved, so we fail secure
+  // and revoke it (the user simply signs in again).
+  const cutoff = currentAuthTime !== null ? new Date(currentAuthTime) : new Date();
+  await revokeUserSessions(user.id, cutoff);
+
   log.info("Password changed", { event: "auth.password_changed", userId: redactUserId(user.id) });
   return { ok: true, message: "Password changed. You've been signed out on your other devices." };
 }
