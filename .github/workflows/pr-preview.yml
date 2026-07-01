@@ -407,6 +407,20 @@ jobs:
       # still in scope as a step env. Splitting into a separate job
       # produced P1000 "Authentication failed" on every run.
       # -----------------------------------------------------------------
+      # Re-authenticate to Azure right before the ACR login. The GitHub OIDC
+      # federated assertion minted by the job's initial `azure/login` only lives
+      # ~5 minutes, but the "Deploy preview stack" step above can take ~10 minutes.
+      # By then `az acr login` can no longer refresh its AAD token and fails with
+      # AADSTS700024 ("Client assertion is not within its valid time range"). A
+      # fresh login here mints a new assertion so the ACR (and the migration steps
+      # that follow) authenticate reliably regardless of deploy duration.
+      - name: Re-auth Azure before ACR login (OIDC, pr-preview principal)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_PREVIEW_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       - name: ACR login (for migrator image)
         run: az acr login --name '${{ needs.build-image.outputs.acr_name }}'
 
