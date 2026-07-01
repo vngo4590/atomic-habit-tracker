@@ -16,7 +16,6 @@ const signInMock = vi.hoisted(() => vi.fn());
 vi.mock("@/auth", () => ({
   signIn: signInMock,
   signOut: vi.fn(),
-  updateSession: vi.fn(),
 }));
 
 vi.mock("@/lib/auth/session", () => ({

@@ -100,17 +100,21 @@ CSRF).
 - **Session revocation gate:** `isSessionRevoked` (`lib/auth/session-policy.ts`)
   rejects any JWT whose issue time (`authTime`) predates the user's revocation
   cutoff (`sessionsValidFrom`). "Sign out everywhere"
-  (`signOutEverywhereAction`) advances the cutoff to revoke **all** devices —
-  including the current one — by design. A **self-service password change**
-  (`changePasswordAction`), however, now revokes only **other** devices: after
-  bumping the cutoff it re-issues the current session's cookie with a fresh
-  `authTime` (via next-auth's `unstable_update` / the `update` jwt trigger, see
-  `auth.ts`) so the initiating device stays signed in and can change the
-  password repeatedly in-session. This is a deliberately narrowed control —
-  standard practice not to log yourself out when you change your own password;
-  stale/stolen cookies on other devices are still invalidated. The equality
-  boundary matters: `isSessionRevoked` uses a strict `<`, so the refreshed
-  `authTime == sessionsValidFrom` is treated as valid.
+  (`signOutEverywhereAction`) advances the cutoff to **now**, revoking every
+  device including the current one — by design. A **self-service password
+  change** (`changePasswordAction`), however, uses a narrowed strategy to keep
+  the initiating device signed in: it reads the current session's own
+  `authTime` from `getCurrentSession()` and passes that instant as the
+  `validFrom` cutoff to `revokeUserSessions`. The gate is a strict `<`, so any
+  session whose `authTime < cutoff` (i.e. older than the initiating device's
+  original sign-in) is revoked on its next request, while the initiating
+  session — whose `authTime` **equals** the cutoff — survives unchanged. No
+  cookie is re-issued, which avoids the Set-Cookie propagation race that would
+  log the user out on a back-to-back change.
+  **Known limitation:** sessions minted more recently than the initiating
+  session (e.g. a concurrent sign-in by an attacker who obtained credentials
+  after the victim signed in) are not revoked by a password change alone. For
+  full revocation of all devices use "Sign out everywhere" first.
 
 ### Bot challenge — Cloudflare Turnstile (`lib/security/turnstile.ts`, `components/TurnstileWidget.tsx`)
 

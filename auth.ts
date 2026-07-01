@@ -12,11 +12,6 @@ export const {
   auth,
   signIn,
   signOut,
-  // Exposed so `changePasswordAction` can re-issue the current session cookie with
-  // a fresh `authTime` after a password change, keeping the current device signed
-  // in while every other device stays revoked. `unstable_update` is next-auth v5's
-  // purpose-built session-mutation primitive; the alias localises the beta API here.
-  unstable_update: updateSession,
 } = NextAuth({
   adapter: PrismaAdapter(db),
   session: {
@@ -45,9 +40,10 @@ export const {
   callbacks: {
     // `authTime` stamping lives in a pure helper (`stampAuthToken`) so the
     // revocation-critical behaviour is unit-testable without the NextAuth/Prisma
-    // stack. Initial sign-in stamps it once; an `update` trigger (fired by
-    // `updateSession` after a password change) re-stamps it to now; ordinary
-    // token slides preserve it.
+    // stack. Initial sign-in stamps it once; ordinary token slides preserve it.
+    // (`trigger === "update"` is available should a future flow need to re-stamp
+    // it — e.g. a privilege escalation step — but the current password-change
+    // flow does not use it.)
     jwt({ token, user, trigger }) {
       return stampAuthToken({ token, user, trigger });
     },

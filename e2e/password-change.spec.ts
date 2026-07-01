@@ -7,17 +7,17 @@ import { test, expect, type Page } from "@playwright/test";
  * WHAT THIS PROVES (and why only an E2E test can):
  * A successful password change advances the user's server-side revocation cutoff
  * (`sessionsValidFrom`) via `revokeUserSessions`, which — before the fix — ALSO
- * logged out the current device. The fix re-issues the current session cookie
- * with a fresh `authTime` by calling next-auth `updateSession({})` inside the
- * server action. The unit/integration tests mock `updateSession`, so they can
- * only prove the action CALLS it — they cannot prove the real Set-Cookie round
- * trip actually keeps the browser signed in. This spec drives a real browser
- * against the real app + database, so the fact that `/api/v1/session` (which runs
- * `getCurrentUser` → `isSessionRevoked(authTime, sessionsValidFrom)`) STILL
- * resolves the user after a change — and that a SECOND, third, fourth and fifth
- * in-session change is ACCEPTED rather than rejected with "Not authenticated." —
- * is the load-bearing evidence that the cookie was genuinely re-issued and
- * survived the revocation gate.
+ * logged out the current device. The fix anchors the cutoff to the current
+ * session's own `authTime` (read from `getCurrentSession()`) rather than "now",
+ * so the initiating session — whose `authTime` equals the cutoff — passes the
+ * strict `<` gate and survives unchanged. No cookie is re-issued, removing the
+ * Set-Cookie propagation race that caused "keeps saying not authenticated" on
+ * back-to-back changes. This spec drives a real browser against the real app +
+ * database, so the fact that `/api/v1/session` (which runs `getCurrentUser` →
+ * `isSessionRevoked(authTime, sessionsValidFrom)`) STILL resolves the user after
+ * a change — and that a SECOND, third, fourth and fifth in-session change is
+ * ACCEPTED rather than rejected with "Not authenticated." — is the load-bearing
+ * evidence that the existing cookie genuinely survived the revocation gate.
  *
  * OBSERVED APP BEHAVIOUR (prod build): a SUCCESSFUL change (which sets a fresh
  * session cookie server-side) triggers a client refresh that lands the user back
@@ -138,9 +138,10 @@ async function submitChange(page: Page, current: string, next: string): Promise<
  * Assert — at the authoritative source of truth — that the current browser
  * cookie still resolves the signed-in user server-side. `/api/v1/session` runs
  * `getCurrentUser`, which applies the `isSessionRevoked(authTime, sessionsValidFrom)`
- * gate. If `updateSession({})` had NOT re-issued the cookie, this would report
- * `authenticated: false` after the first change. `page.request` shares the
- * browser context's cookies, so this exercises the real Set-Cookie round trip.
+ * gate. If the revocation cutoff were set to "now" without preserving the
+ * initiating session's `authTime`, this would report `authenticated: false`
+ * after the first change. `page.request` shares the browser context's cookies,
+ * so this exercises the real cookie survival check.
  */
 async function expectStillAuthenticated(page: Page, email: string): Promise<void> {
   const response = await page.request.get("/api/v1/session");
@@ -151,11 +152,11 @@ async function expectStillAuthenticated(page: Page, email: string): Promise<void
 }
 
 /** Wait for the user-visible success signal of a valid change and confirm the
- *  session survived. A successful change sets a fresh session cookie server-side,
- *  which makes the app refresh onto the authenticated home dashboard ("/"); we
- *  accept either the momentary in-place "Password changed." confirmation OR that
- *  landing as success, then confirm the session is still valid and the user was
- *  not stranded on /login. */
+ *  session survived. A successful change triggers a client refresh that lands
+ *  the user back on the authenticated home dashboard ("/"); we accept either
+ *  the momentary in-place "Password changed." confirmation OR that landing as
+ *  success, then confirm the session is still valid and the user was not
+ *  stranded on /login. */
 async function expectChangeSucceeded(page: Page, email: string): Promise<void> {
   await expect(async () => {
     const onHome = new URL(page.url()).pathname === "/";
