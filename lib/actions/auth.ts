@@ -4,7 +4,7 @@ import { AuthError } from "next-auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { signIn, signOut } from "@/auth";
+import { signIn, signOut, updateSession } from "@/auth";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import type { AuthFormState } from "@/lib/contracts/auth";
 import { loginSchema } from "@/lib/contracts/auth";
@@ -225,8 +225,16 @@ export async function changePasswordAction(_prevState: ProfileFormState, formDat
   const newHash = await hashPassword(newPassword);
   await updateUserPassword(user.id, newHash);
   // Revoke every existing session so a stolen or stale cookie cannot outlive the
-  // password it was created under. The user signs in again with the new password.
+  // password it was created under. This advances the user's `sessionsValidFrom`
+  // cutoff to "now", which would ALSO revoke the current device.
   await revokeUserSessions(user.id);
+  // Ordering is load-bearing: re-issue the CURRENT session's cookie with a fresh
+  // `authTime` (via the `update` jwt trigger) AFTER the revoke above, so that
+  // `authTime >= sessionsValidFrom`. `isSessionRevoked` uses a strict `<`, so an
+  // equal timestamp is not revoked — the current device stays signed in while
+  // every other device (whose older `authTime` predates the cutoff) stays revoked.
+  // Reversing this order would silently sign the current device out again.
+  await updateSession({});
   log.info("Password changed", { event: "auth.password_changed", userId: redactUserId(user.id) });
-  return { ok: true, message: "Password changed. Please sign in again on your devices." };
+  return { ok: true, message: "Password changed. You've been signed out on your other devices." };
 }
