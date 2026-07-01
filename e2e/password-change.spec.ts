@@ -7,17 +7,20 @@ import { test, expect, type Page } from "@playwright/test";
  * WHAT THIS PROVES (and why only an E2E test can):
  * A successful password change advances the user's server-side revocation cutoff
  * (`sessionsValidFrom`) via `revokeUserSessions`, which — before the fix — ALSO
- * logged out the current device. The fix anchors the cutoff to the current
- * session's own `authTime` (read from `getCurrentSession()`) rather than "now",
- * so the initiating session — whose `authTime` equals the cutoff — passes the
- * strict `<` gate and survives unchanged. No cookie is re-issued, removing the
- * Set-Cookie propagation race that caused "keeps saying not authenticated" on
- * back-to-back changes. This spec drives a real browser against the real app +
- * database, so the fact that `/api/v1/session` (which runs `getCurrentUser` →
- * `isSessionRevoked(authTime, sessionsValidFrom)`) STILL resolves the user after
- * a change — and that a SECOND, third, fourth and fifth in-session change is
- * ACCEPTED rather than rejected with "Not authenticated." — is the load-bearing
- * evidence that the existing cookie genuinely survived the revocation gate.
+ * logged out the current device. The race-free fix sets the cutoff to the CURRENT
+ * device's own `authTime` (read via `getCurrentSession()`): because the gate uses
+ * a strict `<`, the initiating device (`authTime == cutoff`) survives on its
+ * EXISTING cookie — no cookie is re-issued, so there is no Set-Cookie race — while
+ * every session minted BEFORE it is revoked. The unit/integration tests mock the
+ * session boundary, so they can only prove the action passes the right cutoff —
+ * they cannot prove the real gate keeps the browser signed in. This spec drives a
+ * real browser against the real app + database, so the fact that `/api/v1/session`
+ * (which runs `getCurrentUser` → `isSessionRevoked(authTime, sessionsValidFrom)`)
+ * STILL resolves the user after a change — and that a SECOND, third, fourth and
+ * fifth in-session change is ACCEPTED rather than rejected with "Not
+ * authenticated." — is the load-bearing evidence the current device survived the
+ * revocation gate. A separate two-context test proves the flip side: an OLDER
+ * other-device session IS revoked by the change.
  *
  * OBSERVED APP BEHAVIOUR (prod build): a SUCCESSFUL change (which sets a fresh
  * session cookie server-side) triggers a client refresh that lands the user back
@@ -103,6 +106,28 @@ async function registerUser(page: Page): Promise<string> {
   }
 
   return email;
+}
+
+/**
+ * Sign an EXISTING account in through the real login form, in whatever browser
+ * context `page` belongs to. Used to give a user a SECOND, independent "device"
+ * (browser context) so we can prove cross-device revocation. Because this login
+ * happens AFTER the account was registered elsewhere, its session carries a
+ * NEWER `authTime` than the original device.
+ */
+async function loginUser(page: Page, email: string, password: string): Promise<void> {
+  await page.goto("/login");
+  await page.fill('input[name="email"]', email);
+  await page.fill('input[name="password"]', password);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.waitForURL((url) => url.pathname === "/", { timeout: 15_000 });
+
+  // A first-run user may still see the onboarding overlay in this context.
+  const skipOnboarding = page.locator('.overlay button:has-text("Skip")');
+  if (await skipOnboarding.isVisible().catch(() => false)) {
+    await skipOnboarding.click();
+    await expect(skipOnboarding).not.toBeVisible();
+  }
 }
 
 /**
@@ -284,5 +309,46 @@ test.describe("password change keeps the current device signed in", () => {
     await expect(page.locator('input[name="currentPassword"]')).toHaveValue("");
     await expect(page.locator('input[name="newPassword"]')).toHaveValue("");
     await expect(page.getByText("Password changed.", { exact: true })).toHaveCount(0);
+  });
+
+  // 5.6 — The flip side of the survival guarantee: an OLDER session on ANOTHER
+  // device IS revoked by a password change. This is the honest security promise
+  // of the race-free model — the current device is kept, but sessions that
+  // predate it are invalidated.
+  test("a password change revokes an older session on another device", async ({ page, browser }) => {
+    // Given: a user registered (and thus signed in) on "device A" — the page
+    // under test. This is the OLDER session: its `authTime` is stamped first.
+    const email = await registerUser(page);
+    await expectStillAuthenticated(page, email);
+
+    // And: the SAME user signs in on a second, independent "device B" (a separate
+    // browser context, so it has its own cookie jar). Because this login happens
+    // after device A registered, device B's session carries a NEWER `authTime`.
+    const deviceB = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    const pageB = await deviceB.newPage();
+    try {
+      await loginUser(pageB, email, PASSWORDS[0]);
+      await expectStillAuthenticated(pageB, email);
+
+      // When: device B (the newer session) changes the password. The revocation
+      // cutoff is anchored to device B's `authTime`, so every session OLDER than
+      // it — device A — falls below the cutoff.
+      await changePasswordSucceeds(pageB, PASSWORDS[0], PASSWORDS[1], email);
+
+      // Then: device B (the initiator) is still authenticated…
+      await expectStillAuthenticated(pageB, email);
+
+      // …but device A's older cookie is now rejected by the revocation gate, so
+      // `/api/v1/session` reports it as signed out. `page.request` uses device A's
+      // cookie jar, exercising the real revocation round trip.
+      await expect(async () => {
+        const response = await page.request.get("/api/v1/session");
+        expect(response.ok()).toBe(true);
+        const body = await response.json();
+        expect(body.data.authenticated, "the older other-device session must be revoked").toBe(false);
+      }).toPass({ timeout: 15_000 });
+    } finally {
+      await deviceB.close();
+    }
   });
 });
