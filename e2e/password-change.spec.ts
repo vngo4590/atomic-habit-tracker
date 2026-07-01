@@ -89,8 +89,10 @@ async function registerUser(page: Page): Promise<string> {
   await page.fill('input[name="password"]', PASSWORDS[0]);
   await page.getByRole("button", { name: "Create account" }).click();
 
-  // A successful registration redirects to the app root.
-  await page.waitForURL("http://localhost:3000/", { timeout: 15_000 });
+  // A successful registration redirects to the app root. Match on the path only
+  // (not a hardcoded origin) so this works both locally (http://localhost:3000/)
+  // and against the live per-PR preview URL that CI sets via BASE_URL.
+  await page.waitForURL((url) => url.pathname === "/", { timeout: 15_000 });
 
   // A first-run user may see the onboarding overlay; dismiss it so it can never
   // intercept a later click on the Settings controls.
