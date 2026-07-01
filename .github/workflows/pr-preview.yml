@@ -610,6 +610,26 @@ jobs:
           fi
           echo "pass=$PASS" >> "$GITHUB_OUTPUT"
           echo "fail=$FAIL" >> "$GITHUB_OUTPUT"
+          # Surface a human-readable summary (counts + failing test titles) on
+          # the workflow run's Summary tab so failures are visible at a glance
+          # without opening the raw job log or downloading artifacts.
+          {
+            echo "### Playwright (live preview) — ${PASS} passed, ${FAIL} failed"
+            echo ""
+            echo "Ran against \`$BASE_URL\`."
+            if [ "$STATUS" -ne 0 ] && [ -f playwright-report/results.json ]; then
+              echo ""
+              echo "<details><summary>Failing tests</summary>"
+              echo ""
+              echo '```'
+              jq -r '.suites[]? | .. | objects | select(.tests?) as $s
+                | $s.tests[]? | select(.results[]?.status == "failed")
+                | "\($s.title // "") › \(.title // .titlePath // "")"' \
+                playwright-report/results.json 2>/dev/null | sort -u || true
+              echo '```'
+              echo "</details>"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
           exit $STATUS
 
       - name: Remove runner IP from Container App ingress
@@ -641,6 +661,13 @@ jobs:
           az containerapp logs show --name "$APP" --resource-group "$RG" \
             --type system --tail 200 > container-logs/system.log 2>&1 || true
           echo "=== captured $(wc -l < container-logs/console.log) console lines ==="
+          # Echo the console tail INLINE in the job log too (not just the
+          # uploaded artifact) so a 500's real stack trace is visible directly
+          # in the failed step without downloading anything.
+          echo "----- preview container console (tail 200) -----"
+          tail -n 200 container-logs/console.log || true
+          echo "----- preview container system (tail 80) -----"
+          tail -n 80 container-logs/system.log || true
 
       - name: Upload Playwright report (on failure)
         if: failure()
