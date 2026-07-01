@@ -97,6 +97,20 @@ CSRF).
   arbitrary unknown emails. Progressive backoff (vs a hard lock) bounds the
   lock-out-the-victim DoS. State is in-memory/per-instance (same caveat as the
   rate limiter).
+- **Session revocation gate:** `isSessionRevoked` (`lib/auth/session-policy.ts`)
+  rejects any JWT whose issue time (`authTime`) predates the user's revocation
+  cutoff (`sessionsValidFrom`). "Sign out everywhere"
+  (`signOutEverywhereAction`) advances the cutoff to revoke **all** devices —
+  including the current one — by design. A **self-service password change**
+  (`changePasswordAction`), however, now revokes only **other** devices: after
+  bumping the cutoff it re-issues the current session's cookie with a fresh
+  `authTime` (via next-auth's `unstable_update` / the `update` jwt trigger, see
+  `auth.ts`) so the initiating device stays signed in and can change the
+  password repeatedly in-session. This is a deliberately narrowed control —
+  standard practice not to log yourself out when you change your own password;
+  stale/stolen cookies on other devices are still invalidated. The equality
+  boundary matters: `isSessionRevoked` uses a strict `<`, so the refreshed
+  `authTime == sessionsValidFrom` is treated as valid.
 
 ### Bot challenge — Cloudflare Turnstile (`lib/security/turnstile.ts`, `components/TurnstileWidget.tsx`)
 
