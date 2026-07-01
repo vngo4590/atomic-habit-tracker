@@ -98,23 +98,30 @@ CSRF).
   lock-out-the-victim DoS. State is in-memory/per-instance (same caveat as the
   rate limiter).
 - **Session revocation gate:** `isSessionRevoked` (`lib/auth/session-policy.ts`)
-  rejects any JWT whose issue time (`authTime`) predates the user's revocation
-  cutoff (`sessionsValidFrom`). "Sign out everywhere"
-  (`signOutEverywhereAction`) advances the cutoff to **now**, revoking every
-  device including the current one — by design. A **self-service password
-  change** (`changePasswordAction`), however, uses a narrowed strategy to keep
-  the initiating device signed in: it reads the current session's own
-  `authTime` from `getCurrentSession()` and passes that instant as the
-  `validFrom` cutoff to `revokeUserSessions`. The gate is a strict `<`, so any
-  session whose `authTime < cutoff` (i.e. older than the initiating device's
-  original sign-in) is revoked on its next request, while the initiating
-  session — whose `authTime` **equals** the cutoff — survives unchanged. No
-  cookie is re-issued, which avoids the Set-Cookie propagation race that would
-  log the user out on a back-to-back change.
-  **Known limitation:** sessions minted more recently than the initiating
-  session (e.g. a concurrent sign-in by an attacker who obtained credentials
-  after the victim signed in) are not revoked by a password change alone. For
-  full revocation of all devices use "Sign out everywhere" first.
+- **Session revocation gate:** `isSessionRevoked` (`lib/auth/session-policy.ts`)
+  rejects any JWT whose issue time (`authTime`) is strictly **before** the user's
+  revocation cutoff (`sessionsValidFrom`). "Sign out everywhere"
+  (`signOutEverywhereAction`) advances the cutoff to **now**, which revokes
+  **all** devices — including the current one — by design. A **self-service
+  password change** (`changePasswordAction`) instead sets the cutoff to the
+  **current device's own `authTime`** (read via `getCurrentSession()`). Because
+  the gate uses a strict `<`, the initiating device (`authTime == cutoff`)
+  survives on its **existing** cookie — no cookie is re-issued — so the user can
+  change their password repeatedly in-session, and every session minted **before**
+  this device's login is revoked. Not re-issuing a cookie is what makes this
+  **race-free**: an earlier implementation bumped the cutoff to `now` and
+  re-minted the current cookie (via next-auth's `unstable_update`), but on a real
+  HTTPS deployment that fresh cookie lost a propagation race against the immediate
+  post-action RSC revalidation and stranded the current device on `/login`.
+  **Accepted trade-off:** anchoring the cutoff to the current `authTime` means an
+  **other** device that logged in *more recently* than the initiating device
+  (a newer `authTime`) is **not** revoked. Fully revoking those too would require
+  either the racy cookie re-issue above or a richer per-session identifier
+  (stamp a stable `sid` into the JWT, mark it exempt, and set the cutoff to `now`)
+  — a token + Prisma-migration change we deliberately deferred. For full
+  revocation of all devices use "Sign out everywhere" first. The user-facing
+  copy reflects this honestly ("You're still signed in on this device") rather
+  than claiming all other devices were signed out.
 
 ### Bot challenge — Cloudflare Turnstile (`lib/security/turnstile.ts`, `components/TurnstileWidget.tsx`)
 

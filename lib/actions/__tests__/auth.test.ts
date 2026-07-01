@@ -234,8 +234,10 @@ describe("changePasswordAction", () => {
     // No cookie is re-minted: we must NOT call signIn (the old racy path).
     expect(signInMock).not.toHaveBeenCalled();
     expect(result.ok).toBe(true);
-    // Copy reflects reality: current device stays in, other devices signed out.
-    expect(result.message).toBe("Password changed. You've been signed out on your other devices.");
+    // Copy reflects reality: the current device stays signed in. We do NOT claim
+    // "all other devices signed out" — a newer other-device session survives (the
+    // documented trade-off of the race-free cutoff-at-authTime model).
+    expect(result.message).toBe("Password changed. You're still signed in on this device.");
     expect(result.message).not.toMatch(/sign in again/i);
   });
 

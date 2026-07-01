@@ -248,5 +248,11 @@ export async function changePasswordAction(_prevState: ProfileFormState, formDat
   await revokeUserSessions(user.id, cutoff);
 
   log.info("Password changed", { event: "auth.password_changed", userId: redactUserId(user.id) });
-  return { ok: true, message: "Password changed. You've been signed out on your other devices." };
+  // NOTE: on success the form renders a fixed "Password changed." label, so this
+  // message string is not shown to the user (it only surfaces on error). We keep
+  // it accurate anyway: the current device stays signed in, and older sessions on
+  // other devices are revoked. We deliberately do NOT claim "all other devices" —
+  // a device that signed in more recently than this one keeps a newer `authTime`
+  // than the cutoff and survives (the documented trade-off of the race-free model).
+  return { ok: true, message: "Password changed. You're still signed in on this device." };
 }
