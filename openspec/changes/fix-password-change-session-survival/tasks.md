@@ -65,18 +65,23 @@
 > change loop). On Windows, run the prod server via `npx next start -p 3000` with `BASE_URL`
 > set (per the repo e2e convention in `playwright.config.ts`).
 
-- [ ] 5.1 New spec (e.g. `e2e/password-change.spec.ts`): log in, then change the password
-      AT LEAST 5 TIMES in a row in one session (chaining old→new each time), asserting each
-      change succeeds AND the user stays authenticated (never bounced to `/login`).
-- [ ] 5.2 Edge case: wrong current password shows "Current password is incorrect." and the
-      form stays usable (not signed out).
-- [ ] 5.3 Edge case (the reported bug): after a wrong attempt, a subsequent CORRECT change
+- [x] 5.1 New spec (`e2e/password-change.spec.ts`): register a fresh throwaway user, then
+      change the password 5 times in a row in one session (chaining old→new P0→P5), asserting
+      each change succeeds (authoritatively via `/api/v1/session`, which runs the revocation
+      gate) AND the user stays authenticated (never stranded on `/login`). A final check proves
+      the original password is now rejected as "incorrect", not "Not authenticated."
+- [x] 5.2 Edge case: wrong current password shows "Current password is incorrect." (asserts
+      "Not authenticated." is absent) and the form stays usable / session intact.
+- [x] 5.3 Edge case (the reported bug): after a wrong attempt, a subsequent CORRECT change
       still works.
-- [ ] 5.4 Edge case: a new password failing a validation rule shows the specific message.
-- [ ] 5.5 Edge case: reopening the panel after a successful change shows a fresh, empty form
+- [x] 5.4 Edge case: a new password missing a symbol shows "New password must include a
+      symbol." and does not change the password (original password still works afterwards).
+- [x] 5.5 Edge case: reopening the panel after a successful change shows a fresh, empty form
       (guards the earlier `change-password-form` reset fix).
-- [ ] 5.6 Verify: `RATE_LIMIT_DISABLED=true` with the prod server running, then
-      `npx playwright test e2e/password-change.spec.ts` (green).
+- [x] 5.6 Verify: ran the prod server (`npx next start -p 3000`, `NEXT_OUTPUT_STANDALONE=false`)
+      with `RATE_LIMIT_DISABLED=true`, then `BASE_URL=http://localhost:3000 npx playwright test
+      e2e/password-change.spec.ts` — 11 passed across chromium + Mobile Chrome, 0 flakes over
+      4 runs.
 
 ## 6. Docs & validation
 
