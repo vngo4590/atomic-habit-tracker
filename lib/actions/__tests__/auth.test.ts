@@ -10,12 +10,12 @@ const updateUserPasswordMock = vi.hoisted(() => vi.fn());
 const revokeUserSessionsMock = vi.hoisted(() => vi.fn());
 const hashPasswordMock = vi.hoisted(() => vi.fn());
 const verifyPasswordMock = vi.hoisted(() => vi.fn());
-const updateSessionMock = vi.hoisted(() => vi.fn());
+const signInMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/auth", () => ({
-  signIn: vi.fn(),
+  signIn: signInMock,
   signOut: vi.fn(),
-  updateSession: updateSessionMock,
+  updateSession: vi.fn(),
 }));
 
 vi.mock("@/lib/auth/session", () => ({
@@ -97,7 +97,7 @@ describe("changePasswordAction", () => {
     hashPasswordMock.mockReset();
     updateUserPasswordMock.mockReset();
     revokeUserSessionsMock.mockReset();
-    updateSessionMock.mockReset();
+    signInMock.mockReset();
   });
 
   it("rejects unauthenticated users", async () => {
@@ -221,12 +221,18 @@ describe("changePasswordAction", () => {
     expect(updateUserPasswordMock).toHaveBeenCalledWith("user_1", "new_hash");
     // Security: a password change invalidates every previously-issued session...
     expect(revokeUserSessionsMock).toHaveBeenCalledWith("user_1");
-    // ...but the CURRENT device is kept signed in by re-issuing its cookie with a
-    // fresh authTime AFTER the revoke (so authTime >= sessionsValidFrom).
-    expect(updateSessionMock).toHaveBeenCalledTimes(1);
-    // Ordering is load-bearing: revoke must run before the session refresh.
+    // ...but the CURRENT device is kept signed in by minting a fresh session via
+    // the credentials sign-in path, using the NEW password, AFTER the revoke (so
+    // its fresh authTime >= sessionsValidFrom).
+    expect(signInMock).toHaveBeenCalledTimes(1);
+    expect(signInMock).toHaveBeenCalledWith("credentials", {
+      email: "alex@example.com",
+      password: "NewPass1!",
+      redirect: false,
+    });
+    // Ordering is load-bearing: revoke must run before the session re-mint.
     expect(revokeUserSessionsMock.mock.invocationCallOrder[0]).toBeLessThan(
-      updateSessionMock.mock.invocationCallOrder[0],
+      signInMock.mock.invocationCallOrder[0],
     );
     expect(result.ok).toBe(true);
     // Copy reflects reality: current device stays in, other devices signed out.
@@ -259,7 +265,14 @@ describe("changePasswordAction", () => {
     expect(second.ok).toBe(true);
     expect(second.message).not.toBe("Not authenticated.");
     expect(revokeUserSessionsMock).toHaveBeenCalledTimes(2);
-    expect(updateSessionMock).toHaveBeenCalledTimes(2);
+    expect(signInMock).toHaveBeenCalledTimes(2);
+    // The second re-mint uses the NEW current password (B), proving the current
+    // device is re-authenticated with fresh credentials each change.
+    expect(signInMock).toHaveBeenLastCalledWith("credentials", {
+      email: "alex@example.com",
+      password: "NewPassC1!",
+      redirect: false,
+    });
   });
 
   // Regression: with a still-valid session, a wrong current password must report
@@ -280,6 +293,6 @@ describe("changePasswordAction", () => {
     expect(verifyPasswordMock).toHaveBeenCalledWith("wrong", "hash");
     expect(updateUserPasswordMock).not.toHaveBeenCalled();
     expect(revokeUserSessionsMock).not.toHaveBeenCalled();
-    expect(updateSessionMock).not.toHaveBeenCalled();
+    expect(signInMock).not.toHaveBeenCalled();
   });
 });

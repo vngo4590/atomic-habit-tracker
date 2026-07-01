@@ -4,7 +4,7 @@ import { AuthError } from "next-auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { signIn, signOut, updateSession } from "@/auth";
+import { signIn, signOut } from "@/auth";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import type { AuthFormState } from "@/lib/contracts/auth";
 import { loginSchema } from "@/lib/contracts/auth";
@@ -228,13 +228,38 @@ export async function changePasswordAction(_prevState: ProfileFormState, formDat
   // password it was created under. This advances the user's `sessionsValidFrom`
   // cutoff to "now", which would ALSO revoke the current device.
   await revokeUserSessions(user.id);
-  // Ordering is load-bearing: re-issue the CURRENT session's cookie with a fresh
-  // `authTime` (via the `update` jwt trigger) AFTER the revoke above, so that
-  // `authTime >= sessionsValidFrom`. `isSessionRevoked` uses a strict `<`, so an
-  // equal timestamp is not revoked — the current device stays signed in while
-  // every other device (whose older `authTime` predates the cutoff) stays revoked.
-  // Reversing this order would silently sign the current device out again.
-  await updateSession({});
+  // Ordering is load-bearing: keep THIS device signed in by minting a brand-new
+  // session through the exact same credentials sign-in path the login form uses,
+  // AFTER the revoke above. `signIn` deterministically re-issues the session
+  // cookie with a fresh `authTime` of "now" (>= the cutoff we just set), so the
+  // `isSessionRevoked` gate keeps the current device while every other device
+  // (whose older `authTime` predates the cutoff) stays revoked. We mint via
+  // `signIn` rather than a lighter session "update" because on a real HTTPS
+  // deployment the update's re-issued cookie can lose a race with the request
+  // that immediately follows a rapid, back-to-back change — stranding the user on
+  // /login (the reported "keeps saying not authenticated" bug). `signIn` is the
+  // battle-tested cookie path (login and registration rely on it), so it sets the
+  // cookie reliably even under high latency and repeated changes.
+  try {
+    await signIn("credentials", {
+      email: user.email,
+      password: newPassword,
+      redirect: false,
+    });
+  } catch (error) {
+    // A genuine Next.js redirect (NEXT_REDIRECT) must bubble up untouched. Any
+    // AuthError here means the re-mint failed even though the password was already
+    // changed; the truthful outcome is still "changed" — the user will simply be
+    // asked to sign in again on their next protected navigation.
+    if (error instanceof AuthError) {
+      log.warn("Password changed but session re-mint failed", {
+        event: "auth.password_change_remint_failed",
+        userId: redactUserId(user.id),
+      });
+    } else {
+      throw error;
+    }
+  }
   log.info("Password changed", { event: "auth.password_changed", userId: redactUserId(user.id) });
   return { ok: true, message: "Password changed. You've been signed out on your other devices." };
 }
