@@ -657,7 +657,7 @@ jobs:
         run: |
           mkdir -p container-logs
           az containerapp logs show --name "$APP" --resource-group "$RG" \
-            --type console --tail 600 > container-logs/console.log 2>&1 || true
+            --type console --tail 300 > container-logs/console.log 2>&1 || true
           az containerapp logs show --name "$APP" --resource-group "$RG" \
             --type system --tail 200 > container-logs/system.log 2>&1 || true
           echo "=== captured $(wc -l < container-logs/console.log) console lines ==="
