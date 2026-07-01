@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 
 import { PasswordInput } from "@/components/PasswordInput";
 import { changePasswordAction } from "@/lib/actions/auth";
@@ -16,6 +16,13 @@ interface ChangePasswordFormProps {
    * The Settings page uses this to close the panel and show its toast.
    */
   onDone: () => void;
+  /**
+   * Fired once the change has SUCCEEDED (before the user clicks "Done"). The
+   * Settings page uses this to hide its redundant row-level "Cancel" button —
+   * after the password is already changed there is nothing left to cancel, so
+   * the success view should offer only "Done".
+   */
+  onSuccess?: () => void;
 }
 
 /**
@@ -30,13 +37,22 @@ interface ChangePasswordFormProps {
  * Both fields use the shared `PasswordInput` so each has its own independent
  * show/hide toggle.
  */
-export function ChangePasswordForm({ onDone }: ChangePasswordFormProps) {
+export function ChangePasswordForm({ onDone, onSuccess }: ChangePasswordFormProps) {
   const [passwordState, passwordAction, passwordPending] = useActionState<ProfileFormState, FormData>(
     changePasswordAction,
     { ok: false, message: "" },
   );
 
   const passwordSuccess = passwordState.ok;
+
+  // When the change succeeds, tell the Settings page so it can drop its
+  // redundant "Cancel" toggle — the success view already shows "Done", and
+  // "Cancel" makes no sense once the password has actually changed.
+  useEffect(() => {
+    if (passwordSuccess) {
+      onSuccess?.();
+    }
+  }, [passwordSuccess, onSuccess]);
 
   return (
     <div className={styles.editFormShell}>

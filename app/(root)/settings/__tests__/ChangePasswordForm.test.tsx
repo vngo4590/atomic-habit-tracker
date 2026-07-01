@@ -37,17 +37,30 @@ afterEach(() => {
 /**
  * Harness mirroring the Settings page wiring: a Change/Cancel toggle that
  * mounts ChangePasswordForm only while `changingPassword` is true, and unmounts
- * it on the "Done"/close path. This reproduces the exact reopen behaviour the
- * bug fix relies on (fresh mount = fresh useActionState).
+ * it on the "Done"/close path. It also mirrors the page's `passwordChanged`
+ * flag: once the form reports success via `onSuccess`, the row-level "Cancel"
+ * toggle is hidden (the success view offers only "Done"). This reproduces both
+ * the reopen behaviour the bug fix relies on AND the Cancel-removal behaviour.
  */
 function Harness() {
   const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordChanged, setPasswordChanged] = useState(false);
   return (
     <div>
-      <button onClick={() => setChangingPassword((open) => !open)}>
-        {changingPassword ? "Cancel" : "Change"}
-      </button>
-      {changingPassword && <ChangePasswordForm onDone={() => setChangingPassword(false)} />}
+      {!changingPassword ? (
+        <button onClick={() => setChangingPassword(true)}>Change</button>
+      ) : passwordChanged ? null : (
+        <button onClick={() => setChangingPassword(false)}>Cancel</button>
+      )}
+      {changingPassword && (
+        <ChangePasswordForm
+          onSuccess={() => setPasswordChanged(true)}
+          onDone={() => {
+            setChangingPassword(false);
+            setPasswordChanged(false);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -83,6 +96,29 @@ describe("ChangePasswordForm reopen flow", () => {
     expect(screen.getByText("Current password")).toBeTruthy();
     expect(screen.getByText("New password")).toBeTruthy();
     expect(screen.queryByText("Password changed.")).toBeNull();
+  });
+
+  // Given: an open change-password form
+  // When: the change succeeds
+  // Then: the redundant row-level "Cancel" button is removed, leaving only the
+  // success view's "Done" — there is nothing to cancel once the password changed.
+  it("removes the Cancel button once the change has succeeded, leaving only Done", async () => {
+    changePasswordActionMock.mockResolvedValue({ ok: true, message: "" });
+    render(<Harness />);
+
+    // Open the panel — while editing, the Cancel toggle is present.
+    fireEvent.click(screen.getByRole("button", { name: "Change" }));
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeTruthy();
+
+    // Submit the form — the mocked action reports success.
+    await act(async () => {
+      fireEvent.submit(screen.getByText("Change password").closest("form")!);
+    });
+
+    // The success row appears with "Done", and the Cancel toggle is now gone.
+    await waitFor(() => expect(screen.getByText("Password changed.")).toBeTruthy());
+    expect(screen.getByRole("button", { name: "Done" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Cancel" })).toBeNull();
   });
 
   // Given: an open change-password form

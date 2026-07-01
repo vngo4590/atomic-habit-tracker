@@ -49,6 +49,10 @@ export default function SettingsPage() {
 
   // Password change state
   const [changingPassword, setChangingPassword] = useState(false);
+  // True once a password change has succeeded but before the panel is closed.
+  // Used to hide the row-level "Cancel" toggle in the success state, where the
+  // ChangePasswordForm already shows a "Done" button and there is nothing to cancel.
+  const [passwordChanged, setPasswordChanged] = useState(false);
 
   // Data import state. `pendingImport` holds the chosen file's text + name while
   // we ask the user to confirm the merge; `importPending` blocks the UI while
@@ -290,7 +294,7 @@ export default function SettingsPage() {
                 <motion.button className="btn btn-sm" onClick={() => setChangingPassword(true)} whileTap={{ scale: 0.97 }}>
                   Change
                 </motion.button>
-              ) : (
+              ) : passwordChanged ? null : (
                 <motion.button className="btn btn-sm" onClick={() => setChangingPassword(false)} whileTap={{ scale: 0.97 }}>
                   Cancel
                 </motion.button>
@@ -303,8 +307,10 @@ export default function SettingsPage() {
               starts from a fresh, empty form (fixes the old "change once" bug). */}
           {changingPassword && (
             <ChangePasswordForm
+              onSuccess={() => setPasswordChanged(true)}
               onDone={() => {
                 setChangingPassword(false);
+                setPasswordChanged(false);
                 store.showToast("Password changed");
               }}
             />
