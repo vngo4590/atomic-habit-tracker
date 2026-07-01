@@ -4,6 +4,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 
 import { authorizeCredentials } from "@/lib/auth/credentials";
 import { SESSION_MAX_AGE_SECONDS, SESSION_UPDATE_AGE_SECONDS } from "@/lib/auth/session-policy";
+import { stampAuthToken } from "@/lib/auth/token";
 import { db } from "@/lib/db/client";
 
 export const {
@@ -37,15 +38,14 @@ export const {
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
-      if (user?.id) {
-        token.id = user.id;
-        // Stamp the original sign-in time exactly once. `user` is only present
-        // on the initial sign-in, so this survives every later token slide and
-        // lets the server compare it against the user's revocation cutoff.
-        token.authTime = Date.now();
-      }
-      return token;
+    // `authTime` stamping lives in a pure helper (`stampAuthToken`) so the
+    // revocation-critical behaviour is unit-testable without the NextAuth/Prisma
+    // stack. Initial sign-in stamps it once; ordinary token slides preserve it.
+    // (`trigger === "update"` is available should a future flow need to re-stamp
+    // it — e.g. a privilege escalation step — but the current password-change
+    // flow does not use it.)
+    jwt({ token, user, trigger }) {
+      return stampAuthToken({ token, user, trigger });
     },
     session({ session, token }) {
       if (session.user && typeof token.id === "string") {

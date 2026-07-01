@@ -103,17 +103,40 @@ export async function updateUserPassword(id: string, passwordHash: string, clien
 }
 
 /**
- * Revokes every existing session for a user by advancing their revocation
- * cutoff to now. Any session whose `authTime` predates this instant is rejected
- * on its next server request. Powers "sign out of all devices" and the
- * automatic revocation performed after a password change.
+ * Revokes existing sessions for a user by advancing their revocation cutoff.
+ * Any session whose `authTime` is strictly BEFORE the `validFrom` instant is
+ * rejected on its next server request.
+ *
+ * By default `validFrom` is "now", which revokes EVERY existing session — this
+ * powers the "sign out of all devices" security flow. A password change instead
+ * passes the CURRENT device's own `authTime` as the cutoff: that keeps the
+ * device that performed the change signed in (its `authTime` EQUALS the cutoff,
+ * so it is not strictly `<` and survives) while every session issued BEFORE it
+ * is revoked. This is deterministic and requires no re-issued cookie, so it
+ * cannot lose a cookie-propagation race after a rapid, back-to-back change.
+ *
+ * TRADE-OFF (deliberate): because the cutoff equals the current device's
+ * `authTime`, an OTHER device whose session was minted AFTER this device's login
+ * (a newer `authTime`) is NOT revoked. The alternative — cutoff = now() plus a
+ * re-issued current cookie — would revoke those too, but the re-issued cookie
+ * races the immediate post-action navigation on a real HTTPS deployment and
+ * strands the current device on /login. We accept the narrower revocation to
+ * keep the change race-free. See docs/architecture/security.md.
+ *
+ * @param id        The user whose sessions to revoke.
+ * @param validFrom The revocation cutoff. Defaults to now (revoke everything).
+ * @param client    Optional transaction client.
  */
-export async function revokeUserSessions(id: string, client: DbClient = db): Promise<void> {
-  log.debug("Revoking all user sessions", { event: "repo.user.revokeSessions", userId: redactUserId(id) });
+export async function revokeUserSessions(
+  id: string,
+  validFrom: Date = new Date(),
+  client: DbClient = db,
+): Promise<void> {
+  log.debug("Revoking user sessions", { event: "repo.user.revokeSessions", userId: redactUserId(id) });
   validateDatabaseUrl();
 
   await client.user.update({
     where: { id },
-    data: { sessionsValidFrom: new Date() },
+    data: { sessionsValidFrom: validFrom },
   });
 }

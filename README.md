@@ -295,7 +295,7 @@ Notes:
 - `app/(root)/`: shared sidebar shell and all app screens. Each route has a co-located `page.module.css` for page-specific styles.
 - `app/styles/`: modular global stylesheet partials (see "Styles & Design Tokens" below).
 - `app/globals.css`: thin entry point that `@import`s the modular partials in cascade order.
-- `components/`: reusable client UI components. Each non-trivial component has a co-located `Component.module.css` next to it.
+- `components/`: reusable client UI components. Each non-trivial component has a co-located `Component.module.css` next to it. For example, `components/PasswordInput.tsx` is the shared password field with a built-in show/hide visibility toggle, used by the auth forms and the Settings change-password form.
 - `lib/`: types, helpers, auth/db helpers, repositories, server actions, store cache logic, and unit tests.
 - `scripts/`: local automation helpers, including Docker/PostgreSQL database management.
 - `k8s/local/`: local Docker Desktop Kubernetes overlay for the app deployment and migration job.

@@ -9,7 +9,7 @@ import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import type { AuthFormState } from "@/lib/contracts/auth";
 import { loginSchema } from "@/lib/contracts/auth";
 import { registerUser } from "@/lib/auth/register";
-import { getCurrentUser } from "@/lib/auth/session";
+import { getCurrentSession, getCurrentUser } from "@/lib/auth/session";
 import { clientIpFromHeaders } from "@/lib/security/rate-limit";
 import { TURNSTILE_FIELD, verifyTurnstileToken } from "@/lib/security/turnstile";
 import { logger, redactEmail, redactUserId } from "@/lib/logger";
@@ -224,9 +224,35 @@ export async function changePasswordAction(_prevState: ProfileFormState, formDat
 
   const newHash = await hashPassword(newPassword);
   await updateUserPassword(user.id, newHash);
-  // Revoke every existing session so a stolen or stale cookie cannot outlive the
-  // password it was created under. The user signs in again with the new password.
-  await revokeUserSessions(user.id);
+
+  // Keep THIS device signed in without re-issuing any cookie. We read the current
+  // session's own `authTime` (the epoch-ms instant this device's token was minted)
+  // and use it as the revocation cutoff. The gate is `authTime < sessionsValidFrom`
+  // (strict), so the current device — whose `authTime` EQUALS the cutoff — survives,
+  // while every OLDER session (a stale or stolen cookie minted before this instant)
+  // is revoked on its next request.
+  //
+  // Why this over re-minting the cookie: a fresh `signIn`/`updateSession` cookie must
+  // reach the browser and be replayed on the NEXT navigation. On a real HTTPS
+  // deployment a rapid, back-to-back change lets that navigation race ahead of the
+  // Set-Cookie, so the server still sees the OLD (now-revoked) cookie, `getCurrentUser`
+  // returns null, and /settings redirects to /login — the reported "keeps saying not
+  // authenticated" bug. Anchoring the cutoff to the existing cookie's `authTime`
+  // removes the cookie round-trip entirely, so there is no race to lose.
+  const session = await getCurrentSession();
+  const currentAuthTime = typeof session?.authTime === "number" ? session.authTime : null;
+  // Fall back to "now" only for the degenerate case of a legacy token with no
+  // `authTime`; that device cannot be deterministically preserved, so we fail secure
+  // and revoke it (the user simply signs in again).
+  const cutoff = currentAuthTime !== null ? new Date(currentAuthTime) : new Date();
+  await revokeUserSessions(user.id, cutoff);
+
   log.info("Password changed", { event: "auth.password_changed", userId: redactUserId(user.id) });
-  return { ok: true, message: "Password changed. Please sign in again on your devices." };
+  // NOTE: on success the form renders a fixed "Password changed." label, so this
+  // message string is not shown to the user (it only surfaces on error). We keep
+  // it accurate anyway: the current device stays signed in, and older sessions on
+  // other devices are revoked. We deliberately do NOT claim "all other devices" —
+  // a device that signed in more recently than this one keeps a newer `authTime`
+  // than the cutoff and survives (the documented trade-off of the race-free model).
+  return { ok: true, message: "Password changed. You're still signed in on this device." };
 }

@@ -7,6 +7,7 @@ import type { AuthFormState } from "@/lib/contracts/auth";
 import { initialAuthFormState } from "@/lib/contracts/auth";
 import { clientLogger } from "@/lib/logger-client";
 
+import { PasswordInput } from "./PasswordInput";
 import { TurnstileWidget } from "./TurnstileWidget";
 import styles from "./AuthForm.module.css";
 
@@ -88,10 +89,9 @@ export function AuthForm({
 
           <label>
             <span className="field-label">Password</span>
-            <input
+            <PasswordInput
               className="input"
               name="password"
-              type="password"
               autoComplete={includeName ? "new-password" : "current-password"}
               required
               minLength={8}

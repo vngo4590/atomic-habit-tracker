@@ -27,6 +27,10 @@ export default defineConfig({
   reporter: isCI
     ? [
         ["list"],
+        // Annotate every failure inline on the GitHub Actions run (and on the
+        // changed lines in the PR) with the file:line and error message, so a
+        // reviewer can see what broke without downloading the trace artifact.
+        ["github"],
         ["json", { outputFile: "playwright-report/results.json" }],
         ["html", { open: "never", outputFolder: "playwright-report/html" }],
       ]

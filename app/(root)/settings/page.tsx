@@ -7,12 +7,13 @@ import { IconMoon, IconSun } from "@/components/Icons";
 import { HuePicker } from "@/components/HuePicker";
 import { useStoreContext } from "@/components/StoreProvider";
 import { importDataAction } from "@/lib/actions/backup";
-import { changePasswordAction, updateProfileAction, signOutEverywhereAction } from "@/lib/actions/auth";
+import { updateProfileAction, signOutEverywhereAction } from "@/lib/actions/auth";
 import type { ProfileFormState } from "@/lib/actions/auth";
 import { applyAppearance, readStoredVariant } from "@/lib/appearance";
 import { clientLogger } from "@/lib/logger-client";
 import { THEMES, getTheme, isThemeVariantId } from "@/lib/themes";
 
+import { ChangePasswordForm } from "./ChangePasswordForm";
 import styles from "./page.module.css";
 
 interface SessionUser {
@@ -48,6 +49,10 @@ export default function SettingsPage() {
 
   // Password change state
   const [changingPassword, setChangingPassword] = useState(false);
+  // True once a password change has succeeded but before the panel is closed.
+  // Used to hide the row-level "Cancel" toggle in the success state, where the
+  // ChangePasswordForm already shows a "Done" button and there is nothing to cancel.
+  const [passwordChanged, setPasswordChanged] = useState(false);
 
   // Data import state. `pendingImport` holds the chosen file's text + name while
   // we ask the user to confirm the merge; `importPending` blocks the UI while
@@ -80,10 +85,6 @@ export default function SettingsPage() {
     updateProfileAction,
     { ok: false, message: "" },
   );
-  const [passwordState, passwordAction, passwordPending] = useActionState<ProfileFormState, FormData>(
-    changePasswordAction,
-    { ok: false, message: "" },
-  );
 
   // Note: local `theme`/`accent` are seeded from the store on mount (above) and
   // are the source of truth while the Settings page is open. We deliberately do
@@ -109,7 +110,6 @@ export default function SettingsPage() {
   // Derive a local success flag for the profile form so we can offer a
   // "Done" button that closes the panel without triggering cascading renders.
   const profileSuccess = profileState.ok;
-  const passwordSuccess = passwordState.ok;
 
   // The id of the currently active look: the chosen variant if any, otherwise
   // the plain light/dark theme (whose ids double as variant ids).
@@ -294,7 +294,7 @@ export default function SettingsPage() {
                 <motion.button className="btn btn-sm" onClick={() => setChangingPassword(true)} whileTap={{ scale: 0.97 }}>
                   Change
                 </motion.button>
-              ) : (
+              ) : passwordChanged ? null : (
                 <motion.button className="btn btn-sm" onClick={() => setChangingPassword(false)} whileTap={{ scale: 0.97 }}>
                   Cancel
                 </motion.button>
@@ -302,65 +302,18 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Password change form — appears when the user clicks Change. */}
+          {/* Password change form — appears when the user clicks Change.
+              Rendered only while open and unmounted on close, so each reopen
+              starts from a fresh, empty form (fixes the old "change once" bug). */}
           {changingPassword && (
-            <div className={styles.editFormShell}>
-              {!passwordSuccess ? (
-                <form
-                  action={passwordAction}
-                  className={styles.passwordForm}
-                  onSubmit={() => clientLogger.info("Password change submitted", { page: "settings" })}
-                >
-                  <label>
-                    <span className="field-label">Current password</span>
-                    <input
-                      className={`input ${styles.smallInput}`}
-                      name="currentPassword"
-                      type="password"
-                      required
-                      minLength={8}
-                    />
-                  </label>
-                  <label>
-                    <span className="field-label">New password</span>
-                    <input
-                      className={`input ${styles.smallInput}`}
-                      name="newPassword"
-                      type="password"
-                      required
-                      minLength={8}
-                    />
-                  </label>
-                  <div className={styles.formActions}>
-                    <motion.button
-                      className="btn btn-sm btn-primary"
-                      type="submit"
-                      disabled={passwordPending}
-                      whileTap={{ scale: 0.97 }}
-                    >
-                      {passwordPending ? "Changing..." : "Change password"}
-                    </motion.button>
-                  </div>
-                </form>
-              ) : (
-                <div className={styles.successRow}>
-                  <span className={styles.successText}>Password changed.</span>
-                  <motion.button
-                    className="btn btn-sm btn-primary"
-                    onClick={() => {
-                      setChangingPassword(false);
-                      store.showToast("Password changed");
-                    }}
-                    whileTap={{ scale: 0.97 }}
-                  >
-                    Done
-                  </motion.button>
-                </div>
-              )}
-              {!passwordSuccess && passwordState.message && (
-                <div className={`muted ${styles.formError}`}>{passwordState.message}</div>
-              )}
-            </div>
+            <ChangePasswordForm
+              onSuccess={() => setPasswordChanged(true)}
+              onDone={() => {
+                setChangingPassword(false);
+                setPasswordChanged(false);
+                store.showToast("Password changed");
+              }}
+            />
           )}
 
           {/* Sign out of all devices — advances the session revocation cutoff so

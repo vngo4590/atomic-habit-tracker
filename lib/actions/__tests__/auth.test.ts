@@ -1,18 +1,26 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ---------------------------------------------------------------------------
 // Mocks — must be hoisted so they apply before the module under test imports.
 // ---------------------------------------------------------------------------
 
 const getCurrentUserMock = vi.hoisted(() => vi.fn());
+const getCurrentSessionMock = vi.hoisted(() => vi.fn());
 const updateUserNameMock = vi.hoisted(() => vi.fn());
 const updateUserPasswordMock = vi.hoisted(() => vi.fn());
 const revokeUserSessionsMock = vi.hoisted(() => vi.fn());
 const hashPasswordMock = vi.hoisted(() => vi.fn());
 const verifyPasswordMock = vi.hoisted(() => vi.fn());
+const signInMock = vi.hoisted(() => vi.fn());
+
+vi.mock("@/auth", () => ({
+  signIn: signInMock,
+  signOut: vi.fn(),
+}));
 
 vi.mock("@/lib/auth/session", () => ({
   getCurrentUser: getCurrentUserMock,
+  getCurrentSession: getCurrentSessionMock,
 }));
 
 vi.mock("@/lib/repositories/users", () => ({
@@ -84,6 +92,20 @@ describe("updateProfileAction", () => {
 });
 
 describe("changePasswordAction", () => {
+  beforeEach(() => {
+    getCurrentUserMock.mockReset();
+    getCurrentSessionMock.mockReset();
+    verifyPasswordMock.mockReset();
+    hashPasswordMock.mockReset();
+    updateUserPasswordMock.mockReset();
+    revokeUserSessionsMock.mockReset();
+    signInMock.mockReset();
+    // Default: the current device's session was minted at a known instant. The
+    // action anchors the revocation cutoff to this `authTime` so the current
+    // device survives while older sessions are revoked.
+    getCurrentSessionMock.mockResolvedValue({ authTime: 1_000 });
+  });
+
   it("rejects unauthenticated users", async () => {
     getCurrentUserMock.mockResolvedValue(null);
 
@@ -172,8 +194,26 @@ describe("changePasswordAction", () => {
     expect(result.message).toBe("New password must include a symbol.");
   });
 
-  it("changes the password and revokes existing sessions when everything is valid", async () => {
+  it("rejects a new password that is too long", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user_1", name: "Alex", email: "alex@example.com", passwordHash: "hash" });
+    verifyPasswordMock.mockResolvedValue(true);
+
+    // Given a valid-shape password (letter + number + symbol) but > 128 chars.
+    const tooLong = "Aa1!".repeat(33); // 132 chars
+
+    const result = await changePasswordAction(
+      { ok: false, message: "" },
+      form({ currentPassword: "oldpass", newPassword: tooLong }),
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.message).toBe("New password is too long.");
+    expect(hashPasswordMock).not.toHaveBeenCalled();
+  });
+
+  it("changes the password and revokes older sessions while keeping the current device signed in", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user_1", name: "Alex", email: "alex@example.com", passwordHash: "hash" });
+    getCurrentSessionMock.mockResolvedValue({ authTime: 1_700_000_000_000 });
     verifyPasswordMock.mockResolvedValue(true);
     hashPasswordMock.mockResolvedValue("new_hash");
     updateUserPasswordMock.mockResolvedValue({ id: "user_1", name: "Alex", email: "alex@example.com", passwordHash: "new_hash" });
@@ -186,9 +226,72 @@ describe("changePasswordAction", () => {
     expect(verifyPasswordMock).toHaveBeenCalledWith("oldpass", "hash");
     expect(hashPasswordMock).toHaveBeenCalledWith("NewPass1!");
     expect(updateUserPasswordMock).toHaveBeenCalledWith("user_1", "new_hash");
-    // Security: a password change invalidates every previously-issued session.
-    expect(revokeUserSessionsMock).toHaveBeenCalledWith("user_1");
+    // Security: a password change invalidates older sessions, but the revocation
+    // cutoff is anchored to the CURRENT session's own authTime so the current
+    // device (whose authTime EQUALS the cutoff, not <) survives with no cookie
+    // re-issue. This removes the fragile re-mint that raced the next navigation.
+    expect(revokeUserSessionsMock).toHaveBeenCalledWith("user_1", new Date(1_700_000_000_000));
+    // No cookie is re-minted: we must NOT call signIn (the old racy path).
+    expect(signInMock).not.toHaveBeenCalled();
     expect(result.ok).toBe(true);
-    expect(result.message).toBe("Password changed. Please sign in again on your devices.");
+    // Copy reflects reality: the current device stays signed in. We do NOT claim
+    // "all other devices signed out" — a newer other-device session survives (the
+    // documented trade-off of the race-free cutoff-at-authTime model).
+    expect(result.message).toBe("Password changed. You're still signed in on this device.");
+    expect(result.message).not.toMatch(/sign in again/i);
+  });
+
+  // Regression (the reported bug): after a first successful change, a second
+  // change in the SAME session must still resolve the current user and succeed
+  // with the correct new current password — never bounce to "Not authenticated."
+  it("allows a second in-session password change to succeed", async () => {
+    // Given a still-authenticated user across two consecutive changes.
+    getCurrentUserMock.mockResolvedValue({ id: "user_1", name: "Alex", email: "alex@example.com", passwordHash: "hash" });
+    getCurrentSessionMock.mockResolvedValue({ authTime: 1_700_000_000_000 });
+    verifyPasswordMock.mockResolvedValue(true);
+    hashPasswordMock.mockResolvedValueOnce("hash_b").mockResolvedValueOnce("hash_c");
+    updateUserPasswordMock.mockResolvedValue({ id: "user_1", name: "Alex", email: "alex@example.com", passwordHash: "hash_b" });
+
+    // When the user changes A→B, then B→C in the same session.
+    const first = await changePasswordAction(
+      { ok: false, message: "" },
+      form({ currentPassword: "OldPass1!", newPassword: "NewPassB1!" }),
+    );
+    const second = await changePasswordAction(
+      { ok: false, message: "" },
+      form({ currentPassword: "NewPassB1!", newPassword: "NewPassC1!" }),
+    );
+
+    // Then both changes succeed and the second is never rejected as unauthenticated.
+    expect(first.ok).toBe(true);
+    expect(second.ok).toBe(true);
+    expect(second.message).not.toBe("Not authenticated.");
+    expect(revokeUserSessionsMock).toHaveBeenCalledTimes(2);
+    // Each change anchors the cutoff to the same current-session authTime, so the
+    // current device deterministically survives every consecutive change.
+    expect(revokeUserSessionsMock).toHaveBeenLastCalledWith("user_1", new Date(1_700_000_000_000));
+    // No cookie re-mint on either change.
+    expect(signInMock).not.toHaveBeenCalled();
+  });
+
+  // Regression: with a still-valid session, a wrong current password must report
+  // the password as incorrect — NOT "Not authenticated." (the old misleading bug).
+  it("reports a wrong current password as incorrect, not unauthenticated, while the session is valid", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user_1", name: "Alex", email: "alex@example.com", passwordHash: "hash" });
+    verifyPasswordMock.mockResolvedValue(false);
+
+    const result = await changePasswordAction(
+      { ok: false, message: "" },
+      form({ currentPassword: "wrong", newPassword: "NewPass1!" }),
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.message).toBe("Current password is incorrect.");
+    expect(result.message).not.toBe("Not authenticated.");
+    // The password was actually checked (not short-circuited as unauthenticated).
+    expect(verifyPasswordMock).toHaveBeenCalledWith("wrong", "hash");
+    expect(updateUserPasswordMock).not.toHaveBeenCalled();
+    expect(revokeUserSessionsMock).not.toHaveBeenCalled();
+    expect(signInMock).not.toHaveBeenCalled();
   });
 });

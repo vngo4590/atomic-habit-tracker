@@ -97,6 +97,31 @@ CSRF).
   arbitrary unknown emails. Progressive backoff (vs a hard lock) bounds the
   lock-out-the-victim DoS. State is in-memory/per-instance (same caveat as the
   rate limiter).
+- **Session revocation gate:** `isSessionRevoked` (`lib/auth/session-policy.ts`)
+- **Session revocation gate:** `isSessionRevoked` (`lib/auth/session-policy.ts`)
+  rejects any JWT whose issue time (`authTime`) is strictly **before** the user's
+  revocation cutoff (`sessionsValidFrom`). "Sign out everywhere"
+  (`signOutEverywhereAction`) advances the cutoff to **now**, which revokes
+  **all** devices — including the current one — by design. A **self-service
+  password change** (`changePasswordAction`) instead sets the cutoff to the
+  **current device's own `authTime`** (read via `getCurrentSession()`). Because
+  the gate uses a strict `<`, the initiating device (`authTime == cutoff`)
+  survives on its **existing** cookie — no cookie is re-issued — so the user can
+  change their password repeatedly in-session, and every session minted **before**
+  this device's login is revoked. Not re-issuing a cookie is what makes this
+  **race-free**: an earlier implementation bumped the cutoff to `now` and
+  re-minted the current cookie (via next-auth's `unstable_update`), but on a real
+  HTTPS deployment that fresh cookie lost a propagation race against the immediate
+  post-action RSC revalidation and stranded the current device on `/login`.
+  **Accepted trade-off:** anchoring the cutoff to the current `authTime` means an
+  **other** device that logged in *more recently* than the initiating device
+  (a newer `authTime`) is **not** revoked. Fully revoking those too would require
+  either the racy cookie re-issue above or a richer per-session identifier
+  (stamp a stable `sid` into the JWT, mark it exempt, and set the cutoff to `now`)
+  — a token + Prisma-migration change we deliberately deferred. For full
+  revocation of all devices use "Sign out everywhere" first. The user-facing
+  copy reflects this honestly ("You're still signed in on this device") rather
+  than claiming all other devices were signed out.
 
 ### Bot challenge — Cloudflare Turnstile (`lib/security/turnstile.ts`, `components/TurnstileWidget.tsx`)
 

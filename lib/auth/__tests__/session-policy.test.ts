@@ -40,6 +40,20 @@ describe("isSessionRevoked", () => {
     expect(isSessionRevoked(3_000, cutoff)).toBe(false);
   });
 
+  // Given a session whose issue time exactly equals the cutoff /
+  // When checking it / Then it is NOT revoked. This equality boundary is the
+  // linchpin of the password-change fix: after a change, the current device's
+  // refreshed authTime can land exactly on `sessionsValidFrom`, and the strict
+  // `<` comparison must treat that as valid (a future switch to `<=` would
+  // silently re-break the current device).
+  it("does not revoke a session issued at the exact cutoff (strict < boundary)", () => {
+    const cutoff = new Date(2_000);
+    expect(isSessionRevoked(2_000, cutoff)).toBe(false);
+    // One millisecond earlier is revoked; one millisecond later is valid.
+    expect(isSessionRevoked(1_999, cutoff)).toBe(true);
+    expect(isSessionRevoked(2_001, cutoff)).toBe(false);
+  });
+
   // Given a revocation cutoff but a legacy session with no issue time /
   // When checking it / Then it fails closed and is revoked.
   it("fails closed when a revoked user's session has no issue time", () => {
