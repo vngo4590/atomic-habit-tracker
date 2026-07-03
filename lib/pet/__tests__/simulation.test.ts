@@ -6,6 +6,7 @@ import {
   initialVitals,
   MAX_SATIETY,
   SATIETY_DECAY_PER_DAY,
+  satietyCapacity,
   simulatePet,
   tuningFor,
   type PetVitals,
@@ -162,6 +163,33 @@ describe("simulation", () => {
 
       // Then the vitals are returned unchanged
       expect(next).toEqual(start);
+    });
+  });
+
+  describe("satietyCapacity", () => {
+    it("reports no room for a brimming (just-fed) pet", () => {
+      // Given a pet at maximum satiety; Then it cannot take any more food
+      expect(satietyCapacity(MAX_SATIETY)).toBe(0);
+    });
+
+    it("opens a feed slot after a single day of decay (the daily-feed rule)", () => {
+      // Given a full pet that a real day of decay has dropped below the max...
+      const afterOneDay = MAX_SATIETY - SATIETY_DECAY_PER_DAY; // ~2.3 at MAX 3
+
+      // Then there is room for at least one feed — the bug was reporting zero
+      // here (ceil rounded 2.3 back up to 3), which locked the pet as "full".
+      expect(satietyCapacity(afterOneDay)).toBeGreaterThanOrEqual(1);
+    });
+
+    it("offers the full capacity to a starving pet", () => {
+      // Given an empty pet; Then every satiety unit can be refilled
+      expect(satietyCapacity(0)).toBe(MAX_SATIETY);
+    });
+
+    it("clamps out-of-range satiety instead of reporting negative room", () => {
+      // Given absurd values; Then capacity stays within [0, MAX]
+      expect(satietyCapacity(999)).toBe(0);
+      expect(satietyCapacity(-5)).toBe(MAX_SATIETY);
     });
   });
 

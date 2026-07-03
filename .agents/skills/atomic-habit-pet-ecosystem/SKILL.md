@@ -60,7 +60,7 @@ Per-**day** model (was per-hour in the first version):
 | `HEALTH_REGEN_PER_DAY` | `30` | recovers while satiety > 0 |
 
 - `simulatePet(vitals, tuning, now)` is **pure** and idempotent ("simulate on read"). Satiety decays first; health only drains **after** satiety hits 0; death pins a precise `diedAt` and freezes the pet (no resurrection).
-- `feedVitals`, `satietyCapacity` (`MAX_SATIETY − ceil(satiety)`), `initialVitals` (satiety `round(MAX/2)=2`, full health), `tuningFor(temperament)`, `satietyRatio`, `healthRatio`.
+- `feedVitals`, `satietyCapacity` (`MAX_SATIETY − floor(satiety)`, so a pet one day past full still has room for a feed — the daily-feed rule), `initialVitals` (satiety `round(MAX/2)=2`, full health), `tuningFor(temperament)`, `satietyRatio`, `healthRatio`.
 - **Schema quirk:** `Pet.satiety @default(4)` is a harmless fallback only — `adoptPet` always sets satiety explicitly, so the >`MAX_SATIETY` default never applies (avoids a migration).
 
 ## 5. Evolution (`lib/pet/evolution.ts`)
