@@ -35,8 +35,12 @@ export function AdoptPanel({
   const [previewSeed, setPreviewSeed] = useState(() => randomSeed());
 
   // Regenerate the preview sprite only when the inputs that affect it change.
+  // Deliberately drawn at the "egg" stage — the same form every pet actually
+  // starts as — so the preview never promises a grown-up creature it won't
+  // deliver. Which features (ears, horns, wings, patterns) a pet reveals as it
+  // evolves stays a genuine surprise unlocked through daily care.
   const previewSprite = useMemo(
-    () => generateSprite({ seed: previewSeed, temperament }, "juvenile"),
+    () => generateSprite({ seed: previewSeed, temperament }, "egg"),
     [previewSeed, temperament],
   );
 
@@ -55,7 +59,7 @@ export function AdoptPanel({
       <div className={styles.adoptBody}>
         <div className={styles.previewColumn}>
           <div className={styles.previewSprite}>
-            <PixelSprite sprite={previewSprite} label={`A ${active.name.toLowerCase()} creature preview`} pixelSize={12} />
+            <PixelSprite sprite={previewSprite} label={`A ${active.name.toLowerCase()} creature egg preview`} pixelSize={12} />
           </div>
           <button
             type="button"
@@ -64,7 +68,7 @@ export function AdoptPanel({
           >
             Shuffle preview
           </button>
-          <p className={styles.previewNote}>Your real pet will be a surprise!</p>
+          <p className={styles.previewNote}>Every pet hatches from an egg — how it grows up is a surprise!</p>
         </div>
 
         <div className={styles.adoptForm}>
