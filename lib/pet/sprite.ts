@@ -114,7 +114,7 @@ function toRows(grid: Grid): string[] {
 }
 
 /** Per-stage canvas dimensions (always odd width so there is a centre column). */
-function dimsForStage(stage: Stage): { width: number; height: number } {
+export function dimsForStage(stage: Stage): { width: number; height: number } {
   switch (stage) {
     case "egg":
       return { width: 7, height: 8 };

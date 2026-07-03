@@ -188,7 +188,16 @@ export function healthRatio(health: number): number {
   return clamp(health, 0, MAX_HEALTH) / MAX_HEALTH;
 }
 
-/** Remaining satiety capacity right now (how many more units it can take). */
+/**
+ * Remaining satiety capacity right now (how many more whole units it can take).
+ *
+ * We floor the current satiety before subtracting so that any *partial* unit of
+ * hunger opens a whole feed slot. This is what makes "feed once a day" actually
+ * work: a pet fed to full (satiety = MAX) drops to ~MAX-0.7 after a day, and with
+ * `floor` that leaves room for one feed (capacity 1). Using `ceil` here was the
+ * bug — it rounded 2.3 up to 3, reported zero capacity, and locked the pet as
+ * "full" for well over a day, making it effectively unfeedable.
+ */
 export function satietyCapacity(satiety: number): number {
-  return Math.max(0, MAX_SATIETY - Math.ceil(clamp(satiety, 0, MAX_SATIETY)));
+  return Math.max(0, MAX_SATIETY - Math.floor(clamp(satiety, 0, MAX_SATIETY)));
 }
