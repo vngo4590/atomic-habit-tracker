@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
@@ -12,21 +12,21 @@ interface PageTransitionProps {
 
 export function PageTransition({ children }: PageTransitionProps) {
   const pathname = usePathname();
-  // No `mode="wait"` / `exit` here on purpose. With those, a navigation (or a
-  // re-render from an in-flight server action, e.g. saving an accent-hue change)
-  // that interrupts the enter animation can leave the incoming page stranded at
-  // its `initial` opacity of 0 — a fully blank screen. Letting the new page fade
-  // in over the outgoing one guarantees content always settles to opacity 1.
+  // Enter-only transition on purpose — no `AnimatePresence`/`exit`. This is a
+  // pure fade-in: keying the `motion.div` on `pathname` makes React remount it
+  // on navigation, replaying `initial` -> `animate`. `AnimatePresence` without an
+  // `exit` animation would keep the previous route's node mounted while the new
+  // one mounts, leaving both stacked in the DOM (the "duplicated page" bug).
+  // Because the incoming page is always immediately in the tree and `animate`
+  // drives it to opacity 1, content also never gets stranded at a blank screen.
   return (
-    <AnimatePresence>
-      <motion.div
-        key={pathname}
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={pageTransition}
-      >
-        {children}
-      </motion.div>
-    </AnimatePresence>
+    <motion.div
+      key={pathname}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={pageTransition}
+    >
+      {children}
+    </motion.div>
   );
 }
