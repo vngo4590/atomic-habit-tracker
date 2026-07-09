@@ -9,6 +9,7 @@ const routerMock = vi.hoisted(() => ({
 
 const storeMock = vi.hoisted(() => ({
   habits: [] as Habit[],
+  formationVerdicts: [] as Array<{ habitId: string; formed: boolean }>,
   identity: { statement: "", values: [] as string[] },
   addHabit: vi.fn(),
 }));
@@ -190,5 +191,59 @@ describe("NewHabitPage", () => {
     // Then: the chip area is empty, implying a new identity
     const chips = document.querySelectorAll(".identity-chip");
     expect(chips.length).toBe(0);
+  });
+
+  // -------------------------------------------------------------------------
+  // Active-habit cap UX
+  // -------------------------------------------------------------------------
+  it("disables submission and explains the cap when the user has 3 active habits", () => {
+    // Given: exactly three active (non-inducted) habits
+    storeMock.habits = [
+      { id: "h1", name: "Read", identity: "a reader" },
+      { id: "h2", name: "Run", identity: "a runner" },
+      { id: "h3", name: "Write", identity: "a writer" },
+    ] as Habit[];
+    storeMock.formationVerdicts = [];
+    storeMock.addHabit.mockClear();
+    render(<NewHabitPage />);
+
+    // Fill the required fields so only the cap can be blocking submission.
+    fireEvent.change(screen.getByPlaceholderText("read one page"), { target: { value: "meditate" } });
+    fireEvent.change(screen.getByPlaceholderText("a reader"), { target: { value: "calm" } });
+
+    // Then: the cap message and a HelpTip explaining the mechanic are shown
+    expect(screen.getByText(/reached the maximum of 3 active habits/i)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Why can't I add a habit?" })).toBeTruthy();
+
+    // And: the Create button is disabled and clicking it does nothing
+    const createButton = screen.getByRole("button", { name: "Create habit" }) as HTMLButtonElement;
+    expect(createButton.disabled).toBe(true);
+    fireEvent.click(createButton);
+    expect(storeMock.addHabit).not.toHaveBeenCalled();
+  });
+
+  it("keeps submission available when one of three habits is inducted (frees a slot)", () => {
+    // Given: three habits where one is inducted into the Hall of Fame
+    storeMock.habits = [
+      { id: "h1", name: "Read", identity: "a reader" },
+      { id: "h2", name: "Run", identity: "a runner" },
+      { id: "h3", name: "Write", identity: "a writer" },
+    ] as Habit[];
+    storeMock.formationVerdicts = [{ habitId: "h2", formed: true }];
+    storeMock.addHabit.mockClear();
+    render(<NewHabitPage />);
+
+    // Fill the required fields
+    fireEvent.change(screen.getByPlaceholderText("read one page"), { target: { value: "meditate" } });
+    fireEvent.change(screen.getByPlaceholderText("a reader"), { target: { value: "calm" } });
+
+    // Then: there is no cap message and the Create button is enabled
+    expect(screen.queryByText(/reached the maximum of 3 active habits/i)).toBeNull();
+    const createButton = screen.getByRole("button", { name: "Create habit" }) as HTMLButtonElement;
+    expect(createButton.disabled).toBe(false);
+
+    // And: submitting actually creates the habit
+    fireEvent.click(createButton);
+    expect(storeMock.addHabit).toHaveBeenCalledTimes(1);
   });
 });
