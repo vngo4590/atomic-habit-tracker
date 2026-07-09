@@ -1,0 +1,68 @@
+/* HelpTip — a small, reusable, accessible "?" help control.
+ *
+ * Layout: an inline-flex wrapper so the trigger sits neatly beside whatever it
+ * annotates, with the popover positioned relative to it. */
+.wrapper {
+  /* Keep the trigger on the same baseline as adjacent text/labels. */
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+/* The round "?" button. Sized to sit comfortably beside body text. */
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border-radius: 50%;
+  /* A quiet, low-contrast chip that reads as "info" without shouting. */
+  border: 1px solid var(--rule-strong);
+  background: var(--bg-elev);
+  color: var(--ink-2);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  /* Smooth the hover/focus affordance. */
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.trigger:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Clear, on-brand keyboard focus ring so the control is obviously focusable. */
+.trigger:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* The revealed explanatory bubble. Absolutely positioned above the trigger so
+ * it never shifts surrounding layout when it opens. */
+.popover {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  width: max-content;
+  max-width: 260px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--rule-strong);
+  background: var(--bg-elev);
+  color: var(--ink);
+  box-shadow: var(--shadow-md);
+  /* Comfortable reading size for a short explanation. */
+  font-size: 12.5px;
+  line-height: 1.45;
+  text-align: left;
+  /* Let the wrapper's alignment win; text stays left-aligned and readable. */
+  white-space: normal;
+}
