@@ -166,7 +166,7 @@ describe("API v1 route contracts", () => {
   it("lists and creates habits with stable success envelopes", async () => {
     mocks.session = { user: { id: "user_1" } };
     mocks.listHabits.mockResolvedValue([testHabit({ id: "habit_1" })]);
-    mocks.createHabit.mockResolvedValue(testHabit({ id: "habit_2", name: "Write" }));
+    mocks.createHabit.mockResolvedValue({ ok: true, habit: testHabit({ id: "habit_2", name: "Write" }) });
     const { GET, POST } = await import("@/app/api/v1/habits/route");
 
     const listResponse = await GET();
@@ -178,6 +178,18 @@ describe("API v1 route contracts", () => {
     await expect(jsonBody(createResponse)).resolves.toMatchObject({ ok: true, data: { habit: { id: "habit_2", name: "Write" } } });
     expect(mocks.listHabits).toHaveBeenCalledWith("user_1");
     expect(mocks.createHabit).toHaveBeenCalledWith("user_1", expect.objectContaining({ name: "Write", identity: "writer" }));
+  });
+
+  it("returns 409 when creating a habit is refused by the active-habit cap", async () => {
+    mocks.session = { user: { id: "user_1" } };
+    // The repository refuses the create with the discriminated cap result.
+    mocks.createHabit.mockResolvedValue({ ok: false, reason: "cap" });
+    const { POST } = await import("@/app/api/v1/habits/route");
+
+    const response = await POST(jsonRequest("https://atomicly.test/api/v1/habits", { name: "Fourth", identity: "doer" }));
+
+    expect(response.status).toBe(409);
+    await expect(jsonBody(response)).resolves.toMatchObject({ ok: false, error: { code: "habit_cap_reached" } });
   });
 
   it("updates habit check-ins, notes, and contracts through nested route handlers", async () => {

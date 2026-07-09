@@ -67,10 +67,10 @@ describe("domain server actions", () => {
 
   it("creates habits for the authenticated user and revalidates app paths", async () => {
     const habit = testHabit({ id: "habit_new", name: "Read" });
-    mocks.createHabit.mockResolvedValue(habit);
+    mocks.createHabit.mockResolvedValue({ ok: true, habit });
     const { createHabitAction } = await import("@/lib/actions/domain");
 
-    await expect(createHabitAction({ name: "Read", identity: "reader", cue: "After coffee" })).resolves.toEqual(habit);
+    await expect(createHabitAction({ name: "Read", identity: "reader", cue: "After coffee" })).resolves.toEqual({ ok: true, habit });
 
     expect(mocks.createHabit).toHaveBeenCalledWith("user_1", expect.objectContaining({
       name: "Read",
