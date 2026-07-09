@@ -189,7 +189,7 @@ describe("addHabit behavior", () => {
   it("creates a temporary ID and replaces it with the server ID when saved", async () => {
     // Given: a server that returns a saved habit with a real ID
     const serverHabit = testHabit({ id: "server-h1", name: "Meditate", identity: "meditator" });
-    let resolveCreate!: (habit: typeof serverHabit) => void;
+    let resolveCreate!: (result: { ok: true; habit: typeof serverHabit }) => void;
     vi.mocked(createHabitAction).mockReturnValueOnce(
       new Promise((resolve) => {
         resolveCreate = resolve;
@@ -208,7 +208,7 @@ describe("addHabit behavior", () => {
 
     // When: the server responds with the real habit
     await act(async () => {
-      resolveCreate(serverHabit);
+      resolveCreate({ ok: true, habit: serverHabit });
       await Promise.resolve();
     });
 
