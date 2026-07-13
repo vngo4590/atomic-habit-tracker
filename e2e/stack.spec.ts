@@ -80,6 +80,56 @@ async function seedHabit(page: import("@playwright/test").Page, name: string, id
   return body.data.habit.id as string;
 }
 
+/**
+ * The server caps how many *active* habits a user may keep at once. This mirrors
+ * `MAX_ACTIVE_HABITS` in `lib/habit-cap.ts`; the stacking suite needs the two to
+ * agree so it can seed a pool larger than the cap without tripping a 409.
+ */
+const MAX_ACTIVE_HABITS = 3;
+
+/**
+ * Induct a habit into the Hall of Fame by recording a `formed` formation
+ * verdict. An inducted habit stays fully trackable and is NOT archived, so it
+ * remains in the store and stays a valid stack candidate/target — it simply no
+ * longer counts against the active-habit cap. Stacking tests use this to free a
+ * cap slot so they can seed more linkable habits than the cap would otherwise
+ * allow.
+ */
+async function inductHabit(page: import("@playwright/test").Page, habitId: string) {
+  await requestOk(() =>
+    page.request.post("/api/v1/reflection/formation-verdicts", {
+      data: { habitId, score: 5, formed: true },
+    }),
+  );
+}
+
+/**
+ * Seed several habits while respecting the server's active-habit cap. Because at
+ * most `MAX_ACTIVE_HABITS` habits may be *active* at once, we induct the oldest
+ * still-active seeded habit whenever the next create would exceed the cap.
+ * Inducted habits remain selectable in the stack picker (they are not archived),
+ * so the caller ends up with every requested habit available to link, just not
+ * all of them counting against the cap. Returns the created ids in order.
+ */
+async function seedWithinCap(
+  page: import("@playwright/test").Page,
+  names: string[],
+  identity: string,
+): Promise<string[]> {
+  const ids: string[] = [];
+  const active: string[] = []; // ids that still count against the active cap
+  for (const name of names) {
+    if (active.length >= MAX_ACTIVE_HABITS) {
+      // Free a slot before creating the next habit, or the create would 409.
+      await inductHabit(page, active.shift() as string);
+    }
+    const id = await seedHabit(page, name, identity);
+    ids.push(id);
+    active.push(id);
+  }
+  return ids;
+}
+
 async function openHabitDetail(page: import("@playwright/test").Page, habitId: string) {
   // The preview instance can be slow to render a detail page under cold start,
   // so allow a generous timeout and retry the navigation once before giving up.
@@ -213,10 +263,14 @@ test.describe("Habit stacking", () => {
   });
 
   test("moving a habit from one stack to another", async ({ page }) => {
-    const idA = await seedHabit(page, unique("Move A"), "mover");
-    const idB = await seedHabit(page, unique("Move B"), "mover");
-    const idX = await seedHabit(page, unique("Move X"), "mover");
-    const idY = await seedHabit(page, unique("Move Y"), "mover");
+    // Four habits exceed the active-habit cap, so seed them cap-aware: the
+    // helper inducts the oldest active habit to free a slot. Inducted habits are
+    // still valid stack targets/candidates, so all four remain fully stackable.
+    const [idA, idB, idX, idY] = await seedWithinCap(
+      page,
+      [unique("Move A"), unique("Move B"), unique("Move X"), unique("Move Y")],
+      "mover",
+    );
 
     // Build stacks via API: Y → X and B → A
     await setStackNextId(page, idY, idX);
@@ -257,12 +311,16 @@ test.describe("Habit stacking", () => {
 
   test("link selector caps the list at 10 with a Show-all expand", async ({ page }) => {
     // Anchor + 12 standalone candidates → the picker must initially show 10
-    // plus a "Show all" button revealing the remaining 2.
-    const idAnchor = await seedHabit(page, unique("Limit Anchor"), "limiter");
+    // plus a "Show all" button revealing the remaining 2. This is far beyond the
+    // active-habit cap, so seed cap-aware: earlier habits get inducted to free
+    // slots but stay in the picker (inducted habits are not archived), leaving
+    // all 13 selectable while the server only ever sees ≤3 active at create time.
     const tag = unique("Pool");
+    const names = [unique("Limit Anchor")];
     for (let i = 0; i < 12; i += 1) {
-      await seedHabit(page, `${tag} ${String(i).padStart(2, "0")}`, "limiter");
+      names.push(`${tag} ${String(i).padStart(2, "0")}`);
     }
+    const [idAnchor] = await seedWithinCap(page, names, "limiter");
 
     await openStackTab(page, idAnchor);
     await page.click('button:has-text("Link after…")');
@@ -395,11 +453,14 @@ test.describe("Habit stacking", () => {
   });
 
   test("adds a standalone habit after a mid-chain habit", async ({ page }) => {
-    // Build chain R → M → T via API.
-    const idR = await seedHabit(page, unique("Mid Root"), "midder");
-    const idM = await seedHabit(page, unique("Mid Middle"), "midder");
-    const idT = await seedHabit(page, unique("Mid Tail"), "midder");
-    await seedHabit(page, unique("Mid Solo"), "midder");
+    // Build chain R → M → T via API, plus a standalone. Four habits exceed the
+    // active cap, so seed cap-aware — an inducted chain member keeps its
+    // stackNextId and still renders, so the chain is unaffected.
+    const [idR, idM, idT] = await seedWithinCap(
+      page,
+      [unique("Mid Root"), unique("Mid Middle"), unique("Mid Tail"), unique("Mid Solo")],
+      "midder",
+    );
     await setStackNextId(page, idR, idM);
     await setStackNextId(page, idM, idT);
 
@@ -460,10 +521,17 @@ test.describe("Habit stacking", () => {
   test("adds a standalone habit before a mid-chain habit", async ({ page }) => {
     // Build chain R → M → T via API; then add a standalone before M.
     // Expected: R → Solo → M → T (M moves from step 2 of 3 to step 3 of 4).
-    const idR = await seedHabit(page, unique("MidBefore Root"), "mid-before");
-    const idM = await seedHabit(page, unique("MidBefore Middle"), "mid-before");
-    const idT = await seedHabit(page, unique("MidBefore Tail"), "mid-before");
-    await seedHabit(page, unique("MidBefore Solo"), "mid-before");
+    // Four habits exceed the active cap, so seed cap-aware.
+    const [idR, idM, idT] = await seedWithinCap(
+      page,
+      [
+        unique("MidBefore Root"),
+        unique("MidBefore Middle"),
+        unique("MidBefore Tail"),
+        unique("MidBefore Solo"),
+      ],
+      "mid-before",
+    );
     await setStackNextId(page, idR, idM);
     await setStackNextId(page, idM, idT);
 
@@ -482,10 +550,13 @@ test.describe("Habit stacking", () => {
 
   test("standalone-only picker still excludes chain members when anchor is mid-chain", async ({ page }) => {
     // Build chain X → Y → Z; the picker on Y must exclude X, Y, Z and only show the standalone.
-    const idX = await seedHabit(page, unique("Excl X"), "excluder");
-    const idY = await seedHabit(page, unique("Excl Y"), "excluder");
-    const idZ = await seedHabit(page, unique("Excl Z"), "excluder");
-    await seedHabit(page, unique("Excl Solo"), "excluder");
+    // Four habits exceed the active cap, so seed cap-aware — an inducted chain
+    // member is still `isInStack`, so it stays excluded from the picker.
+    const [idX, idY, idZ] = await seedWithinCap(
+      page,
+      [unique("Excl X"), unique("Excl Y"), unique("Excl Z"), unique("Excl Solo")],
+      "excluder",
+    );
     await setStackNextId(page, idX, idY);
     await setStackNextId(page, idY, idZ);
 
@@ -848,10 +919,18 @@ test.describe("Responsive layout", () => {
     // Build chain A → B → C, plus solo S. From S's Stack tab, the picker
     // should include every other habit (chain members AND any other solos).
     // Picking B with "Link after…" must produce A → B → S → C.
-    const idA = await seedHabit(page, unique("Solo Join A"), "joiner");
-    const idB = await seedHabit(page, unique("Solo Join B"), "joiner");
-    const idC = await seedHabit(page, unique("Solo Join C"), "joiner");
-    const idS = await seedHabit(page, unique("Solo Join S"), "joiner");
+    // Four habits exceed the active cap, so seed cap-aware — the inducted
+    // habit stays in the store, so it still shows as a picker option.
+    const [idA, idB, idC, idS] = await seedWithinCap(
+      page,
+      [
+        unique("Solo Join A"),
+        unique("Solo Join B"),
+        unique("Solo Join C"),
+        unique("Solo Join S"),
+      ],
+      "joiner",
+    );
     await setStackNextId(page, idA, idB);
     await setStackNextId(page, idB, idC);
 
