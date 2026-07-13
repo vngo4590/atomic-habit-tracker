@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { HabitSentenceFields } from "@/components/HabitSentenceFields";
+import { HelpTip } from "@/components/HelpTip";
 import {
   SchedulePicker,
   scheduleLabelFromState,
@@ -12,9 +13,17 @@ import {
 } from "@/components/SchedulePicker";
 import { useStoreContext } from "@/components/StoreProvider";
 import { capitalizeFirst, withCueConnector } from "@/lib/habit-sentence";
+import { MAX_ACTIVE_HABITS, remainingHabitSlots } from "@/lib/habit-cap";
 import { clientLogger } from "@/lib/logger-client";
 
 import styles from "./page.module.css";
+
+/** Shared explanation of the active-habit cap, reused by the header help tip and
+ *  the "cap reached" banner so the wording stays consistent. */
+const CAP_EXPLANATION =
+  `Atomicly keeps you focused: you can track at most ${MAX_ACTIVE_HABITS} active habits at once. ` +
+  "Once a habit is inducted into the Hall of Fame it still counts on your dashboard but frees " +
+  "a slot, so you can start a new one. Archiving a habit also frees a slot.";
 
 /**
  * NewHabitPage — the create-habit sentence builder. Users fill in inline
@@ -30,13 +39,19 @@ import styles from "./page.module.css";
  */
 export default function NewHabitPage() {
   const router = useRouter();
-  const { habits, addHabit } = useStoreContext();
+  const { habits, formationVerdicts, addHabit } = useStoreContext();
   const [name, setName] = useState("");
   const [cue, setCue] = useState("");
   const [location, setLocation] = useState("");
   const [identity, setIdentity] = useState("");
   const [preset, setPreset] = useState<Preset>("daily");
   const [customDays, setCustomDays] = useState<string[]>([]);
+
+  // How many more active habits the user may create. Mirrors the server-side
+  // cap (see lib/habit-cap.ts): habits already exclude archived rows, so we only
+  // subtract the inducted (Hall-of-Fame) ones here. At zero, creation is blocked.
+  const remainingSlots = remainingHabitSlots(habits, formationVerdicts);
+  const atCap = remainingSlots <= 0;
 
   useEffect(() => {
     clientLogger.info("Page viewed", { page: "habit-new" });
@@ -80,8 +95,12 @@ export default function NewHabitPage() {
       page: "habit-new",
       canSubmit: Boolean(name.trim() && identity.trim()),
       scheduleType: preset,
+      atCap,
     });
 
+    // The server is the source of truth, but we also block here so the user
+    // never gets an optimistic add + rollback when they're already at the cap.
+    if (atCap) return;
     if (!name.trim() || !identity.trim()) return;
 
     const cleanName = name.trim();
@@ -129,9 +148,24 @@ export default function NewHabitPage() {
       <div className="page-header">
         <div>
           <div className="eyebrow">Create</div>
-          <h1 className="h1">Design a <em>small vote</em></h1>
+          <h1 className="h1">
+            Design a <em>small vote</em>{" "}
+            <HelpTip label="How many habits can I have?">{CAP_EXPLANATION}</HelpTip>
+          </h1>
         </div>
       </div>
+
+      {atCap && (
+        <div className={`card ${styles.capBanner}`} role="note">
+          <HelpTip className={styles.capBannerTip} label="Why can't I add a habit?">
+            {CAP_EXPLANATION}
+          </HelpTip>
+          <span>
+            You&apos;ve reached the maximum of {MAX_ACTIVE_HABITS} active habits. Induct one into
+            the Hall of Fame or archive one to free a slot for a new habit.
+          </span>
+        </div>
+      )}
 
       <div className={`card card-pad ${styles.sentenceCard}`}>
         <HabitSentenceFields
@@ -168,7 +202,7 @@ export default function NewHabitPage() {
         <motion.button
           className="btn btn-primary"
           type="button"
-          disabled={!name.trim() || !identity.trim()}
+          disabled={atCap || !name.trim() || !identity.trim()}
           onClick={finalize}
           whileHover={{ y: -1 }}
           whileTap={{ scale: 0.97 }}

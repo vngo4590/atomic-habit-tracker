@@ -22,3 +22,27 @@
   gap: 10px;
   margin-top: 24px;
 }
+
+/* Cap banner — shown when the user is at the 3-active-habit maximum. It mirrors
+   the Pet ecosystem's "ecosystem is full" tone: a calm, explanatory notice
+   rather than an error. */
+.capBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  /* A soft accent-tinted surface so it reads as informational, not alarming. */
+  border: 1px solid var(--rule-strong);
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+/* Keep the "?" help control aligned with the first line of the banner text. */
+.capBannerTip {
+  margin-top: 1px;
+}
+

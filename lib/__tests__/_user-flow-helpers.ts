@@ -70,12 +70,15 @@ export function installUserFlowMocks() {
   vi.useRealTimers();
 
   vi.mocked(createHabitAction).mockImplementation(async (draft) => ({
-    ...testHabit(),
-    ...draft,
-    id: "server_habit",
-    history: {},
-    notes: [],
-    createdAt: todayKey(),
+    ok: true,
+    habit: {
+      ...testHabit(),
+      ...draft,
+      id: "server_habit",
+      history: {},
+      notes: [],
+      createdAt: todayKey(),
+    },
   }));
   vi.mocked(toggleHabitAction).mockImplementation(async () => null);
   vi.mocked(saveFormationVerdictAction).mockImplementation(async (verdict) => verdict);

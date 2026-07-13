@@ -20,6 +20,7 @@ import {
 import { adoptPetAction, buryPetAction, deletePetAction, feedPetAction } from "@/lib/actions/pets";
 import type { StackMutationInput } from "@/lib/contracts/domain";
 import { dateAdd, todayKey } from "@/lib/helpers";
+import { MAX_ACTIVE_HABITS } from "@/lib/habit-cap";
 import { clientLogger } from "@/lib/logger-client";
 import { MAX_ALIVE_PETS, feedVitals, simulatePet, tuningFor } from "@/lib/pet";
 import { isScheduledForDate } from "@/lib/schedule";
@@ -382,9 +383,28 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
     });
 
     void createHabitAction(draft)
-      .then((saved) => {
+      .then((result) => {
+        if (!result.ok) {
+          // The server refused the create (e.g. the active-habit cap was hit —
+          // possibly a race across browser tabs). Roll back the optimistic add
+          // by removing exactly the pending row we inserted, then explain why
+          // via a Toast instead of silently swallowing the failure.
+          clientLogger.warn("Habit creation refused", {
+            event: "store.habit.create_refused",
+            habitId: tempId,
+            reason: result.reason,
+          });
+          setHabits((currentHabits) => currentHabits.filter((habit) => habit.id !== tempId));
+          if (result.reason === "cap") {
+            showToast(
+              "Couldn't create habit",
+              `You can have at most ${MAX_ACTIVE_HABITS} active habits. Induct one into the Hall of Fame to free a slot.`,
+            );
+          }
+          return;
+        }
         setHabits((currentHabits) =>
-          currentHabits.map((habit) => (habit.id === tempId ? saved : habit)),
+          currentHabits.map((habit) => (habit.id === tempId ? result.habit : habit)),
         );
       })
       .catch((error: unknown) => {
@@ -394,7 +414,7 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
           message: errorMessage(error),
         });
       });
-  }, []);
+  }, [showToast]);
 
   const updateHabit = useCallback((id: string, patch: Partial<Habit>) => {
     const version = ++updateHabitVersion.current;

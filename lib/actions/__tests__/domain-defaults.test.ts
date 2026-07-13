@@ -40,7 +40,7 @@ describe("createHabitAction default field population", () => {
   beforeEach(() => {
     for (const mock of Object.values(mocks)) mock.mockReset();
     mocks.requireUserId.mockResolvedValue("user_1");
-    mocks.createHabit.mockResolvedValue(testHabit());
+    mocks.createHabit.mockResolvedValue({ ok: true, habit: testHabit() });
   });
 
   it("sends emoji '•', schedule 'Daily', and time 'Morning' when draft only has name and identity", async () => {

@@ -13,6 +13,7 @@ import {
   type StackMutationInput,
 } from "@/lib/contracts/domain";
 import { logger, redactUserId } from "@/lib/logger";
+import { MAX_ACTIVE_HABITS } from "@/lib/habit-cap";
 import { stackInsertPatches, stackRemovePatches, stackReorderPatches, getStackChain, getStackRoot } from "@/lib/stack";
 import { makeStackError } from "@/lib/stack-errors";
 import type { CheckIn, Habit, Note } from "@/lib/types";
@@ -127,7 +128,43 @@ export async function getHabit(userId: string, habitId: string, db: DbClient = d
   return record ? toHabit(record) : null;
 }
 
-export async function createHabit(userId: string, input: HabitCreateInput, db: DbClient = defaultDb) {
+/**
+ * Count a user's *active* habits — the ones that count against the
+ * `MAX_ACTIVE_HABITS` cap. A habit is active when it is BOTH:
+ *   1. not archived (`archivedAt: null`), and
+ *   2. not inducted into the Hall of Fame — i.e. it has no `FormationVerdict`
+ *      whose `decision` is `formed` (`verdicts: { none: { decision: "formed" } }`).
+ *
+ * This is the authoritative, server-side mirror of the pure `activeHabitCount`
+ * helper the client uses, so the two can never disagree about who is at the cap.
+ */
+export async function countActiveHabits(userId: string, db: DbClient = defaultDb): Promise<number> {
+  validateDatabaseUrl();
+  return db.habit.count({
+    where: {
+      userId,
+      archivedAt: null,
+      verdicts: { none: { decision: "formed" } },
+    },
+  });
+}
+
+/**
+ * The outcome of attempting to create a habit. Mirrors the Pet ecosystem's
+ * `AdoptResult`: we return a discriminated union instead of throwing so the
+ * specific refusal reason survives the trip to the browser. Next.js strips
+ * thrown error *messages* from server actions in production (replacing them with
+ * a generic digest), which would otherwise hide *why* a create was refused.
+ */
+export type CreateHabitResult =
+  | { ok: true; habit: Habit }
+  | { ok: false; reason: "cap" };
+
+export async function createHabit(
+  userId: string,
+  input: HabitCreateInput,
+  db: DbClient = defaultDb,
+): Promise<CreateHabitResult> {
   log.debug("Creating habit", {
     event: "repo.habit.create",
     userId: redactUserId(userId),
@@ -136,6 +173,20 @@ export async function createHabit(userId: string, input: HabitCreateInput, db: D
   });
   validateDatabaseUrl();
   const data = habitCreateSchema.parse(input);
+
+  // Enforce the active-habit cap BEFORE writing anything, so a refused create
+  // performs no database mutation. Inducted and archived habits are excluded by
+  // `countActiveHabits`, so they never block a new create.
+  const activeCount = await countActiveHabits(userId, db);
+  if (activeCount >= MAX_ACTIVE_HABITS) {
+    log.info("Habit create refused: active cap reached", {
+      event: "repo.habit.create.capped",
+      userId: redactUserId(userId),
+      activeCount,
+      cap: MAX_ACTIVE_HABITS,
+    });
+    return { ok: false, reason: "cap" };
+  }
 
   const record = await db.habit.create({
     data: {
@@ -163,7 +214,7 @@ export async function createHabit(userId: string, input: HabitCreateInput, db: D
     include: habitInclude,
   });
 
-  return toHabit(record);
+  return { ok: true, habit: toHabit(record) };
 }
 
 export async function updateHabit(userId: string, habitId: string, input: HabitUpdateInput, db: DbClient = defaultDb) {

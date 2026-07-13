@@ -76,6 +76,8 @@ describe("repository ownership boundaries", () => {
   it("creates habits with owner fields and optional contract data", async () => {
     const db = {
       habit: {
+        // The cap check counts active habits before creating; return 0 (under cap).
+        count: vi.fn(async () => 0),
         create: vi.fn(async () => habitRecord),
       },
     };

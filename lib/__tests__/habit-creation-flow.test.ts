@@ -163,7 +163,7 @@ describe("addHabit store optimistic behavior", () => {
 
   it("appends the habit to the store immediately with a pending ID before the server responds", async () => {
     // Given: a controlled promise so we can verify the pre-resolve state
-    let resolveCreate!: (h: ReturnType<typeof testHabit>) => void;
+    let resolveCreate!: (result: { ok: true; habit: ReturnType<typeof testHabit> }) => void;
     vi.mocked(createHabitAction).mockReturnValueOnce(
       new Promise((resolve) => { resolveCreate = resolve; }),
     );
@@ -179,14 +179,14 @@ describe("addHabit store optimistic behavior", () => {
     expect(result.current.habits[0].name).toBe("Meditate");
 
     // Cleanup — resolve so we don't leave a dangling promise
-    resolveCreate(testHabit({ id: "server_1", name: "Meditate" }));
+    resolveCreate({ ok: true, habit: testHabit({ id: "server_1", name: "Meditate" }) });
     await act(async () => { await Promise.resolve(); });
   });
 
   it("replaces the pending entry with the server-assigned ID once the action resolves", async () => {
     // Given: a server response that arrives after the optimistic add
     const saved = testHabit({ id: "server_42", name: "Meditate" });
-    let resolveCreate!: (h: typeof saved) => void;
+    let resolveCreate!: (result: { ok: true; habit: typeof saved }) => void;
     vi.mocked(createHabitAction).mockReturnValueOnce(
       new Promise((resolve) => { resolveCreate = resolve; }),
     );
@@ -196,7 +196,7 @@ describe("addHabit store optimistic behavior", () => {
 
     // When: the server action resolves with the persisted record
     await act(async () => {
-      resolveCreate(saved);
+      resolveCreate({ ok: true, habit: saved });
       await Promise.resolve();
     });
 
@@ -204,6 +204,31 @@ describe("addHabit store optimistic behavior", () => {
     expect(result.current.habits).toHaveLength(1);
     expect(result.current.habits[0].id).toBe("server_42");
     expect(result.current.habits.some((h) => h.id.startsWith("pending-"))).toBe(false);
+  });
+
+  it("rolls back the optimistic add and shows a Toast when the server refuses with the cap reason", async () => {
+    // Given: a server that refuses the create because the active-habit cap is hit
+    let resolveCreate!: (result: { ok: false; reason: "cap" }) => void;
+    vi.mocked(createHabitAction).mockReturnValueOnce(
+      new Promise((resolve) => { resolveCreate = resolve; }),
+    );
+
+    const { result } = renderHook(() => useStore(makeSnapshot([])));
+    act(() => result.current.addHabit({ name: "Fourth", identity: "doer" }));
+
+    // The optimistic entry is present before the server responds.
+    expect(result.current.habits).toHaveLength(1);
+
+    // When: the server returns a cap refusal
+    await act(async () => {
+      resolveCreate({ ok: false, reason: "cap" });
+      await Promise.resolve();
+    });
+
+    // Then: the optimistic entry is rolled back and an explanatory Toast is shown
+    expect(result.current.habits).toHaveLength(0);
+    expect(result.current.toast?.msg).toBe("Couldn't create habit");
+    expect(result.current.toast?.sub).toMatch(/active habits/i);
   });
 
   it("populates loopCue from cue in the optimistic entry when loopCue is absent from the draft", () => {

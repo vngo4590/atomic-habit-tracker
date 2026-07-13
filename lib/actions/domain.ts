@@ -10,6 +10,7 @@ import {
   updateHabit,
   upsertCheckIn,
   applyStackMutation,
+  type CreateHabitResult,
 } from "@/lib/repositories/habits";
 import {
   createJournalEntry,
@@ -47,10 +48,17 @@ function revalidateApp() {
   revalidatePath("/settings");
 }
 
-export async function createHabitAction(draft: HabitDraft) {
+/**
+ * Create a habit for the signed-in user. Returns the repository's discriminated
+ * `CreateHabitResult` unchanged so the caller can tell a successful create from
+ * a cap refusal — thrown error messages are stripped from server actions in
+ * production, so a discriminated union is the only reliable way to surface the
+ * "you've reached the 3-active-habit cap" reason to the browser.
+ */
+export async function createHabitAction(draft: HabitDraft): Promise<CreateHabitResult> {
   const userId = await requireUserId();
   log.info("Creating habit", { event: "habit.created", userId: redactUserId(userId), habitName: draft.name });
-  const habit = await createHabit(userId, {
+  const result = await createHabit(userId, {
     emoji: "•",
     cue: "",
     craving: "",
@@ -69,8 +77,12 @@ export async function createHabitAction(draft: HabitDraft) {
     ...draft,
   });
 
-  revalidateApp();
-  return habit;
+  // Only revalidate cached pages when a habit was actually created; a cap
+  // refusal changes nothing on the server.
+  if (result.ok) {
+    revalidateApp();
+  }
+  return result;
 }
 
 export async function updateHabitAction(habitId: string, patch: Partial<Habit>) {
