@@ -121,6 +121,7 @@ import "dotenv/config";
 import { hashPassword } from "../lib/auth/password";
 import { db } from "../lib/db/client";
 import { FormationDecision } from "../lib/generated/prisma/enums";
+import { MAX_ACTIVE_HABITS } from "../lib/habit-cap";
 
 const users = Number(process.env.ATOMICLY_RANDOM_USERS ?? "3");
 const habitsPerUser = Number(process.env.ATOMICLY_RANDOM_HABITS ?? "5");
@@ -336,6 +337,39 @@ async function main() {
       });
     }
 
+    // Reflect the active-habit cap (see lib/habit-cap.ts): a user may keep at
+    // most MAX_ACTIVE_HABITS *active* habits — ones that are not archived and
+    // carry no `formed` formation verdict. So the seeded demo matches the
+    // product rule, induct any surplus active habits into the Hall of Fame with
+    // a `formed` verdict — exactly how the app frees a slot. Inducted habits
+    // stay fully trackable, so their check-in history and streaks are kept.
+    {
+      const formedHabitIds = new Set(
+        (
+          await db.formationVerdict.findMany({
+            where: { userId: user.id, decision: FormationDecision.formed },
+            select: { habitId: true },
+          })
+        ).map((verdict) => verdict.habitId),
+      );
+      const activeHabits = habits.filter(
+        (habit) => !habit.archivedAt && !formedHabitIds.has(habit.id),
+      );
+      for (const habit of activeHabits.slice(MAX_ACTIVE_HABITS)) {
+        await db.formationVerdict.upsert({
+          where: { habitId: habit.id },
+          update: { decision: FormationDecision.formed },
+          create: {
+            userId: user.id,
+            habitId: habit.id,
+            score: 88,
+            reflection: "Inducted into the Hall of Fame — this habit is formed.",
+            decision: FormationDecision.formed,
+          },
+        });
+      }
+    }
+
     console.log(`Demo user ready: ${email} / Atomicly1!`);
   }
 }
@@ -382,6 +416,7 @@ import "dotenv/config";
 import { hashPassword } from "../lib/auth/password";
 import { db } from "../lib/db/client";
 import { FormationDecision } from "../lib/generated/prisma/enums";
+import { MAX_ACTIVE_HABITS } from "../lib/habit-cap";
 
 const users = Number(process.env.ATOMICLY_HISTORY_USERS ?? "2");
 const habitsPerUser = Number(process.env.ATOMICLY_HISTORY_HABITS ?? "7");
@@ -676,6 +711,42 @@ async function main() {
           createdAt: dateAt(randomInt(0, 10)),
         },
       });
+    }
+
+    // Reflect the active-habit cap (see lib/habit-cap.ts): a user may keep at
+    // most MAX_ACTIVE_HABITS *active* habits — ones that are not archived and
+    // carry no `formed` formation verdict. Archiving and the verdict loop above
+    // already retire some habits, but the remainder can still exceed the cap, so
+    // induct any surplus active habits into the Hall of Fame with a `formed`
+    // verdict — exactly how the app frees a slot. Inducted habits stay fully
+    // trackable, so their long check-in history and streaks are preserved.
+    {
+      const formedHabitIds = new Set(
+        (
+          await db.formationVerdict.findMany({
+            where: { userId: user.id, decision: FormationDecision.formed },
+            select: { habitId: true },
+          })
+        ).map((verdict) => verdict.habitId),
+      );
+      const activeHabits = habits.filter(
+        (habit) => !habit.archivedAt && !formedHabitIds.has(habit.id),
+      );
+      for (const habit of activeHabits.slice(MAX_ACTIVE_HABITS)) {
+        await db.formationVerdict.upsert({
+          where: { habitId: habit.id },
+          update: { decision: FormationDecision.formed },
+          create: {
+            userId: user.id,
+            habitId: habit.id,
+            score: randomInt(80, 98),
+            reflection: "Inducted into the Hall of Fame after a strong run.",
+            decision: FormationDecision.formed,
+            reviewedAt: dateAt(randomInt(0, 8)),
+            createdAt: dateAt(randomInt(0, 8)),
+          },
+        });
+      }
     }
 
     console.log(`Fake history user ready: ${email} / Atomicly1!`);
