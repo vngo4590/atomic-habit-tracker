@@ -51,9 +51,24 @@
       (DevTools device mode), open both the header tip and the cap-banner tip and confirm neither
       popover is clipped by the screen edge. (Optional: capture as a Playwright check.)
 
-## 7. Wrap up
+## 7. Independent end-to-end validation (run in a later session)
 
-- [x] 7.1 Update `README.md` / `AGENTS.md` only if HelpTip behaviour docs need it (likely not).
-- [x] 7.2 Commit with a Conventional Commit (`fix(help-tip): keep popover within viewport on
+- [ ] 7.1 Bring up the full stack and run the **entire** test suite, including end-to-end tests
+      with Docker: start local Postgres (`npm run db:setup`), run `npm exec vitest run` for the
+      unit/integration suite, then run the Playwright end-to-end tests (`npm run test:e2e`) against
+      the running app. All suites must pass.
+- [ ] 7.2 Use the **Playwright MCP** to walk through the app interactively: register/log in, reach
+      `/habits/new` at the 3-active-habit cap, resize to a narrow/mobile viewport, open both the
+      header HelpTip and the cap-banner HelpTip, and confirm each popover stays fully on-screen
+      (no clipping at the edge) and its text is readable.
+- [ ] 7.3 Deploy a **separate agent with no prior context of this change** and have it independently
+      validate that the end-to-end workflow completes successfully — give it only the app and the
+      goal (exercise the habit-cap HelpTip on mobile), not this change's design/reasoning, so its
+      pass/fail verdict is an unbiased confirmation.
+
+## 8. Wrap up
+
+- [x] 8.1 Update `README.md` / `AGENTS.md` only if HelpTip behaviour docs need it (likely not).
+- [x] 8.2 Commit with a Conventional Commit (`fix(help-tip): keep popover within viewport on
       mobile`) including the Copilot co-author trailer; push the branch.
-- [ ] 7.3 Archive this OpenSpec change once implemented and validated.
+- [ ] 8.3 Archive this OpenSpec change once implemented and validated.
