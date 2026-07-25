@@ -54,6 +54,6 @@
 ## 7. Wrap up
 
 - [x] 7.1 Update `README.md` / `AGENTS.md` only if HelpTip behaviour docs need it (likely not).
-- [ ] 7.2 Commit with a Conventional Commit (`fix(help-tip): keep popover within viewport on
+- [x] 7.2 Commit with a Conventional Commit (`fix(help-tip): keep popover within viewport on
       mobile`) including the Copilot co-author trailer; push the branch.
 - [ ] 7.3 Archive this OpenSpec change once implemented and validated.
