@@ -3,7 +3,28 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { HelpTip } from "@/components/HelpTip";
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  // Restore any getBoundingClientRect spies so layout stubs don't leak between tests.
+  vi.restoreAllMocks();
+});
+
+/** Build a DOMRect for jsdom (which otherwise reports all zeros) so we can
+ *  simulate a trigger sitting near a screen edge and a fixed-width popover. */
+function makeRect(overrides: Partial<DOMRect>): DOMRect {
+  return {
+    x: 0,
+    y: 0,
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    width: 0,
+    height: 0,
+    toJSON: () => ({}),
+    ...overrides,
+  } as DOMRect;
+}
 
 describe("HelpTip", () => {
   it("hides the explanatory text until the trigger is activated", () => {
@@ -82,5 +103,76 @@ describe("HelpTip", () => {
     // Then: the popover closes
     expect(screen.queryByRole("tooltip")).toBeNull();
     expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("closes the popover when the user interacts outside the control", () => {
+    // Given: an open HelpTip
+    render(<HelpTip>Help text</HelpTip>);
+    const trigger = screen.getByRole("button", { name: "Help" });
+    fireEvent.click(trigger);
+    expect(screen.getByRole("tooltip")).toBeTruthy();
+
+    // When: a pointer interaction happens outside the control
+    fireEvent.pointerDown(document.body);
+
+    // Then: the popover closes and the trigger returns to its collapsed state
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("shifts the popover back inside the viewport when the trigger is near a screen edge", () => {
+    // Given: a narrow 360px viewport with the trigger pinned near the right edge,
+    // and a bubble whose natural width (260px) would overflow that edge.
+    const originalInnerWidth = window.innerWidth;
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 360 });
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: Element,
+    ) {
+      if (this.getAttribute("role") === "tooltip") {
+        return makeRect({ left: 0, right: 260, width: 260 });
+      }
+      // The trigger/wrapper sits 350px from the left of a 360px-wide screen.
+      return makeRect({ left: 350, right: 368, width: 18 });
+    });
+
+    try {
+      render(<HelpTip>Explanation that would otherwise overflow the screen.</HelpTip>);
+
+      // When: the user opens the tip
+      fireEvent.click(screen.getByRole("button", { name: "Help" }));
+
+      // Then: the bubble is nudged left so its right edge clears the 8px margin.
+      // trigger centre = 359, half width = 130 -> right edge = 489;
+      // 489 - (360 - 8) = 137px of overflow, so the shift is -137px.
+      const tooltip = screen.getByRole("tooltip");
+      expect(tooltip.style.getPropertyValue("--tip-shift")).toBe("-137px");
+    } finally {
+      Object.defineProperty(window, "innerWidth", {
+        configurable: true,
+        value: originalInnerWidth,
+      });
+    }
+  });
+
+  it("leaves the popover centred (no shift) when there is room on both sides", () => {
+    // Given: a wide viewport with the trigger comfortably centred
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 1200 });
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: Element,
+    ) {
+      if (this.getAttribute("role") === "tooltip") {
+        return makeRect({ left: 470, right: 730, width: 260 });
+      }
+      return makeRect({ left: 591, right: 609, width: 18 });
+    });
+
+    render(<HelpTip>Plenty of room here.</HelpTip>);
+
+    // When: the tip opens
+    fireEvent.click(screen.getByRole("button", { name: "Help" }));
+
+    // Then: no correction is applied — the bubble stays centred over the trigger.
+    const tooltip = screen.getByRole("tooltip");
+    expect(tooltip.style.getPropertyValue("--tip-shift")).toBe("0px");
   });
 });

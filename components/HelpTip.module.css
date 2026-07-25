@@ -49,10 +49,16 @@
   position: absolute;
   bottom: calc(100% + 8px);
   left: 50%;
-  transform: translateX(-50%);
+  /* Centre the bubble over the trigger, then nudge it by --tip-shift (set in JS)
+   * so an edge-adjacent trigger on a narrow screen doesn't push the popover off
+   * the viewport. Defaults to 0 when there is room to stay centred. */
+  transform: translateX(calc(-50% + var(--tip-shift, 0px)));
   z-index: 20;
   width: max-content;
-  max-width: 260px;
+  /* Never let the bubble exceed the viewport: on small screens the preferred
+   * 260px is clamped to the available width (minus an 8px margin each side) so
+   * the text wraps instead of being clipped by the screen edge. */
+  max-width: min(260px, calc(100vw - 16px));
   padding: 10px 12px;
   border-radius: 10px;
   border: 1px solid var(--rule-strong);

@@ -1,8 +1,14 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 
 import styles from "./HelpTip.module.css";
+
+// useLayoutEffect lets us measure the popover and correct its position *before*
+// the browser paints, so it never flashes in the wrong place. During SSR there
+// is no DOM to measure, so we fall back to useEffect to avoid React's
+// "useLayoutEffect does nothing on the server" warning.
+const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 /**
  * HelpTip — a small, reusable contextual help control.
@@ -37,6 +43,11 @@ export function HelpTip({
   const [open, setOpen] = useState(false);
   const popoverId = useId();
   const wrapperRef = useRef<HTMLSpanElement>(null);
+  const popoverRef = useRef<HTMLSpanElement>(null);
+  // Horizontal correction (px) applied to the popover so it stays inside the
+  // viewport. 0 means "perfectly centred over the trigger"; a non-zero value
+  // nudges the bubble left/right when the trigger is close to a screen edge.
+  const [shift, setShift] = useState(0);
 
   // Close on Escape (from anywhere) and on any interaction outside the control.
   // Only wire these listeners while the popover is actually open.
@@ -64,6 +75,54 @@ export function HelpTip({
     };
   }, [open]);
 
+  // Keep the open popover inside the viewport. The bubble is centred over the
+  // trigger by default, but on a narrow (mobile) screen a trigger near the edge
+  // would push a centred bubble off-screen and clip its text. We measure the
+  // trigger's centre and the popover's width, then compute how far to nudge the
+  // bubble so both its edges stay within an 8px margin of the viewport.
+  useIsomorphicLayoutEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const reposition = () => {
+      const wrapper = wrapperRef.current;
+      const popover = popoverRef.current;
+      if (!wrapper || !popover) {
+        return;
+      }
+
+      const margin = 8;
+      const wrapperRect = wrapper.getBoundingClientRect();
+      // Width is unaffected by the translate transform, so this is the bubble's
+      // true rendered width regardless of any shift already applied.
+      const popoverWidth = popover.getBoundingClientRect().width;
+      const triggerCentre = wrapperRect.left + wrapperRect.width / 2;
+      const halfWidth = popoverWidth / 2;
+      const leftEdge = triggerCentre - halfWidth;
+      const rightEdge = triggerCentre + halfWidth;
+
+      let next = 0;
+      if (leftEdge < margin) {
+        // Overflowing the left edge: nudge right just enough to clear the margin.
+        next = margin - leftEdge;
+      } else if (rightEdge > window.innerWidth - margin) {
+        // Overflowing the right edge: nudge left just enough to clear the margin.
+        next = window.innerWidth - margin - rightEdge;
+      }
+      setShift(next);
+    };
+
+    reposition();
+    // Recompute while open so the bubble tracks orientation changes and scroll.
+    window.addEventListener("resize", reposition);
+    window.addEventListener("scroll", reposition, true);
+    return () => {
+      window.removeEventListener("resize", reposition);
+      window.removeEventListener("scroll", reposition, true);
+    };
+  }, [open]);
+
   return (
     <span ref={wrapperRef} className={`${styles.wrapper} ${className ?? ""}`.trim()}>
       <button
@@ -77,7 +136,16 @@ export function HelpTip({
         ?
       </button>
       {open && (
-        <span id={popoverId} role="tooltip" className={styles.popover}>
+        <span
+          ref={popoverRef}
+          id={popoverId}
+          role="tooltip"
+          className={styles.popover}
+          // Dynamic CSS-variable passthrough (allowed by our inline-style
+          // policy): the module class owns all static styling; JS only feeds the
+          // measured horizontal shift so the bubble stays inside the viewport.
+          style={{ "--tip-shift": `${shift}px` } as CSSProperties}
+        >
           {children}
         </span>
       )}
