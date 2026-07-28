@@ -77,16 +77,23 @@ export function HelpTip({
   const popoverId = useId();
   const wrapperRef = useRef<HTMLSpanElement>(null);
   const popoverRef = useRef<HTMLSpanElement>(null);
-  // Where the bubble sits relative to the trigger, and how far it is nudged
-  // sideways to stay on screen:
+  // Where the bubble sits relative to the trigger, and the corrections that
+  // keep it fully readable:
   //   - `shift`: horizontal correction in px. 0 means "perfectly centred over
   //     the trigger"; a non-zero value slides the bubble left/right when the
   //     trigger is close to a screen edge.
+  //   - `lift`: vertical correction in px (positive = downwards). Keeps the
+  //     bubble clear of fixed top chrome and the bottom of the screen even when
+  //     the trigger itself has been scrolled behind them.
   //   - `placement`: "top" (the default, bubble above the trigger) flips to
-  //     "bottom" when there isn't enough clear room above — otherwise the
-  //     bubble would slide under the fixed mobile menu button or off-screen.
-  const [position, setPosition] = useState<{ shift: number; placement: "top" | "bottom" }>({
+  //     "bottom" when there isn't enough clear room above.
+  const [position, setPosition] = useState<{
+    shift: number;
+    lift: number;
+    placement: "top" | "bottom";
+  }>({
     shift: 0,
+    lift: 0,
     placement: "top",
   });
 
@@ -117,14 +124,19 @@ export function HelpTip({
   }, [open]);
 
   // Keep the open popover inside the viewport. The bubble is centred above the
-  // trigger by default, but two things can push it out of view:
-  //   1. On a narrow (mobile) screen a trigger near a side edge would push a
-  //      centred bubble off-screen and clip its text -> we nudge it sideways.
+  // trigger by default, but three things can push it out of view:
+  //   1. On a narrow screen a trigger near a side edge would push a centred
+  //      bubble off-screen and clip its text -> we nudge it sideways (`shift`).
   //   2. A trigger near the top of the page has no room above it, so the bubble
   //      would slide underneath the fixed mobile menu button (or off the top of
-  //      the screen) -> we flip it to sit below the trigger instead.
+  //      the screen) -> we flip it below the trigger (`placement`).
+  //   3. Once the page is scrolled, the trigger itself can slide up behind that
+  //      fixed menu button. The bubble is anchored to the trigger, so flipping
+  //      alone is not enough — it would still be dragged under the menu. So we
+  //      also clamp it vertically (`lift`), pushing it back down below the menu
+  //      (or up off the bottom edge) until the whole bubble is readable.
   // We measure the trigger and the bubble on open (and on resize/scroll) and
-  // recompute both corrections together.
+  // recompute all three corrections together.
   useIsomorphicLayoutEffect(() => {
     if (!open) {
       return;
@@ -137,13 +149,18 @@ export function HelpTip({
         return;
       }
 
+      // `margin` is the breathing room we keep between the bubble and any
+      // viewport edge or fixed chrome; `gap` is the distance from the trigger.
       const margin = 8;
+      const gap = 8;
       const wrapperRect = wrapper.getBoundingClientRect();
       // Width/height are unaffected by the translate transform, so these are the
-      // bubble's true rendered size regardless of any shift already applied.
+      // bubble's true rendered size regardless of any correction already applied.
       const popoverRect = popover.getBoundingClientRect();
       const popoverWidth = popoverRect.width;
       const popoverHeight = popoverRect.height;
+
+      /* ---- Horizontal: keep both side edges on screen ---- */
       const triggerCentre = wrapperRect.left + wrapperRect.width / 2;
       const halfWidth = popoverWidth / 2;
       const leftEdge = triggerCentre - halfWidth;
@@ -158,23 +175,43 @@ export function HelpTip({
         shift = window.innerWidth - margin - rightEdge;
       }
 
-      // Anything fixed to the top of the screen (on mobile, the hamburger menu
-      // button) eats into the usable space above the trigger. Treat the bottom
-      // of that element as the real ceiling so the bubble is never hidden
-      // behind it.
+      /* ---- Vertical: choose a side, then clamp into the usable band ---- */
+      // Anything fixed to the top of the screen (on mobile/tablet, the hamburger
+      // menu button) eats into the usable space. Treat the bottom of that
+      // element as the real ceiling so the bubble is never hidden behind it.
       const topBoundary = Math.max(margin, obstructedTop() + margin);
-      const roomAbove = wrapperRect.top - topBoundary;
-      const roomBelow = window.innerHeight - margin - wrapperRect.bottom;
-      const spaceNeeded = popoverHeight + margin;
-      // Prefer the default "above" placement; only flip below when the bubble
-      // genuinely does not fit above AND there is more room below.
-      const placement: "top" | "bottom" =
-        roomAbove < spaceNeeded && roomBelow > roomAbove ? "bottom" : "top";
+      const bottomBoundary = window.innerHeight - margin;
+      const roomAbove = wrapperRect.top - gap - topBoundary;
+      const roomBelow = bottomBoundary - (wrapperRect.bottom + gap);
+
+      let placement: "top" | "bottom";
+      if (roomAbove >= popoverHeight) {
+        // Preferred: the original placement above the trigger.
+        placement = "top";
+      } else if (roomBelow >= popoverHeight) {
+        // It does not fit above, but it does fit below — flip it.
+        placement = "bottom";
+      } else {
+        // It fits on neither side (a very short window): take the roomier side
+        // and let the clamp below salvage as much of the text as possible.
+        placement = roomBelow > roomAbove ? "bottom" : "top";
+      }
+
+      // Where the bubble would land with no vertical correction...
+      const naturalTop =
+        placement === "top" ? wrapperRect.top - gap - popoverHeight : wrapperRect.bottom + gap;
+      // ...and how far we must slide it (positive = down) to stay in the band.
+      let lift = 0;
+      if (naturalTop < topBoundary) {
+        lift = topBoundary - naturalTop;
+      } else if (naturalTop + popoverHeight > bottomBoundary) {
+        lift = bottomBoundary - (naturalTop + popoverHeight);
+      }
 
       setPosition((current) =>
-        current.shift === shift && current.placement === placement
+        current.shift === shift && current.lift === lift && current.placement === placement
           ? current
-          : { shift, placement },
+          : { shift, lift, placement },
       );
     };
 
@@ -210,8 +247,13 @@ export function HelpTip({
           data-placement={position.placement}
           // Dynamic CSS-variable passthrough (allowed by our inline-style
           // policy): the module class owns all static styling; JS only feeds the
-          // measured horizontal shift so the bubble stays inside the viewport.
-          style={{ "--tip-shift": `${position.shift}px` } as CSSProperties}
+          // measured corrections so the bubble stays inside the viewport.
+          style={
+            {
+              "--tip-shift": `${position.shift}px`,
+              "--tip-lift": `${position.lift}px`,
+            } as CSSProperties
+          }
         >
           {children}
         </span>

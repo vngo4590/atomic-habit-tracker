@@ -193,4 +193,105 @@ test.describe("HelpTip stays readable inside the viewport", () => {
       // Then: the bubble re-positions itself back inside the smaller viewport.
       .toBe(true);
   });
+
+  /**
+   * The medium-window regression: at tablet-ish sizes the page scrolls under
+   * the fixed hamburger button, so the trigger itself can slip behind it. The
+   * bubble is anchored to the trigger, so flipping it below is NOT enough — it
+   * has to be pushed back down past the menu. This sweep opens both tips on the
+   * page at several window sizes and scroll offsets and demands the bubble stay
+   * readable in every combination.
+   */
+  test("stays readable at every window size and scroll offset", async ({ page }) => {
+    const viewports = [
+      { width: 480, height: 700 },
+      { width: 600, height: 620 },
+      { width: 768, height: 560 },
+      { width: 860, height: 600 },
+      { width: 1024, height: 500 },
+    ];
+    const scrollOffsets = [0, 60, 150, 300];
+    const failures: unknown[] = [];
+
+    for (const viewport of viewports) {
+      await page.setViewportSize(viewport);
+      const batch = await page.evaluate(
+        async ({ offsets }) => {
+          const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+          const bad: unknown[] = [];
+
+          // Every help trigger currently rendered on the page.
+          const labels = Array.from(document.querySelectorAll<HTMLElement>("button[aria-label]"))
+            .filter((button) => button.textContent?.trim() === "?")
+            .map((button) => button.getAttribute("aria-label")!);
+
+          for (const label of labels) {
+            for (const offset of offsets) {
+              // Close any open tip, scroll, then reopen so it measures fresh.
+              document.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+              await sleep(40);
+              window.scrollTo(0, offset);
+              await sleep(110);
+              const trigger = document.querySelector<HTMLElement>(
+                `button[aria-label="${label}"]`,
+              );
+              if (!trigger) continue;
+              trigger.click();
+              await sleep(160);
+
+              const tip = document.querySelector<HTMLElement>('[role="tooltip"]');
+              if (!tip) continue;
+              const rect = tip.getBoundingClientRect();
+              const menu = document.querySelector<HTMLElement>(".mobile-menu-btn");
+              const menuRect =
+                menu && getComputedStyle(menu).display !== "none"
+                  ? menu.getBoundingClientRect()
+                  : null;
+              const overlapsMenu = menuRect
+                ? !(
+                    rect.right <= menuRect.left ||
+                    rect.left >= menuRect.right ||
+                    rect.bottom <= menuRect.top ||
+                    rect.top >= menuRect.bottom
+                  )
+                : false;
+              const atCentre = document.elementFromPoint(
+                rect.left + rect.width / 2,
+                rect.top + rect.height / 2,
+              );
+              const withinViewport =
+                rect.left >= -1 &&
+                rect.top >= -1 &&
+                rect.right <= window.innerWidth + 1 &&
+                rect.bottom <= window.innerHeight + 1;
+              const unobstructed = !!atCentre && (atCentre === tip || tip.contains(atCentre));
+
+              if (!withinViewport || overlapsMenu || !unobstructed) {
+                bad.push({
+                  viewport: `${window.innerWidth}x${window.innerHeight}`,
+                  label,
+                  scrollY: offset,
+                  withinViewport,
+                  overlapsMenu,
+                  unobstructed,
+                  placement: tip.getAttribute("data-placement"),
+                  box: [rect.top, rect.left, rect.right, rect.bottom].map((n) => Math.round(n)),
+                });
+              }
+            }
+          }
+
+          document.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+          window.scrollTo(0, 0);
+          return bad;
+        },
+        { offsets: scrollOffsets },
+      );
+      failures.push(...batch);
+    }
+
+    // Then: not a single combination leaves the bubble clipped, covered, or
+    // hidden behind the fixed navigation button.
+    expect(failures).toEqual([]);
+  });
 });
