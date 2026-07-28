@@ -3,7 +3,28 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { HelpTip } from "@/components/HelpTip";
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  // Restore any getBoundingClientRect spies so layout stubs don't leak between tests.
+  vi.restoreAllMocks();
+});
+
+/** Build a DOMRect for jsdom (which otherwise reports all zeros) so we can
+ *  simulate a trigger sitting near a screen edge and a fixed-width popover. */
+function makeRect(overrides: Partial<DOMRect>): DOMRect {
+  return {
+    x: 0,
+    y: 0,
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    width: 0,
+    height: 0,
+    toJSON: () => ({}),
+    ...overrides,
+  } as DOMRect;
+}
 
 describe("HelpTip", () => {
   it("hides the explanatory text until the trigger is activated", () => {
@@ -82,5 +103,264 @@ describe("HelpTip", () => {
     // Then: the popover closes
     expect(screen.queryByRole("tooltip")).toBeNull();
     expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("closes the popover when the user interacts outside the control", () => {
+    // Given: an open HelpTip
+    render(<HelpTip>Help text</HelpTip>);
+    const trigger = screen.getByRole("button", { name: "Help" });
+    fireEvent.click(trigger);
+    expect(screen.getByRole("tooltip")).toBeTruthy();
+
+    // When: a pointer interaction happens outside the control
+    fireEvent.pointerDown(document.body);
+
+    // Then: the popover closes and the trigger returns to its collapsed state
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("shifts the popover back inside the viewport when the trigger is near a screen edge", () => {
+    // Given: a narrow 360px viewport with the trigger pinned near the right edge,
+    // and a bubble whose natural width (260px) would overflow that edge.
+    const originalInnerWidth = window.innerWidth;
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 360 });
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: Element,
+    ) {
+      if (this.getAttribute("role") === "tooltip") {
+        return makeRect({ left: 0, right: 260, width: 260 });
+      }
+      // The trigger/wrapper sits 350px from the left of a 360px-wide screen.
+      return makeRect({ left: 350, right: 368, width: 18 });
+    });
+
+    try {
+      render(<HelpTip>Explanation that would otherwise overflow the screen.</HelpTip>);
+
+      // When: the user opens the tip
+      fireEvent.click(screen.getByRole("button", { name: "Help" }));
+
+      // Then: the bubble is pulled left so its right edge clears the 8px margin.
+      // Left-aligned natural position = 350; right edge = 350 + 260 = 610;
+      // allowed right edge = 360 - 8 = 352, so the shift is 352 - 610 = -258px.
+      const tooltip = screen.getByRole("tooltip");
+      expect(tooltip.style.getPropertyValue("--tip-shift")).toBe("-258px");
+    } finally {
+      Object.defineProperty(window, "innerWidth", {
+        configurable: true,
+        value: originalInnerWidth,
+      });
+    }
+  });
+
+  it("leaves the popover flush with the trigger's left edge when there is room to its right", () => {
+    // Given: a wide viewport with plenty of space to the right of the trigger
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 1200 });
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: Element,
+    ) {
+      if (this.getAttribute("role") === "tooltip") {
+        return makeRect({ left: 470, right: 730, width: 260 });
+      }
+      return makeRect({ left: 591, right: 609, width: 18 });
+    });
+
+    render(<HelpTip>Plenty of room here.</HelpTip>);
+
+    // When: the tip opens
+    fireEvent.click(screen.getByRole("button", { name: "Help" }));
+
+    // Then: no correction is applied — the bubble's left edge stays lined up
+    // with the "?" and the text grows rightwards, away from page chrome.
+    const tooltip = screen.getByRole("tooltip");
+    expect(tooltip.style.getPropertyValue("--tip-shift")).toBe("0px");
+  });
+
+  it("never pulls the bubble off the left edge, even on a viewport narrower than the bubble", () => {
+    // Given: an extremely narrow 200px viewport and a 260px bubble — there is
+    // no position where both side margins can be honoured.
+    const originalInnerWidth = window.innerWidth;
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 200 });
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: Element,
+    ) {
+      if (this.getAttribute("role") === "tooltip") {
+        return makeRect({ left: 0, right: 260, width: 260 });
+      }
+      return makeRect({ left: 150, right: 168, width: 18 });
+    });
+
+    try {
+      render(<HelpTip>Very cramped screen.</HelpTip>);
+
+      // When: the user opens the tip
+      fireEvent.click(screen.getByRole("button", { name: "Help" }));
+
+      // Then: keeping the left edge readable wins over the right-edge clamp,
+      // so the bubble starts at the 8px margin (shift = 8 - 150 = -142px)
+      // rather than sliding its opening words off the screen.
+      const tooltip = screen.getByRole("tooltip");
+      expect(tooltip.style.getPropertyValue("--tip-shift")).toBe("-142px");
+    } finally {
+      Object.defineProperty(window, "innerWidth", {
+        configurable: true,
+        value: originalInnerWidth,
+      });
+    }
+  });
+
+  it("keeps the bubble above the trigger when there is clear room above it", () => {
+    // Given: a trigger sitting low on the page with plenty of empty space above
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 1200 });
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 800 });
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: Element,
+    ) {
+      if (this.getAttribute("role") === "tooltip") {
+        return makeRect({ left: 470, right: 730, width: 260, top: 300, bottom: 380, height: 80 });
+      }
+      return makeRect({ left: 591, right: 609, width: 18, top: 400, bottom: 418, height: 18 });
+    });
+
+    render(<HelpTip>Plenty of headroom.</HelpTip>);
+
+    // When: the tip opens
+    fireEvent.click(screen.getByRole("button", { name: "Help" }));
+
+    // Then: it uses the default placement above the trigger
+    expect(screen.getByRole("tooltip").getAttribute("data-placement")).toBe("top");
+  });
+
+  it("flips the bubble below the trigger when the fixed mobile menu button blocks the space above", () => {
+    // Given: a 360px-wide mobile viewport where the fixed hamburger button
+    // occupies the top-left corner and the trigger sits just beneath it — the
+    // exact situation where an upward bubble slid under the menu.
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 360 });
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 640 });
+    const menuButton = document.createElement("button");
+    menuButton.className = "mobile-menu-btn";
+    document.body.appendChild(menuButton);
+
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: Element,
+    ) {
+      if (this.classList.contains("mobile-menu-btn")) {
+        // Fixed hamburger: 40px square anchored 12px from the top.
+        return makeRect({ left: 12, right: 52, width: 40, top: 12, bottom: 52, height: 40 });
+      }
+      if (this.getAttribute("role") === "tooltip") {
+        return makeRect({ left: 50, right: 310, width: 260, top: 0, bottom: 80, height: 80 });
+      }
+      // The trigger sits in the page heading, only 70px down the screen.
+      return makeRect({ left: 171, right: 189, width: 18, top: 70, bottom: 88, height: 18 });
+    });
+
+    try {
+      render(<HelpTip>Explanation that has nowhere to go above the trigger.</HelpTip>);
+
+      // When: the user opens the tip
+      fireEvent.click(screen.getByRole("button", { name: "Help" }));
+
+      // Then: the bubble flips below the trigger so the menu never covers it
+      expect(screen.getByRole("tooltip").getAttribute("data-placement")).toBe("bottom");
+    } finally {
+      menuButton.remove();
+    }
+  });
+
+  it("pushes the bubble down past the fixed menu button when the trigger is scrolled behind it", () => {
+    // Given: a mid-size window where the user has scrolled far enough that the
+    // trigger itself has slipped up behind the fixed hamburger button. Flipping
+    // alone cannot help here — the bubble is anchored to the trigger, so it
+    // would still be dragged underneath the menu.
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 860 });
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 600 });
+    const menuButton = document.createElement("button");
+    menuButton.className = "mobile-menu-btn";
+    document.body.appendChild(menuButton);
+
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: Element,
+    ) {
+      if (this.classList.contains("mobile-menu-btn")) {
+        return makeRect({ left: 12, right: 52, width: 40, top: 12, bottom: 52, height: 40 });
+      }
+      if (this.getAttribute("role") === "tooltip") {
+        return makeRect({ left: 300, right: 560, width: 260, top: 0, bottom: 112, height: 112 });
+      }
+      // Trigger scrolled 20px ABOVE the top of the screen.
+      return makeRect({ left: 421, right: 439, width: 18, top: -20, bottom: -2, height: 18 });
+    });
+
+    try {
+      render(<HelpTip>Explanation the user must still be able to read.</HelpTip>);
+
+      // When: the user opens the tip
+      fireEvent.click(screen.getByRole("button", { name: "Help" }));
+
+      // Then: the bubble is pushed down so its top clears the menu button's
+      // bottom edge (52px) plus the 8px safety margin. Its natural top would be
+      // trigger bottom (-2) + 8px gap = 6px, so the lift is 60 - 6 = 54px.
+      const tooltip = screen.getByRole("tooltip");
+      expect(tooltip.getAttribute("data-placement")).toBe("bottom");
+      expect(tooltip.style.getPropertyValue("--tip-lift")).toBe("54px");
+    } finally {
+      menuButton.remove();
+    }
+  });
+
+  it("pulls the bubble up when it would otherwise run off the bottom of a short window", () => {
+    // Given: a short window with the trigger near the bottom, where a bubble
+    // hanging below would spill off-screen.
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 1024 });
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 300 });
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: Element,
+    ) {
+      if (this.getAttribute("role") === "tooltip") {
+        return makeRect({ left: 400, right: 660, width: 260, top: 0, bottom: 200, height: 200 });
+      }
+      // Trigger sits 120px down a 300px-tall window: 112px above, 172px below —
+      // the 200px bubble fits on neither side, so the roomier side wins.
+      return makeRect({ left: 503, right: 521, width: 18, top: 120, bottom: 138, height: 18 });
+    });
+
+    render(<HelpTip>A long explanation in a very short window.</HelpTip>);
+
+    // When: the user opens the tip
+    fireEvent.click(screen.getByRole("button", { name: "Help" }));
+
+    // Then: it takes the roomier side (below) and is pulled up so its bottom
+    // clears the 8px margin. Natural top = 138 + 8 = 146; bottom would be 346,
+    // but the floor is 300 - 8 = 292, so the lift is 292 - 346 = -54px.
+    const tooltip = screen.getByRole("tooltip");
+    expect(tooltip.getAttribute("data-placement")).toBe("bottom");
+    expect(tooltip.style.getPropertyValue("--tip-lift")).toBe("-54px");
+  });
+
+  it("applies no vertical correction when the bubble already fits above the trigger", () => {
+    // Given: a roomy desktop window with the trigger low on the page
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 1280 });
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 900 });
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: Element,
+    ) {
+      if (this.getAttribute("role") === "tooltip") {
+        return makeRect({ left: 510, right: 770, width: 260, top: 300, bottom: 412, height: 112 });
+      }
+      return makeRect({ left: 631, right: 649, width: 18, top: 450, bottom: 468, height: 18 });
+    });
+
+    render(<HelpTip>Nothing to correct here.</HelpTip>);
+
+    // When: the tip opens
+    fireEvent.click(screen.getByRole("button", { name: "Help" }));
+
+    // Then: the original placement and geometry are untouched.
+    const tooltip = screen.getByRole("tooltip");
+    expect(tooltip.getAttribute("data-placement")).toBe("top");
+    expect(tooltip.style.getPropertyValue("--tip-lift")).toBe("0px");
+    expect(tooltip.style.getPropertyValue("--tip-shift")).toBe("0px");
   });
 });
