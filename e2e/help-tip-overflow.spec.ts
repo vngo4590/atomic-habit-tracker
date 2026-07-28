@@ -49,6 +49,10 @@ type TipGeometry = {
    * of the component's own decision so we can assert the rule it must follow.
    */
   hasRoomAbove: boolean;
+  /** Gap in px between the trigger's left edge and the bubble's left edge. */
+  leftEdgeDelta: number;
+  /** True when the bubble would still fit on screen growing rightwards. */
+  fitsGrowingRight: boolean;
 };
 
 /**
@@ -110,6 +114,8 @@ async function openAndMeasureTip(page: Page, label: string): Promise<TipGeometry
       hasRoomAbove:
         triggerRect.top - Math.max(8, (menuRect && mobileMenuVisible ? menuRect.bottom : 0) + 8) >=
         tipRect.height + 8,
+      leftEdgeDelta: tipRect.left - triggerRect.left,
+      fitsGrowingRight: triggerRect.left + tipRect.width <= window.innerWidth - 8,
     };
   }, label);
 }
@@ -166,6 +172,23 @@ test.describe("HelpTip stays readable inside the viewport", () => {
     expect(geometry.placement).toBe("bottom");
     expect(geometry.belowTrigger).toBe(true);
     expect(geometry.overlapsMenuButton).toBe(false);
+  });
+
+  test("aligns the bubble's left edge with the '?' trigger", async ({ page }) => {
+    // Given/When: the heading help tip is opened.
+    const geometry = await openAndMeasureTip(page, "How many habits can I have?");
+
+    if (geometry.fitsGrowingRight) {
+      // Then: the bubble starts exactly where the "?" starts and grows to the
+      // right, so it can never reach back towards the top-left menu button.
+      expect(Math.abs(geometry.leftEdgeDelta)).toBeLessThanOrEqual(1);
+    } else {
+      // Unless the trigger sits so close to the right edge that a right-growing
+      // bubble would fall off screen — then it is pulled left just enough to
+      // stay visible, never further.
+      expect(geometry.leftEdgeDelta).toBeLessThan(0);
+      expect(geometry.withinViewport).toBe(true);
+    }
   });
 
   test("keeps the bubble on screen after the viewport is resized while open", async ({ page }) => {
@@ -265,8 +288,16 @@ test.describe("HelpTip stays readable inside the viewport", () => {
                 rect.right <= window.innerWidth + 1 &&
                 rect.bottom <= window.innerHeight + 1;
               const unobstructed = !!atCentre && (atCentre === tip || tip.contains(atCentre));
+              // The bubble's left edge must sit on the trigger's left edge,
+              // unless it had to be pulled left to stay on screen.
+              const triggerRect = trigger.getBoundingClientRect();
+              const fitsGrowingRight =
+                triggerRect.left + rect.width <= window.innerWidth - 8;
+              const leftAligned = fitsGrowingRight
+                ? Math.abs(rect.left - triggerRect.left) <= 1
+                : rect.left <= triggerRect.left + 1;
 
-              if (!withinViewport || overlapsMenu || !unobstructed) {
+              if (!withinViewport || overlapsMenu || !unobstructed || !leftAligned) {
                 bad.push({
                   viewport: `${window.innerWidth}x${window.innerHeight}`,
                   label,
@@ -274,6 +305,7 @@ test.describe("HelpTip stays readable inside the viewport", () => {
                   withinViewport,
                   overlapsMenu,
                   unobstructed,
+                  leftAligned,
                   placement: tip.getAttribute("data-placement"),
                   box: [rect.top, rect.left, rect.right, rect.bottom].map((n) => Math.round(n)),
                 });

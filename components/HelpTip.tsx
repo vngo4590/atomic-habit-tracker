@@ -79,9 +79,9 @@ export function HelpTip({
   const popoverRef = useRef<HTMLSpanElement>(null);
   // Where the bubble sits relative to the trigger, and the corrections that
   // keep it fully readable:
-  //   - `shift`: horizontal correction in px. 0 means "perfectly centred over
-  //     the trigger"; a non-zero value slides the bubble left/right when the
-  //     trigger is close to a screen edge.
+  //   - `shift`: horizontal correction in px. 0 means "the bubble's left edge is
+  //     flush with the '?' trigger"; a negative value pulls it back left when
+  //     the trigger sits close to the right edge of the screen.
   //   - `lift`: vertical correction in px (positive = downwards). Keeps the
   //     bubble clear of fixed top chrome and the bottom of the screen even when
   //     the trigger itself has been scrolled behind them.
@@ -160,19 +160,23 @@ export function HelpTip({
       const popoverWidth = popoverRect.width;
       const popoverHeight = popoverRect.height;
 
-      /* ---- Horizontal: keep both side edges on screen ---- */
-      const triggerCentre = wrapperRect.left + wrapperRect.width / 2;
-      const halfWidth = popoverWidth / 2;
-      const leftEdge = triggerCentre - halfWidth;
-      const rightEdge = triggerCentre + halfWidth;
+      /* ---- Horizontal: anchor the bubble's LEFT edge to the trigger ---- */
+      // The bubble opens rightwards from the "?" rather than being centred on
+      // it. Centring made the bubble reach backwards past the trigger, which is
+      // how it ended up under the fixed top-left menu button; growing to the
+      // right keeps it clear of that chrome by construction. We still clamp so
+      // a trigger near the right edge cannot push the bubble off-screen.
+      const naturalLeft = wrapperRect.left;
+      const naturalRight = naturalLeft + popoverWidth;
 
       let shift = 0;
-      if (leftEdge < margin) {
-        // Overflowing the left edge: nudge right just enough to clear the margin.
-        shift = margin - leftEdge;
-      } else if (rightEdge > window.innerWidth - margin) {
-        // Overflowing the right edge: nudge left just enough to clear the margin.
-        shift = window.innerWidth - margin - rightEdge;
+      if (naturalRight > window.innerWidth - margin) {
+        // Overflowing the right edge: pull left just enough to clear the margin.
+        shift = window.innerWidth - margin - naturalRight;
+      }
+      if (naturalLeft + shift < margin) {
+        // ...but never so far that the left edge leaves the screen.
+        shift = margin - naturalLeft;
       }
 
       /* ---- Vertical: choose a side, then clamp into the usable band ---- */

@@ -141,11 +141,11 @@ describe("HelpTip", () => {
       // When: the user opens the tip
       fireEvent.click(screen.getByRole("button", { name: "Help" }));
 
-      // Then: the bubble is nudged left so its right edge clears the 8px margin.
-      // trigger centre = 359, half width = 130 -> right edge = 489;
-      // 489 - (360 - 8) = 137px of overflow, so the shift is -137px.
+      // Then: the bubble is pulled left so its right edge clears the 8px margin.
+      // Left-aligned natural position = 350; right edge = 350 + 260 = 610;
+      // allowed right edge = 360 - 8 = 352, so the shift is 352 - 610 = -258px.
       const tooltip = screen.getByRole("tooltip");
-      expect(tooltip.style.getPropertyValue("--tip-shift")).toBe("-137px");
+      expect(tooltip.style.getPropertyValue("--tip-shift")).toBe("-258px");
     } finally {
       Object.defineProperty(window, "innerWidth", {
         configurable: true,
@@ -154,8 +154,8 @@ describe("HelpTip", () => {
     }
   });
 
-  it("leaves the popover centred (no shift) when there is room on both sides", () => {
-    // Given: a wide viewport with the trigger comfortably centred
+  it("leaves the popover flush with the trigger's left edge when there is room to its right", () => {
+    // Given: a wide viewport with plenty of space to the right of the trigger
     Object.defineProperty(window, "innerWidth", { configurable: true, value: 1200 });
     vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (
       this: Element,
@@ -171,9 +171,43 @@ describe("HelpTip", () => {
     // When: the tip opens
     fireEvent.click(screen.getByRole("button", { name: "Help" }));
 
-    // Then: no correction is applied — the bubble stays centred over the trigger.
+    // Then: no correction is applied — the bubble's left edge stays lined up
+    // with the "?" and the text grows rightwards, away from page chrome.
     const tooltip = screen.getByRole("tooltip");
     expect(tooltip.style.getPropertyValue("--tip-shift")).toBe("0px");
+  });
+
+  it("never pulls the bubble off the left edge, even on a viewport narrower than the bubble", () => {
+    // Given: an extremely narrow 200px viewport and a 260px bubble — there is
+    // no position where both side margins can be honoured.
+    const originalInnerWidth = window.innerWidth;
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 200 });
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: Element,
+    ) {
+      if (this.getAttribute("role") === "tooltip") {
+        return makeRect({ left: 0, right: 260, width: 260 });
+      }
+      return makeRect({ left: 150, right: 168, width: 18 });
+    });
+
+    try {
+      render(<HelpTip>Very cramped screen.</HelpTip>);
+
+      // When: the user opens the tip
+      fireEvent.click(screen.getByRole("button", { name: "Help" }));
+
+      // Then: keeping the left edge readable wins over the right-edge clamp,
+      // so the bubble starts at the 8px margin (shift = 8 - 150 = -142px)
+      // rather than sliding its opening words off the screen.
+      const tooltip = screen.getByRole("tooltip");
+      expect(tooltip.style.getPropertyValue("--tip-shift")).toBe("-142px");
+    } finally {
+      Object.defineProperty(window, "innerWidth", {
+        configurable: true,
+        value: originalInnerWidth,
+      });
+    }
   });
 
   it("keeps the bubble above the trigger when there is clear room above it", () => {

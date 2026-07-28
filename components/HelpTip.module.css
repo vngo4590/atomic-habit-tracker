@@ -53,13 +53,17 @@
 .popover {
   position: absolute;
   bottom: calc(100% + 8px);
-  left: 50%;
-  /* Centre the bubble over the trigger, then apply the corrections measured in
-   * JS: --tip-shift slides it sideways so an edge-adjacent trigger on a narrow
-   * screen doesn't push the popover off the viewport, and --tip-lift slides it
-   * down/up so it clears fixed top chrome (the mobile menu button) and the
-   * bottom edge. Both default to 0 when the bubble already fits. */
-  transform: translate(calc(-50% + var(--tip-shift, 0px)), var(--tip-lift, 0px));
+  /* Anchor the bubble's LEFT edge to the trigger so it opens rightwards from
+   * the "?" instead of being centred on it. A centred bubble reached backwards
+   * past the trigger and could slide under the fixed top-left menu button;
+   * growing rightwards keeps it clear of that chrome by construction. */
+  left: 0;
+  /* Apply the corrections measured in JS: --tip-shift pulls the bubble back
+   * left when a trigger near the right edge would push it off-screen, and
+   * --tip-lift slides it down/up so it clears fixed top chrome (the mobile menu
+   * button) and the bottom edge. Both default to 0 when the bubble already
+   * fits. */
+  transform: translate(var(--tip-shift, 0px), var(--tip-lift, 0px));
   /* Sit above the fixed mobile menu button (z-index 80) but below the mobile
    * navigation drawer overlay (z-index 100), so an open tip is never hidden
    * behind page chrome yet still yields to a full-screen menu. */
