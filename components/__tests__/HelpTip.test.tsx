@@ -175,4 +175,63 @@ describe("HelpTip", () => {
     const tooltip = screen.getByRole("tooltip");
     expect(tooltip.style.getPropertyValue("--tip-shift")).toBe("0px");
   });
+
+  it("keeps the bubble above the trigger when there is clear room above it", () => {
+    // Given: a trigger sitting low on the page with plenty of empty space above
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 1200 });
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 800 });
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: Element,
+    ) {
+      if (this.getAttribute("role") === "tooltip") {
+        return makeRect({ left: 470, right: 730, width: 260, top: 300, bottom: 380, height: 80 });
+      }
+      return makeRect({ left: 591, right: 609, width: 18, top: 400, bottom: 418, height: 18 });
+    });
+
+    render(<HelpTip>Plenty of headroom.</HelpTip>);
+
+    // When: the tip opens
+    fireEvent.click(screen.getByRole("button", { name: "Help" }));
+
+    // Then: it uses the default placement above the trigger
+    expect(screen.getByRole("tooltip").getAttribute("data-placement")).toBe("top");
+  });
+
+  it("flips the bubble below the trigger when the fixed mobile menu button blocks the space above", () => {
+    // Given: a 360px-wide mobile viewport where the fixed hamburger button
+    // occupies the top-left corner and the trigger sits just beneath it — the
+    // exact situation where an upward bubble slid under the menu.
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 360 });
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 640 });
+    const menuButton = document.createElement("button");
+    menuButton.className = "mobile-menu-btn";
+    document.body.appendChild(menuButton);
+
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: Element,
+    ) {
+      if (this.classList.contains("mobile-menu-btn")) {
+        // Fixed hamburger: 40px square anchored 12px from the top.
+        return makeRect({ left: 12, right: 52, width: 40, top: 12, bottom: 52, height: 40 });
+      }
+      if (this.getAttribute("role") === "tooltip") {
+        return makeRect({ left: 50, right: 310, width: 260, top: 0, bottom: 80, height: 80 });
+      }
+      // The trigger sits in the page heading, only 70px down the screen.
+      return makeRect({ left: 171, right: 189, width: 18, top: 70, bottom: 88, height: 18 });
+    });
+
+    try {
+      render(<HelpTip>Explanation that has nowhere to go above the trigger.</HelpTip>);
+
+      // When: the user opens the tip
+      fireEvent.click(screen.getByRole("button", { name: "Help" }));
+
+      // Then: the bubble flips below the trigger so the menu never covers it
+      expect(screen.getByRole("tooltip").getAttribute("data-placement")).toBe("bottom");
+    } finally {
+      menuButton.remove();
+    }
+  });
 });

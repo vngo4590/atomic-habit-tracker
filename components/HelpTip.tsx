@@ -10,6 +10,39 @@ import styles from "./HelpTip.module.css";
 // "useLayoutEffect does nothing on the server" warning.
 const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
+/** Elements that are pinned to the top of the screen and would visually cover
+ *  an upward-opening popover. On mobile the navigation hamburger is fixed to
+ *  the top-left corner; on desktop it is `display: none` and reports no box. */
+const TOP_OBSTRUCTION_SELECTORS = [".mobile-menu-btn"];
+
+/**
+ * Returns the lowest pixel occupied by any fixed element at the top of the
+ * screen, i.e. the highest point an upward-opening popover may reach before it
+ * would disappear behind that element. Returns 0 when nothing is in the way.
+ */
+function obstructedTop(): number {
+  if (typeof document === "undefined") {
+    return 0;
+  }
+
+  let bottom = 0;
+  for (const selector of TOP_OBSTRUCTION_SELECTORS) {
+    for (const element of Array.from(document.querySelectorAll(selector))) {
+      const rect = element.getBoundingClientRect();
+      // A hidden element (desktop) has no box, so it obstructs nothing.
+      if (rect.width === 0 && rect.height === 0) {
+        continue;
+      }
+      // Only count elements anchored near the top of the viewport.
+      if (rect.top > window.innerHeight / 2) {
+        continue;
+      }
+      bottom = Math.max(bottom, rect.bottom);
+    }
+  }
+  return bottom;
+}
+
 /**
  * HelpTip — a small, reusable contextual help control.
  *
@@ -44,10 +77,18 @@ export function HelpTip({
   const popoverId = useId();
   const wrapperRef = useRef<HTMLSpanElement>(null);
   const popoverRef = useRef<HTMLSpanElement>(null);
-  // Horizontal correction (px) applied to the popover so it stays inside the
-  // viewport. 0 means "perfectly centred over the trigger"; a non-zero value
-  // nudges the bubble left/right when the trigger is close to a screen edge.
-  const [shift, setShift] = useState(0);
+  // Where the bubble sits relative to the trigger, and how far it is nudged
+  // sideways to stay on screen:
+  //   - `shift`: horizontal correction in px. 0 means "perfectly centred over
+  //     the trigger"; a non-zero value slides the bubble left/right when the
+  //     trigger is close to a screen edge.
+  //   - `placement`: "top" (the default, bubble above the trigger) flips to
+  //     "bottom" when there isn't enough clear room above — otherwise the
+  //     bubble would slide under the fixed mobile menu button or off-screen.
+  const [position, setPosition] = useState<{ shift: number; placement: "top" | "bottom" }>({
+    shift: 0,
+    placement: "top",
+  });
 
   // Close on Escape (from anywhere) and on any interaction outside the control.
   // Only wire these listeners while the popover is actually open.
@@ -75,11 +116,15 @@ export function HelpTip({
     };
   }, [open]);
 
-  // Keep the open popover inside the viewport. The bubble is centred over the
-  // trigger by default, but on a narrow (mobile) screen a trigger near the edge
-  // would push a centred bubble off-screen and clip its text. We measure the
-  // trigger's centre and the popover's width, then compute how far to nudge the
-  // bubble so both its edges stay within an 8px margin of the viewport.
+  // Keep the open popover inside the viewport. The bubble is centred above the
+  // trigger by default, but two things can push it out of view:
+  //   1. On a narrow (mobile) screen a trigger near a side edge would push a
+  //      centred bubble off-screen and clip its text -> we nudge it sideways.
+  //   2. A trigger near the top of the page has no room above it, so the bubble
+  //      would slide underneath the fixed mobile menu button (or off the top of
+  //      the screen) -> we flip it to sit below the trigger instead.
+  // We measure the trigger and the bubble on open (and on resize/scroll) and
+  // recompute both corrections together.
   useIsomorphicLayoutEffect(() => {
     if (!open) {
       return;
@@ -94,23 +139,43 @@ export function HelpTip({
 
       const margin = 8;
       const wrapperRect = wrapper.getBoundingClientRect();
-      // Width is unaffected by the translate transform, so this is the bubble's
-      // true rendered width regardless of any shift already applied.
-      const popoverWidth = popover.getBoundingClientRect().width;
+      // Width/height are unaffected by the translate transform, so these are the
+      // bubble's true rendered size regardless of any shift already applied.
+      const popoverRect = popover.getBoundingClientRect();
+      const popoverWidth = popoverRect.width;
+      const popoverHeight = popoverRect.height;
       const triggerCentre = wrapperRect.left + wrapperRect.width / 2;
       const halfWidth = popoverWidth / 2;
       const leftEdge = triggerCentre - halfWidth;
       const rightEdge = triggerCentre + halfWidth;
 
-      let next = 0;
+      let shift = 0;
       if (leftEdge < margin) {
         // Overflowing the left edge: nudge right just enough to clear the margin.
-        next = margin - leftEdge;
+        shift = margin - leftEdge;
       } else if (rightEdge > window.innerWidth - margin) {
         // Overflowing the right edge: nudge left just enough to clear the margin.
-        next = window.innerWidth - margin - rightEdge;
+        shift = window.innerWidth - margin - rightEdge;
       }
-      setShift(next);
+
+      // Anything fixed to the top of the screen (on mobile, the hamburger menu
+      // button) eats into the usable space above the trigger. Treat the bottom
+      // of that element as the real ceiling so the bubble is never hidden
+      // behind it.
+      const topBoundary = Math.max(margin, obstructedTop() + margin);
+      const roomAbove = wrapperRect.top - topBoundary;
+      const roomBelow = window.innerHeight - margin - wrapperRect.bottom;
+      const spaceNeeded = popoverHeight + margin;
+      // Prefer the default "above" placement; only flip below when the bubble
+      // genuinely does not fit above AND there is more room below.
+      const placement: "top" | "bottom" =
+        roomAbove < spaceNeeded && roomBelow > roomAbove ? "bottom" : "top";
+
+      setPosition((current) =>
+        current.shift === shift && current.placement === placement
+          ? current
+          : { shift, placement },
+      );
     };
 
     reposition();
@@ -141,10 +206,12 @@ export function HelpTip({
           id={popoverId}
           role="tooltip"
           className={styles.popover}
+          // Drives the CSS rule that puts the bubble above or below the trigger.
+          data-placement={position.placement}
           // Dynamic CSS-variable passthrough (allowed by our inline-style
           // policy): the module class owns all static styling; JS only feeds the
           // measured horizontal shift so the bubble stays inside the viewport.
-          style={{ "--tip-shift": `${shift}px` } as CSSProperties}
+          style={{ "--tip-shift": `${position.shift}px` } as CSSProperties}
         >
           {children}
         </span>
