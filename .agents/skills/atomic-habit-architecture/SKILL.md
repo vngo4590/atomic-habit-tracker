@@ -33,7 +33,7 @@ components/        # Reusable client UI components
   StackCardGroup.tsx  # Apple-Wallet stacked habit card group (Today page)
   StackDiagram.tsx    # Stack chain diagram (habit detail Stack tab)
   Modal.tsx           # Accessible blocking dialog
-features/          # Feature slices (ADR-0001): index.ts, actions.ts, contracts.ts, server.ts, model/, server/
+features/          # Feature slices (ADR-0001): index.ts (pure model only), actions.ts, contracts.ts (import via @/features/<x>/contracts — never re-export from index.ts, it bloats client JS), store.ts (client slice), server.ts, model/, server/
   habits/          # Habits, check-ins, notes/contract, formation verdicts, stack-link validator
   stacks/          # Habit stacks (linked list) model + repository
   reflection/      # Journal, weekly review, identity, lessons (server/ split by aggregate)

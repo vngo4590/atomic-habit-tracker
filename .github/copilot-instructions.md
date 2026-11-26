@@ -52,7 +52,7 @@ Backend/deployment architecture notes live in `docs/architecture/backend-auth-mo
 
 ### Key Directories
 
-- `features/<name>/` — feature slices (`habits`, `stacks`, `reflection`, `settings`, `pet`) per ADR-0001: `index.ts` (client-safe API), `actions.ts`, `contracts.ts`, `server.ts` + `server/` repositories, `model/` pure logic.
+- `features/<name>/` — feature slices (`habits`, `stacks`, `reflection`, `settings`, `pet`) per ADR-0001: `index.ts` (client-safe API), `actions.ts`, `contracts.ts`, `server.ts` + `server/` repositories, `model/` pure logic. Import Zod schemas via `@/features/<name>/contracts`; never re-export contracts from `index.ts` (it drags Zod into every client bundle — check with `npm run bundle:report`).
 - `lib/repositories/` — remaining shared Prisma data access (auth users).
 - `lib/actions/` — Server actions that validate via contracts and call repositories.
 - `lib/contracts/` — Zod schemas for action inputs.
