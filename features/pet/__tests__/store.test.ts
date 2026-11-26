@@ -5,7 +5,7 @@ import { adoptPetAction, feedPetAction } from "@/features/pet/actions";
 import { useStore } from "@/lib/store";
 import type { Pet, StoreSnapshot } from "@/lib/types";
 
-import { makeLocalStorageMock } from "./_store-test-helpers";
+import { makeLocalStorageMock } from "@/lib/store/__tests__/store-test-helpers";
 
 /**
  * Store-level tests for the pet ecosystem callbacks. These guard two bugs the

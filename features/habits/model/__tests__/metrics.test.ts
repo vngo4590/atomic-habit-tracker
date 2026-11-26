@@ -4,7 +4,7 @@ import { dateAdd, todayKey } from "@/lib/helpers";
 import { completionRate, longestStreak, streak } from "../metrics";
 import type { Habit } from "@/lib/types";
 
-import { makeStoreTestHabit as makeHabit } from "@/lib/__tests__/_store-test-helpers";
+import { makeStoreTestHabit as makeHabit } from "@/lib/store/__tests__/store-test-helpers";
 
 // Pin today to a Wednesday so schedule-aware streak tests are deterministic.
 vi.mock("@/lib/helpers", async () => {

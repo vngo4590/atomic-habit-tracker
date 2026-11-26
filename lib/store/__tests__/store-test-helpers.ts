@@ -1,13 +1,14 @@
 /**
- * Shared test setup for the split store tests.
+ * Shared test setup for the split client-store tests.
  *
- * Used by sibling files (store.mutations.test.ts,
- * features/habits/model/__tests__/metrics.test.ts). Each split file installs
+ * Used by the store tests under features/<name>/__tests__/store*.test.ts
+ * and features/habits/model/__tests__/metrics.test.ts. Each test file installs
  * its own vi.mock for @/lib/helpers (to pin todayKey to a Wednesday so
  * schedule-aware streak tests are deterministic) and the server-action
  * modules (@/features/habits/actions, @/features/stacks/actions,
- * @/features/reflection/actions, @/features/settings/actions) to keep the
- * unit tests free of any real server-action work.
+ * @/features/reflection/actions, @/features/settings/actions,
+ * @/features/pet/actions) to keep the unit tests free of any real
+ * server-action work.
  *
  * Mock functions live as plain module exports (not vi.hoisted) so they
  * can be re-exported safely; vi.mock factory closures evaluate lazily.
@@ -59,3 +60,4 @@ export function makeLocalStorageMock() {
     clear: vi.fn(() => map.clear()),
   };
 }
+
