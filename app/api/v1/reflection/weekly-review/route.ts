@@ -1,5 +1,5 @@
 import { handleApiError, jsonError, jsonOk, readJson, withApiUser } from "@/lib/api/http";
-import { weeklyReviewSchema } from "@/features/reflection";
+import { weeklyReviewSchema } from "@/features/reflection/contracts";
 import { logger } from "@/lib/logger";
 import { getWeeklyReview, saveWeeklyReview } from "@/features/reflection/server";
 

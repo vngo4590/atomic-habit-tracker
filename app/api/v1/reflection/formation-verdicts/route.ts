@@ -1,5 +1,5 @@
 import { handleApiError, jsonError, jsonOk, readJson, withApiUser } from "@/lib/api/http";
-import { formationVerdictSchema } from "@/features/habits";
+import { formationVerdictSchema } from "@/features/habits/contracts";
 import { logger } from "@/lib/logger";
 import { listFormationVerdicts, saveFormationVerdict } from "@/features/habits/server";
 

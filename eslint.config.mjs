@@ -18,8 +18,8 @@ const eslintConfig = defineConfig([
         {
           patterns: [
             {
-              group: ["@/features/*/*", "@/features/*/*/**", "!@/features/*/actions", "!@/features/*/server", "!@/features/*/store"],
-              message: "Import a feature through '@/features/<name>', '/actions', '/server' or '/store' only.",
+              group: ["@/features/*/*", "@/features/*/*/**", "!@/features/*/actions", "!@/features/*/server", "!@/features/*/store", "!@/features/*/contracts"],
+              message: "Import a feature through '@/features/<name>', '/actions', '/server', '/store' or '/contracts' only.",
             },
           ],
         },
@@ -39,7 +39,7 @@ const eslintConfig = defineConfig([
             { name: "server-only", message: "model/ is pure: no server-only code." },
           ],
           patterns: [
-            { group: ["@/features/*/*", "@/features/*/*/**", "!@/features/*/actions", "!@/features/*/server"], message: "Use the feature's public API." },
+            { group: ["@/features/*/*", "@/features/*/*/**", "!@/features/*/actions", "!@/features/*/server", "!@/features/*/contracts"], message: "Use the feature's public API." },
             { group: ["@/lib/db/**", "@/lib/repositories/**", "@/lib/generated/**", "**/server/**", "@/features/*/server", "@/features/*/actions", "**/actions"], message: "model/ is pure: no I/O." },
           ],
         },

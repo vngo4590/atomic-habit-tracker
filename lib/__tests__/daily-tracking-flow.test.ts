@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { checkInSchema } from "@/features/habits";
+import { checkInSchema } from "@/features/habits/contracts";
 import { todayKey } from "@/lib/helpers";
 import { logCheckInAction, toggleHabitAction } from "@/features/habits/actions";
 import { testHabit } from "@/lib/test/fixtures";

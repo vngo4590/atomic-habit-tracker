@@ -1,5 +1,5 @@
 import { handleApiError, jsonError, jsonOk, readJson, withApiUser } from "@/lib/api/http";
-import { checkInSchema } from "@/features/habits";
+import { checkInSchema } from "@/features/habits/contracts";
 import { logger } from "@/lib/logger";
 import { upsertCheckIn } from "@/features/habits/server";
 

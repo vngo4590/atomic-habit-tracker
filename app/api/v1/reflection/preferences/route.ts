@@ -1,5 +1,5 @@
 import { handleApiError, jsonOk, readJson, withApiUser } from "@/lib/api/http";
-import { preferencesSchema } from "@/features/settings";
+import { preferencesSchema } from "@/features/settings/contracts";
 import { logger } from "@/lib/logger";
 import { getPreferences, savePreferences } from "@/features/settings/server";
 

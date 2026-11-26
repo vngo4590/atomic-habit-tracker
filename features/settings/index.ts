@@ -1,11 +1,11 @@
 /**
  * Settings feature — client-safe public API.
  *
- * The preferences and backup validation schemas plus the pure backup
- * builder (`buildBackup`). Database code lives behind
+ * The pure backup builder (`buildBackup`). Zod schemas live behind
+ * `@/features/settings/contracts` so client bundles never pull in Zod.
+ * Database code lives behind
  * `@/features/settings/server` and server actions behind
  * `@/features/settings/actions`.
  */
 
-export * from "./contracts";
 export * from "./model/backup-export";

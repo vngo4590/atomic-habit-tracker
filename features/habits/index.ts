@@ -12,4 +12,3 @@ export * from "./model/habit-cap";
 export * from "./model/habit-sentence";
 export * from "./model/metrics";
 export * from "./model/schedule";
-export * from "./contracts";

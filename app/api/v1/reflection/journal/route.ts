@@ -1,5 +1,5 @@
 import { handleApiError, jsonOk, readJson, withApiUser } from "@/lib/api/http";
-import { journalEntrySchema } from "@/features/reflection";
+import { journalEntrySchema } from "@/features/reflection/contracts";
 import { logger } from "@/lib/logger";
 import { createJournalEntry, listJournalEntries } from "@/features/reflection/server";
 

@@ -1,5 +1,5 @@
 import { handleApiError, jsonOk, readJson, withApiUser } from "@/lib/api/http";
-import { identitySchema } from "@/features/reflection";
+import { identitySchema } from "@/features/reflection/contracts";
 import { logger } from "@/lib/logger";
 import { getIdentity, saveIdentity } from "@/features/reflection/server";
 

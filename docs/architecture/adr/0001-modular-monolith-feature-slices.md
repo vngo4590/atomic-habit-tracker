@@ -39,10 +39,10 @@ features/<domain>/    habits | stacks | reflection | settings | pet
   model/              pure domain logic (no React, no Prisma, no I/O)
   server/             repositories ("server-only")
   ui/                 feature components + CSS Modules + tests
-  contracts.ts        Zod schemas shared by client, actions and /api/v1
+  contracts.ts        Zod schemas used by actions, /api/v1 and forms
   actions.ts          "use server" actions (safe to import from client code)
-  store.ts            the feature's slice of the client cache
-  index.ts            client-safe public API (model, contracts, store, ui)
+  store.ts            the feature's slice of the client cache (client-only)
+  index.ts            client-safe public API (pure model only)
   server.ts           server-only public API (repositories) for routes/layouts
 components/ui/        design-system primitives (Button, Card, Sheet, ...)
 components/           app-shell components (Nav, StoreProvider, Toast, ...)
@@ -53,6 +53,12 @@ Each feature has exactly three public entry points: `index.ts` (client-safe),
 `actions.ts` (server actions callable from the client) and `server.ts`
 (server-only data access). This split guarantees database code never reaches
 a browser bundle.
+
+Amendment (Phase B3): two more entry points were added. `store.ts` is the
+client-only cache slice composed by `lib/store`. `contracts.ts` is imported
+directly as `@/features/<x>/contracts` and is **not** re-exported from
+`index.ts`: Zod schemas are built at module load, so bundlers cannot
+tree-shake them, and re-exporting them added ~64 KB gz to every route.
 
 Dependency direction is one-way: `app -> features -> lib`. A feature may use
 another feature only through those entry points. `model/` stays pure so it can

@@ -5,14 +5,14 @@ import {
   formationVerdictSchema,
   habitCreateSchema,
   habitUpdateSchema,
-} from "@/features/habits";
+} from "@/features/habits/contracts";
 import {
   identitySchema,
   journalEntrySchema,
   lessonProgressSchema,
   weeklyReviewSchema,
-} from "@/features/reflection";
-import { preferencesSchema } from "@/features/settings";
+} from "@/features/reflection/contracts";
+import { preferencesSchema } from "@/features/settings/contracts";
 
 describe("domain validation contracts", () => {
   it("validates habit and check-in inputs", () => {

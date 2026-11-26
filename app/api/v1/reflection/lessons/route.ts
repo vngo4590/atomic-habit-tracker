@@ -1,6 +1,6 @@
 import { handleApiError, jsonOk, readJson, withApiUser } from "@/lib/api/http";
-import { lessonProgressSchema } from "@/features/reflection";
-import { preferencesSchema } from "@/features/settings";
+import { lessonProgressSchema } from "@/features/reflection/contracts";
+import { preferencesSchema } from "@/features/settings/contracts";
 import { logger } from "@/lib/logger";
 import {
   listCompletedLessons,

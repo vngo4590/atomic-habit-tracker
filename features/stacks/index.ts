@@ -7,6 +7,5 @@
  * `@/features/stacks/actions`.
  */
 
-export * from "./contracts";
 export * from "./model/stack";
 export * from "./model/stack-errors";
