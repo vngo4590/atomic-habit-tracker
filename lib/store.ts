@@ -2,25 +2,20 @@
 
 import { useCallback, useMemo, useState } from "react";
 
-import { savePreferencesAction } from "@/features/settings/actions";
 import { adoptPetAction, buryPetAction, deletePetAction, feedPetAction } from "@/features/pet/actions";
 import { useReflectionSlice } from "@/features/reflection/store";
+import { useSettingsSlice } from "@/features/settings/store";
 import { useStacksSlice } from "@/features/stacks/store";
 import { completionRate, longestStreak, streak } from "@/features/habits";
 import { useHabitsSlice } from "@/features/habits/store";
 import { clientLogger } from "@/lib/logger-client";
 import { useToast } from "@/lib/store/toast";
 import { MAX_ALIVE_PETS, feedVitals, simulatePet, tuningFor } from "@/features/pet";
-import type { Pet, PetDraft, StoreSnapshot, StoreState, UserPreferences } from "@/lib/types";
+import type { Pet, PetDraft, StoreSnapshot, StoreState } from "@/lib/types";
 
 /** Reduce repeated unknown-error handling to a safe, non-sensitive message. */
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Unexpected error.";
-}
-
-/** Report which allowlisted fields are changing without logging their values. */
-function changedFields(patch: object) {
-  return Object.keys(patch).sort();
 }
 
 // Habit metrics now live in the habits feature (`features/habits/model/metrics.ts`).
@@ -62,54 +57,9 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
   const habitsSlice = useHabitsSlice(backendSnapshot, showToast);
   const stacksSlice = useStacksSlice(habitsSlice.setHabits);
   const reflectionSlice = useReflectionSlice(backendSnapshot);
-  const [lessonModeState, setLessonModeState] = useState(backendSnapshot.preferences.lessonMode);
-  const [preferences, setPreferencesState] = useState<UserPreferences>(backendSnapshot.preferences);
+  const settingsSlice = useSettingsSlice(backendSnapshot);
   const [pets, setPets] = useState<Pet[]>(backendSnapshot.pets ?? []);
   const [petFeedsUsedToday, setPetFeedsUsedToday] = useState<number>(backendSnapshot.petFeedsUsedToday ?? 0);
-
-  const setLessonMode = useCallback((lessonMode: UserPreferences["lessonMode"]) => {
-    setLessonModeState(lessonMode);
-    setPreferencesState((current) => ({ ...current, lessonMode }));
-    clientLogger.info("Setting lesson mode", {
-      event: "store.preferences.lesson_mode",
-      lessonMode,
-    });
-    void savePreferencesAction({ lessonMode })
-      .then((saved) => {
-        setPreferencesState(saved);
-        setLessonModeState(saved.lessonMode);
-      })
-      .catch((error: unknown) => {
-        clientLogger.warn("Lesson mode save failed", {
-          event: "store.preferences.lesson_mode_failed",
-          lessonMode,
-          message: errorMessage(error),
-        });
-      });
-  }, []);
-
-  const setPreferences = useCallback((patch: Partial<UserPreferences>) => {
-    setPreferencesState((current) => ({ ...current, ...patch }));
-    if (patch.lessonMode) {
-      setLessonModeState(patch.lessonMode);
-    }
-    clientLogger.info("Saving preferences", {
-      event: "store.preferences.save",
-      fields: changedFields(patch),
-    });
-    void savePreferencesAction(patch)
-      .then((saved) => {
-        setPreferencesState(saved);
-        setLessonModeState(saved.lessonMode);
-      })
-      .catch((error: unknown) => {
-        clientLogger.warn("Preferences save failed", {
-          event: "store.preferences.save_failed",
-          fields: changedFields(patch),
-          message: errorMessage(error),
-        });
-      });
-  }, []);
 
   /**
    * Adopt a new pet from a chosen temperament. The server seeds the unique
@@ -285,10 +235,7 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
       ...habitsSlice,
       ...stacksSlice,
       ...reflectionSlice,
-      lessonMode: lessonModeState,
-      setLessonMode,
-      preferences,
-      setPreferences,
+      ...settingsSlice,
       pets,
       petFeedsUsedToday,
       adoptPet,
@@ -305,10 +252,7 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
       habitsSlice,
       stacksSlice,
       reflectionSlice,
-      lessonModeState,
-      preferences,
-      setLessonMode,
-      setPreferences,
+      settingsSlice,
       showToast,
       toast,
       pets,
