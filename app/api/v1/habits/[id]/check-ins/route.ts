@@ -1,7 +1,7 @@
 import { handleApiError, jsonError, jsonOk, readJson, withApiUser } from "@/lib/api/http";
 import { checkInSchema } from "@/features/habits";
 import { logger } from "@/lib/logger";
-import { upsertCheckIn } from "@/lib/repositories/habits";
+import { upsertCheckIn } from "@/features/habits/server";
 
 const log = logger.child({ module: "api.v1.habits.check-ins" });
 

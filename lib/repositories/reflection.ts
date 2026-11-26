@@ -2,7 +2,7 @@ import "server-only";
 
 import { db as defaultDb } from "@/lib/db/client";
 import { validateDatabaseUrl } from "@/lib/db/config";
-import { formationVerdictSchema } from "@/features/habits";
+import { listFormationVerdicts, listHabits } from "@/features/habits/server";
 import {
   identitySchema,
   journalEntrySchema,
@@ -14,11 +14,9 @@ import {
   type WeeklyReviewInput,
 } from "@/lib/contracts/domain";
 import { logger, redactUserId } from "@/lib/logger";
-import { listHabits } from "@/lib/repositories/habits";
 import { countFeedsUsedToday, listPets } from "@/lib/repositories/pets";
 import { todayKey } from "@/lib/helpers";
 import type {
-  FormationVerdict,
   Identity,
   JournalEntry,
   StoreSnapshot,
@@ -90,22 +88,6 @@ function toPreferences(record: Partial<UserPreferences> | null | undefined): Use
   return {
     ...defaultPreferences,
     ...record,
-  };
-}
-
-function toFormationVerdict(record: {
-  habitId: string;
-  score: number;
-  reflection: string;
-  decision: string;
-  reviewedAt: Date;
-}): FormationVerdict {
-  return {
-    habitId: record.habitId,
-    score: record.score,
-    reflection: record.reflection,
-    formed: record.decision === "formed",
-    reviewedAt: record.reviewedAt.toISOString(),
   };
 }
 
@@ -348,53 +330,6 @@ export async function savePreferences(userId: string, input: PreferencesInput, d
     lessonMode: record.lessonMode,
     timezone: record.timezone,
   });
-}
-
-export async function listFormationVerdicts(userId: string, db: DbClient = defaultDb) {
-  log.debug("Listing formation verdicts", { event: "repo.formationVerdict.list", userId: redactUserId(userId) });
-  validateDatabaseUrl();
-
-  const records = await db.formationVerdict.findMany({
-    where: { userId },
-    orderBy: { reviewedAt: "desc" },
-  });
-
-  return records.map(toFormationVerdict);
-}
-
-export async function saveFormationVerdict(userId: string, input: FormationVerdict, db: DbClient = defaultDb) {
-  log.debug("Saving formation verdict", {
-    event: "repo.formationVerdict.save",
-    userId: redactUserId(userId),
-    habitId: input.habitId,
-  });
-  validateDatabaseUrl();
-  const data = formationVerdictSchema.parse(input);
-  const habit = await db.habit.findFirst({ where: { id: data.habitId, userId } });
-
-  if (!habit) {
-    return null;
-  }
-
-  const record = await db.formationVerdict.upsert({
-    where: { habitId: data.habitId },
-    create: {
-      userId,
-      habitId: data.habitId,
-      score: data.score,
-      reflection: data.reflection,
-      decision: data.formed ? "formed" : "keep_practicing",
-      reviewedAt: data.reviewedAt ? new Date(data.reviewedAt) : new Date(),
-    },
-    update: {
-      score: data.score,
-      reflection: data.reflection,
-      decision: data.formed ? "formed" : "keep_practicing",
-      reviewedAt: data.reviewedAt ? new Date(data.reviewedAt) : new Date(),
-    },
-  });
-
-  return toFormationVerdict(record);
 }
 
 export async function getStoreSnapshot(userId: string, weekStartKey: string, db: DbClient = defaultDb): Promise<StoreSnapshot> {

@@ -1,7 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { addNote, archiveHabit, createHabit, getHabit, listHabits, saveContract, updateHabit, upsertCheckIn } from "@/lib/repositories/habits";
-import { saveFormationVerdict } from "@/lib/repositories/reflection";
+import {
+  addNote,
+  archiveHabit,
+  createHabit,
+  getHabit,
+  listHabits,
+  saveContract,
+  saveFormationVerdict,
+  updateHabit,
+  upsertCheckIn,
+} from "@/features/habits/server";
 
 const habitRecord = {
   id: "habit_b",

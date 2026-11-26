@@ -8,14 +8,14 @@ import {
   createHabit,
   archiveHabit,
   updateHabit,
+  saveFormationVerdict as saveFormationVerdictRecord,
   upsertCheckIn,
-  applyStackMutation,
   type CreateHabitResult,
-} from "@/lib/repositories/habits";
+} from "@/features/habits/server";
+import { applyStackMutation } from "@/features/stacks/server";
 import {
   createJournalEntry,
   markLessonComplete,
-  saveFormationVerdict as saveFormationVerdictRecord,
   saveIdentity,
   savePreferences,
   saveWeeklyReview,

@@ -7,18 +7,20 @@ import {
   getStoreSnapshot,
   getWeeklyReview,
   listCompletedLessons,
-  listFormationVerdicts,
   listJournalEntries,
   listWeeklyReviews,
   markLessonComplete,
-  saveFormationVerdict,
   saveIdentity,
   savePreferences,
   saveWeeklyReview,
   updateJournalEntry,
 } from "@/lib/repositories/reflection";
+import { listFormationVerdicts, saveFormationVerdict } from "@/features/habits/server";
 
-vi.mock("@/lib/repositories/habits", () => ({
+// Only `listHabits` is stubbed; the real formation-verdict repository is kept so
+// its mapping is still exercised (it moved to the habits feature).
+vi.mock("@/features/habits/server", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/features/habits/server")>()),
   listHabits: vi.fn(async () => [{ id: "habit_1", name: "Read" }]),
 }));
 

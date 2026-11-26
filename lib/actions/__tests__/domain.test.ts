@@ -30,12 +30,17 @@ vi.mock("@/lib/auth/session", () => ({
   requireUserId: mocks.requireUserId,
 }));
 
-vi.mock("@/lib/repositories/habits", () => ({
+vi.mock("@/features/habits/server", () => ({
   createHabit: mocks.createHabit,
   updateHabit: mocks.updateHabit,
   archiveHabit: mocks.archiveHabit,
   upsertCheckIn: mocks.upsertCheckIn,
   getHabit: mocks.getHabit,
+  saveFormationVerdict: mocks.saveFormationVerdictRecord,
+}));
+
+vi.mock("@/features/stacks/server", () => ({
+  applyStackMutation: vi.fn(),
 }));
 
 vi.mock("@/lib/db/client", () => ({
@@ -50,7 +55,6 @@ vi.mock("@/lib/db/client", () => ({
 vi.mock("@/lib/repositories/reflection", () => ({
   createJournalEntry: mocks.createJournalEntry,
   markLessonComplete: mocks.markLessonComplete,
-  saveFormationVerdict: mocks.saveFormationVerdictRecord,
   saveIdentity: mocks.saveIdentity,
   savePreferences: mocks.savePreferences,
   saveWeeklyReview: mocks.saveWeeklyReview,

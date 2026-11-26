@@ -17,16 +17,17 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("@/lib/auth/session", () => ({ requireUserId: mocks.requireUserId }));
-vi.mock("@/lib/repositories/habits", () => ({
+vi.mock("@/features/habits/server", () => ({
   createHabit: mocks.createHabit,
   updateHabit: mocks.updateHabit,
   archiveHabit: mocks.archiveHabit,
   upsertCheckIn: mocks.upsertCheckIn,
+  saveFormationVerdict: vi.fn(),
 }));
+vi.mock("@/features/stacks/server", () => ({ applyStackMutation: vi.fn() }));
 vi.mock("@/lib/repositories/reflection", () => ({
   createJournalEntry: vi.fn(),
   markLessonComplete: vi.fn(),
-  saveFormationVerdict: vi.fn(),
   saveIdentity: vi.fn(),
   savePreferences: vi.fn(),
   saveWeeklyReview: vi.fn(),

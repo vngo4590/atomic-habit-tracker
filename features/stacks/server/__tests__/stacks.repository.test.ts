@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { applyStackMutation } from "@/lib/repositories/habits";
+import { applyStackMutation } from "@/features/stacks/server";
 import { isStackError } from "@/features/stacks";
 
 /**

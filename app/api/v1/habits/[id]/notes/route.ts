@@ -1,7 +1,7 @@
 import { handleApiError, jsonError, jsonOk, readJson, withApiUser } from "@/lib/api/http";
 import { habitUpdateSchema } from "@/features/habits";
 import { logger } from "@/lib/logger";
-import { updateHabit } from "@/lib/repositories/habits";
+import { updateHabit } from "@/features/habits/server";
 
 const log = logger.child({ module: "api.v1.habits.notes" });
 
