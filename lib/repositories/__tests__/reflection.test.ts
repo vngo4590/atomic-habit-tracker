@@ -4,7 +4,6 @@ import {
   createJournalEntry,
   getIdentity,
   getPreferences,
-  getStoreSnapshot,
   getWeeklyReview,
   listCompletedLessons,
   listJournalEntries,
@@ -174,38 +173,5 @@ describe("reflection repositories", () => {
       where: { habitId: "habit_1" },
       create: expect.objectContaining({ userId: "user_1", decision: "formed" }),
     }));
-  });
-
-  it("builds a store snapshot from all user-scoped reflection sources", async () => {
-    const db = {
-      journalEntry: { findMany: vi.fn(async () => []) },
-      identityProfile: { upsert: vi.fn(async () => ({ statement: "I show up", values: [] })) },
-      weeklyReview: {
-        findUnique: vi.fn(async () => null),
-        findMany: vi.fn(async () => []),
-      },
-      lessonProgress: { findMany: vi.fn(async () => [{ lessonId: 2 }]) },
-      formationVerdict: { findMany: vi.fn(async () => []) },
-      pet: { findMany: vi.fn(async () => []) },
-      petFeedLog: { aggregate: vi.fn(async () => ({ _sum: { amount: null } })) },
-      userPreference: {
-        upsert: vi.fn(async () => ({
-          theme: "light",
-          accentHue: 60,
-          remindersEnabled: true,
-          weeklyReviewNudge: true,
-          accountabilityNudge: false,
-          onboardingSeen: false,
-          lessonMode: "sequential",
-          timezone: "UTC",
-        })),
-      },
-    };
-
-    await expect(getStoreSnapshot("user_1", "2030-01-01", db as never)).resolves.toMatchObject({
-      habits: [{ id: "habit_1" }],
-      completedLessons: [2],
-      identity: { statement: "I show up" },
-    });
   });
 });

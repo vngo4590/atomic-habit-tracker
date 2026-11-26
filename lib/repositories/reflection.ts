@@ -2,7 +2,6 @@ import "server-only";
 
 import { db as defaultDb } from "@/lib/db/client";
 import { validateDatabaseUrl } from "@/lib/db/config";
-import { listFormationVerdicts, listHabits } from "@/features/habits/server";
 import {
   identitySchema,
   journalEntrySchema,
@@ -14,12 +13,9 @@ import {
   type WeeklyReviewInput,
 } from "@/lib/contracts/domain";
 import { logger, redactUserId } from "@/lib/logger";
-import { countFeedsUsedToday, listPets } from "@/features/pet/server";
-import { todayKey } from "@/lib/helpers";
 import type {
   Identity,
   JournalEntry,
-  StoreSnapshot,
   UserPreferences,
   WeeklyReview,
   WeeklyReviewAnswers,
@@ -326,46 +322,6 @@ export async function savePreferences(userId: string, input: PreferencesInput, d
     lessonMode: record.lessonMode,
     timezone: record.timezone,
   });
-}
-
-export async function getStoreSnapshot(userId: string, weekStartKey: string, db: DbClient = defaultDb): Promise<StoreSnapshot> {
-  log.debug("Getting store snapshot", {
-    event: "repo.snapshot.get",
-    userId: redactUserId(userId),
-    weekStartKey,
-  });
-  validateDatabaseUrl();
-
-  // The pet ecosystem decays in real time and is funded by today's habit
-  // completions, so we load it against "now" and today's date key.
-  const now = Date.now();
-  const petsDateKey = todayKey();
-
-  const [habits, journal, identity, weeklyReview, weeklyReviews, completedLessons, formationVerdicts, preferences, pets, petFeedsUsedToday] = await Promise.all([
-    listHabits(userId, db),
-    listJournalEntries(userId, db),
-    getIdentity(userId, db),
-    getWeeklyReview(userId, weekStartKey, db),
-    listWeeklyReviews(userId, db),
-    listCompletedLessons(userId, db),
-    listFormationVerdicts(userId, db),
-    getPreferences(userId, db),
-    listPets(userId, now, db),
-    countFeedsUsedToday(userId, petsDateKey, db),
-  ]);
-
-  return {
-    habits,
-    journal,
-    identity,
-    weeklyReview,
-    weeklyReviews,
-    completedLessons,
-    formationVerdicts,
-    preferences,
-    pets,
-    petFeedsUsedToday,
-  };
 }
 
 export { defaultPreferences };

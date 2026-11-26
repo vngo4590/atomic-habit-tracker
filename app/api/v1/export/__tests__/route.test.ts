@@ -19,7 +19,7 @@ vi.mock("@/auth", () => ({ auth: mocks.auth }));
 
 vi.mock("@/lib/repositories/users", () => ({ findAuthUserById: mocks.findAuthUserById }));
 
-vi.mock("@/lib/repositories/reflection", () => ({ getStoreSnapshot: mocks.getStoreSnapshot }));
+vi.mock("@/lib/server/store-snapshot", () => ({ getStoreSnapshot: mocks.getStoreSnapshot }));
 
 function snapshot(): StoreSnapshot {
   return {
