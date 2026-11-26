@@ -11,7 +11,7 @@ import {
   type CheckInInput,
   type HabitCreateInput,
   type HabitUpdateInput,
-} from "@/lib/contracts/domain";
+} from "@/features/habits";
 import { logger, redactUserId } from "@/lib/logger";
 import { MAX_ACTIVE_HABITS } from "@/features/habits";
 import {

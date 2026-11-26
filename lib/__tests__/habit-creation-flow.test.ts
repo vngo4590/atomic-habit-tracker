@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { habitCreateSchema } from "@/lib/contracts/domain";
+import { habitCreateSchema } from "@/features/habits";
 import { createHabitAction } from "@/lib/actions/domain";
 import { testHabit } from "@/lib/test/fixtures";
 import { useStore } from "@/lib/store";

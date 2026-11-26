@@ -5,6 +5,8 @@ import {
   formationVerdictSchema,
   habitCreateSchema,
   habitUpdateSchema,
+} from "@/features/habits";
+import {
   identitySchema,
   journalEntrySchema,
   lessonProgressSchema,

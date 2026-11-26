@@ -2,8 +2,8 @@ import "server-only";
 
 import { db as defaultDb } from "@/lib/db/client";
 import { validateDatabaseUrl } from "@/lib/db/config";
+import { formationVerdictSchema } from "@/features/habits";
 import {
-  formationVerdictSchema,
   identitySchema,
   journalEntrySchema,
   lessonProgressSchema,

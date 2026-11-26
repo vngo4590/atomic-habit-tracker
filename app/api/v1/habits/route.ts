@@ -1,5 +1,5 @@
 import { handleApiError, jsonError, jsonOk, readJson, withApiUser } from "@/lib/api/http";
-import { habitCreateSchema } from "@/lib/contracts/domain";
+import { habitCreateSchema } from "@/features/habits";
 import { logger } from "@/lib/logger";
 import { createHabit, listHabits } from "@/lib/repositories/habits";
 
