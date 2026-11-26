@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 
 import { IconCheck } from "@/components/Icons";
 import { getChainFrom } from "@/features/stacks";
-import { completionRate } from "@/lib/store";
+import { completionRate } from "@/features/habits";
 import type { Habit } from "@/lib/types";
 
 import styles from "./StackCardGroup.module.css";

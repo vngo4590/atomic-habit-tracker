@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { dateAdd, todayKey } from "@/lib/helpers";
-import { completionRate, longestStreak, streak } from "@/lib/store";
+import { completionRate, longestStreak, streak } from "@/features/habits";
 import type { Habit } from "@/lib/types";
 
 // Prevent next-auth / next/server from loading through the store → action chain

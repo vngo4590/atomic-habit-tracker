@@ -1,7 +1,8 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { useStore, streak, longestStreak } from "@/lib/store";
+import { longestStreak, streak } from "@/features/habits";
+import { useStore } from "@/lib/store";
 import { testHabit, testPreferences } from "@/lib/test/fixtures";
 import { makeSnapshot, installUserFlowMocksHook } from "./_user-flow-helpers";
 
