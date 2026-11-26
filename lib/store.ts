@@ -4,14 +4,6 @@ import { useCallback, useMemo, useRef, useState } from "react";
 
 import { applyStackMutationAction } from "@/features/stacks/actions";
 import {
-  createHabitAction,
-  deleteHabitAction,
-  logCheckInAction,
-  saveFormationVerdictAction,
-  toggleHabitAction,
-  updateHabitAction,
-} from "@/features/habits/actions";
-import {
   createJournalEntryAction,
   markLessonReadAction,
   saveIdentityAction,
@@ -26,58 +18,24 @@ import {
   stackReorderPatches as stackReorderPatchesHelper,
   type StackMutationInput,
 } from "@/features/stacks";
-import { completionRate, longestStreak, MAX_ACTIVE_HABITS, streak } from "@/features/habits";
+import { completionRate, longestStreak, streak } from "@/features/habits";
+import { useHabitsSlice } from "@/features/habits/store";
 import { todayKey } from "@/lib/helpers";
 import { clientLogger } from "@/lib/logger-client";
-import { optimistic } from "@/lib/store/optimistic";
+import { useToast } from "@/lib/store/toast";
 import { MAX_ALIVE_PETS, feedVitals, simulatePet, tuningFor } from "@/features/pet";
 import type {
-  CheckIn,
-  FormationVerdict,
   Habit,
-  HabitDraft,
   Identity,
   JournalEntry,
   Pet,
   PetDraft,
   StoreSnapshot,
   StoreState,
-  ToastState,
   UserPreferences,
   WeeklyReview,
   WeeklyReviewAnswers,
 } from "@/lib/types";
-
-function isCheckIn(value: Habit["history"][string]): value is CheckIn {
-  return typeof value === "object" && value !== null;
-}
-
-function isDone(value: Habit["history"][string] | undefined) {
-  return Boolean(value);
-}
-
-function normalizeDraft(draft: HabitDraft): Omit<Habit, "id" | "history" | "notes" | "createdAt"> {
-  return {
-    name: draft.name,
-    emoji: draft.emoji ?? "•",
-    cue: draft.cue ?? "",
-    craving: draft.craving ?? "",
-    response: draft.response ?? "",
-    reward: draft.reward ?? "",
-    loopCue: draft.loopCue ?? draft.cue ?? "",
-    loopCraving: draft.loopCraving ?? draft.craving ?? "",
-    loopResponse: draft.loopResponse ?? draft.response ?? "",
-    loopReward: draft.loopReward ?? draft.reward ?? "",
-    twoMin: draft.twoMin ?? "",
-    identity: draft.identity,
-    environment: draft.environment ?? "",
-    schedule: draft.schedule ?? "Daily",
-    time: draft.time ?? "Morning",
-    stackNextId: draft.stackNextId ?? null,
-    contract: draft.contract ?? "",
-    contractPartners: draft.contractPartners ?? [],
-  };
-}
 
 /** Reduce repeated unknown-error handling to a safe, non-sensitive message. */
 function errorMessage(error: unknown) {
@@ -124,7 +82,9 @@ export const defaultSnapshot: StoreSnapshot = {
 };
 
 export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): StoreState {
-  const [habits, setHabits] = useState<Habit[]>(backendSnapshot.habits);
+  const { toast, showToast } = useToast();
+  const habitsSlice = useHabitsSlice(backendSnapshot, showToast);
+  const { setHabits } = habitsSlice;
   const [journal, setJournal] = useState<JournalEntry[]>(backendSnapshot.journal);
   const [identity, setIdentityState] = useState<Identity>(backendSnapshot.identity);
   const [weeklyReview, setWeeklyReviewState] = useState<WeeklyReviewAnswers>(backendSnapshot.weeklyReview);
@@ -133,258 +93,12 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
     () => new Set(backendSnapshot.completedLessons),
   );
   const [lessonModeState, setLessonModeState] = useState(backendSnapshot.preferences.lessonMode);
-  const [formationVerdicts, setFormationVerdicts] = useState<FormationVerdict[]>(
-    backendSnapshot.formationVerdicts,
-  );
   const [preferences, setPreferencesState] = useState<UserPreferences>(backendSnapshot.preferences);
   const [pets, setPets] = useState<Pet[]>(backendSnapshot.pets ?? []);
   const [petFeedsUsedToday, setPetFeedsUsedToday] = useState<number>(backendSnapshot.petFeedsUsedToday ?? 0);
-  const [toast, setToast] = useState<ToastState | null>(null);
-  const updateHabitVersion = useRef(0);
   const updateJournalVersion = useRef(0);
   const pendingJournalPatches = useRef(new Map<string, Partial<JournalEntry>>());
   const identityVersion = useRef(0);
-
-  const showToast = useCallback((msg: string, sub?: string) => {
-    const id = Date.now();
-    setToast({ msg, sub, id });
-    window.setTimeout(() => {
-      setToast((current) => (current?.id === id ? null : current));
-    }, 2400);
-  }, []);
-
-  const toggleHabit = useCallback(
-    (id: string, dateKey = todayKey(), payload: Partial<CheckIn> | null = null) => {
-      let toastIdentity: string | null = null;
-      let toastVotes = 0;
-      let shouldComplete = true;
-      let hadEntry = false;
-      let previousEntry: Habit["history"][string] | undefined;
-
-      setHabits((currentHabits) =>
-        currentHabits.map((habit) => {
-          if (habit.id !== id) {
-            return habit;
-          }
-
-          const history = { ...habit.history };
-          const previous = history[dateKey];
-          hadEntry = Object.prototype.hasOwnProperty.call(habit.history, dateKey);
-          previousEntry = previous;
-
-          if (previous && !payload) {
-            delete history[dateKey];
-            shouldComplete = false;
-          } else {
-            const prevObject = isCheckIn(previous) ? previous : {};
-            history[dateKey] = { done: true, ...prevObject, ...(payload ?? {}) };
-            if (!previous) {
-              toastIdentity = habit.identity;
-              toastVotes = Object.keys(history).filter((key) => isDone(history[key])).length;
-            }
-          }
-
-          return { ...habit, history };
-        }),
-      );
-
-      clientLogger.info("Habit toggled", {
-        event: "store.habit.toggle",
-        habitId: id,
-        dateKey,
-        done: shouldComplete,
-        includesCheckIn: Boolean(payload),
-      });
-
-      void optimistic({
-        // The optimistic change was applied above (it also decides the toast).
-        // Rolling back restores only this habit's entry for `dateKey`, so
-        // unrelated edits made while the request was in flight survive.
-        apply: () => () =>
-          setHabits((currentHabits) =>
-            currentHabits.map((habit) => {
-              if (habit.id !== id) {
-                return habit;
-              }
-              const history = { ...habit.history };
-              if (hadEntry) {
-                history[dateKey] = previousEntry as Habit["history"][string];
-              } else {
-                delete history[dateKey];
-              }
-              return { ...habit, history };
-            }),
-          ),
-        action: () => toggleHabitAction(id, dateKey, shouldComplete),
-        onSuccess: (saved) => {
-          if (!saved) {
-            return;
-          }
-          setHabits((currentHabits) => currentHabits.map((habit) => (habit.id === id ? saved : habit)));
-        },
-        failure: {
-          log: "Habit toggle failed",
-          event: "store.habit.toggle_failed",
-          context: { habitId: id, dateKey, done: shouldComplete },
-          toast: "Couldn't save check-in",
-        },
-        showToast,
-      });
-
-      if (toastIdentity) {
-        showToast(`Vote cast for "${toastIdentity}"`, `${toastVotes} total`);
-      }
-    },
-    [showToast],
-  );
-
-  const logCheckIn = useCallback(
-    (id: string, payload: Partial<CheckIn>, dateKey = todayKey()) => {
-      setHabits((currentHabits) =>
-        currentHabits.map((habit) => {
-          if (habit.id !== id) {
-            return habit;
-          }
-
-          const history = { ...habit.history };
-          const previous = history[dateKey];
-          const prevObject = isCheckIn(previous) ? previous : {};
-          history[dateKey] = { done: true, ...prevObject, ...payload };
-          if (Object.prototype.hasOwnProperty.call(payload, "mood") && payload.mood === undefined) {
-            delete (history[dateKey] as CheckIn).mood;
-          }
-          if (Object.prototype.hasOwnProperty.call(payload, "journal") && payload.journal === undefined) {
-            delete (history[dateKey] as CheckIn).journal;
-          }
-
-          return { ...habit, history };
-        }),
-      );
-
-      clientLogger.info("Habit check-in saved", {
-        event: "store.check-in.save",
-        habitId: id,
-        dateKey,
-        hasMood: payload.mood !== undefined,
-        hasJournal: payload.journal !== undefined,
-      });
-
-      void logCheckInAction(id, dateKey, payload)
-        .then((saved) => {
-          if (!saved) {
-            return;
-          }
-          setHabits((currentHabits) => currentHabits.map((habit) => (habit.id === id ? saved : habit)));
-        })
-        .catch((error: unknown) => {
-          clientLogger.warn("Habit check-in failed", {
-            event: "store.check-in.save_failed",
-            habitId: id,
-            dateKey,
-            message: errorMessage(error),
-          });
-        });
-    },
-    [],
-  );
-
-  const addHabit = useCallback((draft: HabitDraft) => {
-    const tempId = `pending-${Date.now()}`;
-    setHabits((currentHabits) => [
-      ...currentHabits,
-      {
-        ...normalizeDraft(draft),
-        id: tempId,
-        history: {},
-        notes: [],
-        createdAt: todayKey(),
-      },
-    ]);
-
-    clientLogger.info("Creating habit", {
-      event: "store.habit.create",
-      habitId: tempId,
-      schedule: draft.schedule ?? "Daily",
-      time: draft.time ?? "Morning",
-      hasStackTarget: Boolean(draft.stackNextId),
-      hasContract: Boolean(draft.contract?.trim()),
-    });
-
-    void createHabitAction(draft)
-      .then((result) => {
-        if (!result.ok) {
-          // The server refused the create (e.g. the active-habit cap was hit —
-          // possibly a race across browser tabs). Roll back the optimistic add
-          // by removing exactly the pending row we inserted, then explain why
-          // via a Toast instead of silently swallowing the failure.
-          clientLogger.warn("Habit creation refused", {
-            event: "store.habit.create_refused",
-            habitId: tempId,
-            reason: result.reason,
-          });
-          setHabits((currentHabits) => currentHabits.filter((habit) => habit.id !== tempId));
-          if (result.reason === "cap") {
-            showToast(
-              "Couldn't create habit",
-              `You can have at most ${MAX_ACTIVE_HABITS} active habits. Induct one into the Hall of Fame to free a slot.`,
-            );
-          }
-          return;
-        }
-        setHabits((currentHabits) =>
-          currentHabits.map((habit) => (habit.id === tempId ? result.habit : habit)),
-        );
-      })
-      .catch((error: unknown) => {
-        clientLogger.warn("Habit creation failed", {
-          event: "store.habit.create_failed",
-          habitId: tempId,
-          message: errorMessage(error),
-        });
-      });
-  }, [showToast]);
-
-  const updateHabit = useCallback((id: string, patch: Partial<Habit>) => {
-    const version = ++updateHabitVersion.current;
-    let preSnapshot: Habit | null = null;
-    setHabits((currentHabits) => {
-      preSnapshot = currentHabits.find((habit) => habit.id === id) ?? null;
-      return currentHabits.map((habit) => (habit.id === id ? { ...habit, ...patch } : habit));
-    });
-
-    clientLogger.info("Updating habit", {
-      event: "store.habit.update",
-      habitId: id,
-      fields: changedFields(patch),
-    });
-
-    void updateHabitAction(id, patch)
-      .then((saved) => {
-        if (!saved || version !== updateHabitVersion.current) {
-          return;
-        }
-        setHabits((currentHabits) =>
-          currentHabits.map((habit) => (habit.id === id ? { ...habit, ...saved, ...patch } : habit)),
-        );
-      })
-      .catch((error: unknown) => {
-        // Roll back the optimistic patch so the UI matches the server.
-        if (version === updateHabitVersion.current && preSnapshot) {
-          const snapshot = preSnapshot;
-          setHabits((currentHabits) =>
-            currentHabits.map((habit) => (habit.id === id ? snapshot : habit)),
-          );
-        }
-        const message = errorMessage(error);
-        clientLogger.warn("Habit update rolled back", {
-          event: "store.habit.update_failed",
-          habitId: id,
-          fields: changedFields(patch),
-          message,
-        });
-        showToast("Couldn't update habit", message);
-      });
-  }, [showToast]);
 
   /**
    * Apply an atomic stack mutation (insert or remove). Optimistically applies
@@ -458,21 +172,6 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
       });
       throw new Error(message);
     }
-  }, []);
-
-  const deleteHabit = useCallback((id: string) => {
-    setHabits((currentHabits) => currentHabits.filter((habit) => habit.id !== id));
-    clientLogger.info("Deleting habit", {
-      event: "store.habit.delete",
-      habitId: id,
-    });
-    void Promise.resolve(deleteHabitAction(id)).catch((error: unknown) => {
-      clientLogger.warn("Habit deletion failed", {
-        event: "store.habit.delete_failed",
-        habitId: id,
-        message: errorMessage(error),
-      });
-    });
   }, []);
 
   const addJournal = useCallback((entry: Partial<JournalEntry>) => {
@@ -685,36 +384,6 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
       });
   }, []);
 
-  const saveFormationVerdict = useCallback((verdict: FormationVerdict) => {
-    setFormationVerdicts((current) => [
-      ...current.filter((item) => item.habitId !== verdict.habitId),
-      verdict,
-    ]);
-    clientLogger.info("Saving formation verdict", {
-      event: "store.formation.save",
-      habitId: verdict.habitId,
-      formed: verdict.formed,
-      score: verdict.score,
-    });
-    void saveFormationVerdictAction(verdict)
-      .then((saved) => {
-        if (!saved) {
-          return;
-        }
-        setFormationVerdicts((current) => [
-          ...current.filter((item) => item.habitId !== saved.habitId),
-          saved,
-        ]);
-      })
-      .catch((error: unknown) => {
-        clientLogger.warn("Formation verdict save failed", {
-          event: "store.formation.save_failed",
-          habitId: verdict.habitId,
-          message: errorMessage(error),
-        });
-      });
-  }, []);
-
   const setPreferences = useCallback((patch: Partial<UserPreferences>) => {
     setPreferencesState((current) => ({ ...current, ...patch }));
     if (patch.lessonMode) {
@@ -909,14 +578,8 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
 
   return useMemo(
     () => ({
-      habits,
-      setHabits,
-      toggleHabit,
-      logCheckIn,
-      addHabit,
-      updateHabit,
+      ...habitsSlice,
       applyStackMutation,
-      deleteHabit,
       journal,
       addJournal,
       updateJournal,
@@ -929,8 +592,6 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
       lessonMode: lessonModeState,
       setLessonMode,
       markLessonRead,
-      formationVerdicts,
-      saveFormationVerdict,
       preferences,
       setPreferences,
       pets,
@@ -946,11 +607,9 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
       completionRate,
     }),
     [
-      addHabit,
+      habitsSlice,
       addJournal,
       applyStackMutation,
-      deleteHabit,
-      habits,
       identity,
       journal,
       weeklyReview,
@@ -958,19 +617,14 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
       updateJournal,
       completedLessons,
       lessonModeState,
-      formationVerdicts,
       preferences,
-      logCheckIn,
       markLessonRead,
-      saveFormationVerdict,
       setLessonMode,
       setPreferences,
       setIdentity,
       setWeeklyReview,
       showToast,
       toast,
-      toggleHabit,
-      updateHabit,
       pets,
       petFeedsUsedToday,
       adoptPet,

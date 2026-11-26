@@ -6,9 +6,10 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   // Architecture fitness functions (see docs/architecture/adr/0001-*.md).
-  // Other modules may use a feature only through its three public entry
-  // points: `index` (client-safe), `actions` (server actions) and `server`
-  // (server-only data access). Inside a feature, use relative imports.
+  // Other modules may use a feature only through its public entry points:
+  // `index` (client-safe), `actions` (server actions), `server` (server-only
+  // data access) and `store` (client-only cache slice, composed by
+  // `lib/store`). Inside a feature, use relative imports.
   {
     files: ["**/*.{ts,tsx}"],
     rules: {
@@ -17,8 +18,8 @@ const eslintConfig = defineConfig([
         {
           patterns: [
             {
-              group: ["@/features/*/*", "@/features/*/*/**", "!@/features/*/actions", "!@/features/*/server"],
-              message: "Import a feature through '@/features/<name>', '/actions' or '/server' only.",
+              group: ["@/features/*/*", "@/features/*/*/**", "!@/features/*/actions", "!@/features/*/server", "!@/features/*/store"],
+              message: "Import a feature through '@/features/<name>', '/actions', '/server' or '/store' only.",
             },
           ],
         },
