@@ -346,7 +346,7 @@ See `.agents/skills/atomic-habit-workflow/SKILL.md` for the full styling convent
 ## Implementation Notes
 
 - Screens read the authenticated backend snapshot from the root layout and issue mutations through server actions.
-- Shared client state is exposed through `components/StoreProvider.tsx` and `lib/store.ts` as optimistic cache coordination.
+- Shared client state is exposed through `components/StoreProvider.tsx` and `lib/store/` as optimistic cache coordination. `lib/store/index.ts` composes `useStore` from per-feature slices (`features/<name>/store.ts`), and `lib/store/optimistic.ts` applies optimistic updates with rollback + toast on failure.
 - Date keys use local `YYYY-MM-DD` strings via `lib/helpers.ts`.
 - Schedule evaluation uses `features/habits/model/schedule.ts` helpers (`isScheduledForDate`, `nextScheduledDateKey`) to determine which habits appear on a given day.
 - Streaks, completion rates, and analytics charts are **schedule-aware**: unscheduled days do not break streaks, and completion rates are measured against scheduled days (bonus completions can exceed 100%). See `features/habits/model/metrics.ts`.

@@ -77,7 +77,7 @@ k8s/local/         # Docker Desktop Kubernetes manifests
 1. **Auth gate**: `proxy.ts` uses Auth.js session state and `lib/auth/routes.ts` to redirect unauthenticated protected routes to `/login`. All `app/(root)/` screens then call `requireCurrentUser()` / `requireUserId()` (`lib/auth/session.ts`), which verifies the JWT maps to an existing DB user and redirects missing/expired/deleted users to `/login`. JWT sessions expire after 1 day via `SESSION_MAX_AGE_SECONDS`.
 2. **Reverse auth gate**: `/login` and `/register` are server components that call `auth()` from `@/auth`; if signed in, they redirect to `/` (or a validated `callbackUrl`).
 3. **Backend snapshot**: `app/(root)/layout.tsx` fetches the full user-scoped snapshot via `getStoreSnapshot(userId, todayKey())` (`lib/server/store-snapshot.ts`, a server-only composition root over each feature's `server` entry) and passes it to `StoreProvider`.
-4. **Optimistic cache**: `components/StoreProvider.tsx` + `lib/store.ts` maintain an in-memory optimistic store. Mutations hit server actions immediately and the store updates before the server round-trip.
+4. **Optimistic cache**: `components/StoreProvider.tsx` + `lib/store/index.ts` maintain an in-memory optimistic store composed from per-feature slices (`features/<name>/store.ts`). Mutations go through `optimistic()` in `lib/store/optimistic.ts` (apply, call action, roll back + toast + log on failure). Mutations hit server actions immediately and the store updates before the server round-trip.
 5. **Domain writes**: Habit mutations go through `features/habits/actions.ts`, stack mutations through `features/stacks/actions.ts`, journal/identity/review/lesson mutations through `features/reflection/actions.ts`, preferences and backup import through `features/settings/actions.ts`, and pet mutations through `features/pet/actions.ts`. Each calls user-scoped repository functions in `features/<name>/server/*.repository.ts` (`lib/repositories/users.ts` remains for auth only). Feature slices follow ADR-0001 (`docs/architecture/adr/0001-modular-monolith-feature-slices.md`): import them only via `@/features/<name>` (client-safe), `@/features/<name>/actions`, or `@/features/<name>/server`.
 6. **Mobile/API clients**: Use authenticated `/api/v1/` route handlers with stable `{ ok, data }` / `{ ok, error }` envelopes (see `app/api/v1/README.md`).
 7. **Appearance sync**: `components/AppearanceSync.tsx` applies backend `preferences.theme` and `preferences.accentHue` via `lib/appearance.ts`.
@@ -112,7 +112,9 @@ k8s/local/         # Docker Desktop Kubernetes manifests
 | `lib/server/store-snapshot.ts` | `getStoreSnapshot` — server-only composition root used by the layout and export route |
 | `features/<name>/contracts.ts` | Zod contracts shared by actions and API (shared primitives in `lib/contracts/primitives.ts`) |
 | `lib/api/http.ts` | Stable API response/error helpers for `/api/v1` |
-| `lib/store.ts` | Optimistic cache store (re-exports the habit metrics from `@/features/habits`) |
+| `lib/store/index.ts` | Optimistic cache composition root (`useStore`, `StoreState`, `defaultSnapshot`) |
+| `lib/store/optimistic.ts` | Shared optimistic-mutation helper (rollback, toast, client log) |
+| `features/<name>/store.ts` | Client store slice per feature (client-only entry point; not re-exported from `index.ts`) |
 | `components/StoreProvider.tsx` | React context wrapper for the store |
 | `app/(root)/layout.tsx` | Snapshot load, provider setup |
 | `auth.ts` | NextAuth config (credentials provider, JWT+session callbacks) |

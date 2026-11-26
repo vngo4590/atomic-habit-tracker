@@ -5,7 +5,7 @@ description: Data model, pure engine, mutation API, store wiring, and UI for the
 
 # Atomicly Pet Ecosystem
 
-> **TL;DR:** Every pet is generated deterministically from a **genome** (`seed` + `temperament`) — there are **no hardcoded pets**. Pure engine in `features/pet/model/`, persisted in Postgres (`Pet` + `PetFeedLog`) via `features/pet/server/`, mutated through `features/pet/actions.ts`, cached optimistically in `lib/store.ts`, rendered under `app/(root)/pet/`. Feeding is funded by doing habits & journalling. Pets decay in real time and **die permanently** if neglected.
+> **TL;DR:** Every pet is generated deterministically from a **genome** (`seed` + `temperament`) — there are **no hardcoded pets**. Pure engine in `features/pet/model/`, persisted in Postgres (`Pet` + `PetFeedLog`) via `features/pet/server/`, mutated through `features/pet/actions.ts`, cached optimistically in `features/pet/store.ts` (composed by `lib/store`), rendered under `app/(root)/pet/`. Feeding is funded by doing habits & journalling. Pets decay in real time and **die permanently** if neglected.
 
 ## 1. Where things live
 
@@ -22,7 +22,7 @@ description: Data model, pure engine, mutation API, store wiring, and UI for the
 | Repository | `features/pet/server/` — `listPets`, `adoptPet`, `feedPet`, `buryPet`, `deletePet`, `countEarnedFoodToday`, `countFeedsUsedToday` |
 | Server actions | `features/pet/actions.ts` — `adoptPetAction`, `feedPetAction`, `buryPetAction`, `deletePetAction` |
 | Zod contracts | `features/pet/contracts.ts` — `petAdoptSchema`, `petFeedSchema`, `petBurySchema`, `petDeleteSchema` |
-| Store wiring | `lib/store.ts` — `adoptPet`/`feedPet`/`buryPet`/`deletePet` callbacks; state `pets`, `petFeedsUsedToday` |
+| Store wiring | `features/pet/store.ts` (composed into `useStore` by `lib/store/index.ts`) — `adoptPet`/`feedPet`/`buryPet`/`deletePet` callbacks; state `pets`, `petFeedsUsedToday` |
 | UI | `app/(root)/pet/` — `page.tsx`, `PetEcosystem.tsx`, `PetCard.tsx`, `AdoptPanel.tsx`, `page.module.css` |
 | Sprite rendering | `components/pet/MoodSprite.tsx` (Framer Motion idle loops) over `components/pet/PixelSprite.tsx` |
 | DB schema | `prisma/schema.prisma` — `Pet`, `PetFeedLog` models |

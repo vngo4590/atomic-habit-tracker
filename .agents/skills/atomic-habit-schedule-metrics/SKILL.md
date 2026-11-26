@@ -1,6 +1,6 @@
 ---
 name: atomic-habit-schedule-metrics
-description: Schedule-aware metric rules for Atomicly habits — how `streak()`, `longestStreak()`, and `completionRate()` in `features/habits/model/metrics.ts` (re-exported by `lib/store.ts`) interact with `isScheduledForDate()` in `features/habits/model/schedule.ts`. Use when reading, writing, or testing any habit metric, when adding analytics, or when reasoning about why a missed day did or did not break a streak.
+description: Schedule-aware metric rules for Atomicly habits — how `streak()`, `longestStreak()`, and `completionRate()` in `features/habits/model/metrics.ts` (exported from `@/features/habits`) interact with `isScheduledForDate()` in `features/habits/model/schedule.ts`. Use when reading, writing, or testing any habit metric, when adding analytics, or when reasoning about why a missed day did or did not break a streak.
 ---
 
 # Atomicly Schedule-Aware Metrics
