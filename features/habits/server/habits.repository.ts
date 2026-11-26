@@ -7,7 +7,6 @@ import "server-only";
  * another user's habits.
  */
 
-import { validateStackLink } from "@/features/stacks/server";
 import { db as defaultDb } from "@/lib/db/client";
 import { validateDatabaseUrl } from "@/lib/db/config";
 import { logger, redactUserId } from "@/lib/logger";
@@ -16,6 +15,7 @@ import type { Habit } from "@/lib/types";
 import { habitCreateSchema, habitUpdateSchema, type HabitCreateInput, type HabitUpdateInput } from "../contracts";
 import { MAX_ACTIVE_HABITS } from "../model/habit-cap";
 import { habitInclude, toHabit } from "./habit-mapper";
+import { validateStackLink } from "./stack-link.validator";
 
 type DbClient = typeof defaultDb;
 

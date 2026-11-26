@@ -2,10 +2,11 @@ import "server-only";
 
 /**
  * Stacks repository — the only place that writes habit-stack links
- * (`stackNextId`) to the database. It validates single link changes and
- * applies multi-habit insert / remove / reorder changes inside one
- * transaction, so a stack can never end up half-updated, circular, or with a
- * habit belonging to two stacks.
+ * (`stackNextId`) in bulk. It applies multi-habit insert / remove / reorder
+ * changes inside one transaction, so a stack can never end up half-updated,
+ * circular, or with a habit belonging to two stacks. Single link changes made
+ * through `updateHabit` are validated by `validateStackLink` in the habits
+ * feature, which keeps the habits -> stacks dependency one-way.
  */
 
 import { habitInclude, toHabit } from "@/features/habits/server";
@@ -22,70 +23,6 @@ type DbClient = typeof defaultDb;
 
 // Keep the original module name so existing log queries and dashboards still match.
 const log = logger.child({ module: "repo.habits" });
-
-/**
- * Validate a `habit.stackNextId = nextId` change before it is written.
- *
- * Rules (mirroring `openspec/changes/enhanced-habit-stacking/specs/habit-stack-model/spec.md`):
- *   - A habit cannot point to itself (self-reference).
- *   - The target habit must exist and belong to the same user.
- *   - The target must not already be the `stackNextId` of any other habit
- *     (exclusivity: at most one predecessor).
- *   - Setting the link must not introduce a cycle.
- *
- * Throws `StackError` on any violation so server actions and API routes can
- * surface a user-friendly message.
- */
-export async function validateStackLink(
-  userId: string,
-  habitId: string,
-  nextId: string | null,
-  db: DbClient = defaultDb,
-) {
-  log.debug("Validating stack link", {
-    event: "repo.habit.stackLink.validate",
-    userId: redactUserId(userId),
-    habitId,
-    nextId,
-  });
-  if (nextId === null) return;
-
-  if (nextId === habitId) {
-    throw makeStackError("self_reference");
-  }
-
-  const target = await db.habit.findFirst({
-    where: { id: nextId, userId, archivedAt: null },
-    select: { id: true, stackNextId: true },
-  });
-  if (!target) {
-    throw makeStackError("target_not_found");
-  }
-
-  const currentOwner = await db.habit.findFirst({
-    where: { userId, stackNextId: nextId, NOT: { id: habitId } },
-    select: { id: true },
-  });
-  if (currentOwner) {
-    throw makeStackError("target_in_other_stack");
-  }
-
-  // Cycle detection: walk forward from `nextId` and see if we reach `habitId`.
-  let cursor: string | null = target.stackNextId;
-  const visited = new Set<string>([nextId]);
-  while (cursor) {
-    if (visited.has(cursor)) break;
-    visited.add(cursor);
-    if (cursor === habitId) {
-      throw makeStackError("circular_stack");
-    }
-    const next: { stackNextId: string | null } | null = await db.habit.findUnique({
-      where: { id: cursor },
-      select: { stackNextId: true },
-    });
-    cursor = next?.stackNextId ?? null;
-  }
-}
 
 /**
  * Atomically apply a stack mutation (insert or remove) inside a single

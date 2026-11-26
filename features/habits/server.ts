@@ -13,4 +13,5 @@ export * from "./server/check-ins.repository";
 export { habitInclude, toHabit, type HabitRecord } from "./server/habit-mapper";
 export * from "./server/habits.repository";
 export * from "./server/notes-contract.repository";
+export * from "./server/stack-link.validator";
 export * from "./server/verdicts.repository";
