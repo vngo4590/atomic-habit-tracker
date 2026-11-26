@@ -1,3 +1,5 @@
+import "server-only";
+
 /**
  * pets.ts — Prisma data access for the pet ecosystem.
  *
