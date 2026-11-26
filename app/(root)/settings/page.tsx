@@ -6,7 +6,7 @@ import { useActionState, useEffect, useRef, useState, useTransition } from "reac
 import { IconMoon, IconSun } from "@/components/Icons";
 import { HuePicker } from "@/components/HuePicker";
 import { useStoreContext } from "@/components/StoreProvider";
-import { importDataAction } from "@/lib/actions/backup";
+import { importDataAction } from "@/features/settings/actions";
 import { updateProfileAction, signOutEverywhereAction } from "@/lib/actions/auth";
 import type { ProfileFormState } from "@/lib/actions/auth";
 import { applyAppearance, readStoredVariant } from "@/lib/appearance";

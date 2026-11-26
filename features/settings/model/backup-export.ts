@@ -2,7 +2,7 @@ import {
   BACKUP_APP_MARKER,
   BACKUP_SCHEMA_VERSION,
   type BackupEnvelope,
-} from "@/lib/contracts/backup";
+} from "./backup-envelope";
 import type { Pet, StoreSnapshot } from "@/lib/types";
 
 /**

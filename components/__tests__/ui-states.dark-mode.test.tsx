@@ -32,7 +32,7 @@ vi.mock("@/lib/actions/auth", () => ({
   changePasswordAction: vi.fn(),
 }));
 
-vi.mock("@/lib/actions/backup", () => ({
+vi.mock("@/features/settings/actions", () => ({
   importDataAction: vi.fn(),
 }));
 

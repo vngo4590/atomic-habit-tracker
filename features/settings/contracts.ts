@@ -3,7 +3,8 @@
  *
  * `preferencesSchema` validates a partial preferences patch (theme, accent,
  * nudges, lesson mode, timezone) for the settings server action and the
- * `/api/v1/reflection/preferences` route.
+ * `/api/v1/reflection/preferences` route. The backup envelope contract
+ * (`backupEnvelopeSchema`) validates uploaded backup files before import.
  */
 
 import { z } from "zod";
@@ -20,3 +21,7 @@ export const preferencesSchema = z.object({
 });
 
 export type PreferencesInput = z.infer<typeof preferencesSchema>;
+
+// The backup envelope schemas live in the model folder (pure Zod) and are
+// re-exported here so the feature keeps a single contracts entry point.
+export * from "./model/backup-envelope";

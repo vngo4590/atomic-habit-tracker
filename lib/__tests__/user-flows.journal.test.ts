@@ -6,7 +6,7 @@ import { makeSnapshot, installUserFlowMocksHook } from "./_user-flow-helpers";
 
 // vi.mock is only hoisted within the file that contains it, so each
 // split file installs its own server-action mocks (habits, stacks and
-// the remaining @/lib/actions/domain reflection actions).
+// the reflection and settings actions).
 vi.mock("@/features/habits/actions", () => ({
   createHabitAction: vi.fn(),
   deleteHabitAction: vi.fn(),

@@ -4,7 +4,7 @@ import {
   BACKUP_APP_MARKER,
   BACKUP_SCHEMA_VERSION,
   backupEnvelopeSchema,
-} from "@/lib/contracts/backup";
+} from "../backup-envelope";
 
 /**
  * Build a minimal valid backup envelope, then let individual tests override

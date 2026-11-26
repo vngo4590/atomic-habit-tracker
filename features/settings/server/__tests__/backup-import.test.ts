@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { BACKUP_APP_MARKER, BACKUP_SCHEMA_VERSION } from "@/lib/contracts/backup";
-import { mergeBackup } from "@/lib/backup/import";
+import { BACKUP_APP_MARKER, BACKUP_SCHEMA_VERSION } from "../../contracts";
+import { mergeBackup } from "../backup-import";
 
 /**
  * Build a mock Prisma transaction client. Every model method is a vi.fn with a

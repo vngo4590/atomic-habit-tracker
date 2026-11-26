@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { backupEnvelopeSchema } from "@/lib/contracts/backup";
-import { buildBackup } from "@/lib/backup/export";
+import { backupEnvelopeSchema } from "../backup-envelope";
+import { buildBackup } from "../backup-export";
 import type { StoreSnapshot } from "@/lib/types";
 
 /** A representative, fully-populated snapshot covering every backup block. */

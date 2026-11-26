@@ -10,9 +10,9 @@ vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 
 vi.mock("@/lib/auth/session", () => ({ requireUserId: mocks.requireUserId }));
 
-vi.mock("@/lib/backup/import", () => ({ mergeBackup: mocks.mergeBackup }));
+vi.mock("@/features/settings/server", () => ({ mergeBackup: mocks.mergeBackup }));
 
-import { importDataAction } from "@/lib/actions/backup";
+import { importDataAction } from "../actions";
 
 const validFile = JSON.stringify({
   app: "atomicly",

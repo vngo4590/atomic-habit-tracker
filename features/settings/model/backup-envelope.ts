@@ -17,7 +17,7 @@ import { z } from "zod";
  *   - Records carry their own ids. Import upserts by id, which makes restoring
  *     the same file twice a harmless no-op (idempotent).
  *   - Pets are included for completeness/portability but are intentionally NOT
- *     part of the import contract's writeable set — see `lib/backup/import.ts`.
+ *     part of the import contract's writeable set — see `features/settings/server/backup-import.ts`.
  */
 
 // A YYYY-MM-DD calendar key, matching the rest of the domain contracts.
