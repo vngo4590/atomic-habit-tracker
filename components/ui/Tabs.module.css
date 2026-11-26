@@ -1,0 +1,59 @@
+/* Tabs — underline-style tab list. Scrolls horizontally on narrow screens
+   rather than wrapping. */
+.list {
+  display: flex;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.list::-webkit-scrollbar {
+  display: none;
+}
+.tab {
+  appearance: none;
+  position: relative;
+  flex: 0 0 auto;
+  min-height: var(--tap-target);
+  padding: 0 var(--space-4);
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+.tab:hover {
+  color: var(--text);
+}
+/* Focus ring drawn inside the tab so overflow clipping can't hide it. */
+.tab:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -4px;
+  border-radius: var(--radius-sm);
+}
+/* Selected indicator: a 2px accent bar sitting on the list's bottom border. */
+.tab[aria-selected="true"],
+.tab[aria-current="page"] {
+  color: var(--text);
+}
+.tab[aria-selected="true"]::after,
+.tab[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  left: var(--space-3);
+  right: var(--space-3);
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--primary);
+}
+.panel {
+  padding-top: var(--space-6);
+}
