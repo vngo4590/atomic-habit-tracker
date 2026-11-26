@@ -11,7 +11,7 @@ import {
   journalEntrySchema,
   lessonProgressSchema,
   weeklyReviewSchema,
-} from "@/lib/contracts/domain";
+} from "@/features/reflection";
 import { preferencesSchema } from "@/features/settings";
 
 // ---------------------------------------------------------------------------

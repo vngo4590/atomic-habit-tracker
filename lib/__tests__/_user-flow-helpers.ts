@@ -19,7 +19,7 @@ import {
   markLessonReadAction,
   saveWeeklyReviewAction,
   updateJournalEntryAction,
-} from "@/lib/actions/domain";
+} from "@/features/reflection/actions";
 import { savePreferencesAction } from "@/features/settings/actions";
 import { todayKey } from "@/lib/helpers";
 import { testHabit, testPreferences } from "@/lib/test/fixtures";

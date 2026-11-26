@@ -2,8 +2,9 @@
 
 /**
  * Server actions for the reflection side of the app: journal entries, weekly
- * reviews, identity, lessons and preferences. Habit and stack actions live in
- * their feature slices (`@/features/habits/actions`, `@/features/stacks/actions`).
+ * reviews, identity and lessons. Preferences live in `@/features/settings/actions`;
+ * habit and stack actions live in their feature slices
+ * (`@/features/habits/actions`, `@/features/stacks/actions`).
  */
 
 import { revalidatePath } from "next/cache";
@@ -16,7 +17,7 @@ import {
   saveIdentity,
   saveWeeklyReview,
   updateJournalEntry,
-} from "@/lib/repositories/reflection";
+} from "./server";
 import type {
   Identity,
   JournalEntry,

@@ -1,6 +1,6 @@
 # Atomicly API v1
 
-Mobile-ready route handlers live under `/api/v1`. They use the same validation schemas in `lib/contracts/domain.ts` and the same user-scoped repositories as web Server Actions.
+Mobile-ready route handlers live under `/api/v1`. They use the same validation schemas in each feature's `contracts.ts` (for example `features/reflection/contracts.ts`) and the same user-scoped repositories as web Server Actions.
 
 All responses use a stable envelope:
 

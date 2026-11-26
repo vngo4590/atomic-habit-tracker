@@ -17,7 +17,7 @@ import {
   saveIdentityAction,
   saveWeeklyReviewAction,
   updateJournalEntryAction,
-} from "@/lib/actions/domain";
+} from "@/features/reflection/actions";
 import { savePreferencesAction } from "@/features/settings/actions";
 import { adoptPetAction, buryPetAction, deletePetAction, feedPetAction } from "@/features/pet/actions";
 import {

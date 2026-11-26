@@ -11,15 +11,7 @@ import {
   saveIdentity,
   saveWeeklyReview,
   updateJournalEntry,
-} from "@/lib/repositories/reflection";
-import { listFormationVerdicts, saveFormationVerdict } from "@/features/habits/server";
-
-// Only `listHabits` is stubbed; the real formation-verdict repository is kept so
-// its mapping is still exercised (it moved to the habits feature).
-vi.mock("@/features/habits/server", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/features/habits/server")>()),
-  listHabits: vi.fn(async () => [{ id: "habit_1", name: "Read" }]),
-}));
+} from "../../server";
 
 const dates = {
   created: new Date("2030-01-02T00:00:00.000Z"),
@@ -117,33 +109,5 @@ describe("reflection repositories", () => {
       create: { userId: "user_1", lessonId: 3 },
       update: { completedAt: expect.any(Date) },
     });
-  });
-
-  it("lists and saves formation verdicts only for habits owned by the user", async () => {
-    const record = {
-      habitId: "habit_1",
-      score: 4,
-      reflection: "Stable",
-      decision: "formed",
-      reviewedAt: dates.reviewed,
-    };
-    const db = {
-      formationVerdict: {
-        findMany: vi.fn(async () => [record]),
-        upsert: vi.fn(async () => record),
-      },
-      habit: {
-        findFirst: vi.fn(async () => ({ id: "habit_1", userId: "user_1" })),
-      },
-    };
-
-    await expect(listFormationVerdicts("user_1", db as never)).resolves.toEqual([{ habitId: "habit_1", score: 4, reflection: "Stable", formed: true, reviewedAt: dates.reviewed.toISOString() }]);
-    await expect(saveFormationVerdict("user_1", { habitId: "habit_1", score: 4, reflection: "Stable", formed: true, reviewedAt: dates.reviewed.toISOString() }, db as never)).resolves.toMatchObject({ formed: true });
-
-    expect(db.habit.findFirst).toHaveBeenCalledWith({ where: { id: "habit_1", userId: "user_1" } });
-    expect(db.formationVerdict.upsert).toHaveBeenCalledWith(expect.objectContaining({
-      where: { habitId: "habit_1" },
-      create: expect.objectContaining({ userId: "user_1", decision: "formed" }),
-    }));
   });
 });

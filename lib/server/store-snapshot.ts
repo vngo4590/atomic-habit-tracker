@@ -21,7 +21,7 @@ import {
   listCompletedLessons,
   listJournalEntries,
   listWeeklyReviews,
-} from "@/lib/repositories/reflection";
+} from "@/features/reflection/server";
 import { getPreferences } from "@/features/settings/server";
 import type { StoreSnapshot } from "@/lib/types";
 

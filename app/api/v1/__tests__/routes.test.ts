@@ -46,7 +46,7 @@ vi.mock("@/features/habits/server", () => ({
   upsertCheckIn: mocks.upsertCheckIn,
 }));
 
-vi.mock("@/lib/repositories/reflection", () => ({
+vi.mock("@/features/reflection/server", () => ({
   createJournalEntry: mocks.createJournalEntry,
   getIdentity: mocks.getIdentity,
   getWeeklyReview: mocks.getWeeklyReview,

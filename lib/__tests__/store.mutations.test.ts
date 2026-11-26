@@ -7,7 +7,7 @@ import {
   markLessonReadAction,
   saveIdentityAction,
   updateJournalEntryAction,
-} from "@/lib/actions/domain";
+} from "@/features/reflection/actions";
 import { savePreferencesAction } from "@/features/settings/actions";
 import { updateHabitAction, deleteHabitAction } from "@/features/habits/actions";
 import { useStore } from "@/lib/store";
@@ -38,7 +38,7 @@ vi.mock("@/features/habits/actions", () => ({
 vi.mock("@/features/stacks/actions", () => ({
   applyStackMutationAction: vi.fn(),
 }));
-vi.mock("@/lib/actions/domain", () => ({
+vi.mock("@/features/reflection/actions", () => ({
   createJournalEntryAction: vi.fn(),
   markLessonReadAction: vi.fn(),
   saveIdentityAction: vi.fn(async (identity) => identity),

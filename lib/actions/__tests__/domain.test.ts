@@ -48,7 +48,7 @@ vi.mock("@/lib/db/client", () => ({
   },
 }));
 
-vi.mock("@/lib/repositories/reflection", () => ({
+vi.mock("@/features/reflection/server", () => ({
   createJournalEntry: mocks.createJournalEntry,
   markLessonComplete: mocks.markLessonComplete,
   saveIdentity: mocks.saveIdentity,
@@ -114,7 +114,7 @@ describe("domain server actions", () => {
     mocks.createJournalEntry.mockResolvedValue(entry);
     mocks.updateJournalEntry.mockResolvedValue({ ...entry, title: "Edited" });
     mocks.saveWeeklyReview.mockResolvedValue(review);
-    const { createJournalEntryAction, saveWeeklyReviewAction, updateJournalEntryAction } = await import("@/lib/actions/domain");
+    const { createJournalEntryAction, saveWeeklyReviewAction, updateJournalEntryAction } = await import("@/features/reflection/actions");
 
     await expect(createJournalEntryAction({ date: "2030-01-02", title: "Small win" })).resolves.toEqual(entry);
     await expect(updateJournalEntryAction("journal_1", { title: "Edited" })).resolves.toMatchObject({ title: "Edited" });
@@ -135,7 +135,7 @@ describe("domain server actions", () => {
     // Given: an existing journal entry the server can update
     const entry = testJournalEntry({ id: "journal_2" });
     mocks.updateJournalEntry.mockResolvedValue(entry);
-    const { updateJournalEntryAction } = await import("@/lib/actions/domain");
+    const { updateJournalEntryAction } = await import("@/features/reflection/actions");
 
     // When: a caller sends a patch that includes a new date alongside other fields
     await updateJournalEntryAction("journal_2", { date: "2099-12-31", title: "Edited", mood: "good" });
@@ -152,7 +152,7 @@ describe("domain server actions", () => {
     mocks.markLessonComplete.mockResolvedValue([1, 2, 3]);
     mocks.saveFormationVerdictRecord.mockResolvedValue(testFormationVerdict());
     const { saveFormationVerdictAction } = await import("@/features/habits/actions");
-    const { markLessonReadAction, saveIdentityAction } = await import("@/lib/actions/domain");
+    const { markLessonReadAction, saveIdentityAction } = await import("@/features/reflection/actions");
     const { savePreferencesAction } = await import("@/features/settings/actions");
 
     await expect(saveIdentityAction(testIdentity({ statement: "I show up" }))).resolves.toMatchObject({ statement: "I am someone who keeps promises to myself." });
@@ -180,7 +180,7 @@ describe("domain server actions", () => {
   it("rejects unauthenticated actions before repository writes", async () => {
     mocks.requireUserId.mockRejectedValue(new Error("redirect:/login"));
     const { createHabitAction } = await import("@/features/habits/actions");
-    const { markLessonReadAction } = await import("@/lib/actions/domain");
+    const { markLessonReadAction } = await import("@/features/reflection/actions");
 
     await expect(createHabitAction({ name: "Read", identity: "reader" })).rejects.toThrow("redirect:/login");
     await expect(markLessonReadAction(1)).rejects.toThrow("redirect:/login");

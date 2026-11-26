@@ -1,3 +1,8 @@
+/**
+ * Reflection feature — input validation (Zod schemas) for journal entries,
+ * weekly reviews, identity and lesson progress.
+ */
+
 import { z } from "zod";
 
 import { dateKeySchema, stringListSchema } from "@/lib/contracts/primitives";

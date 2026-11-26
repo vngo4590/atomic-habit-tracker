@@ -16,7 +16,7 @@ vi.mock("@/features/habits/actions", () => ({
 vi.mock("@/features/stacks/actions", () => ({
   applyStackMutationAction: vi.fn(),
 }));
-vi.mock("@/lib/actions/domain", () => ({
+vi.mock("@/features/reflection/actions", () => ({
   createJournalEntryAction: vi.fn(),
   markLessonReadAction: vi.fn(),
   saveIdentityAction: vi.fn(async (identity: unknown) => identity),

@@ -1,7 +1,7 @@
 import { handleApiError, jsonOk, readJson, withApiUser } from "@/lib/api/http";
-import { journalEntrySchema } from "@/lib/contracts/domain";
+import { journalEntrySchema } from "@/features/reflection";
 import { logger } from "@/lib/logger";
-import { createJournalEntry, listJournalEntries } from "@/lib/repositories/reflection";
+import { createJournalEntry, listJournalEntries } from "@/features/reflection/server";
 
 const log = logger.child({ module: "api.v1.reflection.journal" });
 
