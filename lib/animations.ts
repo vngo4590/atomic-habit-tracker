@@ -83,23 +83,6 @@ export const staggerItemVariants: Variants = {
   },
 };
 
-export const navItemVariants: Variants = {
-  hidden: { opacity: 0, x: -8 },
-  visible: {
-    opacity: 1,
-    x: 0,
-    transition: { duration: duration.base, ease: ease.smooth },
-  },
-};
-
-export const sidebarStagger: Variants = {
-  hidden: { opacity: 1 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.03, delayChildren: 0.1 },
-  },
-};
-
 export const toastVariants: Variants = {
   hidden: { opacity: 0, y: 16, scale: 0.96 },
   visible: {

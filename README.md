@@ -29,6 +29,10 @@ The app is implemented with Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, 
 | `/pet` | Pet Ecosystem — adopt, feed, and evolve procedural pixel pets by completing habits |
 | `/identity` | Identity statement and vote ledger |
 | `/settings` | Account, appearance, and data controls |
+| `/reflect` | Reflect hub — redirects to `/journal` (tabs: Journal \| Weekly review) |
+| `/insights` | Insights hub — redirects to `/analytics` (tabs: Analytics \| Hall of Fame) |
+
+Navigation (ADR-0003): a 240px sidebar on desktop (≥1024px) with Today, Habits, Reflect, Insights, Pet, Settings and a "New habit" button; below 1024px a top bar (section title, New habit, avatar → Settings) plus a fixed bottom tab bar (Today, Habits, Reflect, Insights, Pet). Identity is linked from Settings. Single-key shortcuts: T, H, N, R, I, P, `,` (plus J, W, A, F for individual pages). Nav code lives in `components/nav/`.
 
 ## Quick Start With Docker
 

@@ -4,7 +4,7 @@
  * Contains:
  *   • @keyframes used by component states (checkPop, lessonModePulse,
  *     principle-float, fadeUp, pulse, shimmer).
- *   • Animation utility classes (.fade-up, .skeleton, .glass, .focus-ring).
+ *   • Animation utility classes (.fade-up, .skeleton, .focus-ring).
  *
  * Notes:
  *   • Framer Motion is the primary animation library (per AGENTS.md).
@@ -55,13 +55,6 @@
 @keyframes shimmer {
   0%   { background-position: -200% 0; }
   100% { background-position: 200% 0; }
-}
-
-/* Glass surface — frosted background used on overlays. */
-.glass {
-  background: oklch(from var(--bg-elev) l c h / 0.72);
-  backdrop-filter: blur(12px) saturate(1.15);
-  -webkit-backdrop-filter: blur(12px) saturate(1.15);
 }
 
 /* Skeleton placeholder — animated gradient used for loading rows. */
