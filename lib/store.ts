@@ -29,6 +29,7 @@ import {
 import { completionRate, longestStreak, MAX_ACTIVE_HABITS, streak } from "@/features/habits";
 import { todayKey } from "@/lib/helpers";
 import { clientLogger } from "@/lib/logger-client";
+import { optimistic } from "@/lib/store/optimistic";
 import { MAX_ALIVE_PETS, feedVitals, simulatePet, tuningFor } from "@/features/pet";
 import type {
   CheckIn,
@@ -157,6 +158,8 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
       let toastIdentity: string | null = null;
       let toastVotes = 0;
       let shouldComplete = true;
+      let hadEntry = false;
+      let previousEntry: Habit["history"][string] | undefined;
 
       setHabits((currentHabits) =>
         currentHabits.map((habit) => {
@@ -166,6 +169,8 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
 
           const history = { ...habit.history };
           const previous = history[dateKey];
+          hadEntry = Object.prototype.hasOwnProperty.call(habit.history, dateKey);
+          previousEntry = previous;
 
           if (previous && !payload) {
             delete history[dateKey];
@@ -191,22 +196,40 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
         includesCheckIn: Boolean(payload),
       });
 
-      void toggleHabitAction(id, dateKey, shouldComplete)
-        .then((saved) => {
+      void optimistic({
+        // The optimistic change was applied above (it also decides the toast).
+        // Rolling back restores only this habit's entry for `dateKey`, so
+        // unrelated edits made while the request was in flight survive.
+        apply: () => () =>
+          setHabits((currentHabits) =>
+            currentHabits.map((habit) => {
+              if (habit.id !== id) {
+                return habit;
+              }
+              const history = { ...habit.history };
+              if (hadEntry) {
+                history[dateKey] = previousEntry as Habit["history"][string];
+              } else {
+                delete history[dateKey];
+              }
+              return { ...habit, history };
+            }),
+          ),
+        action: () => toggleHabitAction(id, dateKey, shouldComplete),
+        onSuccess: (saved) => {
           if (!saved) {
             return;
           }
           setHabits((currentHabits) => currentHabits.map((habit) => (habit.id === id ? saved : habit)));
-        })
-        .catch((error: unknown) => {
-          clientLogger.warn("Habit toggle failed", {
-            event: "store.habit.toggle_failed",
-            habitId: id,
-            dateKey,
-            done: shouldComplete,
-            message: errorMessage(error),
-          });
-        });
+        },
+        failure: {
+          log: "Habit toggle failed",
+          event: "store.habit.toggle_failed",
+          context: { habitId: id, dateKey, done: shouldComplete },
+          toast: "Couldn't save check-in",
+        },
+        showToast,
+      });
 
       if (toastIdentity) {
         showToast(`Vote cast for "${toastIdentity}"`, `${toastVotes} total`);

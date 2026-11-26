@@ -125,6 +125,46 @@ describe("toggleHabit checked to unchecked", () => {
   });
 });
 
+describe("toggleHabit rollback when the server action fails", () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+    vi.mocked(toggleHabitAction).mockReset();
+    vi.mocked(toggleHabitAction).mockRejectedValue(new Error("Network down"));
+  });
+
+  it("reverts an optimistic check-in and tells the user it was not saved", async () => {
+    // Given: a habit with no check-in today and a server that rejects the save
+    const habit = testHabit({ id: "h1", identity: "runner", history: {} });
+    const { result } = renderHook(() => useStore(makeSnapshot([habit])));
+
+    // When: the user checks the habit in and the server action rejects
+    await act(async () => {
+      result.current.toggleHabit("h1", TODAY);
+      await Promise.resolve();
+    });
+
+    // Then: the check-in disappears again and a failure toast explains why
+    expect(result.current.habits[0].history[TODAY]).toBeUndefined();
+    expect(result.current.toast?.msg).toBe("Couldn't save check-in");
+    expect(result.current.toast?.sub).toBe("Network down");
+  });
+
+  it("restores a removed check-in when un-checking fails", async () => {
+    // Given: a habit already done today with mood data, and a failing server
+    const habit = testHabit({ id: "h1", history: { [TODAY]: { done: true, mood: 4 } } });
+    const { result } = renderHook(() => useStore(makeSnapshot([habit])));
+
+    // When: the user un-checks it and the server action rejects
+    await act(async () => {
+      result.current.toggleHabit("h1", TODAY);
+      await Promise.resolve();
+    });
+
+    // Then: the original check-in (including its mood) is back
+    expect(result.current.habits[0].history[TODAY]).toEqual({ done: true, mood: 4 });
+  });
+});
+
 describe("logCheckIn behavior", () => {
   beforeEach(() => {
     vi.useRealTimers();
