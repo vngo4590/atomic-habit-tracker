@@ -50,7 +50,7 @@ describe("Loading / Transition States", () => {
 
     // Then: the email is used as the display name and the initial comes from it
     expect(screen.getByText("ada@example.com")).toBeTruthy();
-    expect(document.querySelector(".avatar")?.textContent).toBe("A");
+    expect(screen.getByTestId("nav-avatar").textContent).toBe("A");
   });
 
   it("HabitRow renders with a very long habit name without overflowing", () => {
