@@ -6,8 +6,9 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   // Architecture fitness functions (see docs/architecture/adr/0001-*.md).
-  // Other modules may use a feature only through its public `index.ts`.
-  // Inside a feature, use relative imports.
+  // Other modules may use a feature only through its three public entry
+  // points: `index` (client-safe), `actions` (server actions) and `server`
+  // (server-only data access). Inside a feature, use relative imports.
   {
     files: ["**/*.{ts,tsx}"],
     rules: {
@@ -16,8 +17,8 @@ const eslintConfig = defineConfig([
         {
           patterns: [
             {
-              group: ["@/features/*/*", "@/features/*/*/**"],
-              message: "Import a feature through its public API: '@/features/<name>'.",
+              group: ["@/features/*/*", "@/features/*/*/**", "!@/features/*/actions", "!@/features/*/server"],
+              message: "Import a feature through '@/features/<name>', '/actions' or '/server' only.",
             },
           ],
         },
@@ -37,8 +38,8 @@ const eslintConfig = defineConfig([
             { name: "server-only", message: "model/ is pure: no server-only code." },
           ],
           patterns: [
-            { group: ["@/features/*/*", "@/features/*/*/**"], message: "Use the feature's public API." },
-            { group: ["@/lib/db/**", "@/lib/repositories/**", "@/lib/generated/**", "**/server/**"], message: "model/ is pure: no I/O." },
+            { group: ["@/features/*/*", "@/features/*/*/**", "!@/features/*/actions", "!@/features/*/server"], message: "Use the feature's public API." },
+            { group: ["@/lib/db/**", "@/lib/repositories/**", "@/lib/generated/**", "**/server/**", "@/features/*/server", "@/features/*/actions", "**/actions"], message: "model/ is pure: no I/O." },
           ],
         },
       ],
@@ -46,11 +47,16 @@ const eslintConfig = defineConfig([
   },
   // Keep new modules small and single-purpose (~300 lines, ignoring blank lines and comments).
   {
-    files: ["features/**/*.{ts,tsx}", "shared/**/*.{ts,tsx}"],
+    files: ["features/**/*.{ts,tsx}", "components/ui/**/*.{ts,tsx}"],
     ignores: ["**/__tests__/**", "**/*.test.{ts,tsx}"],
     rules: {
       "max-lines": ["error", { max: 300, skipBlankLines: true, skipComments: true }],
     },
+  },
+  // Tests may reach into internals to exercise them directly.
+  {
+    files: ["**/__tests__/**", "**/*.test.{ts,tsx}", "e2e/**"],
+    rules: { "no-restricted-imports": "off" },
   },
   // Override default ignores of eslint-config-next.
   globalIgnores([
