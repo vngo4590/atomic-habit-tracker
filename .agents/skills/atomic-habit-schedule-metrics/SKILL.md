@@ -1,18 +1,18 @@
 ---
 name: atomic-habit-schedule-metrics
-description: Schedule-aware metric rules for Atomicly habits — how `streak()`, `longestStreak()`, and `completionRate()` in `lib/store.ts` interact with `isScheduledForDate()` in `lib/schedule.ts`. Use when reading, writing, or testing any habit metric, when adding analytics, or when reasoning about why a missed day did or did not break a streak.
+description: Schedule-aware metric rules for Atomicly habits — how `streak()`, `longestStreak()`, and `completionRate()` in `features/habits/model/metrics.ts` (re-exported by `lib/store.ts`) interact with `isScheduledForDate()` in `features/habits/model/schedule.ts`. Use when reading, writing, or testing any habit metric, when adding analytics, or when reasoning about why a missed day did or did not break a streak.
 ---
 
 # Atomicly Schedule-Aware Metrics
 
 > **TL;DR:** Unscheduled days never break a streak. Completion-rate denominators count only scheduled days. Bonus completions can push rate above 100%.
 
-All core habit metrics in `lib/store.ts` are **schedule-aware** — they evaluate progress against the days the user actually scheduled, not against every calendar day.
+All core habit metrics in `features/habits/model/metrics.ts` are **schedule-aware** — they evaluate progress against the days the user actually scheduled, not against every calendar day.
 
 ## 1. How schedules are stored
 
 - `habit.schedule` is a plain-text string like `"Daily"`, `"Weekdays"`, `"Mon, Wed, Fri"`, or free-form text.
-- `lib/schedule.ts` exports `isScheduledForDate(dateKey, schedule)` which returns `true` when the day-of-week for `dateKey` matches the parsed schedule (or `true` for free-form schedules).
+- `features/habits/model/schedule.ts` exports `isScheduledForDate(dateKey, schedule)` which returns `true` when the day-of-week for `dateKey` matches the parsed schedule (or `true` for free-form schedules).
 - Other helpers: `nextScheduledDateKey(fromDateKey, schedule)`, `formatNextDayLabel(dateKey)`, `formatScheduleLabel(schedule)`.
 
 ## 2. Metric behaviour
@@ -31,7 +31,7 @@ All core habit metrics in `lib/store.ts` are **schedule-aware** — they evaluat
 ## 4. Consequences for UI / code changes
 
 - Any code that calls `streak()`, `longestStreak()`, or `completionRate()` automatically respects schedules.
-- If you add a new metric, use `isScheduledForDate()` from `lib/schedule.ts` to stay consistent.
+- If you add a new metric, use `isScheduledForDate()` from `@/features/habits` to stay consistent.
 - Tests for metrics should include both `"Daily"` habits (backward-compatible) and custom-schedule habits (gap-skipping, bonus days, etc.). See `atomic-habit-test-edge-cases` § Date and time.
 
 ## See Also

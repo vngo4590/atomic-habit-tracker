@@ -55,8 +55,9 @@ Backend/deployment architecture notes live in `docs/architecture/backend-auth-mo
 - `lib/repositories/` — Prisma data access (one file per entity).
 - `lib/actions/` — Server actions that validate via contracts and call repositories.
 - `lib/contracts/` — Zod schemas for action inputs.
-- `lib/store.ts` — Client-side optimistic state and schedule-aware metrics (streak, completionRate).
-- `lib/schedule.ts` — Scheduling helpers; unscheduled days don't break streaks.
+- `features/<name>/` — Feature slices (habits, stacks) per ADR-0001: `model/`, `contracts.ts`, `actions.ts`, `server/`. Import via `@/features/<name>`, `/actions` or `/server` only.
+- `lib/store.ts` — Client-side optimistic state; re-exports the schedule-aware metrics (streak, completionRate) from `features/habits/model/metrics.ts`.
+- `features/habits/model/schedule.ts` — Scheduling helpers; unscheduled days don't break streaks.
 - `components/motion/` — Reusable Framer Motion primitives (`FadeIn`, `StaggerContainer`, `HoverLift`, etc.).
 - `lib/animations.ts` — Shared spring presets, easing curves, and variants.
 

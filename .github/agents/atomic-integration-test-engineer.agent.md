@@ -140,7 +140,7 @@ describe("creating a habit through the server action", () => {
       mocks.prismaHabit.create.mockResolvedValue(persisted);
 
       // When: the action runs
-      const { createHabitAction } = await import("@/lib/actions/domain");
+      const { createHabitAction } = await import("@/features/habits/actions");
       const result = await createHabitAction({ name: "Run", identity: "runner", cue: "After alarm" });
 
       // Then: the caller observes the persisted habit AND the DB writes the

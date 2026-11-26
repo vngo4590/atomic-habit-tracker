@@ -72,7 +72,7 @@ k8s/local/         # Docker Desktop Kubernetes manifests
 2. **Reverse auth gate**: `/login` and `/register` are server components that call `auth()` from `@/auth`; if signed in, they redirect to `/` (or a validated `callbackUrl`).
 3. **Backend snapshot**: `app/(root)/layout.tsx` fetches the full user-scoped snapshot via `getStoreSnapshot(userId, todayKey())` and passes it to `StoreProvider`.
 4. **Optimistic cache**: `components/StoreProvider.tsx` + `lib/store.ts` maintain an in-memory optimistic store. Mutations hit server actions immediately and the store updates before the server round-trip.
-5. **Domain writes**: All habit/journal/identity mutations go through `lib/actions/domain.ts`, which calls user-scoped repository functions in `lib/repositories/`.
+5. **Domain writes**: Habit mutations go through `features/habits/actions.ts`, stack mutations through `features/stacks/actions.ts`, and journal/identity/review/preferences mutations through `lib/actions/domain.ts`. Each calls user-scoped repository functions (`features/<name>/server/*.repository.ts` or `lib/repositories/`). Feature slices follow ADR-0001 (`docs/architecture/adr/0001-modular-monolith-feature-slices.md`): import them only via `@/features/<name>` (client-safe), `@/features/<name>/actions`, or `@/features/<name>/server`.
 6. **Mobile/API clients**: Use authenticated `/api/v1/` route handlers with stable `{ ok, data }` / `{ ok, error }` envelopes (see `app/api/v1/README.md`).
 7. **Appearance sync**: `components/AppearanceSync.tsx` applies backend `preferences.theme` and `preferences.accentHue` via `lib/appearance.ts`.
 8. **localStorage**: Only used for `atomicly:theme`, `atomicly:accent`, and `atomicly:theme-variant` (selected named theme) — UI mirrors only, **never** source of truth for domain data.
@@ -99,20 +99,22 @@ k8s/local/         # Docker Desktop Kubernetes manifests
 |---|---|
 | `lib/types.ts` | All shared TypeScript interfaces |
 | `prisma/schema.prisma` | Database schema |
-| `lib/actions/domain.ts` | All domain mutation server actions |
-| `lib/contracts/domain.ts` | Zod contracts shared by actions and API |
+| `features/habits/` | Habits slice: `model/` (schedule, metrics, habit-cap, habit-sentence), `contracts.ts`, `actions.ts`, `server/` repositories (habits, check-ins, notes/contract, formation verdicts) |
+| `features/stacks/` | Stacks slice: `model/` (stack helpers, `StackError`), `contracts.ts`, `actions.ts`, `server/stacks.repository.ts` |
+| `lib/actions/domain.ts` | Reflection server actions (journal, weekly review, identity, lessons, preferences) |
+| `lib/contracts/domain.ts` | Reflection Zod contracts shared by actions and API (habit/stack contracts live in their feature slices) |
 | `lib/api/http.ts` | Stable API response/error helpers for `/api/v1` |
-| `lib/store.ts` | Optimistic cache store + schedule-aware metrics |
+| `lib/store.ts` | Optimistic cache store (re-exports the habit metrics from `@/features/habits`) |
 | `components/StoreProvider.tsx` | React context wrapper for the store |
 | `app/(root)/layout.tsx` | Snapshot load, provider setup |
 | `auth.ts` | NextAuth config (credentials provider, JWT+session callbacks) |
 | `proxy.ts` | Auth.js-backed route protection redirect layer |
 | `lib/auth/register.ts` | Account creation logic |
-| `lib/schedule.ts` | Schedule parsing — see `atomic-habit-schedule-metrics` |
-| `lib/stack.ts` / `lib/stack-errors.ts` | Habit stack helpers — see `atomic-habit-habit-stacking` |
+| `features/habits/model/schedule.ts` | Schedule parsing — see `atomic-habit-schedule-metrics` |
+| `features/stacks/model/stack.ts` / `stack-errors.ts` | Habit stack helpers — see `atomic-habit-habit-stacking` |
 | `lib/pet/` / `lib/repositories/pets.ts` | Procedural pet engine + persistence — see `atomic-habit-pet-ecosystem` |
 | `lib/animations.ts` | Shared Framer Motion presets — see `atomic-habit-ui-animation` |
-| `lib/repositories/habits.ts` / `reflection.ts` | Prisma data access |
+| `features/*/server/` / `lib/repositories/reflection.ts` | Prisma data access |
 | `lib/logger.ts` / `lib/logger-client.ts` | Structured logging — see `atomic-habit-logging` |
 | `docs/architecture/backend-auth-mobile.md` | Provider choices, Vercel notes, migration safety |
 | `Dockerfile` / `k8s/local/` | Container build + local Kubernetes overlay |

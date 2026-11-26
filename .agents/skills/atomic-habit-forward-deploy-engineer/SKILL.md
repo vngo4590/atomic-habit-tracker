@@ -45,7 +45,7 @@ Atomicly-specific deployment facts:
 - Required environment variables are `DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL`, and `NEXT_PUBLIC_APP_URL`.
 - Production-safe migration command is `npm run prisma:migrate:deploy`; local reset, seed, random-data, fake-history, and clean helpers must stay local-only.
 - `npm run backend:validate` runs Prisma validation/generation, TypeScript, scoped lint, tests, and build.
-- Versioned mobile-ready API contracts live under `app/api/v1/*` and use shared contracts from `lib/contracts/domain.ts`.
+- Versioned mobile-ready API contracts live under `app/api/v1/*` and use shared contracts from `features/<name>/contracts.ts` and `lib/contracts/domain.ts`.
 - Local Kubernetes testing uses `Dockerfile` targets `runner` (`atomicly:local`) and `migrator` (`atomicly-migrator:local`) plus `k8s/local/`, exposed through Docker Desktop NodePort `30080`, with PostgreSQL provided by the host Docker Compose database at `host.docker.internal:55432`.
 - Local Kubernetes npm wrappers are `npm run deploy:kube` or `npm run kube:deploy` for the full flow, plus `npm run kube:update`, `npm run kube:restart`, `npm run kube:stop`, and `npm run kube:cleanup`.
 - Container/Kubernetes probes use the public `app/api/healthz/route.ts` endpoint.

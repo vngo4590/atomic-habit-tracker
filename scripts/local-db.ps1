@@ -337,7 +337,7 @@ async function main() {
       });
     }
 
-    // Reflect the active-habit cap (see lib/habit-cap.ts): a user may keep at
+    // Reflect the active-habit cap (see features/habits/model/habit-cap.ts): a user may keep at
     // most MAX_ACTIVE_HABITS *active* habits — ones that are not archived and
     // carry no `formed` formation verdict. So the seeded demo matches the
     // product rule, induct any surplus active habits into the Hall of Fame with
@@ -713,7 +713,7 @@ async function main() {
       });
     }
 
-    // Reflect the active-habit cap (see lib/habit-cap.ts): a user may keep at
+    // Reflect the active-habit cap (see features/habits/model/habit-cap.ts): a user may keep at
     // most MAX_ACTIVE_HABITS *active* habits — ones that are not archived and
     // carry no `formed` formation verdict. Archiving and the verdict loop above
     // already retire some habits, but the remainder can still exceed the cap, so

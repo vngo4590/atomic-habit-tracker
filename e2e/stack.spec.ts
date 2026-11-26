@@ -82,7 +82,7 @@ async function seedHabit(page: import("@playwright/test").Page, name: string, id
 
 /**
  * The server caps how many *active* habits a user may keep at once. This mirrors
- * `MAX_ACTIVE_HABITS` in `lib/habit-cap.ts`; the stacking suite needs the two to
+ * `MAX_ACTIVE_HABITS` in `features/habits/model/habit-cap.ts`; the stacking suite needs the two to
  * agree so it can seed a pool larger than the cap without tripping a 409.
  */
 const MAX_ACTIVE_HABITS = 3;

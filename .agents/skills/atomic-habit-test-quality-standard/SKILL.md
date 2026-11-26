@@ -29,7 +29,7 @@ it("saves a new habit and revalidates the habits route", async () => {
   mocks.createHabit.mockResolvedValue(testHabit({ id: "h_new", name: "Run" }));
 
   // When: createHabitAction is called with a minimal valid payload
-  const { createHabitAction } = await import("@/lib/actions/domain");
+  const { createHabitAction } = await import("@/features/habits/actions");
   const result = await createHabitAction({ name: "Run", identity: "runner", cue: "After alarm" });
 
   // Then: the habit is persisted and the cache is invalidated
