@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { STAGES, type Stage } from "@/lib/pet/evolution";
-import { generateSprite } from "@/lib/pet/sprite";
-import type { Genome } from "@/lib/pet/genome";
+import { STAGES, type Stage } from "../evolution";
+import { generateSprite } from "../sprite";
+import type { Genome } from "../genome";
 
 /**
  * The sprite generator must always return well-formed, bilaterally symmetric art

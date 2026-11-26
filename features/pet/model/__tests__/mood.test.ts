@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { deriveMood, moodById, type MoodContext } from "@/lib/pet/mood";
-import { MAX_HEALTH, MAX_SATIETY, type PetVitals } from "@/lib/pet/simulation";
+import { deriveMood, moodById, type MoodContext } from "../mood";
+import { MAX_HEALTH, MAX_SATIETY, type PetVitals } from "../simulation";
 
 /**
  * Mood is the pet's "face": it turns raw vitals into a feeling the UI animates.

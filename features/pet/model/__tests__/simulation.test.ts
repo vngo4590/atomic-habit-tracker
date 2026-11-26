@@ -11,7 +11,7 @@ import {
   tuningFor,
   type PetVitals,
   type SimTuning,
-} from "@/lib/pet/simulation";
+} from "../simulation";
 
 /**
  * The simulation is where the stakes live: time passes, the pet gets hungry, and

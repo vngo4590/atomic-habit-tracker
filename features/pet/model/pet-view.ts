@@ -1,31 +1,7 @@
 /**
- * index.ts — public barrel for the procedural pet engine.
- *
- * The pet engine is split into focused, pure modules:
- *   - genome.ts     : seeded PRNG, temperaments, trait decoding (a pet's "DNA").
- *   - evolution.ts  : life-stage ladder and which features each stage reveals.
- *   - sprite.ts     : deterministic pixel-art generation from genome + stage.
- *   - simulation.ts : real-time satiety/health decay and permanent death.
- *   - mood.ts       : maps vitals to an emotional state + idle animation.
- *
- * UI and data layers should import from "@/lib/pet" (this barrel) rather than
- * reaching into individual files, so the internal split can evolve freely.
+ * pet-view.ts - the ecosystem cap, the stored pet record shape, and the pure
+ * `buildPetView` that combines every engine module into one render-ready view.
  */
-
-export * from "./genome";
-export * from "./evolution";
-export * from "./sprite";
-export * from "./simulation";
-export * from "./mood";
-export * from "./food";
-export * from "./age";
-
-/**
- * The ecosystem cap: how many *alive* pets a user may keep at once. Lives in the
- * engine barrel (not the repository) so both the server-side adoption guard and
- * the client UI agree on the limit without the client importing server code.
- */
-export const MAX_ALIVE_PETS = 3;
 
 import { decodeTraits, type Genome } from "./genome";
 import {
@@ -43,6 +19,13 @@ import {
   tuningFor,
   type PetVitals,
 } from "./simulation";
+
+/**
+ * The ecosystem cap: how many *alive* pets a user may keep at once. Lives in the
+ * engine barrel (not the repository) so both the server-side adoption guard and
+ * the client UI agree on the limit without the client importing server code.
+ */
+export const MAX_ALIVE_PETS = 3;
 
 /**
  * The persisted, storage-agnostic shape of a pet. The repository maps a database

@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { dimsForStage } from "@/lib/pet/sprite";
+import { dimsForStage } from "@/features/pet";
 
 import { AdoptPanel } from "../AdoptPanel";
 

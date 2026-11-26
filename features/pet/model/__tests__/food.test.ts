@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { earnedFoodFrom, FOOD_PER_HABIT, FOOD_PER_JOURNAL } from "@/lib/pet/food";
+import { earnedFoodFrom, FOOD_PER_HABIT, FOOD_PER_JOURNAL } from "../food";
 
 /**
  * Food is the bridge between doing habits/journalling and feeding pets. These

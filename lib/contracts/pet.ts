@@ -8,7 +8,7 @@
 
 import { z } from "zod";
 
-import { TEMPERAMENTS } from "@/lib/pet/genome";
+import { TEMPERAMENTS } from "@/features/pet";
 
 /** The allowed temperament ids, derived from the engine registry so they can't drift. */
 const temperamentIds = TEMPERAMENTS.map((t) => t.id) as [string, ...string[]];

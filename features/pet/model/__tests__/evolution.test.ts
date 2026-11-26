@@ -9,8 +9,8 @@ import {
   stageForFeeds,
   stageIndex,
   visibleFeatures,
-} from "@/lib/pet/evolution";
-import type { Traits } from "@/lib/pet/genome";
+} from "../evolution";
+import type { Traits } from "../genome";
 
 /**
  * Evolution turns lifetime feeds into life stages, and gates which features show

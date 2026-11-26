@@ -10,7 +10,7 @@ import {
   rngFor,
   TEMPERAMENTS,
   type Genome,
-} from "@/lib/pet/genome";
+} from "../genome";
 
 /**
  * These tests pin down the determinism guarantees of the genome layer: the same

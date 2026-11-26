@@ -9,7 +9,7 @@ import {
   listPets,
   MAX_ALIVE_PETS,
 } from "@/lib/repositories/pets";
-import { FOOD_PER_HABIT, MAX_SATIETY } from "@/lib/pet";
+import { FOOD_PER_HABIT, MAX_SATIETY } from "@/features/pet";
 
 /**
  * Integration tests for the pet repository against a hand-built mock Prisma

@@ -19,9 +19,9 @@ import { db as defaultDb } from "@/lib/db/client";
 import { validateDatabaseUrl } from "@/lib/db/config";
 import { petAdoptSchema, type PetAdoptInput } from "@/lib/contracts/pet";
 import { logger, redactUserId } from "@/lib/logger";
-import { didEvolve } from "@/lib/pet/evolution";
-import { MAX_ALIVE_PETS, earnedFoodFrom } from "@/lib/pet";
-import { randomSeed } from "@/lib/pet/genome";
+import { didEvolve } from "@/features/pet";
+import { MAX_ALIVE_PETS, earnedFoodFrom } from "@/features/pet";
+import { randomSeed } from "@/features/pet";
 import {
   feedVitals,
   initialVitals,
@@ -29,7 +29,7 @@ import {
   simulatePet,
   tuningFor,
   type PetVitals,
-} from "@/lib/pet/simulation";
+} from "@/features/pet";
 import type { Pet } from "@/lib/types";
 
 type DbClient = typeof defaultDb;
