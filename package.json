@@ -7,11 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "lint:app": "eslint app components lib scripts",
+    "lint:app": "eslint --no-error-on-unmatched-pattern app components features shared lib scripts",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run",
     "test:e2e": "playwright test",
+    "bundle:report": "node scripts/measure-bundle.mjs",
     "backend:validate": "npm run prisma:validate && npm run prisma:generate && npm run typecheck && npm run lint:app && npm run test:run && npm run build",
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
@@ -51,6 +52,7 @@
     "react-dom": "19.2.4",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
+    "server-only": "^0.0.1",
     "zod": "^4.4.1"
   },
   "devDependencies": {
