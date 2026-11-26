@@ -8,16 +8,22 @@ import {
   habitCreateSchema,
   habitUpdateSchema,
   noteSchema,
-  stackMutationSchema,
   type CheckInInput,
   type HabitCreateInput,
   type HabitUpdateInput,
-  type StackMutationInput,
 } from "@/lib/contracts/domain";
 import { logger, redactUserId } from "@/lib/logger";
 import { MAX_ACTIVE_HABITS } from "@/features/habits";
-import { stackInsertPatches, stackRemovePatches, stackReorderPatches, getStackChain, getStackRoot } from "@/lib/stack";
-import { makeStackError } from "@/lib/stack-errors";
+import {
+  getStackChain,
+  getStackRoot,
+  makeStackError,
+  stackInsertPatches,
+  stackMutationSchema,
+  stackRemovePatches,
+  stackReorderPatches,
+  type StackMutationInput,
+} from "@/features/stacks";
 import type { CheckIn, Habit, Note } from "@/lib/types";
 
 type DbClient = typeof defaultDb;

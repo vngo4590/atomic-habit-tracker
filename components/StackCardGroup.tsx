@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useMemo, useState } from "react";
 
 import { IconCheck } from "@/components/Icons";
-import { getChainFrom } from "@/lib/stack";
+import { getChainFrom } from "@/features/stacks";
 import { completionRate } from "@/lib/store";
 import type { Habit } from "@/lib/types";
 

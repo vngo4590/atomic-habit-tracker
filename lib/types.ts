@@ -1,4 +1,4 @@
-import type { StackMutationInput } from "@/lib/contracts/domain";
+import type { StackMutationInput } from "@/features/stacks";
 
 export interface CheckIn {
   done: boolean;

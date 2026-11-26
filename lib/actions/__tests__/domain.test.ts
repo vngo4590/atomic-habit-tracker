@@ -193,7 +193,7 @@ describe("domain server actions", () => {
      * the actual validation logic is covered by the repository tests.
      */
     it("propagates a self-link rejection from the repository", async () => {
-      const { StackError } = await import("@/lib/stack-errors");
+      const { StackError } = await import("@/features/stacks");
       mocks.updateHabit.mockRejectedValue(
         new StackError("self_reference", "A habit cannot stack with itself."),
       );
@@ -205,7 +205,7 @@ describe("domain server actions", () => {
     });
 
     it("propagates an exclusivity rejection from the repository", async () => {
-      const { StackError } = await import("@/lib/stack-errors");
+      const { StackError } = await import("@/features/stacks");
       mocks.updateHabit.mockRejectedValue(
         new StackError("target_in_other_stack", "That habit is already part of another stack."),
       );
@@ -217,7 +217,7 @@ describe("domain server actions", () => {
     });
 
     it("propagates a cycle rejection from the repository", async () => {
-      const { StackError } = await import("@/lib/stack-errors");
+      const { StackError } = await import("@/features/stacks");
       mocks.updateHabit.mockRejectedValue(
         new StackError("circular_stack", "Linking these habits would create a circular stack."),
       );

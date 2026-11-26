@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { applyStackMutation } from "@/lib/repositories/habits";
-import { isStackError } from "@/lib/stack-errors";
+import { isStackError } from "@/features/stacks";
 
 /**
  * Build a minimal in-memory Prisma-like client that can answer the queries

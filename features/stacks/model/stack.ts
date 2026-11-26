@@ -1,3 +1,11 @@
+/**
+ * Habit stacks — pure helpers for "after I do X, I do Y" chains. Each habit can
+ * point at the next habit in its stack (`stackNextId`), forming a simple linked
+ * list. These helpers walk that list (root, chain, successor, predecessor) and
+ * compute the link changes needed to insert, remove or reorder a habit, without
+ * touching React or the database.
+ */
+
 import type { Habit } from "@/lib/types";
 
 export type StackPatch = { id: string; patch: Partial<Habit> };

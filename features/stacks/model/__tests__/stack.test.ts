@@ -13,7 +13,7 @@ import {
   stackRemovePatches,
   stackReorderPatches,
   wouldCreateCycle,
-} from "@/lib/stack";
+} from "../stack";
 import type { Habit } from "@/lib/types";
 
 function makeHabit(id: string, stackNextId?: string | null, history: Habit["history"] = {}): Habit {

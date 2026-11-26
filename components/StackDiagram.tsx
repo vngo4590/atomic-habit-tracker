@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { Modal } from "@/components/Modal";
 import { useStoreContext } from "@/components/StoreProvider";
-import { getStackChain, isInStack } from "@/lib/stack";
+import { getStackChain, isInStack } from "@/features/stacks";
 import type { Habit } from "@/lib/types";
 
 import styles from "./StackDiagram.module.css";

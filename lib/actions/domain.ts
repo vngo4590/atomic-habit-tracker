@@ -32,7 +32,7 @@ import type {
   UserPreferences,
   WeeklyReviewAnswers,
 } from "@/lib/types";
-import type { StackMutationInput } from "@/lib/contracts/domain";
+import type { StackMutationInput } from "@/features/stacks";
 
 const log = logger.child({ module: "actions.domain" });
 

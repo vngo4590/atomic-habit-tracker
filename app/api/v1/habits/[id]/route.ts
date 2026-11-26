@@ -2,7 +2,7 @@ import { handleApiError, jsonError, jsonOk, readJson, withApiUser } from "@/lib/
 import { habitUpdateSchema } from "@/lib/contracts/domain";
 import { logger } from "@/lib/logger";
 import { archiveHabit, getHabit, updateHabit } from "@/lib/repositories/habits";
-import { isStackError } from "@/lib/stack-errors";
+import { isStackError } from "@/features/stacks";
 
 const log = logger.child({ module: "api.v1.habits.id" });
 
