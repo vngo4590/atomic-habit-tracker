@@ -103,9 +103,9 @@ default Vitest suite. Note `e2e/` is outside `lint:app`'s scope.
   the two projects never collide.
 - **Date keys:** build `YYYY-MM-DD` offsets from "today" for multi-day history.
 - **Stable selectors:** prefer `data-testid` (stack chips), `aria-label`
-  (history-wall dots are `"<date> done"` / `"<date> missed"`; theme gallery is
-  `[aria-label="Theme"]`), and visible text. Theme state lands on
-  `html[data-theme-variant]` + `html[data-theme]`.
+  (history-wall dots are `"<date> done"` / `"<date> missed"`; the theme picker
+  is `getByRole("group", { name: "Theme" })` with Light/Dark buttons), and
+  visible text. Theme state lands on `html[data-theme]` (light|dark).
 - **Drag-reorder (framer-motion `Reorder`)** needs several intermediate
   `page.mouse.move(..., { steps })` calls before `mouse.up()`, then a short
   settle wait; verify the result via the API. Fall back to `test.skip` if

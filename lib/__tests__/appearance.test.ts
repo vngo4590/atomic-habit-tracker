@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { applyAppearance, readStoredVariant } from "@/lib/appearance";
+import { accentColor, applyAppearance, readLegacyTheme } from "@/lib/appearance";
 
 describe("Appearance theming", () => {
   // Given: a clean DOM and mocked localStorage before each test
@@ -29,100 +29,82 @@ describe("Appearance theming", () => {
     document.documentElement.style.cssText = "";
   });
 
-  it("applies light theme with ochre accent by default", () => {
-    // When: the user sets light theme with the default ochre hue (60)
-    applyAppearance("light", 60);
+  it("applies the light theme and accent hue", () => {
+    // When: the user sets light theme with the sage hue (160)
+    applyAppearance("light", 160);
 
     // Then: the HTML element gets the light theme data attribute
     expect(document.documentElement.dataset.theme).toBe("light");
-    // And: the accent color is set to a warm ochre tone
-    expect(document.documentElement.style.getPropertyValue("--accent")).toContain("oklch(62% 0.13 60)");
-    // And: the softer accent is light-friendly
-    expect(document.documentElement.style.getPropertyValue("--accent-soft")).toContain("92%");
-    // And: both settings are saved to localStorage so they persist across reloads
+    // And: the accent hue is exposed for every OKLCH accent token to derive from
+    expect(document.documentElement.style.getPropertyValue("--accent-hue")).toBe("160");
+    // And: both settings are saved so the no-flash script can restore them
     expect(storage.get("atomicly:theme")).toBe("light");
+    expect(storage.get("atomicly:accent")).toBe("160");
+  });
+
+  it("applies the dark theme", () => {
+    // When: the user switches to dark mode with an ochre accent (60)
+    applyAppearance("dark", 60);
+
+    // Then: dark tokens take over and the hue is kept
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(document.documentElement.style.getPropertyValue("--accent-hue")).toBe("60");
+    expect(storage.get("atomicly:theme")).toBe("dark");
     expect(storage.get("atomicly:accent")).toBe("60");
   });
 
-  it("applies dark theme with sage accent", () => {
-    // When: the user switches to dark mode with a sage green accent (145)
-    applyAppearance("dark", 145);
-
-    // Then: the HTML element gets the dark theme data attribute
-    expect(document.documentElement.dataset.theme).toBe("dark");
-    // And: the accent uses the sage hue
-    expect(document.documentElement.style.getPropertyValue("--accent")).toContain("oklch(62% 0.13 145)");
-    // And: the softer accent is dark-friendly (darker, less saturated)
-    expect(document.documentElement.style.getPropertyValue("--accent-soft")).toContain("28%");
-    // And: settings are persisted
-    expect(storage.get("atomicly:theme")).toBe("dark");
-    expect(storage.get("atomicly:accent")).toBe("145");
-  });
-
-  it("persists accent hue across theme switches", () => {
+  it("persists the accent hue across theme switches and overwrites it on change", () => {
     // Given: the user has chosen a plum accent (340)
-    // When: they switch from light to dark while keeping the same accent
     applyAppearance("light", 340);
     applyAppearance("dark", 340);
+    // Then: the hue survives the theme switch
+    expect(document.documentElement.style.getPropertyValue("--accent-hue")).toBe("340");
 
-    // Then: the accent hue remains 340 in both theme modes
-    expect(document.documentElement.style.getPropertyValue("--accent")).toContain("340");
-    // And: localStorage always reflects the latest choice
-    expect(storage.get("atomicly:accent")).toBe("340");
+    // When: they pick slate (240)
+    applyAppearance("dark", 240);
+    // Then: the new hue replaces the old one
+    expect(document.documentElement.style.getPropertyValue("--accent-hue")).toBe("240");
+    expect(storage.get("atomicly:accent")).toBe("240");
   });
 
-  it("overwrites previous accent when changed", () => {
-    // Given: the user previously had an ochre accent
-    applyAppearance("light", 60);
-    // When: they change to a slate blue accent (240)
-    applyAppearance("light", 240);
+  it("clears the retired theme-variant attribute and storage key", () => {
+    // Given: leftovers from the retired Glass/Neon/Fairy/Stars system
+    document.documentElement.setAttribute("data-theme-variant", "neon");
+    storage.set("atomicly:theme-variant", "neon");
 
-    // Then: the new accent replaces the old one in CSS
-    expect(document.documentElement.style.getPropertyValue("--accent")).toContain("240");
-    expect(document.documentElement.style.getPropertyValue("--accent")).not.toContain("60");
+    // When: appearance is applied
+    applyAppearance("dark", 160);
+
+    // Then: no stale variant remains for CSS or the next reload to pick up
+    expect(document.documentElement.hasAttribute("data-theme-variant")).toBe(false);
+    expect(storage.has("atomicly:theme-variant")).toBe(false);
   });
 
-  describe("named theme variant", () => {
-    it("does not touch the variant attribute or storage when omitted", () => {
-      // When: a plain 2-arg call is made (e.g. the accent picker)
-      applyAppearance("light", 60);
+  it("accentColor derives the primary colour from the hue", () => {
+    // Then: the preview swatch matches the light-theme --primary token
+    expect(accentColor(160)).toBe("oklch(0.48 0.09 160)");
+  });
 
-      // Then: no variant attribute is written and storage stays empty
-      expect(document.documentElement.dataset.themeVariant).toBeUndefined();
-      expect(storage.get("atomicly:theme-variant")).toBeUndefined();
+  describe("readLegacyTheme", () => {
+    it("returns null when no retired variant is stored", () => {
+      expect(readLegacyTheme()).toBeNull();
     });
 
-    it("sets the variant attribute and persists it when provided", () => {
-      // When: the user selects the Neon theme (a dark-based variant)
-      applyAppearance("dark", 145, "neon");
+    it("maps a stored retired variant to its supported theme", () => {
+      // Given: a browser that remembered the Starlight theme
+      storage.set("atomicly:theme-variant", "stars");
+      // Then: it now resolves to Dark
+      expect(readLegacyTheme()).toBe("dark");
 
-      // Then: the variant is reflected on <html> for CSS to target
-      expect(document.documentElement.dataset.themeVariant).toBe("neon");
-      // And: it is mirrored to localStorage so it survives a reload
-      expect(storage.get("atomicly:theme-variant")).toBe("neon");
-      // And: the original theme/accent behaviour is unaffected
-      expect(document.documentElement.dataset.theme).toBe("dark");
-      expect(storage.get("atomicly:theme")).toBe("dark");
+      // Given: a browser that remembered the Glass theme
+      storage.set("atomicly:theme-variant", "glass");
+      // Then: it now resolves to Light
+      expect(readLegacyTheme()).toBe("light");
     });
 
-    it("does NOT clear an existing variant on a later accent-only change", () => {
-      // Given: the user is on the Glass theme
-      applyAppearance("light", 60, "glass");
-      // When: they later change only the accent (no variant passed)
-      applyAppearance("light", 240);
-
-      // Then: the Glass variant is preserved, not wiped
-      expect(document.documentElement.dataset.themeVariant).toBe("glass");
-      expect(storage.get("atomicly:theme-variant")).toBe("glass");
-    });
-
-    it("readStoredVariant returns the persisted id or null", () => {
-      // Given: nothing stored yet
-      expect(readStoredVariant()).toBeNull();
-      // When: a variant is applied
-      applyAppearance("dark", 60, "stars");
-      // Then: it can be read back
-      expect(readStoredVariant()).toBe("stars");
+    it("ignores unknown stored values", () => {
+      storage.set("atomicly:theme-variant", "rainbow");
+      expect(readLegacyTheme()).toBeNull();
     });
   });
 });

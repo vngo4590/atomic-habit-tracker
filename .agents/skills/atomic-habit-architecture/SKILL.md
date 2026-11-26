@@ -81,7 +81,7 @@ k8s/local/         # Docker Desktop Kubernetes manifests
 5. **Domain writes**: Habit mutations go through `features/habits/actions.ts`, stack mutations through `features/stacks/actions.ts`, journal/identity/review/lesson mutations through `features/reflection/actions.ts`, preferences and backup import through `features/settings/actions.ts`, and pet mutations through `features/pet/actions.ts`. Each calls user-scoped repository functions in `features/<name>/server/*.repository.ts` (`lib/repositories/users.ts` remains for auth only). Feature slices follow ADR-0001 (`docs/architecture/adr/0001-modular-monolith-feature-slices.md`): import them only via `@/features/<name>` (client-safe), `@/features/<name>/actions`, or `@/features/<name>/server`.
 6. **Mobile/API clients**: Use authenticated `/api/v1/` route handlers with stable `{ ok, data }` / `{ ok, error }` envelopes (see `app/api/v1/README.md`).
 7. **Appearance sync**: `components/AppearanceSync.tsx` applies backend `preferences.theme` and `preferences.accentHue` via `lib/appearance.ts`.
-8. **localStorage**: Only used for `atomicly:theme`, `atomicly:accent`, and `atomicly:theme-variant` (selected named theme) — UI mirrors only, **never** source of truth for domain data.
+8. **localStorage**: Only used for `atomicly:theme` and `atomicly:accent` (the retired `atomicly:theme-variant` key is read once and mapped to light/dark) — UI mirrors only, **never** source of truth for domain data.
 
 ## 3. Routes
 

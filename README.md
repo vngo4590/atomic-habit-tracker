@@ -313,20 +313,19 @@ The styling layer is intentionally modular. There is **no monolithic global styl
 
 | Layer | Location | Purpose |
 | --- | --- | --- |
-| Design tokens | `app/styles/tokens.css` | CSS variables for colours, fonts, shadows, transitions; light + dark theme. |
+| Design tokens | `app/styles/tokens.css` | Calm semantic tokens from `design-system/atomicly/MASTER.md` (colour, type scale, spacing, radius, shadow, motion); light on `:root`, dark on `[data-theme="dark"]`; accent derived from `--accent-hue` (OKLCH); legacy variable names aliased. |
 | Element baseline | `app/styles/base.css` | Reset, `<body>` baseline, scrollbar styling. |
 | Typography | `app/styles/typography.css` | `.h1`/`.h2`/`.h3`, `.lede`, `.markdown-body`, text helpers. |
-| App shell | `app/styles/layout.css` | `.app` grid, sidebar, brand, `.main`, `.page-header`. |
+| App shell | `app/styles/layout.css` | `.app` grid, `.main`, `.page-header` (nav styles live in `components/nav/*.module.css`). |
 | Component classes | `app/styles/components.css` | `.card`, `.btn`, `.input`, `.chip`, `.habit-row`, `.loop`, `.principle-*`, `.stack-*`, etc. |
 | Animations | `app/styles/animations.css` | `@keyframes` + animation utility classes (`.fade-up`, `.skeleton`, `.glass`, `.focus-ring`). |
-| Theme variants | `app/styles/themes.css` | `[data-theme-variant="glass\|neon\|fairy\|stars"]` token overrides driven by the theme registry in `lib/themes.ts`. |
-| Responsive | `app/styles/responsive.css` | Mobile (`max-width: 900px`) and tablet (`901–1180px`) overrides. |
+| Responsive | `app/styles/responsive.css` | Mobile (`max-width: 900px`) and tablet (`901–1180px`) page-content overrides. |
 | Per-component | `components/*.module.css` | Locally-scoped CSS Module next to the component. |
 | Per-page | `app/(root)/*/page.module.css` | Locally-scoped CSS Module next to the page. |
 
-`app/globals.css` is a thin entry file that `@import`s the partials in cascade order (Tailwind preflight → tokens → base → typography → layout → components → animations → themes → responsive).
+`app/globals.css` is a thin entry file that `@import`s the partials in cascade order (Tailwind preflight → tokens → base → typography → layout → components → animations → responsive).
 
-**Selectable themes.** `lib/themes.ts` is the registry of named themes (Bright, Midnight, Glass, Neon, Fairy, Starlight). The Settings → Appearance gallery lets users pick a theme and a custom accent hue. The selection is persisted as a UI-only `localStorage` mirror under `atomicly:theme-variant` (the base light/dark mode still persists server-side via the `theme` preference) and applied as a `data-theme-variant` attribute on `<html>`. A pre-hydration inline script in `app/layout.tsx` applies the stored theme before paint to avoid a flash. Each theme can declare a signature click effect rendered by `components/ClickFX.tsx` (pure particle logic in `lib/click-fx.ts`).
+**Themes.** Atomicly has two themes, Light and Dark (ADR-0003). `lib/themes.ts` lists them and maps the retired decorative themes (Glass/Fairy → Light, Neon/Starlight → Dark) so users who picked one keep a sensible look. The theme persists server-side via the `theme` preference and is mirrored to `localStorage` (`atomicly:theme`, `atomicly:accent`); the legacy `atomicly:theme-variant` key is read once, mapped, saved and deleted by `components/AppearanceSync.tsx`. A pre-hydration inline script in `app/layout.tsx` applies the stored theme and `--accent-hue` before paint to avoid a flash. Typography is Plus Jakarta Sans only (`next/font/google`, exposed as `--font-jakarta`). Reusable primitives (Button, IconButton, Card, Field/Input/TextArea/Select, Switch, Tabs, RouteTabs, EmptyState, Skeleton, Badge, ProgressRing, PageHeader) live in `components/ui/` and are imported from `@/components/ui`.
 
 **Pet Ecosystem.** The `/pet` tab is a procedural, evolving, mortal Tamagotchi world. Instead of a fixed roster, every creature is generated deterministically from a genome — a random `seed` plus the `temperament` the user picks at adoption — so two players who both choose "Fiery" still get visibly different pets. The pure engine lives under `features/pet/model/`: `genome.ts` (seeded PRNG + temperaments), `sprite.ts` (bilateral-symmetry pixel-art generator), `evolution.ts` (egg → hatchling → juvenile → adult → elder stages that reveal new seed-derived features), `simulation.ts` (real-time satiety/health decay with **permanent death**), `mood.ts` (mood + Framer Motion idle animation), `food.ts` (the food economy), and `age.ts` (friendly age labels). Pets are persisted in PostgreSQL (`Pet` + `PetFeedLog` models) through `features/pet/server/` (`pets.repository.ts`, `food.repository.ts`), mutated via `features/pet/actions.ts`, and loaded by `getStoreSnapshot` (`lib/server/store-snapshot.ts`). Each card shows the pet's **age** and **lifetime feeds**, and a **Release** button (with a confirm prompt) removes any pet.
 

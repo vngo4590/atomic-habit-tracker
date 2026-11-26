@@ -39,68 +39,69 @@
 .card-pad-lg { padding: 28px; }
 
 /* ── Buttons ────────────────────────────────────────────────────────────── */
+/* Legacy global button classes, restyled to the calm MASTER spec so pages
+   not yet migrated to <Button> (components/ui) already look consistent.
+   Calm: no lift-on-hover; colour change only. */
 .btn {
   appearance: none;
-  border: 1px solid var(--rule-strong);
-  background: var(--bg-elev);
-  color: var(--ink);
-  height: 34px;
-  padding: 0 14px;
-  border-radius: var(--r-md);
-  font-size: 13px;
-  font-weight: 500;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  height: 40px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: var(--space-2);
+  text-decoration: none;
   transition:
     background var(--transition-fast),
     border-color var(--transition-fast),
-    transform var(--transition-fast),
-    box-shadow var(--transition-fast);
+    color var(--transition-fast);
   white-space: nowrap;
 }
-.btn:hover {
-  background: var(--bg-sunk);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
-}
-.btn:active {
-  transform: translateY(0);
-  box-shadow: none;
-}
+.btn:hover { background: var(--surface-2); }
+.btn:disabled { cursor: not-allowed; opacity: 0.55; }
 .btn-primary {
-  background: var(--ink);
-  color: var(--bg);
-  border-color: var(--ink);
+  background: var(--primary);
+  color: var(--on-primary);
+  border-color: var(--primary);
 }
-.btn-primary:hover { background: var(--ink-2); }
+.btn-primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
 .btn-accent {
-  background: var(--accent);
-  color: var(--bg);
-  border-color: var(--accent);
+  background: var(--primary-soft);
+  color: var(--on-primary-soft);
+  border-color: transparent;
 }
+.btn-accent:hover { background: var(--primary-soft); border-color: var(--primary); }
 .btn-danger {
-  background: var(--warn);
-  color: var(--bg);
-  border-color: var(--warn);
+  background: var(--danger);
+  color: var(--on-primary);
+  border-color: var(--danger);
 }
-.btn-danger:hover { background: oklch(from var(--warn) calc(l - 0.07) c h); }
+.btn-danger:hover { background: oklch(from var(--danger) calc(l - 0.07) c h); }
 .btn-ghost {
   border-color: transparent;
   background: transparent;
 }
 .btn-ghost:hover {
-  background: var(--bg-sunk);
-  border-color: var(--rule);
+  background: var(--surface-2);
 }
-.btn-danger-ghost { color: var(--warn); }
+.btn-danger-ghost { color: var(--danger); }
 .btn-danger-ghost:hover {
-  border-color: var(--warn);
-  background: oklch(from var(--warn) 94% 0.025 h);
+  border-color: var(--danger);
+  background: var(--danger-soft);
 }
-.btn-sm { height: 28px; padding: 0 10px; font-size: 12px; }
-.btn-lg { height: 40px; padding: 0 18px; font-size: 14px; }
+.btn-sm { height: 36px; padding: 0 var(--space-3); font-size: var(--text-sm); }
+.btn-lg { height: 48px; padding: 0 var(--space-6); font-size: var(--text-base); }
+/* Touch devices: every button meets the 44px minimum target. */
+@media (pointer: coarse) {
+  .btn, .btn-sm { min-height: var(--tap-target); }
+}
 .btn-back {
   min-width: 118px;
   justify-content: center;

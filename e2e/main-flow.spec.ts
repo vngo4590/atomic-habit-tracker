@@ -250,46 +250,38 @@ test.describe("Reflecting with a weekly review", () => {
 });
 
 /* -------------------------------------------------------------------------- */
-/* 5. Theme switching — every theme applies without breaking the UI           */
+/* 5. Theme switching — Light and Dark both apply without breaking the UI     */
 /* -------------------------------------------------------------------------- */
 
 test.describe("Switching themes", () => {
-  // Each theme card maps to the data-theme-variant + base data-theme it applies.
-  const THEMES: Array<{ label: string; variant: string; base: string }> = [
-    { label: "Bright", variant: "light", base: "light" },
-    { label: "Midnight", variant: "dark", base: "dark" },
-    { label: "Glass", variant: "glass", base: "light" },
-    { label: "Neon", variant: "neon", base: "dark" },
-    { label: "Fairy", variant: "fairy", base: "light" },
-    { label: "Starlight", variant: "stars", base: "dark" },
+  // ADR-0003: exactly two themes. Each button sets data-theme on <html>.
+  const THEMES: Array<{ label: string; theme: string }> = [
+    { label: "Light", theme: "light" },
+    { label: "Dark", theme: "dark" },
   ];
 
-  test("each theme applies its variant and keeps the UI intact", async ({ page }) => {
+  test("each theme applies and keeps the UI intact", async ({ page }) => {
     await page.goto("/settings");
     const html = page.locator("html");
-    const gallery = page.locator('[aria-label="Theme"]');
+    const picker = page.getByRole("group", { name: "Theme" });
 
     for (const theme of THEMES) {
-      // When: the user selects a theme from the gallery
-      await gallery.locator(`button:has-text("${theme.label}")`).click();
+      // When: the user selects a theme
+      await picker.getByRole("button", { name: theme.label }).click();
 
-      // Then: the document switches to that variant + its base light/dark mode
-      await expect(html).toHaveAttribute("data-theme-variant", theme.variant);
-      await expect(html).toHaveAttribute("data-theme", theme.base);
+      // Then: the document switches to that theme
+      await expect(html).toHaveAttribute("data-theme", theme.theme);
 
-      // And: the core UI is still intact (no blank screen / broken layout) —
-      // the Settings heading and the theme gallery remain visible on every
-      // viewport (the sidebar is intentionally hidden on mobile).
+      // And: the core UI is still intact (no blank screen / broken layout).
       await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
-      await expect(gallery).toBeVisible();
+      await expect(picker).toBeVisible();
     }
 
     // Leave the user on a stable default so later tests aren't affected.
-    await gallery.locator('button:has-text("Bright")').click();
-    await expect(html).toHaveAttribute("data-theme-variant", "light");
+    await picker.getByRole("button", { name: "Light" }).click();
+    await expect(html).toHaveAttribute("data-theme", "light");
   });
 });
-
 /* -------------------------------------------------------------------------- */
 /* 6. Identity ledger — check-ins accumulate as votes per identity            */
 /* -------------------------------------------------------------------------- */

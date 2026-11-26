@@ -1,56 +1,56 @@
+import { resolveThemeId } from "@/lib/themes";
 import type { Theme } from "@/lib/types";
 
 const THEME_KEY = "atomicly:theme";
 const ACCENT_KEY = "atomicly:accent";
-// Mirror for the *named* theme variant (Glass/Neon/...). Stored only in the
-// browser because it is a purely visual preference; see lib/themes.ts for why.
-const VARIANT_KEY = "atomicly:theme-variant";
+// Legacy key that remembered a retired decorative theme (Glass/Neon/...).
+// We still read it once so those users land on the nearest supported theme,
+// then delete it so the server-saved preference becomes the only source.
+const LEGACY_VARIANT_KEY = "atomicly:theme-variant";
 
 /**
- * The primary accent colour for a given hue. Lightness and chroma are fixed so
- * the accent stays legible across every hue; only the hue is user-selectable.
- * Centralised here so the hue picker and `applyAppearance` can never drift.
+ * The primary accent colour for a given hue, matching the light-theme
+ * `--primary` token in app/styles/tokens.css. Used by the hue picker preview
+ * so the swatch shows the colour buttons will actually use.
  */
 export function accentColor(hue: number): string {
-  return `oklch(62% 0.13 ${hue})`;
+  return `oklch(0.48 0.09 ${hue})`;
 }
 
 /**
- * Apply the user's appearance choices to the document and persist them.
+ * Apply the user's appearance choices to the document and remember them in
+ * localStorage so the no-flash script can restore them before first paint.
  *
- * @param theme    The base light/dark mode (drives `data-theme` + token set).
- * @param accentHue The accent colour hue in oklch degrees.
- * @param variant  Optional named theme id (e.g. "glass"). When provided we set
- *                 `data-theme-variant` and persist it. When omitted we leave any
- *                 existing variant attribute/storage untouched, so callers that
- *                 only tweak the accent (e.g. the accent picker) never wipe the
- *                 user's chosen theme.
+ * @param theme     Light or dark (drives `data-theme` and the token set).
+ * @param accentHue Accent hue in OKLCH degrees; every accent colour token is
+ *                  derived from it in CSS via `--accent-hue`.
  */
-export function applyAppearance(theme: Theme, accentHue: number, variant?: string) {
-  document.documentElement.dataset.theme = theme;
-  document.documentElement.style.setProperty("--accent", accentColor(accentHue));
-  document.documentElement.style.setProperty("--accent-2", `oklch(72% 0.10 ${accentHue})`);
-  document.documentElement.style.setProperty(
-    "--accent-soft",
-    theme === "dark" ? `oklch(28% 0.05 ${accentHue})` : `oklch(92% 0.04 ${accentHue})`,
-  );
-  window.localStorage.setItem(THEME_KEY, theme);
-  window.localStorage.setItem(ACCENT_KEY, String(accentHue));
+export function applyAppearance(theme: Theme, accentHue: number) {
+  const root = document.documentElement;
+  root.dataset.theme = theme;
+  root.style.setProperty("--accent-hue", String(accentHue));
+  // Clear any leftover attribute from the retired theme-variant system so no
+  // stale selector could ever match.
+  root.removeAttribute("data-theme-variant");
 
-  if (variant !== undefined) {
-    document.documentElement.dataset.themeVariant = variant;
-    window.localStorage.setItem(VARIANT_KEY, variant);
+  try {
+    window.localStorage.setItem(THEME_KEY, theme);
+    window.localStorage.setItem(ACCENT_KEY, String(accentHue));
+    window.localStorage.removeItem(LEGACY_VARIANT_KEY);
+  } catch {
+    // Storage can be unavailable (privacy mode). The DOM is already updated,
+    // so the only cost is a possible flash on the next reload.
   }
 }
 
 /**
- * Read the persisted theme-variant id from localStorage, if any. Returns null
- * when nothing is stored or storage is unavailable (SSR / privacy mode), so
- * callers can safely fall back to the base light/dark preference.
+ * Read a retired theme-variant id left in localStorage (e.g. "neon") and map
+ * it to the supported theme it now renders as. Returns null when nothing is
+ * stored, the value is unknown, or storage is unavailable.
  */
-export function readStoredVariant(): string | null {
+export function readLegacyTheme(): Theme | null {
   try {
-    return window.localStorage.getItem(VARIANT_KEY);
+    return resolveThemeId(window.localStorage.getItem(LEGACY_VARIANT_KEY));
   } catch {
     return null;
   }
