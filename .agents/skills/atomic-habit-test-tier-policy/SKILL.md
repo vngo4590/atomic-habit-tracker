@@ -27,7 +27,7 @@ Write unit tests for every piece of functionality. **No exceptions.**
 - Validation contracts (`lib/contracts/`)
 - Auth helpers (`lib/auth/credentials.ts`, `lib/auth/password.ts`, `lib/auth/routes.ts`, `lib/auth/session.ts`)
 - Store logic (`lib/store.ts` — computed values, optimistic mutations)
-- Server actions (`features/*/actions.ts`, `lib/actions/domain.ts`) — mock repositories and session
+- Server actions (`features/*/actions.ts`) — mock repositories and session
 - Repository functions (`lib/repositories/`) — inject a mock Prisma client object
 - API response helpers (`lib/api/`)
 

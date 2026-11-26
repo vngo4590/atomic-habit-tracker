@@ -5,7 +5,7 @@ description: Canonical map of the Atomicly codebase — project tree, request/da
 
 # Atomicly Architecture
 
-> **TL;DR:** App Router under `app/`. Authenticated screens load a `getStoreSnapshot(userId, todayKey())` snapshot in `app/(root)/layout.tsx` and wrap it in `StoreProvider`. All writes go through `lib/actions/` → `lib/repositories/` → Prisma.
+> **TL;DR:** App Router under `app/`. Authenticated screens load a `getStoreSnapshot(userId, todayKey())` snapshot in `app/(root)/layout.tsx` and wrap it in `StoreProvider`. All writes go through feature server actions (`features/<name>/actions.ts`) → feature repositories (`features/<name>/server/`) → Prisma.
 
 ## 1. Project Structure
 
@@ -33,8 +33,14 @@ components/        # Reusable client UI components
   StackCardGroup.tsx  # Apple-Wallet stacked habit card group (Today page)
   StackDiagram.tsx    # Stack chain diagram (habit detail Stack tab)
   Modal.tsx           # Accessible blocking dialog
+features/          # Feature slices (ADR-0001): index.ts, actions.ts, contracts.ts, server.ts, model/, server/
+  habits/          # Habits, check-ins, notes/contract, formation verdicts, stack-link validator
+  stacks/          # Habit stacks (linked list) model + repository
+  reflection/      # Journal, weekly review, identity, lessons (server/ split by aggregate)
+  settings/        # Preferences + backup envelope/builder (model/) and importer (server/)
+  pet/             # Pure pet engine (model/) + repositories — see atomic-habit-pet-ecosystem
 lib/
-  actions/         # Server actions (domain.ts, auth.ts, pets.ts)
+  actions/         # Remaining shared server actions (auth.ts)
   api/             # API response helpers
   animations.ts    # Shared Framer Motion presets, easings, durations, variants
   auth/            # credentials, register, password, session helpers
@@ -42,8 +48,8 @@ lib/
   db/              # Prisma client singleton (client.ts, config.ts)
   generated/prisma/# Generated Prisma 7 client output
   hooks/           # Shared React hooks (e.g., useMotionReduced)
-  pet/             # Pure pet engine — see atomic-habit-pet-ecosystem
-  repositories/    # User-scoped DB queries (habits.ts, reflection.ts, users.ts, pets.ts)
+  repositories/    # Auth user queries (users.ts)
+  server/          # Server-only composition (store-snapshot.ts -> getStoreSnapshot)
   date-keys.ts     # UTC/local date-key conversion helpers
   types.ts         # All shared TypeScript types
   store.ts         # In-memory optimistic cache (StoreState)
@@ -70,9 +76,9 @@ k8s/local/         # Docker Desktop Kubernetes manifests
 
 1. **Auth gate**: `proxy.ts` uses Auth.js session state and `lib/auth/routes.ts` to redirect unauthenticated protected routes to `/login`. All `app/(root)/` screens then call `requireCurrentUser()` / `requireUserId()` (`lib/auth/session.ts`), which verifies the JWT maps to an existing DB user and redirects missing/expired/deleted users to `/login`. JWT sessions expire after 1 day via `SESSION_MAX_AGE_SECONDS`.
 2. **Reverse auth gate**: `/login` and `/register` are server components that call `auth()` from `@/auth`; if signed in, they redirect to `/` (or a validated `callbackUrl`).
-3. **Backend snapshot**: `app/(root)/layout.tsx` fetches the full user-scoped snapshot via `getStoreSnapshot(userId, todayKey())` and passes it to `StoreProvider`.
+3. **Backend snapshot**: `app/(root)/layout.tsx` fetches the full user-scoped snapshot via `getStoreSnapshot(userId, todayKey())` (`lib/server/store-snapshot.ts`, a server-only composition root over each feature's `server` entry) and passes it to `StoreProvider`.
 4. **Optimistic cache**: `components/StoreProvider.tsx` + `lib/store.ts` maintain an in-memory optimistic store. Mutations hit server actions immediately and the store updates before the server round-trip.
-5. **Domain writes**: Habit mutations go through `features/habits/actions.ts`, stack mutations through `features/stacks/actions.ts`, and journal/identity/review/preferences mutations through `lib/actions/domain.ts`. Each calls user-scoped repository functions (`features/<name>/server/*.repository.ts` or `lib/repositories/`). Feature slices follow ADR-0001 (`docs/architecture/adr/0001-modular-monolith-feature-slices.md`): import them only via `@/features/<name>` (client-safe), `@/features/<name>/actions`, or `@/features/<name>/server`.
+5. **Domain writes**: Habit mutations go through `features/habits/actions.ts`, stack mutations through `features/stacks/actions.ts`, journal/identity/review/lesson mutations through `features/reflection/actions.ts`, preferences and backup import through `features/settings/actions.ts`, and pet mutations through `features/pet/actions.ts`. Each calls user-scoped repository functions in `features/<name>/server/*.repository.ts` (`lib/repositories/users.ts` remains for auth only). Feature slices follow ADR-0001 (`docs/architecture/adr/0001-modular-monolith-feature-slices.md`): import them only via `@/features/<name>` (client-safe), `@/features/<name>/actions`, or `@/features/<name>/server`.
 6. **Mobile/API clients**: Use authenticated `/api/v1/` route handlers with stable `{ ok, data }` / `{ ok, error }` envelopes (see `app/api/v1/README.md`).
 7. **Appearance sync**: `components/AppearanceSync.tsx` applies backend `preferences.theme` and `preferences.accentHue` via `lib/appearance.ts`.
 8. **localStorage**: Only used for `atomicly:theme`, `atomicly:accent`, and `atomicly:theme-variant` (selected named theme) — UI mirrors only, **never** source of truth for domain data.
@@ -101,8 +107,10 @@ k8s/local/         # Docker Desktop Kubernetes manifests
 | `prisma/schema.prisma` | Database schema |
 | `features/habits/` | Habits slice: `model/` (schedule, metrics, habit-cap, habit-sentence), `contracts.ts`, `actions.ts`, `server/` repositories (habits, check-ins, notes/contract, formation verdicts) |
 | `features/stacks/` | Stacks slice: `model/` (stack helpers, `StackError`), `contracts.ts`, `actions.ts`, `server/stacks.repository.ts` |
-| `lib/actions/domain.ts` | Reflection server actions (journal, weekly review, identity, lessons, preferences) |
-| `lib/contracts/domain.ts` | Reflection Zod contracts shared by actions and API (habit/stack contracts live in their feature slices) |
+| `features/reflection/` | Reflection slice: `contracts.ts`, `actions.ts`, `server/` (journal, weekly-review, identity, lessons repositories) |
+| `features/settings/` | Settings slice: preferences + backup — `model/backup-envelope.ts` (contract), `model/backup-export.ts` (`buildBackup`), `server/backup-import*.ts` (`mergeBackup`), `actions.ts` (`savePreferencesAction`, `importDataAction`) |
+| `lib/server/store-snapshot.ts` | `getStoreSnapshot` — server-only composition root used by the layout and export route |
+| `features/<name>/contracts.ts` | Zod contracts shared by actions and API (shared primitives in `lib/contracts/primitives.ts`) |
 | `lib/api/http.ts` | Stable API response/error helpers for `/api/v1` |
 | `lib/store.ts` | Optimistic cache store (re-exports the habit metrics from `@/features/habits`) |
 | `components/StoreProvider.tsx` | React context wrapper for the store |
@@ -112,9 +120,9 @@ k8s/local/         # Docker Desktop Kubernetes manifests
 | `lib/auth/register.ts` | Account creation logic |
 | `features/habits/model/schedule.ts` | Schedule parsing — see `atomic-habit-schedule-metrics` |
 | `features/stacks/model/stack.ts` / `stack-errors.ts` | Habit stack helpers — see `atomic-habit-habit-stacking` |
-| `lib/pet/` / `lib/repositories/pets.ts` | Procedural pet engine + persistence — see `atomic-habit-pet-ecosystem` |
+| `features/pet/model/` / `features/pet/server/` | Procedural pet engine + persistence — see `atomic-habit-pet-ecosystem` |
 | `lib/animations.ts` | Shared Framer Motion presets — see `atomic-habit-ui-animation` |
-| `features/*/server/` / `lib/repositories/reflection.ts` | Prisma data access |
+| `features/*/server/` | Prisma data access |
 | `lib/logger.ts` / `lib/logger-client.ts` | Structured logging — see `atomic-habit-logging` |
 | `docs/architecture/backend-auth-mobile.md` | Provider choices, Vercel notes, migration safety |
 | `Dockerfile` / `k8s/local/` | Container build + local Kubernetes overlay |

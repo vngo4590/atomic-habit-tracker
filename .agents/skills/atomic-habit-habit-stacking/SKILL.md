@@ -11,7 +11,7 @@ description: Data model, helpers, mutation API, and UI behaviour for Atomicly ha
 
 - `habit.stackNextId` is a nullable foreign key pointing to the next habit in the chain.
 - **Exclusivity (`@unique`)**: at most one habit may link to any given habit. The DB enforces this as a unique constraint on `stackNextId`.
-- **No cycles**: validation in `features/stacks/server/stacks.repository.ts::validateStackLink` (called by both `updateHabit` and `applyStackMutation`) rejects any link that would form a cycle (direct or indirect).
+- **No cycles**: validation in `features/habits/server/stack-link.validator.ts::validateStackLink` (kept in habits so the server dependency stays one-way: stacks -> habits) (called by both `updateHabit` and `applyStackMutation`) rejects any link that would form a cycle (direct or indirect).
 - **Symmetric "Link before / Link after" picker** with chain-gravity:
   - **Anchor in a chain**: picker offers only **standalone** habits; the picked solo is inserted before/after the anchor inside the existing chain.
   - **Anchor is solo**: picker offers **every other habit** (chain members and other solos).

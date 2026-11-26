@@ -17,7 +17,7 @@ vi.mock("@/features/habits/actions", () => ({
   // ... list every action the module under test imports
 }));
 vi.mock("@/features/stacks/actions", () => ({ applyStackMutationAction: vi.fn() }));
-vi.mock("@/lib/actions/domain", () => ({ /* reflection actions */ }));
+vi.mock("@/features/reflection/actions", () => ({ /* reflection actions */ }));
 ```
 
 Mock the public entry point (`@/features/<name>/actions` or `/server`), not the internal file: feature code imports its own repositories through the `./server` barrel, so the mock path must match.
@@ -91,7 +91,7 @@ type IconProps = LucideProps;
 
 ## 7. `next-auth` / `next/server` ESM interop
 
-`next-auth` internally imports `next/server` (without `.js`), which fails in vitest on Node.js with ESM/CJS interop errors. If a test file or its imports transitively pull in `next-auth`, mock `@/features/habits/actions`, `@/features/stacks/actions` and `@/lib/actions/domain` (or whichever local module imports `next-auth`) at the **very top** of the test file:
+`next-auth` internally imports `next/server` (without `.js`), which fails in vitest on Node.js with ESM/CJS interop errors. If a test file or its imports transitively pull in `next-auth`, mock `@/features/habits/actions`, `@/features/stacks/actions` and `@/features/reflection/actions` (or whichever local module imports `next-auth`) at the **very top** of the test file:
 
 ```typescript
 vi.mock("@/features/habits/actions", () => ({

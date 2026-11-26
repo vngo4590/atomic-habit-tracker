@@ -107,7 +107,7 @@ Run when the user asks to "look through code and update Atomicly skills", "refre
    ```
 
 2. Check high-signal implementation files for architecture drift:
-   - `auth.ts`, `proxy.ts`, `lib/auth/*`, `lib/db/*`, `lib/contracts/*`, `lib/actions/domain.ts`, `lib/repositories/*`, `features/*/actions.ts`, `features/*/server/*`
+   - `auth.ts`, `proxy.ts`, `lib/auth/*`, `lib/db/*`, `lib/contracts/*`, `lib/server/*`, `lib/repositories/*`, `features/*/actions.ts`, `features/*/server/*`
    - `app/(root)/layout.tsx`, `app/(auth)/*`, `app/api/v1/README.md`, and route handlers under `app/api/v1/`
    - `prisma/schema.prisma`, `.env.example`, `docs/architecture/backend-auth-mobile.md`
 
