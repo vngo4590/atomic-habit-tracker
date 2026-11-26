@@ -232,21 +232,21 @@ describe("HelpTip", () => {
     expect(screen.getByRole("tooltip").getAttribute("data-placement")).toBe("top");
   });
 
-  it("flips the bubble below the trigger when the fixed mobile menu button blocks the space above", () => {
-    // Given: a 360px-wide mobile viewport where the fixed hamburger button
+  it("flips the bubble below the trigger when the fixed mobile top bar blocks the space above", () => {
+    // Given: a 360px-wide mobile viewport where a fixed top obstruction
     // occupies the top-left corner and the trigger sits just beneath it — the
     // exact situation where an upward bubble slid under the menu.
     Object.defineProperty(window, "innerWidth", { configurable: true, value: 360 });
     Object.defineProperty(window, "innerHeight", { configurable: true, value: 640 });
     const menuButton = document.createElement("button");
-    menuButton.className = "mobile-menu-btn";
+    menuButton.setAttribute("data-top-obstruction", "");
     document.body.appendChild(menuButton);
 
     vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (
       this: Element,
     ) {
-      if (this.classList.contains("mobile-menu-btn")) {
-        // Fixed hamburger: 40px square anchored 12px from the top.
+      if (this.hasAttribute("data-top-obstruction")) {
+        // Fixed top chrome: a 40px box anchored 12px from the top.
         return makeRect({ left: 12, right: 52, width: 40, top: 12, bottom: 52, height: 40 });
       }
       if (this.getAttribute("role") === "tooltip") {
@@ -269,21 +269,21 @@ describe("HelpTip", () => {
     }
   });
 
-  it("pushes the bubble down past the fixed menu button when the trigger is scrolled behind it", () => {
+  it("pushes the bubble down past the fixed top bar when the trigger is scrolled behind it", () => {
     // Given: a mid-size window where the user has scrolled far enough that the
-    // trigger itself has slipped up behind the fixed hamburger button. Flipping
+    // trigger itself has slipped up behind the fixed top chrome. Flipping
     // alone cannot help here — the bubble is anchored to the trigger, so it
     // would still be dragged underneath the menu.
     Object.defineProperty(window, "innerWidth", { configurable: true, value: 860 });
     Object.defineProperty(window, "innerHeight", { configurable: true, value: 600 });
     const menuButton = document.createElement("button");
-    menuButton.className = "mobile-menu-btn";
+    menuButton.setAttribute("data-top-obstruction", "");
     document.body.appendChild(menuButton);
 
     vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (
       this: Element,
     ) {
-      if (this.classList.contains("mobile-menu-btn")) {
+      if (this.hasAttribute("data-top-obstruction")) {
         return makeRect({ left: 12, right: 52, width: 40, top: 12, bottom: 52, height: 40 });
       }
       if (this.getAttribute("role") === "tooltip") {
@@ -299,7 +299,7 @@ describe("HelpTip", () => {
       // When: the user opens the tip
       fireEvent.click(screen.getByRole("button", { name: "Help" }));
 
-      // Then: the bubble is pushed down so its top clears the menu button's
+      // Then: the bubble is pushed down so its top clears the top chrome's
       // bottom edge (52px) plus the 8px safety margin. Its natural top would be
       // trigger bottom (-2) + 8px gap = 6px, so the lift is 60 - 6 = 54px.
       const tooltip = screen.getByRole("tooltip");
@@ -339,6 +339,44 @@ describe("HelpTip", () => {
     expect(tooltip.style.getPropertyValue("--tip-lift")).toBe("-54px");
   });
 
+  it("keeps the bubble clear of the fixed mobile bottom tab bar", () => {
+    // Given: a short phone viewport with a 64px bottom tab bar, where the
+    // bubble has to open below the trigger and would reach under the bar.
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 400 });
+    const tabBar = document.createElement("nav");
+    tabBar.setAttribute("data-bottom-obstruction", "");
+    document.body.appendChild(tabBar);
+
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: Element,
+    ) {
+      if (this.hasAttribute("data-bottom-obstruction")) {
+        return makeRect({ left: 0, right: 390, width: 390, top: 336, bottom: 400, height: 64 });
+      }
+      if (this.getAttribute("role") === "tooltip") {
+        return makeRect({ left: 20, right: 280, width: 260, top: 0, bottom: 210, height: 210 });
+      }
+      // Trigger 100px down: only 84px of room above, 202px below (to the bar).
+      return makeRect({ left: 20, right: 38, width: 18, top: 100, bottom: 118, height: 18 });
+    });
+
+    try {
+      render(<HelpTip>Explanation near the bottom of a phone screen.</HelpTip>);
+
+      // When: the user opens the tip
+      fireEvent.click(screen.getByRole("button", { name: "Help" }));
+
+      // Then: it opens below and is pulled up so its bottom clears the bar
+      // top (336) minus the 8px margin. Natural top = 118 + 8 = 126; bottom
+      // would be 336, the floor is 328, so the lift is -8px.
+      const tooltip = screen.getByRole("tooltip");
+      expect(tooltip.getAttribute("data-placement")).toBe("bottom");
+      expect(tooltip.style.getPropertyValue("--tip-lift")).toBe("-8px");
+    } finally {
+      tabBar.remove();
+    }
+  });
   it("applies no vertical correction when the bubble already fits above the trigger", () => {
     // Given: a roomy desktop window with the trigger low on the page
     Object.defineProperty(window, "innerWidth", { configurable: true, value: 1280 });

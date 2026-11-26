@@ -56,7 +56,7 @@ button {
 
 /* Thin, warm-grey scrollbars on the main scroll container (desktop only —
    mobile defers to the platform's native scrollbar). The sidebar styles its
-   own scrollbar in components/nav/Nav.module.css. */
+   own scrollbar in components/nav/Sidebar.module.css. */
 .main::-webkit-scrollbar {
   width: 10px;
 }

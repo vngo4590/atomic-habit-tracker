@@ -11,9 +11,40 @@ import styles from "./HelpTip.module.css";
 const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 /** Elements that are pinned to the top of the screen and would visually cover
- *  an upward-opening popover. On mobile the navigation hamburger is fixed to
- *  the top-left corner; on desktop it is `display: none` and reports no box. */
-const TOP_OBSTRUCTION_SELECTORS = [".mobile-menu-btn"];
+ *  an upward-opening popover. Below 1024px the mobile top bar (marked with
+ *  `data-top-obstruction`) is fixed to the top; on desktop it is
+ *  `display: none` and reports no box. */
+const TOP_OBSTRUCTION_SELECTORS = ["[data-top-obstruction]"];
+/** Elements pinned to the bottom of the screen (the mobile bottom tab bar). */
+const BOTTOM_OBSTRUCTION_SELECTORS = ["[data-bottom-obstruction]"];
+
+/** Every visible (non-zero box) element matching the selectors. */
+function visibleRects(selectors: readonly string[]): DOMRect[] {
+  if (typeof document === "undefined") {
+    return [];
+  }
+  return selectors
+    .flatMap((selector) => Array.from(document.querySelectorAll(selector)))
+    .map((element) => element.getBoundingClientRect())
+    // A hidden element (desktop) has no box, so it obstructs nothing.
+    .filter((rect) => rect.width !== 0 || rect.height !== 0);
+}
+
+/**
+ * Returns the highest pixel occupied by any fixed element at the bottom of the
+ * screen, i.e. the lowest point a popover may reach before it would disappear
+ * behind the tab bar. Returns the viewport height when nothing is in the way.
+ */
+function obstructedBottom(): number {
+  let top = window.innerHeight;
+  for (const rect of visibleRects(BOTTOM_OBSTRUCTION_SELECTORS)) {
+    // Only count elements anchored near the bottom of the viewport.
+    if (rect.bottom >= window.innerHeight / 2) {
+      top = Math.min(top, rect.top);
+    }
+  }
+  return top;
+}
 
 /**
  * Returns the lowest pixel occupied by any fixed element at the top of the
@@ -21,24 +52,13 @@ const TOP_OBSTRUCTION_SELECTORS = [".mobile-menu-btn"];
  * would disappear behind that element. Returns 0 when nothing is in the way.
  */
 function obstructedTop(): number {
-  if (typeof document === "undefined") {
-    return 0;
-  }
-
   let bottom = 0;
-  for (const selector of TOP_OBSTRUCTION_SELECTORS) {
-    for (const element of Array.from(document.querySelectorAll(selector))) {
-      const rect = element.getBoundingClientRect();
-      // A hidden element (desktop) has no box, so it obstructs nothing.
-      if (rect.width === 0 && rect.height === 0) {
-        continue;
-      }
-      // Only count elements anchored near the top of the viewport.
-      if (rect.top > window.innerHeight / 2) {
-        continue;
-      }
-      bottom = Math.max(bottom, rect.bottom);
+  for (const rect of visibleRects(TOP_OBSTRUCTION_SELECTORS)) {
+    // Only count elements anchored near the top of the viewport.
+    if (rect.top > window.innerHeight / 2) {
+      continue;
     }
+    bottom = Math.max(bottom, rect.bottom);
   }
   return bottom;
 }
@@ -128,12 +148,12 @@ export function HelpTip({
   //   1. On a narrow screen a trigger near a side edge would push a centred
   //      bubble off-screen and clip its text -> we nudge it sideways (`shift`).
   //   2. A trigger near the top of the page has no room above it, so the bubble
-  //      would slide underneath the fixed mobile menu button (or off the top of
+  //      would slide underneath the fixed mobile top bar (or off the top of
   //      the screen) -> we flip it below the trigger (`placement`).
   //   3. Once the page is scrolled, the trigger itself can slide up behind that
-  //      fixed menu button. The bubble is anchored to the trigger, so flipping
-  //      alone is not enough — it would still be dragged under the menu. So we
-  //      also clamp it vertically (`lift`), pushing it back down below the menu
+  //      fixed top bar. The bubble is anchored to the trigger, so flipping
+  //      alone is not enough — it would still be dragged under the bar. So we
+  //      also clamp it vertically (`lift`), pushing it back down below the bar
   //      (or up off the bottom edge) until the whole bubble is readable.
   // We measure the trigger and the bubble on open (and on resize/scroll) and
   // recompute all three corrections together.
@@ -163,7 +183,7 @@ export function HelpTip({
       /* ---- Horizontal: anchor the bubble's LEFT edge to the trigger ---- */
       // The bubble opens rightwards from the "?" rather than being centred on
       // it. Centring made the bubble reach backwards past the trigger, which is
-      // how it ended up under the fixed top-left menu button; growing to the
+      // how it ended up under the old fixed top-left menu button; growing to the
       // right keeps it clear of that chrome by construction. We still clamp so
       // a trigger near the right edge cannot push the bubble off-screen.
       const naturalLeft = wrapperRect.left;
@@ -180,11 +200,12 @@ export function HelpTip({
       }
 
       /* ---- Vertical: choose a side, then clamp into the usable band ---- */
-      // Anything fixed to the top of the screen (on mobile/tablet, the hamburger
-      // menu button) eats into the usable space. Treat the bottom of that
-      // element as the real ceiling so the bubble is never hidden behind it.
+      // Anything fixed to the top of the screen (below 1024px, the mobile top
+      // bar) eats into the usable space. Treat the bottom of that element as
+      // the real ceiling so the bubble is never hidden behind it — and the top
+      // of the fixed bottom tab bar as the real floor.
       const topBoundary = Math.max(margin, obstructedTop() + margin);
-      const bottomBoundary = window.innerHeight - margin;
+      const bottomBoundary = obstructedBottom() - margin;
       const roomAbove = wrapperRect.top - gap - topBoundary;
       const roomBelow = bottomBoundary - (wrapperRect.bottom + gap);
 
