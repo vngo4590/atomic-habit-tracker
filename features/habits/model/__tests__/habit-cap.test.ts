@@ -5,7 +5,7 @@ import {
   activeHabitCount,
   isInductedHabit,
   remainingHabitSlots,
-} from "@/lib/habit-cap";
+} from "../habit-cap";
 import { testFormationVerdict, testHabit } from "@/lib/test/fixtures";
 
 // ---------------------------------------------------------------------------

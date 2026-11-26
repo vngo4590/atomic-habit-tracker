@@ -13,7 +13,7 @@ import { useStoreContext } from "@/components/StoreProvider";
 import { dateAdd, fmt, todayKey } from "@/lib/helpers";
 import { useMotionReduced } from "@/lib/hooks/useMotionReduced";
 import { clientLogger } from "@/lib/logger-client";
-import { isScheduledForDate } from "@/lib/schedule";
+import { isScheduledForDate } from "@/features/habits";
 import { getChainFrom, getStackRoot, isInStack } from "@/lib/stack";
 import { completionRate } from "@/lib/store";
 import type { Habit } from "@/lib/types";

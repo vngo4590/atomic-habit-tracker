@@ -30,9 +30,9 @@ import { MoodCheckSheet } from "@/components/MoodCheckSheet";
 import { NotesManager } from "@/components/NotesManager";
 import { useStoreContext } from "@/components/StoreProvider";
 import { todayKey } from "@/lib/helpers";
-import { composeHabitSentence } from "@/lib/habit-sentence";
+import { composeHabitSentence } from "@/features/habits";
 import { clientLogger } from "@/lib/logger-client";
-import { formatScheduleLabel } from "@/lib/schedule";
+import { formatScheduleLabel } from "@/features/habits";
 import type { CheckIn, Habit } from "@/lib/types";
 
 import styles from "./page.module.css";

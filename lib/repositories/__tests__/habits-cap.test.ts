@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { MAX_ACTIVE_HABITS } from "@/lib/habit-cap";
+import { MAX_ACTIVE_HABITS } from "@/features/habits";
 import { countActiveHabits, createHabit } from "@/lib/repositories/habits";
 
 const habitRecord = {

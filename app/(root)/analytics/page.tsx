@@ -9,7 +9,7 @@ import { useStoreContext } from "@/components/StoreProvider";
 import { TabUnderline } from "@/components/TabUnderline";
 import { dateAdd, fmt, todayKey } from "@/lib/helpers";
 import { clientLogger } from "@/lib/logger-client";
-import { isScheduledForDate } from "@/lib/schedule";
+import { isScheduledForDate } from "@/features/habits";
 
 import styles from "./page.module.css";
 

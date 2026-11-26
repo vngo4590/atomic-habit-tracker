@@ -1,3 +1,9 @@
+/**
+ * Active-habit cap — the shared rule for how many habits a user may actively
+ * work on at once, used by both the server (authoritative) and the browser
+ * (to disable the create button before the server has to refuse).
+ */
+
 import type { FormationVerdict, Habit } from "@/lib/types";
 
 /**

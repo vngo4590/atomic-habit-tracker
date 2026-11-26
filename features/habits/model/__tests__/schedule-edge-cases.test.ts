@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatScheduleLabel } from "@/lib/schedule";
+import { formatScheduleLabel } from "../schedule";
 
 describe("empty and whitespace inputs", () => {
   it("returns Custom for an empty string", () => {

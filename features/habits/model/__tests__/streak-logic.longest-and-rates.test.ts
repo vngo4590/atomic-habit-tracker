@@ -1,23 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { dateAdd, todayKey } from "@/lib/helpers";
-import { completionRate, longestStreak } from "@/lib/store";
+import { completionRate, longestStreak } from "../metrics";
 import type { Habit } from "@/lib/types";
-
-vi.mock("@/lib/actions/domain", () => ({
-  createHabitAction: vi.fn(async () => null),
-  createJournalEntryAction: vi.fn(),
-  deleteHabitAction: vi.fn(),
-  logCheckInAction: vi.fn(async () => null),
-  markLessonReadAction: vi.fn(),
-  saveFormationVerdictAction: vi.fn(),
-  saveIdentityAction: vi.fn(async (identity: unknown) => identity),
-  savePreferencesAction: vi.fn(),
-  saveWeeklyReviewAction: vi.fn(),
-  toggleHabitAction: vi.fn(async () => null),
-  updateHabitAction: vi.fn(async () => null),
-  updateJournalEntryAction: vi.fn(async () => null),
-}));
 
 // Pin "today" to a Wednesday so schedule-aware streak tests are deterministic.
 vi.mock("@/lib/helpers", async () => {

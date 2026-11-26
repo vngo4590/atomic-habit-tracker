@@ -7,7 +7,7 @@ import {
   stripTrailingPunctuation,
   withCravingConnector,
   withCueConnector,
-} from "@/lib/habit-sentence";
+} from "../habit-sentence";
 import type { Habit } from "@/lib/types";
 
 // Minimal habit shape for the sentence helper (only the fields it reads).

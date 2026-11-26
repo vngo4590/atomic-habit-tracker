@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { formatNextDayLabel, isScheduledForDate, nextScheduledDateKey } from "@/lib/schedule";
+import { formatNextDayLabel, isScheduledForDate, nextScheduledDateKey } from "../schedule";
 
 describe("isScheduledForDate", () => {
   it("returns true for Daily on any day", () => {

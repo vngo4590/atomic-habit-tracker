@@ -12,8 +12,8 @@ import {
   type Preset,
 } from "@/components/SchedulePicker";
 import { useStoreContext } from "@/components/StoreProvider";
-import { capitalizeFirst, withCueConnector } from "@/lib/habit-sentence";
-import { MAX_ACTIVE_HABITS, remainingHabitSlots } from "@/lib/habit-cap";
+import { capitalizeFirst, withCueConnector } from "@/features/habits";
+import { MAX_ACTIVE_HABITS, remainingHabitSlots } from "@/features/habits";
 import { clientLogger } from "@/lib/logger-client";
 
 import styles from "./page.module.css";

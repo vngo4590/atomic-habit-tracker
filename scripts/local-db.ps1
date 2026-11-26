@@ -121,7 +121,7 @@ import "dotenv/config";
 import { hashPassword } from "../lib/auth/password";
 import { db } from "../lib/db/client";
 import { FormationDecision } from "../lib/generated/prisma/enums";
-import { MAX_ACTIVE_HABITS } from "../lib/habit-cap";
+import { MAX_ACTIVE_HABITS } from "../features/habits/model/habit-cap";
 
 const users = Number(process.env.ATOMICLY_RANDOM_USERS ?? "3");
 const habitsPerUser = Number(process.env.ATOMICLY_RANDOM_HABITS ?? "5");
@@ -416,7 +416,7 @@ import "dotenv/config";
 import { hashPassword } from "../lib/auth/password";
 import { db } from "../lib/db/client";
 import { FormationDecision } from "../lib/generated/prisma/enums";
-import { MAX_ACTIVE_HABITS } from "../lib/habit-cap";
+import { MAX_ACTIVE_HABITS } from "../features/habits/model/habit-cap";
 
 const users = Number(process.env.ATOMICLY_HISTORY_USERS ?? "2");
 const habitsPerUser = Number(process.env.ATOMICLY_HISTORY_HABITS ?? "7");

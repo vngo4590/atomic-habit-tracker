@@ -15,7 +15,7 @@ import {
   type StackMutationInput,
 } from "@/lib/contracts/domain";
 import { logger, redactUserId } from "@/lib/logger";
-import { MAX_ACTIVE_HABITS } from "@/lib/habit-cap";
+import { MAX_ACTIVE_HABITS } from "@/features/habits";
 import { stackInsertPatches, stackRemovePatches, stackReorderPatches, getStackChain, getStackRoot } from "@/lib/stack";
 import { makeStackError } from "@/lib/stack-errors";
 import type { CheckIn, Habit, Note } from "@/lib/types";

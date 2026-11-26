@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatScheduleLabel } from "@/lib/schedule";
+import { formatScheduleLabel } from "../schedule";
 
 describe("formatScheduleLabel", () => {
   it("collapses recognizable day patterns", () => {

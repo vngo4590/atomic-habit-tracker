@@ -1,4 +1,11 @@
-import { dateAdd, fmt, todayKey } from "./helpers";
+/**
+ * Habit schedules — turns the schedule text a user picks ("Daily", "Weekdays",
+ * "Mon, Wed" ...) into answers the app needs: is this habit due on a given day,
+ * when is it next due, and how should the schedule be labelled on screen.
+ * Pure date logic with no React or database code, so it runs anywhere.
+ */
+
+import { dateAdd, fmt, todayKey } from "@/lib/helpers";
 
 const DAY_ORDER = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 

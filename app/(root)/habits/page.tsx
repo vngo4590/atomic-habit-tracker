@@ -10,7 +10,7 @@ import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContai
 import { useStoreContext } from "@/components/StoreProvider";
 import { todayKey } from "@/lib/helpers";
 import { clientLogger } from "@/lib/logger-client";
-import { formatNextDayLabel, nextScheduledDateKey } from "@/lib/schedule";
+import { formatNextDayLabel, nextScheduledDateKey } from "@/features/habits";
 import type { Habit } from "@/lib/types";
 
 import styles from "./page.module.css";
