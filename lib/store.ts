@@ -1,34 +1,17 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
-import {
-  createJournalEntryAction,
-  markLessonReadAction,
-  saveIdentityAction,
-  saveWeeklyReviewAction,
-  updateJournalEntryAction,
-} from "@/features/reflection/actions";
 import { savePreferencesAction } from "@/features/settings/actions";
 import { adoptPetAction, buryPetAction, deletePetAction, feedPetAction } from "@/features/pet/actions";
+import { useReflectionSlice } from "@/features/reflection/store";
 import { useStacksSlice } from "@/features/stacks/store";
 import { completionRate, longestStreak, streak } from "@/features/habits";
 import { useHabitsSlice } from "@/features/habits/store";
-import { todayKey } from "@/lib/helpers";
 import { clientLogger } from "@/lib/logger-client";
 import { useToast } from "@/lib/store/toast";
 import { MAX_ALIVE_PETS, feedVitals, simulatePet, tuningFor } from "@/features/pet";
-import type {
-  Identity,
-  JournalEntry,
-  Pet,
-  PetDraft,
-  StoreSnapshot,
-  StoreState,
-  UserPreferences,
-  WeeklyReview,
-  WeeklyReviewAnswers,
-} from "@/lib/types";
+import type { Pet, PetDraft, StoreSnapshot, StoreState, UserPreferences } from "@/lib/types";
 
 /** Reduce repeated unknown-error handling to a safe, non-sensitive message. */
 function errorMessage(error: unknown) {
@@ -78,192 +61,11 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
   const { toast, showToast } = useToast();
   const habitsSlice = useHabitsSlice(backendSnapshot, showToast);
   const stacksSlice = useStacksSlice(habitsSlice.setHabits);
-  const [journal, setJournal] = useState<JournalEntry[]>(backendSnapshot.journal);
-  const [identity, setIdentityState] = useState<Identity>(backendSnapshot.identity);
-  const [weeklyReview, setWeeklyReviewState] = useState<WeeklyReviewAnswers>(backendSnapshot.weeklyReview);
-  const [weeklyReviews, setWeeklyReviews] = useState<WeeklyReview[]>(backendSnapshot.weeklyReviews ?? []);
-  const [completedLessons, setCompletedLessons] = useState<Set<number>>(
-    () => new Set(backendSnapshot.completedLessons),
-  );
+  const reflectionSlice = useReflectionSlice(backendSnapshot);
   const [lessonModeState, setLessonModeState] = useState(backendSnapshot.preferences.lessonMode);
   const [preferences, setPreferencesState] = useState<UserPreferences>(backendSnapshot.preferences);
   const [pets, setPets] = useState<Pet[]>(backendSnapshot.pets ?? []);
   const [petFeedsUsedToday, setPetFeedsUsedToday] = useState<number>(backendSnapshot.petFeedsUsedToday ?? 0);
-  const updateJournalVersion = useRef(0);
-  const pendingJournalPatches = useRef(new Map<string, Partial<JournalEntry>>());
-  const identityVersion = useRef(0);
-
-  const addJournal = useCallback((entry: Partial<JournalEntry>) => {
-    const tempId = `pending-${Date.now()}`;
-    setJournal((currentJournal) => [
-      {
-        id: tempId,
-        date: todayKey(),
-        title: "",
-        body: "",
-        mood: "good",
-        tags: [],
-        ...entry,
-      },
-      ...currentJournal,
-    ]);
-
-    clientLogger.info("Creating journal entry", {
-      event: "store.journal.create",
-      journalId: tempId,
-      dateKey: entry.date ?? todayKey(),
-      mood: entry.mood ?? "good",
-      tagCount: entry.tags?.length ?? 0,
-      hasTitle: Boolean(entry.title?.trim()),
-      hasBody: Boolean(entry.body?.trim()),
-    });
-
-    void createJournalEntryAction(entry)
-      .then((saved) => {
-        setJournal((currentJournal) =>
-          currentJournal.map((journalEntry) => {
-            if (journalEntry.id !== tempId) {
-              return journalEntry;
-            }
-
-            const pendingPatch = pendingJournalPatches.current.get(tempId) ?? {};
-            pendingJournalPatches.current.delete(tempId);
-            const merged = { ...saved, ...journalEntry, ...pendingPatch, id: saved.id };
-            if (
-              merged.title !== saved.title ||
-              merged.body !== saved.body ||
-              merged.mood !== saved.mood ||
-              merged.date !== saved.date ||
-              merged.tags.join("\u0000") !== saved.tags.join("\u0000")
-            ) {
-              void updateJournalEntryAction(saved.id, {
-                date: merged.date,
-                title: merged.title,
-                body: merged.body,
-                mood: merged.mood,
-                tags: merged.tags,
-              }).catch((error: unknown) => {
-                clientLogger.warn("Journal entry reconciliation failed", {
-                  event: "store.journal.reconcile_failed",
-                  journalId: saved.id,
-                  message: errorMessage(error),
-                });
-              });
-            }
-            return merged;
-          }),
-        );
-      })
-      .catch((error: unknown) => {
-        clientLogger.warn("Journal creation failed", {
-          event: "store.journal.create_failed",
-          journalId: tempId,
-          message: errorMessage(error),
-        });
-      });
-  }, []);
-
-  const updateJournal = useCallback((id: string, patch: Partial<JournalEntry>) => {
-    const version = ++updateJournalVersion.current;
-    // Journal entries are anchored to the day they happened — the date is
-    // assigned at creation and is never editable afterwards. Strip any
-    // incoming `date` from the patch defensively so neither the optimistic
-    // cache nor the server mutation can move an entry to a different day.
-    const { date: _ignoredDate, ...safePatch } = patch;
-    void _ignoredDate;
-    if (id.startsWith("pending-")) {
-      pendingJournalPatches.current.set(id, {
-        ...(pendingJournalPatches.current.get(id) ?? {}),
-        ...safePatch,
-      });
-    }
-    setJournal((currentJournal) =>
-      currentJournal.map((entry) => (entry.id === id ? { ...entry, ...safePatch } : entry)),
-    );
-
-    clientLogger.info("Updating journal entry", {
-      event: "store.journal.update",
-      journalId: id,
-      fields: changedFields(safePatch),
-      isPending: id.startsWith("pending-"),
-    });
-
-    void updateJournalEntryAction(id, safePatch)
-      .then((saved) => {
-        if (!saved || version !== updateJournalVersion.current) {
-          return;
-        }
-        setJournal((currentJournal) =>
-          currentJournal.map((entry) => (entry.id === id ? { ...entry, ...saved, ...safePatch } : entry)),
-        );
-      })
-      .catch((error: unknown) => {
-        clientLogger.warn("Journal update failed", {
-          event: "store.journal.update_failed",
-          journalId: id,
-          fields: changedFields(safePatch),
-          message: errorMessage(error),
-        });
-      });
-  }, []);
-
-  const setIdentity = useCallback((nextIdentity: Identity) => {
-    const version = ++identityVersion.current;
-    setIdentityState(nextIdentity);
-    clientLogger.info("Saving identity", {
-      event: "store.identity.save",
-      hasStatement: Boolean(nextIdentity.statement.trim()),
-      valuesCount: nextIdentity.values.length,
-    });
-    void saveIdentityAction(nextIdentity)
-      .then((saved) => {
-        if (version !== identityVersion.current) {
-          return;
-        }
-        setIdentityState((current) => ({ ...current, ...saved, statement: nextIdentity.statement }));
-      })
-      .catch((error: unknown) => {
-        clientLogger.warn("Identity save failed", {
-          event: "store.identity.save_failed",
-          valuesCount: nextIdentity.values.length,
-          message: errorMessage(error),
-        });
-      });
-  }, []);
-
-  const setWeeklyReview = useCallback((weekStartKey: string, answers: WeeklyReviewAnswers) => {
-    setWeeklyReviewState(answers);
-    const optimisticReview: WeeklyReview = {
-      weekStartKey,
-      ...answers,
-      updatedAt: new Date().toISOString(),
-    };
-    setWeeklyReviews((current) => [
-      optimisticReview,
-      ...current.filter((review) => review.weekStartKey !== weekStartKey),
-    ].sort((a, b) => b.weekStartKey.localeCompare(a.weekStartKey)));
-
-    clientLogger.info("Saving weekly review", {
-      event: "store.weekly-review.save",
-      weekStartKey,
-    });
-
-    void saveWeeklyReviewAction(weekStartKey, answers)
-      .then((saved) => {
-        setWeeklyReviewState(saved);
-        setWeeklyReviews((current) => [
-          saved,
-          ...current.filter((review) => review.weekStartKey !== saved.weekStartKey),
-        ].sort((a, b) => b.weekStartKey.localeCompare(a.weekStartKey)));
-      })
-      .catch((error: unknown) => {
-        clientLogger.warn("Weekly review save failed", {
-          event: "store.weekly-review.save_failed",
-          weekStartKey,
-          message: errorMessage(error),
-        });
-      });
-  }, []);
 
   const setLessonMode = useCallback((lessonMode: UserPreferences["lessonMode"]) => {
     setLessonModeState(lessonMode);
@@ -281,23 +83,6 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
         clientLogger.warn("Lesson mode save failed", {
           event: "store.preferences.lesson_mode_failed",
           lessonMode,
-          message: errorMessage(error),
-        });
-      });
-  }, []);
-
-  const markLessonRead = useCallback((lessonId: number) => {
-    setCompletedLessons((current) => new Set([...current, lessonId]));
-    clientLogger.info("Marking lesson read", {
-      event: "store.lesson.read",
-      lessonId,
-    });
-    void markLessonReadAction(lessonId)
-      .then((completed) => setCompletedLessons(new Set(completed)))
-      .catch((error: unknown) => {
-        clientLogger.warn("Lesson completion sync failed", {
-          event: "store.lesson.read_failed",
-          lessonId,
           message: errorMessage(error),
         });
       });
@@ -499,18 +284,9 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
     () => ({
       ...habitsSlice,
       ...stacksSlice,
-      journal,
-      addJournal,
-      updateJournal,
-      identity,
-      setIdentity,
-      weeklyReview,
-      weeklyReviews,
-      setWeeklyReview,
-      completedLessons,
+      ...reflectionSlice,
       lessonMode: lessonModeState,
       setLessonMode,
-      markLessonRead,
       preferences,
       setPreferences,
       pets,
@@ -528,20 +304,11 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
     [
       habitsSlice,
       stacksSlice,
-      addJournal,
-      identity,
-      journal,
-      weeklyReview,
-      weeklyReviews,
-      updateJournal,
-      completedLessons,
+      reflectionSlice,
       lessonModeState,
       preferences,
-      markLessonRead,
       setLessonMode,
       setPreferences,
-      setIdentity,
-      setWeeklyReview,
       showToast,
       toast,
       pets,
