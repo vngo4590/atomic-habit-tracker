@@ -17,10 +17,10 @@ import { createHabitAction, saveFormationVerdictAction, toggleHabitAction } from
 import {
   createJournalEntryAction,
   markLessonReadAction,
-  savePreferencesAction,
   saveWeeklyReviewAction,
   updateJournalEntryAction,
 } from "@/lib/actions/domain";
+import { savePreferencesAction } from "@/features/settings/actions";
 import { todayKey } from "@/lib/helpers";
 import { testHabit, testPreferences } from "@/lib/test/fixtures";
 import type { StoreSnapshot } from "@/lib/types";

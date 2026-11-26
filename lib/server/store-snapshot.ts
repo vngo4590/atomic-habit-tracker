@@ -17,12 +17,12 @@ import { todayKey } from "@/lib/helpers";
 import { logger, redactUserId } from "@/lib/logger";
 import {
   getIdentity,
-  getPreferences,
   getWeeklyReview,
   listCompletedLessons,
   listJournalEntries,
   listWeeklyReviews,
 } from "@/lib/repositories/reflection";
+import { getPreferences } from "@/features/settings/server";
 import type { StoreSnapshot } from "@/lib/types";
 
 type DbClient = typeof defaultDb;

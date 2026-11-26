@@ -52,9 +52,11 @@ vi.mock("@/lib/repositories/reflection", () => ({
   createJournalEntry: mocks.createJournalEntry,
   markLessonComplete: mocks.markLessonComplete,
   saveIdentity: mocks.saveIdentity,
-  savePreferences: mocks.savePreferences,
   saveWeeklyReview: mocks.saveWeeklyReview,
   updateJournalEntry: mocks.updateJournalEntry,
+}));
+vi.mock("@/features/settings/server", () => ({
+  savePreferences: mocks.savePreferences,
 }));
 
 describe("domain server actions", () => {
@@ -150,7 +152,8 @@ describe("domain server actions", () => {
     mocks.markLessonComplete.mockResolvedValue([1, 2, 3]);
     mocks.saveFormationVerdictRecord.mockResolvedValue(testFormationVerdict());
     const { saveFormationVerdictAction } = await import("@/features/habits/actions");
-    const { markLessonReadAction, saveIdentityAction, savePreferencesAction } = await import("@/lib/actions/domain");
+    const { markLessonReadAction, saveIdentityAction } = await import("@/lib/actions/domain");
+    const { savePreferencesAction } = await import("@/features/settings/actions");
 
     await expect(saveIdentityAction(testIdentity({ statement: "I show up" }))).resolves.toMatchObject({ statement: "I am someone who keeps promises to myself." });
     await expect(savePreferencesAction({ lessonMode: "random" })).resolves.toMatchObject({ lessonMode: "random" });

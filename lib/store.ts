@@ -15,10 +15,10 @@ import {
   createJournalEntryAction,
   markLessonReadAction,
   saveIdentityAction,
-  savePreferencesAction,
   saveWeeklyReviewAction,
   updateJournalEntryAction,
 } from "@/lib/actions/domain";
+import { savePreferencesAction } from "@/features/settings/actions";
 import { adoptPetAction, buryPetAction, deletePetAction, feedPetAction } from "@/features/pet/actions";
 import {
   stackInsertPatches as stackInsertPatchesHelper,

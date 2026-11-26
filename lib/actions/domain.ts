@@ -14,15 +14,12 @@ import {
   createJournalEntry,
   markLessonComplete,
   saveIdentity,
-  savePreferences,
   saveWeeklyReview,
   updateJournalEntry,
 } from "@/lib/repositories/reflection";
 import type {
   Identity,
   JournalEntry,
-  LessonMode,
-  UserPreferences,
   WeeklyReviewAnswers,
 } from "@/lib/types";
 
@@ -87,14 +84,4 @@ export async function markLessonReadAction(lessonId: number) {
 
   revalidatePath("/lessons");
   return completed;
-}
-
-export async function savePreferencesAction(preferences: Partial<UserPreferences> & { lessonMode?: LessonMode }) {
-  const userId = await requireUserId();
-  log.info("Saving preferences", { event: "preferences.saved", userId: redactUserId(userId) });
-  const saved = await savePreferences(userId, preferences);
-
-  revalidatePath("/settings");
-  revalidatePath("/lessons");
-  return saved;
 }

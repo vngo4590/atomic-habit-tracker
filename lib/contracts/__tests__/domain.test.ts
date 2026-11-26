@@ -10,9 +10,9 @@ import {
   identitySchema,
   journalEntrySchema,
   lessonProgressSchema,
-  preferencesSchema,
   weeklyReviewSchema,
 } from "@/lib/contracts/domain";
+import { preferencesSchema } from "@/features/settings";
 
 describe("domain validation contracts", () => {
   it("validates habit and check-in inputs", () => {

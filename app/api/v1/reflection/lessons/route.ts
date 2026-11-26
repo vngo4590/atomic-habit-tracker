@@ -1,12 +1,12 @@
 import { handleApiError, jsonOk, readJson, withApiUser } from "@/lib/api/http";
-import { lessonProgressSchema, preferencesSchema } from "@/lib/contracts/domain";
+import { lessonProgressSchema } from "@/lib/contracts/domain";
+import { preferencesSchema } from "@/features/settings";
 import { logger } from "@/lib/logger";
 import {
-  getPreferences,
   listCompletedLessons,
   markLessonComplete,
-  savePreferences,
 } from "@/lib/repositories/reflection";
+import { getPreferences, savePreferences } from "@/features/settings/server";
 
 const log = logger.child({ module: "api.v1.reflection.lessons" });
 

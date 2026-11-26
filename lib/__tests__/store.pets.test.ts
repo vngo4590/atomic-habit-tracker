@@ -35,9 +35,11 @@ vi.mock("@/lib/actions/domain", () => ({
   createJournalEntryAction: vi.fn(),
   markLessonReadAction: vi.fn(),
   saveIdentityAction: vi.fn(async (identity) => identity),
-  savePreferencesAction: vi.fn(),
   saveWeeklyReviewAction: vi.fn(),
   updateJournalEntryAction: vi.fn(async () => null),
+}));
+vi.mock("@/features/settings/actions", () => ({
+  savePreferencesAction: vi.fn(),
 }));
 
 vi.mock("@/features/pet/actions", () => ({

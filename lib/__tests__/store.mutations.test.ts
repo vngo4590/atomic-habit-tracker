@@ -5,10 +5,10 @@ import { todayKey } from "@/lib/helpers";
 import {
   createJournalEntryAction,
   markLessonReadAction,
-  savePreferencesAction,
   saveIdentityAction,
   updateJournalEntryAction,
 } from "@/lib/actions/domain";
+import { savePreferencesAction } from "@/features/settings/actions";
 import { updateHabitAction, deleteHabitAction } from "@/features/habits/actions";
 import { useStore } from "@/lib/store";
 import type { Habit } from "@/lib/types";
@@ -42,9 +42,11 @@ vi.mock("@/lib/actions/domain", () => ({
   createJournalEntryAction: vi.fn(),
   markLessonReadAction: vi.fn(),
   saveIdentityAction: vi.fn(async (identity) => identity),
-  savePreferencesAction: vi.fn(),
   saveWeeklyReviewAction: vi.fn(),
   updateJournalEntryAction: vi.fn(async () => null),
+}));
+vi.mock("@/features/settings/actions", () => ({
+  savePreferencesAction: vi.fn(),
 }));
 
 let localStorageMock: ReturnType<typeof makeLocalStorageMock>;

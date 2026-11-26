@@ -49,14 +49,16 @@ vi.mock("@/features/habits/server", () => ({
 vi.mock("@/lib/repositories/reflection", () => ({
   createJournalEntry: mocks.createJournalEntry,
   getIdentity: mocks.getIdentity,
-  getPreferences: mocks.getPreferences,
   getWeeklyReview: mocks.getWeeklyReview,
   listCompletedLessons: mocks.listCompletedLessons,
   listJournalEntries: mocks.listJournalEntries,
   markLessonComplete: mocks.markLessonComplete,
   saveIdentity: mocks.saveIdentity,
-  savePreferences: mocks.savePreferences,
   saveWeeklyReview: mocks.saveWeeklyReview,
+}));
+vi.mock("@/features/settings/server", () => ({
+  getPreferences: mocks.getPreferences,
+  savePreferences: mocks.savePreferences,
 }));
 
 describe("API v1 route contracts", () => {

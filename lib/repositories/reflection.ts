@@ -6,33 +6,19 @@ import {
   identitySchema,
   journalEntrySchema,
   lessonProgressSchema,
-  preferencesSchema,
   weeklyReviewSchema,
   type JournalEntryInput,
-  type PreferencesInput,
   type WeeklyReviewInput,
 } from "@/lib/contracts/domain";
 import { logger, redactUserId } from "@/lib/logger";
 import type {
   Identity,
   JournalEntry,
-  UserPreferences,
   WeeklyReview,
   WeeklyReviewAnswers,
 } from "@/lib/types";
 
 type DbClient = typeof defaultDb;
-
-const defaultPreferences: UserPreferences = {
-  theme: "light",
-  accentHue: 60,
-  remindersEnabled: true,
-  weeklyReviewNudge: true,
-  accountabilityNudge: false,
-  onboardingSeen: false,
-  lessonMode: "sequential",
-  timezone: "UTC",
-};
 
 const log = logger.child({ module: "repo.reflection" });
 
@@ -73,13 +59,6 @@ function toJournalEntry(record: {
     body: record.body,
     mood: record.mood,
     tags: record.tags,
-  };
-}
-
-function toPreferences(record: Partial<UserPreferences> | null | undefined): UserPreferences {
-  return {
-    ...defaultPreferences,
-    ...record,
   };
 }
 
@@ -272,56 +251,3 @@ export async function markLessonComplete(userId: string, lessonId: number, db: D
 
   return listCompletedLessons(userId, db);
 }
-
-export async function getPreferences(userId: string, db: DbClient = defaultDb) {
-  log.debug("Getting preferences", { event: "repo.preferences.get", userId: redactUserId(userId) });
-  validateDatabaseUrl();
-
-  const record = await db.userPreference.upsert({
-    where: { userId },
-    create: { userId },
-    update: {},
-  });
-
-  return toPreferences({
-    theme: record.theme,
-    accentHue: record.accentHue,
-    remindersEnabled: record.remindersEnabled,
-    weeklyReviewNudge: record.weeklyReviewNudge,
-    accountabilityNudge: record.accountabilityNudge,
-    onboardingSeen: record.onboardingSeen,
-    lessonMode: record.lessonMode,
-    timezone: record.timezone,
-  });
-}
-
-export async function savePreferences(userId: string, input: PreferencesInput, db: DbClient = defaultDb) {
-  log.debug("Saving preferences", {
-    event: "repo.preferences.save",
-    userId: redactUserId(userId),
-    theme: input.theme,
-    remindersEnabled: input.remindersEnabled,
-    timezone: input.timezone,
-  });
-  validateDatabaseUrl();
-  const data = preferencesSchema.parse(input);
-
-  const record = await db.userPreference.upsert({
-    where: { userId },
-    create: { userId, ...data },
-    update: data,
-  });
-
-  return toPreferences({
-    theme: record.theme,
-    accentHue: record.accentHue,
-    remindersEnabled: record.remindersEnabled,
-    weeklyReviewNudge: record.weeklyReviewNudge,
-    accountabilityNudge: record.accountabilityNudge,
-    onboardingSeen: record.onboardingSeen,
-    lessonMode: record.lessonMode,
-    timezone: record.timezone,
-  });
-}
-
-export { defaultPreferences };

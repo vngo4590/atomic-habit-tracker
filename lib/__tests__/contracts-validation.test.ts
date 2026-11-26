@@ -10,9 +10,9 @@ import {
   identitySchema,
   journalEntrySchema,
   lessonProgressSchema,
-  preferencesSchema,
   weeklyReviewSchema,
 } from "@/lib/contracts/domain";
+import { preferencesSchema } from "@/features/settings";
 
 // ---------------------------------------------------------------------------
 // habitCreateSchema
