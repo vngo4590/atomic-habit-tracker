@@ -2,7 +2,6 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 
-import { applyStackMutationAction } from "@/features/stacks/actions";
 import {
   createJournalEntryAction,
   markLessonReadAction,
@@ -12,12 +11,7 @@ import {
 } from "@/features/reflection/actions";
 import { savePreferencesAction } from "@/features/settings/actions";
 import { adoptPetAction, buryPetAction, deletePetAction, feedPetAction } from "@/features/pet/actions";
-import {
-  stackInsertPatches as stackInsertPatchesHelper,
-  stackRemovePatches as stackRemovePatchesHelper,
-  stackReorderPatches as stackReorderPatchesHelper,
-  type StackMutationInput,
-} from "@/features/stacks";
+import { useStacksSlice } from "@/features/stacks/store";
 import { completionRate, longestStreak, streak } from "@/features/habits";
 import { useHabitsSlice } from "@/features/habits/store";
 import { todayKey } from "@/lib/helpers";
@@ -25,7 +19,6 @@ import { clientLogger } from "@/lib/logger-client";
 import { useToast } from "@/lib/store/toast";
 import { MAX_ALIVE_PETS, feedVitals, simulatePet, tuningFor } from "@/features/pet";
 import type {
-  Habit,
   Identity,
   JournalEntry,
   Pet,
@@ -84,7 +77,7 @@ export const defaultSnapshot: StoreSnapshot = {
 export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): StoreState {
   const { toast, showToast } = useToast();
   const habitsSlice = useHabitsSlice(backendSnapshot, showToast);
-  const { setHabits } = habitsSlice;
+  const stacksSlice = useStacksSlice(habitsSlice.setHabits);
   const [journal, setJournal] = useState<JournalEntry[]>(backendSnapshot.journal);
   const [identity, setIdentityState] = useState<Identity>(backendSnapshot.identity);
   const [weeklyReview, setWeeklyReviewState] = useState<WeeklyReviewAnswers>(backendSnapshot.weeklyReview);
@@ -99,80 +92,6 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
   const updateJournalVersion = useRef(0);
   const pendingJournalPatches = useRef(new Map<string, Partial<JournalEntry>>());
   const identityVersion = useRef(0);
-
-  /**
-   * Apply an atomic stack mutation (insert or remove). Optimistically applies
-   * the patches locally and reconciles with the server response, or rolls
-   * back to the pre-mutation snapshot on failure. Rejected promises throw a
-   * thin error with the server-supplied message so callers can surface a
-   * modal dialog.
-   */
-  const applyStackMutation = useCallback(async (input: StackMutationInput) => {
-    let snapshot: Habit[] = [];
-    setHabits((currentHabits) => {
-      snapshot = currentHabits;
-      const map = new Map(currentHabits.map((h) => [h.id, { ...h }]));
-      const list = Array.from(map.values());
-
-      if (input.kind === "insert") {
-        const patches = stackInsertPatchesHelper(input.habitId, input.position, input.targetId, list);
-        for (const { id, patch } of patches) {
-          const record = map.get(id);
-          if (record && patch.stackNextId !== undefined) {
-            record.stackNextId = patch.stackNextId ?? null;
-          }
-        }
-      } else if (input.kind === "remove") {
-        const patches = stackRemovePatchesHelper(input.habitId, list);
-        for (const { id, patch } of patches) {
-          const record = map.get(id);
-          if (record && patch.stackNextId !== undefined) {
-            record.stackNextId = patch.stackNextId ?? null;
-          }
-        }
-      } else {
-        // kind === "reorder"
-        const patches = stackReorderPatchesHelper(input.habitIds);
-        for (const { id, patch } of patches) {
-          const record = map.get(id);
-          if (record && patch.stackNextId !== undefined) {
-            record.stackNextId = patch.stackNextId ?? null;
-          }
-        }
-      }
-      return Array.from(map.values());
-    });
-
-    clientLogger.info("Applying habit stack mutation", {
-      event: "store.habit.stack_mutation",
-      kind: input.kind,
-      habitId: "habitId" in input ? input.habitId : undefined,
-      count: input.kind === "reorder" ? input.habitIds.length : undefined,
-    });
-
-    try {
-      const updated = await applyStackMutationAction(input);
-      setHabits((currentHabits) => {
-        const byId = new Map(currentHabits.map((h) => [h.id, h] as const));
-        for (const habit of updated) {
-          byId.set(habit.id, habit);
-        }
-        return Array.from(byId.values());
-      });
-    } catch (error: unknown) {
-      // Roll back optimistic state and rethrow so the caller can show a modal.
-      setHabits(snapshot);
-      const message = errorMessage(error);
-      clientLogger.warn("Habit stack mutation rolled back", {
-        event: "store.habit.stack_mutation_failed",
-        kind: input.kind,
-        habitId: "habitId" in input ? input.habitId : undefined,
-        count: input.kind === "reorder" ? input.habitIds.length : undefined,
-        message,
-      });
-      throw new Error(message);
-    }
-  }, []);
 
   const addJournal = useCallback((entry: Partial<JournalEntry>) => {
     const tempId = `pending-${Date.now()}`;
@@ -579,7 +498,7 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
   return useMemo(
     () => ({
       ...habitsSlice,
-      applyStackMutation,
+      ...stacksSlice,
       journal,
       addJournal,
       updateJournal,
@@ -608,8 +527,8 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
     }),
     [
       habitsSlice,
+      stacksSlice,
       addJournal,
-      applyStackMutation,
       identity,
       journal,
       weeklyReview,
