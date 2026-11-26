@@ -8,6 +8,10 @@
 
 import { z } from "zod";
 
+import type { StackMutationInput } from "@/lib/types";
+
+export type { StackMutationInput };
+
 export const stackMutationSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("insert"),
@@ -23,6 +27,4 @@ export const stackMutationSchema = z.discriminatedUnion("kind", [
     kind: z.literal("reorder"),
     habitIds: z.array(z.string().min(1)).min(2),
   }),
-]);
-
-export type StackMutationInput = z.infer<typeof stackMutationSchema>;
+]) satisfies z.ZodType<StackMutationInput>;

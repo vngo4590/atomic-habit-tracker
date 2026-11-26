@@ -20,16 +20,16 @@ import {
   updateJournalEntryAction,
 } from "@/lib/actions/domain";
 import { adoptPetAction, buryPetAction, deletePetAction, feedPetAction } from "@/lib/actions/pets";
-import type { StackMutationInput } from "@/features/stacks";
-import { completionRate, longestStreak, MAX_ACTIVE_HABITS, streak } from "@/features/habits";
-import { todayKey } from "@/lib/helpers";
-import { clientLogger } from "@/lib/logger-client";
-import { MAX_ALIVE_PETS, feedVitals, simulatePet, tuningFor } from "@/lib/pet";
 import {
   stackInsertPatches as stackInsertPatchesHelper,
   stackRemovePatches as stackRemovePatchesHelper,
   stackReorderPatches as stackReorderPatchesHelper,
+  type StackMutationInput,
 } from "@/features/stacks";
+import { completionRate, longestStreak, MAX_ACTIVE_HABITS, streak } from "@/features/habits";
+import { todayKey } from "@/lib/helpers";
+import { clientLogger } from "@/lib/logger-client";
+import { MAX_ALIVE_PETS, feedVitals, simulatePet, tuningFor } from "@/lib/pet";
 import type {
   CheckIn,
   FormationVerdict,
