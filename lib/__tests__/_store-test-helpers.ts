@@ -2,10 +2,12 @@
  * Shared test setup for the split store tests.
  *
  * Used by sibling files (store.mutations.test.ts,
- * store.streak.test.ts). Each split file installs its own vi.mock for
- * @/lib/helpers (to pin todayKey to a Wednesday so schedule-aware
- * streak tests are deterministic) and @/lib/actions/domain (to keep
- * the unit tests free of any real server-action work).
+ * features/habits/model/__tests__/metrics.test.ts). Each split file installs
+ * its own vi.mock for @/lib/helpers (to pin todayKey to a Wednesday so
+ * schedule-aware streak tests are deterministic) and the server-action
+ * modules (@/features/habits/actions, @/features/stacks/actions,
+ * @/lib/actions/domain) to keep the unit tests free of any real
+ * server-action work.
  *
  * Mock functions live as plain module exports (not vi.hoisted) so they
  * can be re-exported safely; vi.mock factory closures evaluate lazily.

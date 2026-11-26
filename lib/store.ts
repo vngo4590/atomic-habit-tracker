@@ -2,19 +2,21 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 
+import { applyStackMutationAction } from "@/features/stacks/actions";
 import {
-  applyStackMutationAction,
   createHabitAction,
-  createJournalEntryAction,
   deleteHabitAction,
   logCheckInAction,
-  markLessonReadAction,
   saveFormationVerdictAction,
+  toggleHabitAction,
+  updateHabitAction,
+} from "@/features/habits/actions";
+import {
+  createJournalEntryAction,
+  markLessonReadAction,
   saveIdentityAction,
   savePreferencesAction,
   saveWeeklyReviewAction,
-  toggleHabitAction,
-  updateHabitAction,
   updateJournalEntryAction,
 } from "@/lib/actions/domain";
 import { adoptPetAction, buryPetAction, deletePetAction, feedPetAction } from "@/lib/actions/pets";

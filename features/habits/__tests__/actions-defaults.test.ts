@@ -4,7 +4,7 @@ import { testHabit } from "@/lib/test/fixtures";
 
 // ---------------------------------------------------------------------------
 // Mocks — hoisted so they are available before any imports resolve.
-// We do NOT mock @/lib/actions/domain so the real action code runs.
+// We do NOT mock @/features/habits/actions so the real action code runs.
 // ---------------------------------------------------------------------------
 const mocks = vi.hoisted(() => ({
   requireUserId: vi.fn(),
@@ -24,15 +24,6 @@ vi.mock("@/features/habits/server", () => ({
   upsertCheckIn: mocks.upsertCheckIn,
   saveFormationVerdict: vi.fn(),
 }));
-vi.mock("@/features/stacks/server", () => ({ applyStackMutation: vi.fn() }));
-vi.mock("@/lib/repositories/reflection", () => ({
-  createJournalEntry: vi.fn(),
-  markLessonComplete: vi.fn(),
-  saveIdentity: vi.fn(),
-  savePreferences: vi.fn(),
-  saveWeeklyReview: vi.fn(),
-  updateJournalEntry: vi.fn(),
-}));
 
 // ---------------------------------------------------------------------------
 // createHabitAction — default field population and loop-field inheritance
@@ -46,7 +37,7 @@ describe("createHabitAction default field population", () => {
 
   it("sends emoji '•', schedule 'Daily', and time 'Morning' when draft only has name and identity", async () => {
     // Given: the smallest valid draft — only required fields
-    const { createHabitAction } = await import("@/lib/actions/domain");
+    const { createHabitAction } = await import("@/features/habits/actions");
 
     // When: the action is called
     await createHabitAction({ name: "Meditate", identity: "meditator" });
@@ -67,7 +58,7 @@ describe("createHabitAction default field population", () => {
 
   it("uses the habit name as the initial response text when response is absent from the draft", async () => {
     // Given: a draft without an explicit response field
-    const { createHabitAction } = await import("@/lib/actions/domain");
+    const { createHabitAction } = await import("@/features/habits/actions");
 
     // When: the action is called
     await createHabitAction({ name: "Run", identity: "runner" });
@@ -81,7 +72,7 @@ describe("createHabitAction default field population", () => {
 
   it("propagates cue to loopCue when loopCue is absent from the draft", async () => {
     // Given: a draft that specifies a cue but no loop-level cue
-    const { createHabitAction } = await import("@/lib/actions/domain");
+    const { createHabitAction } = await import("@/features/habits/actions");
 
     // When: the action is called
     await createHabitAction({ name: "Read", identity: "reader", cue: "After coffee" });
@@ -95,7 +86,7 @@ describe("createHabitAction default field population", () => {
 
   it("respects an explicit loopCue that intentionally differs from cue", async () => {
     // Given: a draft where the loop-level cue is a more specific version of the 4-laws cue
-    const { createHabitAction } = await import("@/lib/actions/domain");
+    const { createHabitAction } = await import("@/features/habits/actions");
 
     // When: both cue and loopCue are provided
     await createHabitAction({
@@ -114,7 +105,7 @@ describe("createHabitAction default field population", () => {
 
   it("propagates craving, response, and reward into their loop-level equivalents", async () => {
     // Given: a full 4-laws draft with no explicit loop fields
-    const { createHabitAction } = await import("@/lib/actions/domain");
+    const { createHabitAction } = await import("@/features/habits/actions");
 
     // When: the action is called
     await createHabitAction({
@@ -138,7 +129,7 @@ describe("createHabitAction default field population", () => {
 
   it("revalidates all major app routes after successful habit creation", async () => {
     // Given: an authenticated user and a successful repository call
-    const { createHabitAction } = await import("@/lib/actions/domain");
+    const { createHabitAction } = await import("@/features/habits/actions");
 
     // When: the action runs
     await createHabitAction({ name: "Read", identity: "reader" });
@@ -152,7 +143,7 @@ describe("createHabitAction default field population", () => {
   it("does not call the repository when the session is missing", async () => {
     // Given: no authenticated user
     mocks.requireUserId.mockRejectedValue(new Error("redirect:/login"));
-    const { createHabitAction } = await import("@/lib/actions/domain");
+    const { createHabitAction } = await import("@/features/habits/actions");
 
     // When: the action is called
     await expect(createHabitAction({ name: "Read", identity: "reader" })).rejects.toThrow("redirect:/login");
@@ -175,7 +166,7 @@ describe("logCheckInAction selective field forwarding", () => {
 
   it("forwards both mood and journal when both keys are present in the payload", async () => {
     // Given: a full check-in payload
-    const { logCheckInAction } = await import("@/lib/actions/domain");
+    const { logCheckInAction } = await import("@/features/habits/actions");
 
     // When: the action is called with mood and journal
     await logCheckInAction("habit_1", "2030-01-15", { mood: 4, journal: "Great session" });
@@ -190,7 +181,7 @@ describe("logCheckInAction selective field forwarding", () => {
 
   it("omits the journal key from the repository call when journal is absent from the payload", async () => {
     // Given: a payload that only contains mood — journal was never typed
-    const { logCheckInAction } = await import("@/lib/actions/domain");
+    const { logCheckInAction } = await import("@/features/habits/actions");
 
     // When: the action is called
     await logCheckInAction("habit_1", "2030-01-15", { mood: 3 });
@@ -203,7 +194,7 @@ describe("logCheckInAction selective field forwarding", () => {
 
   it("omits the mood key from the repository call when mood is absent from the payload", async () => {
     // Given: a payload with only a journal note
-    const { logCheckInAction } = await import("@/lib/actions/domain");
+    const { logCheckInAction } = await import("@/features/habits/actions");
 
     // When: the action is called
     await logCheckInAction("habit_1", "2030-01-15", { journal: "Reflection note" });
@@ -216,7 +207,7 @@ describe("logCheckInAction selective field forwarding", () => {
 
   it("forwards mood: null to the repository when the payload explicitly clears mood", async () => {
     // Given: a payload where mood is intentionally null (the user removed their rating)
-    const { logCheckInAction } = await import("@/lib/actions/domain");
+    const { logCheckInAction } = await import("@/features/habits/actions");
 
     // When: the action is called
     await logCheckInAction("habit_1", "2030-01-15", { mood: null });
@@ -231,7 +222,7 @@ describe("logCheckInAction selective field forwarding", () => {
 
   it("forwards done: false and no extra fields when the payload only requests an un-completion", async () => {
     // Given: a payload that only marks the habit as not done
-    const { logCheckInAction } = await import("@/lib/actions/domain");
+    const { logCheckInAction } = await import("@/features/habits/actions");
 
     // When: the action is called
     await logCheckInAction("habit_1", "2030-01-15", { done: false });

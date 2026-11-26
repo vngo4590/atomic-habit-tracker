@@ -13,14 +13,12 @@
 
 import { beforeEach, vi } from "vitest";
 
+import { createHabitAction, saveFormationVerdictAction, toggleHabitAction } from "@/features/habits/actions";
 import {
-  createHabitAction,
   createJournalEntryAction,
   markLessonReadAction,
-  saveFormationVerdictAction,
   savePreferencesAction,
   saveWeeklyReviewAction,
-  toggleHabitAction,
   updateJournalEntryAction,
 } from "@/lib/actions/domain";
 import { todayKey } from "@/lib/helpers";

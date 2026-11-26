@@ -7,10 +7,9 @@ import {
   markLessonReadAction,
   savePreferencesAction,
   saveIdentityAction,
-  updateHabitAction,
   updateJournalEntryAction,
-  deleteHabitAction,
 } from "@/lib/actions/domain";
+import { updateHabitAction, deleteHabitAction } from "@/features/habits/actions";
 import { useStore } from "@/lib/store";
 import type { Habit } from "@/lib/types";
 
@@ -28,18 +27,23 @@ vi.mock("@/lib/helpers", async () => {
   };
 });
 
-vi.mock("@/lib/actions/domain", () => ({
+vi.mock("@/features/habits/actions", () => ({
   createHabitAction: vi.fn(),
-  createJournalEntryAction: vi.fn(),
   deleteHabitAction: vi.fn(),
   logCheckInAction: vi.fn(async () => null),
-  markLessonReadAction: vi.fn(),
   saveFormationVerdictAction: vi.fn(),
+  toggleHabitAction: vi.fn(async () => null),
+  updateHabitAction: vi.fn(async () => null),
+}));
+vi.mock("@/features/stacks/actions", () => ({
+  applyStackMutationAction: vi.fn(),
+}));
+vi.mock("@/lib/actions/domain", () => ({
+  createJournalEntryAction: vi.fn(),
+  markLessonReadAction: vi.fn(),
   saveIdentityAction: vi.fn(async (identity) => identity),
   savePreferencesAction: vi.fn(),
   saveWeeklyReviewAction: vi.fn(),
-  toggleHabitAction: vi.fn(async () => null),
-  updateHabitAction: vi.fn(async () => null),
   updateJournalEntryAction: vi.fn(async () => null),
 }));
 
