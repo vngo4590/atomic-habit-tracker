@@ -7,6 +7,7 @@ import "server-only";
  * feature, so a habit always looks the same no matter which query loaded it.
  */
 
+import { utcDateToDateKey as toDateKey } from "@/lib/date-keys";
 import type { Habit } from "@/lib/types";
 
 export type HabitRecord = {
@@ -42,10 +43,6 @@ export const habitInclude = {
   notes: { orderBy: { createdAt: "desc" as const } },
   contract: true,
 };
-
-function toDateKey(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
 
 export function toHabit(record: HabitRecord & { stackNextId?: string | null }): Habit {
   const checkIns = record.checkIns ?? [];

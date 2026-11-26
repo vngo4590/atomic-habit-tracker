@@ -62,10 +62,6 @@ function toWeeklyReview(record: {
   };
 }
 
-function toDateKey(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
-
 function toJournalEntry(record: {
   id: string;
   dateKey: string;
@@ -372,4 +368,4 @@ export async function getStoreSnapshot(userId: string, weekStartKey: string, db:
   };
 }
 
-export { defaultPreferences, toDateKey };
+export { defaultPreferences };
