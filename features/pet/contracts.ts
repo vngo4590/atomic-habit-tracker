@@ -1,5 +1,5 @@
 /**
- * pet.ts — Zod contracts validating every pet mutation at the trust boundary.
+ * contracts.ts — Zod contracts validating every pet mutation at the trust boundary.
  *
  * These schemas are shared by the server actions (and any future API routes) so
  * the rules for adopting, feeding, and burying a pet are defined exactly once.
@@ -8,7 +8,7 @@
 
 import { z } from "zod";
 
-import { TEMPERAMENTS } from "@/features/pet";
+import { TEMPERAMENTS } from "./model/genome";
 
 /** The allowed temperament ids, derived from the engine registry so they can't drift. */
 const temperamentIds = TEMPERAMENTS.map((t) => t.id) as [string, ...string[]];

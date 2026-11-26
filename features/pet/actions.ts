@@ -1,13 +1,20 @@
 "use server";
 
+/**
+ * Pet server actions: adopt, feed, bury and release pets for the signed-in
+ * user. Each validates its input with the pet contracts, logs the event,
+ * writes through the pet repositories and refreshes the `/pet` page.
+ */
+
 import { revalidatePath } from "next/cache";
 
 import { requireUserId } from "@/lib/auth/session";
-import { petAdoptSchema, petBurySchema, petDeleteSchema, petFeedSchema } from "@/lib/contracts/pet";
 import { todayKey } from "@/lib/helpers";
 import { logger, redactUserId } from "@/lib/logger";
-import { adoptPet, buryPet, deletePet, feedPet, type AdoptResult, type FeedResult } from "@/lib/repositories/pets";
 import type { PetDraft } from "@/lib/types";
+
+import { petAdoptSchema, petBurySchema, petDeleteSchema, petFeedSchema } from "./contracts";
+import { adoptPet, buryPet, deletePet, feedPet, type AdoptResult, type FeedResult } from "./server";
 
 const log = logger.child({ module: "actions.pets" });
 

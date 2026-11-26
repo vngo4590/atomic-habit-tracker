@@ -14,7 +14,7 @@ import {
   type WeeklyReviewInput,
 } from "@/lib/contracts/domain";
 import { logger, redactUserId } from "@/lib/logger";
-import { countFeedsUsedToday, listPets } from "@/lib/repositories/pets";
+import { countFeedsUsedToday, listPets } from "@/features/pet/server";
 import { todayKey } from "@/lib/helpers";
 import type {
   Identity,

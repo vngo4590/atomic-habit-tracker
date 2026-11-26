@@ -8,7 +8,7 @@ import {
   feedPet,
   listPets,
   MAX_ALIVE_PETS,
-} from "@/lib/repositories/pets";
+} from "@/features/pet/server";
 import { FOOD_PER_HABIT, MAX_SATIETY } from "@/features/pet";
 
 /**

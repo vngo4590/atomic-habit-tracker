@@ -19,7 +19,7 @@ import {
   saveWeeklyReviewAction,
   updateJournalEntryAction,
 } from "@/lib/actions/domain";
-import { adoptPetAction, buryPetAction, deletePetAction, feedPetAction } from "@/lib/actions/pets";
+import { adoptPetAction, buryPetAction, deletePetAction, feedPetAction } from "@/features/pet/actions";
 import {
   stackInsertPatches as stackInsertPatchesHelper,
   stackRemovePatches as stackRemovePatchesHelper,

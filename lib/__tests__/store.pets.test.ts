@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { adoptPetAction, feedPetAction } from "@/lib/actions/pets";
+import { adoptPetAction, feedPetAction } from "@/features/pet/actions";
 import { useStore } from "@/lib/store";
 import type { Pet, StoreSnapshot } from "@/lib/types";
 
@@ -40,7 +40,7 @@ vi.mock("@/lib/actions/domain", () => ({
   updateJournalEntryAction: vi.fn(async () => null),
 }));
 
-vi.mock("@/lib/actions/pets", () => ({
+vi.mock("@/features/pet/actions", () => ({
   adoptPetAction: vi.fn(),
   buryPetAction: vi.fn(),
   deletePetAction: vi.fn(),

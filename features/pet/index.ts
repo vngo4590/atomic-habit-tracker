@@ -23,3 +23,4 @@ export * from "./model/mood";
 export * from "./model/food";
 export * from "./model/age";
 export * from "./model/pet-view";
+export * from "./contracts";
