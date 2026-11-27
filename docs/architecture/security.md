@@ -73,6 +73,11 @@ resolved from `x-azure-clientip` (Front Door), then `x-forwarded-for`, then
 `x-real-ip`. This is a **second line of defence** behind the WAF rate limit; see
 residual risks for the single-instance caveat.
 
+`RATE_LIMIT_DISABLED=true` turns the in-process limiter off (`proxy.ts`). It is
+set only on ephemeral PR-preview stacks (`infra/preview.bicep`), where the E2E
+suite legitimately exceeds the per-IP API budget from one runner IP, and can be
+set on a local dev server for the same reason. Production never sets it.
+
 ### CSRF / same-origin guard (`lib/security/policy.ts`)
 
 State-changing requests (`POST`/`PUT`/`PATCH`/`DELETE`) to API routes must have

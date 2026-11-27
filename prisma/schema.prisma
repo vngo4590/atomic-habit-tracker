@@ -261,7 +261,7 @@ model FormationVerdict {
 // A procedurally generated Tamagotchi-style companion. Its appearance is NOT
 // stored — only the `seed` + `temperament` genome, from which the sprite is
 // always regenerated deterministically. The remaining columns are the
-// time-varying "vital signs" the simulation advances (see lib/pet/simulation.ts):
+// time-varying "vital signs" the simulation advances (see features/pet/model/simulation.ts):
 // the pet gets hungry over real time and can die permanently if neglected.
 model Pet {
   id          String    @id @default(cuid())
