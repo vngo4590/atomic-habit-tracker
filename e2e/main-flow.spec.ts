@@ -235,16 +235,19 @@ test.describe("Reflecting with a weekly review", () => {
       await page.click('button:has-text("Edit review")');
     }
 
+    // The review is a 3-step wizard: one question per step.
     const reflection = unique("I showed up on the hard days");
-    await page.locator("textarea").nth(0).fill(reflection);
-    await page.locator("textarea").nth(1).fill("Lay my kit out the night before.");
-    await page.locator("textarea").nth(2).fill("Someone who runs whatever the weather.");
+    await page.getByLabel("What went well? Why?").fill(reflection);
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page.getByLabel("What didn't? What's the smallest fix?").fill("Lay my kit out the night before.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page.getByLabel("Who did I vote to become this week?").fill("Someone who runs whatever the weather.");
 
     // When: they save the review
-    await page.click('button:has-text("Save review")');
+    await page.getByRole("button", { name: "Save review" }).click();
 
     // Then: the saved reflection is shown back in the read-only review display.
-    await expect(page.locator('text=This week\'s review')).toBeVisible();
+    await expect(page.getByRole("heading", { name: "This week's review" })).toBeVisible();
     await expect(page.locator(`text=${reflection}`)).toBeVisible();
   });
 });

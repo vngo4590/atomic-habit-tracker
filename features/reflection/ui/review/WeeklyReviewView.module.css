@@ -1,0 +1,12 @@
+/* WeeklyReviewView — one reading column of stacked sections. */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+  max-width: var(--reading-width);
+  margin: 0 auto;
+}
+.page > header {
+  margin-bottom: 0;
+}

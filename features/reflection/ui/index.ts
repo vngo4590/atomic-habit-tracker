@@ -3,3 +3,4 @@
  * (/journal, /review) and /identity. Route files stay thin and render these.
  */
 export { JournalView } from "./journal/JournalView";
+export { WeeklyReviewView } from "./review/WeeklyReviewView";

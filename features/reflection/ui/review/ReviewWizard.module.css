@@ -1,0 +1,111 @@
+/* ReviewWizard — guided step form with a segmented progress indicator. */
+.wizard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.title {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-heading);
+  letter-spacing: var(--tracking-heading);
+}
+.counter {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Segmented progress: one bar per step, labelled underneath. */
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.stepItem {
+  min-width: 0;
+}
+.stepButton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--tap-target);
+  padding: var(--space-1) 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-subtle);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.stepButton:focus-visible {
+  outline: none;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--focus-ring);
+}
+.stepBar {
+  display: block;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--border);
+  transition: background-color var(--duration-base) var(--ease-standard);
+}
+.stepButton[data-state="done"] .stepBar {
+  background: var(--primary-soft);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+.stepButton[data-state="current"] .stepBar {
+  background: var(--primary);
+}
+.stepButton[data-state="current"] {
+  color: var(--text);
+  font-weight: var(--weight-semibold);
+}
+.stepName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Each question fades in when it becomes current (reduced motion collapses
+   the duration token to ~0). */
+.body {
+  animation: stepIn var(--duration-base) var(--ease-standard);
+}
+@keyframes stepIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.nav {
+  display: flex;
+  gap: var(--space-2);
+  margin-left: auto;
+}
