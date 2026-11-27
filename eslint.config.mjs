@@ -3,28 +3,39 @@ import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 import { existsSync, readdirSync } from "node:fs";
 
-// A feature's public entry files; everything else in it is private.
-const FEATURE_ENTRIES = ["index", "actions", "server", "store", "contracts"];
+// A feature's public entry files (ADR-0001); everything else in it is private.
+const FEATURE_ENTRIES = ["index"];
 const features = existsSync("features")
   ? readdirSync("features", { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name)
   : [];
+const BOUNDARY_MESSAGE = "Import a feature through its public API: '@/features/<name>'.";
+
+/** Public entry files of every feature except `self`, relative to the repo root. */
+const publicEntries = (self) =>
+  features
+    .filter((other) => other !== self)
+    .flatMap((other) => FEATURE_ENTRIES.flatMap((entry) => [`./features/${other}/${entry}.ts`, `./features/${other}/${entry}.tsx`]));
 
 /**
- * Resolved-path boundary check: code inside a feature may reach another
- * feature only through its public entry files, however the import is written
- * (alias or relative). Shared code outside `features/` is unaffected.
+ * Resolved-path boundary check: a feature's private files are reachable only
+ * from inside that feature, however the import is written (alias or relative).
+ * Code in other features and in app/, components/ and lib/ must use the
+ * public entry files.
  */
-const featureBoundaryZones = features.map((name) => ({
-  target: `./features/${name}`,
-  from: "./features",
-  except: [
-    `./${name}`,
-    ...features
-      .filter((other) => other !== name)
-      .flatMap((other) => FEATURE_ENTRIES.flatMap((entry) => [`./${other}/${entry}.ts`, `./${other}/${entry}.tsx`])),
-  ],
-  message: "Import another feature through its public API: '@/features/<name>' (or /actions, /server, /store, /contracts).",
-}));
+const featureBoundaryZones = [
+  ...features.map((name) => ({
+    target: `./features/${name}`,
+    from: "./features",
+    except: [`./${name}`, ...publicEntries(name).map((path) => path.replace("./features/", "./"))],
+    message: BOUNDARY_MESSAGE,
+  })),
+  ...["./app", "./components", "./lib"].map((target) => ({
+    target,
+    from: "./features",
+    except: publicEntries(null).map((path) => path.replace("./features/", "./")),
+    message: BOUNDARY_MESSAGE,
+  })),
+];
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -50,7 +61,8 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    files: ["features/**/*.{ts,tsx}"],
+    files: ["{app,components,features,lib}/**/*.{ts,tsx}"],
+    ignores: ["**/__tests__/**", "**/*.test.{ts,tsx}"],
     rules: {
       "import/no-restricted-paths": ["error", { zones: featureBoundaryZones }],
     },
