@@ -1,3 +1,5 @@
+import "server-only";
+
 import { db } from "@/lib/db/client";
 import { validateDatabaseUrl } from "@/lib/db/config";
 import { logger, redactEmail, redactUserId } from "@/lib/logger";

@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tsconfigPaths from 'vite-tsconfig-paths'
@@ -7,6 +8,9 @@ export default defineConfig({
   resolve: {
     alias: {
       'next/server': 'next/server.js',
+      // Repositories import `server-only` so they fail fast if ever bundled
+      // into the browser. Tests run them in Node, so point it at an empty stub.
+      'server-only': fileURLToPath(new URL('./lib/test/server-only-stub.ts', import.meta.url)),
     },
   },
   test: {
