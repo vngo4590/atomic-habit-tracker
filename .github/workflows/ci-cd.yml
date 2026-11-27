@@ -66,6 +66,10 @@ jobs:
         run: npm run build
         timeout-minutes: 10
 
+      - name: Check first-load bundle budget
+        run: npm run bundle:check
+        timeout-minutes: 2
+
   # -------------------------------------------------------------------------
   # DEPLOY — provision Azure infrastructure and release the container.
   # Only runs on the master branch after validation passes.

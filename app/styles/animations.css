@@ -95,3 +95,10 @@
 /* Keyboard-only focus ring — applied to focusable elements that opt in.
    Uses two box-shadows to draw a halo around the element regardless of
    background colour. */
+
+/* Set by MotionProvider when the animation chunk can't load: show Framer
+   Motion elements in their final state instead of frozen at opacity 0. */
+.motion-unavailable [style*="opacity"] {
+  opacity: 1 !important;
+  transform: none !important;
+}
