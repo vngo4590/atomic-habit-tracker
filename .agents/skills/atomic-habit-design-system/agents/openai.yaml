@@ -1,0 +1,4 @@
+interface:
+  display_name: "Atomicly Design System"
+  short_description: "Tokens, light/dark themes, UI primitives, nav/IA, motion and a11y rules"
+  default_prompt: "Use $atomic-habit-design-system when building or reviewing pages, components, themes or navigation."
