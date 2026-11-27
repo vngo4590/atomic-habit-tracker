@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useSpring, useTransform } from "framer-motion";
+import { m, useSpring, useTransform } from "framer-motion";
 import { useEffect } from "react";
 
 interface AnimatedNumberProps {
@@ -22,8 +22,8 @@ export function AnimatedNumber({ value, className, duration = 1.2 }: AnimatedNum
   }, [spring, value]);
 
   return (
-    <motion.span className={className}>
+    <m.span className={className}>
       {display}
-    </motion.span>
+    </m.span>
   );
 }

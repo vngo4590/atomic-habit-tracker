@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import type { ReactNode } from "react";
 
 interface SlideInProps {
@@ -21,7 +21,7 @@ const offsets = {
 export function SlideIn({ children, direction = "up", delay = 0, className, duration = 0.35 }: SlideInProps) {
   const offset = offsets[direction];
   return (
-    <motion.div
+    <m.div
       className={className}
       initial={{ opacity: 0, x: offset.x, y: offset.y }}
       animate={{ opacity: 1, x: 0, y: 0 }}
@@ -32,6 +32,6 @@ export function SlideIn({ children, direction = "up", delay = 0, className, dura
       }}
     >
       {children}
-    </motion.div>
+    </m.div>
   );
 }

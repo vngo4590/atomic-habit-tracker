@@ -17,6 +17,17 @@ Reusable animation patterns and conventions for the Atomicly habit tracker UI.
 - `framer-motion` — primary animation library
 - `lucide-react` — iconography (re-exported via `components/Icons.tsx`)
 
+## Bundle rule: `m`, not `motion` (LazyMotion)
+
+`app/(root)/layout.tsx` wraps the app in `components/motion/MotionProvider.tsx`
+(`LazyMotion` + async `domAnimation` from `motion-features.ts`). Always write
+`import { m } from "framer-motion"` and `<m.div>`; importing `motion` pulls the
+full ~30 KB engine into the route's first load. `m.*` outside the provider never
+animates and stays at its `initial` state, so do not use it on `(auth)` pages.
+Keep the app shell (layout, nav, `Toast`, `PageTransition`) Framer-free: use CSS
+keyframes in `app/styles/animations.css` there. Only `Reorder` (StackDiagram)
+uses the full build. `npm run bundle:check` enforces a 230 KB first-load budget.
+
 ## Core Primitives (`components/motion/`)
 
 | Component | Purpose |
@@ -27,20 +38,20 @@ Reusable animation patterns and conventions for the Atomicly habit tracker UI.
 | `StaggerItem` | Child item for staggered lists |
 | `SlideIn` | Directional slide entrance |
 | `ScaleOnTap` | Button/link micro-interaction (scale down on tap) |
-| `PageTransition` | `AnimatePresence` wrapper for route changes |
+| `PageTransition` | CSS `page-enter` fade keyed on the pathname (no Framer, keeps the shell light) |
 | `HoverLift` | Card hover elevation (translateY + shadow) |
 | `AnimatedNumber` | Count-up animation for stat values |
 
 ## Shared Config (`lib/animations.ts`)
 
 ```ts
-import { spring, ease, duration, fadeUpVariants, staggerContainerVariants, toastVariants, overlayVariants } from "@/lib/animations";
+import { spring, ease, duration, fadeUpVariants, staggerContainerVariants, overlayVariants } from "@/lib/animations";
 ```
 
 - **Springs**: `gentle`, `snappy`, `bouncy`, `stiff`
 - **Easing**: `smooth` `[0.4,0,0.2,1]`, `enter`, `exit`, `bounce`
 - **Durations**: `fast` 0.15s, `base` 0.25s, `slow` 0.4s, `slower` 0.6s
-- **Variants**: `fadeUpVariants`, `scaleInVariants`, `slideUpVariants`, `staggerItemVariants`, `toastVariants`, `overlayVariants`
+- **Variants**: `fadeUpVariants`, `scaleInVariants`, `slideUpVariants`, `staggerItemVariants`, `overlayVariants`
 
 ## Design Tokens (`globals.css`)
 
@@ -54,9 +65,9 @@ import { spring, ease, duration, fadeUpVariants, staggerContainerVariants, toast
 
 ### Page Entrance
 ```tsx
-<motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}>
+<m.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}>
   {/* page content */}
-</motion.div>
+</m.div>
 ```
 
 ### Staggered List
@@ -72,30 +83,30 @@ import { spring, ease, duration, fadeUpVariants, staggerContainerVariants, toast
 
 ### Button Micro-interactions
 ```tsx
-<motion.button whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
+<m.button whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
   Action
-</motion.button>
+</m.button>
 ```
 
 ### Card Hover Lift
 ```tsx
-<motion.div whileHover={{ y: -2, boxShadow: "var(--shadow-md)" }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
+<m.div whileHover={{ y: -2, boxShadow: "var(--shadow-md)" }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
   <div className="card card-pad">...</div>
-</motion.div>
+</m.div>
 ```
 
 ### Progress Bar Animation
 ```tsx
-<motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }} />
+<m.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }} />
 ```
 
 ### Overlay Entrance
 ```tsx
-<motion.div variants={overlayVariants} initial="hidden" animate="visible" exit="exit">
-  <motion.div variants={overlayCardVariants} ...>
+<m.div variants={overlayVariants} initial="hidden" animate="visible" exit="exit">
+  <m.div variants={overlayCardVariants} ...>
     {/* modal content */}
-  </motion.div>
-</motion.div>
+  </m.div>
+</m.div>
 ```
 
 ## Performance Guidelines

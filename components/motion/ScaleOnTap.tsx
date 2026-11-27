@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import type { ReactNode } from "react";
 
 import styles from "./ScaleOnTap.module.css";
@@ -21,13 +21,13 @@ interface ScaleOnTapProps {
  */
 export function ScaleOnTap({ children, className, scale = 0.97, onClick }: ScaleOnTapProps) {
   return (
-    <motion.div
+    <m.div
       className={className ? `${styles.root} ${className}` : styles.root}
       whileTap={{ scale }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
       onClick={onClick}
     >
       {children}
-    </motion.div>
+    </m.div>
   );
 }

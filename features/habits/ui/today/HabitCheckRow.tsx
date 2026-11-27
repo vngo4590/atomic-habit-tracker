@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { m, useReducedMotion } from "framer-motion";
 import { Check, Flame } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode, Ref } from "react";
@@ -91,7 +91,7 @@ export function HabitCheckRow(props: HabitCheckRowProps) {
 
   return (
     <div className={styles.row} data-testid="habit-row" data-done={done ? "true" : "false"}>
-      <motion.button
+      <m.button
         type="button"
         className={`${styles.check} ${done ? styles.checkDone : ""}`}
         aria-label={done ? `Mark ${habit.name} not done` : `Mark ${habit.name} done`}
@@ -102,7 +102,7 @@ export function HabitCheckRow(props: HabitCheckRowProps) {
         <span className={styles.circle} aria-hidden="true">
           <Check size={16} strokeWidth={2.5} />
         </span>
-      </motion.button>
+      </m.button>
 
       {props.href !== undefined ? (
         <Link href={props.href} className={styles.body}>

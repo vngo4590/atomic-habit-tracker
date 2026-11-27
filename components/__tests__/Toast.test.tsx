@@ -10,17 +10,6 @@ vi.mock("@/components/StoreProvider", () => ({
   useStoreContext: useStoreContextMock,
 }));
 
-vi.mock("framer-motion", () => ({
-  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  motion: {
-    div: (p: Record<string, unknown>) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { children, layout, variants, initial, animate, exit, ...props } = p;
-      return <div {...props}>{children as React.ReactNode}</div>;
-    },
-  },
-}));
-
 describe("Toast business logic", () => {
   afterEach(() => {
     cleanup();

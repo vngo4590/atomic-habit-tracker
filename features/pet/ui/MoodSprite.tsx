@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion, type TargetAndTransition, type Transition } from "framer-motion";
+import { m, useReducedMotion, type TargetAndTransition, type Transition } from "framer-motion";
 
 import type { MoodAnimation, Sprite } from "..";
 
@@ -66,32 +66,32 @@ export function MoodSprite({
     <div className={styles.wrap}>
       {showHearts && !reduceMotion ? (
         <div className={styles.hearts} aria-hidden="true">
-          <motion.span
+          <m.span
             className={styles.heart}
             initial={{ opacity: 0, y: 0 }}
             animate={{ opacity: [0, 1, 0], y: -24 }}
             transition={{ duration: 2.4, repeat: Infinity, ease: "easeOut" }}
           >
             ♥
-          </motion.span>
-          <motion.span
+          </m.span>
+          <m.span
             className={`${styles.heart} ${styles.heartRight}`}
             initial={{ opacity: 0, y: 0 }}
             animate={{ opacity: [0, 1, 0], y: -30 }}
             transition={{ duration: 2.8, repeat: Infinity, ease: "easeOut", delay: 0.8 }}
           >
             ♥
-          </motion.span>
+          </m.span>
         </div>
       ) : null}
 
-      <motion.div
+      <m.div
         className={isDead ? styles.dead : undefined}
         animate={motionProps.animate}
         transition={motionProps.transition}
       >
         <PixelSprite sprite={sprite} label={label} pixelSize={pixelSize} />
-      </motion.div>
+      </m.div>
     </div>
   );
 }

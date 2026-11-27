@@ -1,10 +1,8 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
 import { useEffect } from "react";
 
 import { useStoreContext } from "@/components/StoreProvider";
-import { toastVariants } from "@/lib/animations";
 import { clientLogger } from "@/lib/logger-client";
 
 export function Toast() {
@@ -27,24 +25,16 @@ export function Toast() {
   // toast text appears so screen readers announce each new message without
   // interrupting what they're currently reading. `.toast` itself is fixed-
   // positioned, so this unstyled wrapper doesn't affect layout.
+  // Keying on the toast id replays the CSS enter animation for each new toast;
+  // CSS (not Framer Motion) keeps the animation runtime out of the app shell.
   return (
     <div role="status" aria-live="polite" aria-atomic="true">
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            className="toast"
-            key={toast.id}
-            variants={toastVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            layout
-          >
-            <span>{toast.msg}</span>
-            {toast.sub && <em>{toast.sub}</em>}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {toast && (
+        <div className="toast" key={toast.id}>
+          <span>{toast.msg}</span>
+          {toast.sub && <em>{toast.sub}</em>}
+        </div>
+      )}
     </div>
   );
 }

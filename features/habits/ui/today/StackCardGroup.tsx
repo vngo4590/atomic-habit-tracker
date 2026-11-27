@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui";
@@ -130,7 +130,7 @@ export function StackCardGroup({ habit, habits, onCheck, streak, today }: StackC
     >
       <AnimatePresence initial={false}>
         {visible.map((h, i) => (
-          <motion.div
+          <m.div
             key={h.id}
             data-testid="stack-card"
             data-stack-card-position={i}
@@ -146,7 +146,7 @@ export function StackCardGroup({ habit, habits, onCheck, streak, today }: StackC
               onToggle={onCheck}
               href={`/habits/${h.id}`}
             />
-          </motion.div>
+          </m.div>
         ))}
       </AnimatePresence>
 

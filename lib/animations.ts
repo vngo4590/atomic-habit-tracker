@@ -1,4 +1,4 @@
-import type { Transition, Variants } from "framer-motion";
+import type { Variants } from "framer-motion";
 
 export const spring = {
   gentle: { type: "spring", stiffness: 120, damping: 14 } as const,
@@ -83,22 +83,6 @@ export const staggerItemVariants: Variants = {
   },
 };
 
-export const toastVariants: Variants = {
-  hidden: { opacity: 0, y: 16, scale: 0.96 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: spring.gentle,
-  },
-  exit: {
-    opacity: 0,
-    y: 8,
-    scale: 0.98,
-    transition: { duration: duration.fast, ease: ease.exit },
-  },
-};
-
 export const overlayVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
@@ -125,9 +109,4 @@ export const overlayCardVariants: Variants = {
     y: 12,
     transition: { duration: duration.fast, ease: ease.exit },
   },
-};
-
-export const pageTransition: Transition = {
-  duration: duration.slow,
-  ease: ease.smooth,
 };

@@ -1,7 +1,14 @@
 "use client";
 
-import { OnboardingOverlay } from "@/components/OnboardingOverlay";
+import dynamic from "next/dynamic";
+
 import { useStoreContext } from "@/components/StoreProvider";
+
+// Loaded on demand: only first-run users see it, so its code (and the
+// animation runtime it uses) stays out of every route's first-load bundle.
+const OnboardingOverlay = dynamic(() =>
+  import("@/components/OnboardingOverlay").then((mod) => mod.OnboardingOverlay),
+);
 
 /**
  * OnboardingGate — decides whether to render the first-run onboarding

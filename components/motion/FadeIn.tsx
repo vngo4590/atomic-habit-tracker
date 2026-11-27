@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import type { ReactNode } from "react";
 
 
@@ -14,7 +14,7 @@ interface FadeInProps {
 
 export function FadeIn({ children, delay = 0, className, duration, y = 12 }: FadeInProps) {
   return (
-    <motion.div
+    <m.div
       className={className}
       initial={{ opacity: 0, y }}
       animate={{ opacity: 1, y: 0 }}
@@ -25,13 +25,13 @@ export function FadeIn({ children, delay = 0, className, duration, y = 12 }: Fad
       }}
     >
       {children}
-    </motion.div>
+    </m.div>
   );
 }
 
 export function FadeInView({ children, delay = 0, className, duration, y = 16 }: FadeInProps) {
   return (
-    <motion.div
+    <m.div
       className={className}
       initial={{ opacity: 0, y }}
       whileInView={{ opacity: 1, y: 0 }}
@@ -43,6 +43,6 @@ export function FadeInView({ children, delay = 0, className, duration, y = 16 }:
       }}
     >
       {children}
-    </motion.div>
+    </m.div>
   );
 }

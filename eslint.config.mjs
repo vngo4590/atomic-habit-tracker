@@ -16,6 +16,13 @@ const eslintConfig = defineConfig([
       "no-restricted-imports": [
         "error",
         {
+          paths: [
+            {
+              name: "framer-motion",
+              importNames: ["motion"],
+              message: "Use `m` (LazyMotion, see components/motion/MotionProvider.tsx); `motion` ships the full engine in the first load.",
+            },
+          ],
           patterns: [
             {
               group: ["@/features/*/*", "@/features/*/*/**", "!@/features/*/actions", "!@/features/*/server", "!@/features/*/store", "!@/features/*/contracts", "!@/features/*/ui"],
