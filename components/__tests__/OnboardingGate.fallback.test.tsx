@@ -36,4 +36,36 @@ describe("OnboardingGate when the overlay chunk fails to load", () => {
     expect(dialog).toBeTruthy();
     expect(setPreferences).toHaveBeenCalledWith({ onboardingSeen: true });
   });
+
+  it("takes focus, treats Escape as Continue, and returns focus to the opener when it closes", async () => {
+    // Given: a focused control on the page and a first-run user
+    const opener = document.createElement("button");
+    document.body.appendChild(opener);
+    opener.focus();
+    const setPreferences = vi.fn();
+    const firstRun = testStoreContext({ preferences: testPreferences({ onboardingSeen: false }), setPreferences });
+    const { rerender } = render(
+      <StoreContextProvider value={firstRun}>
+        <OnboardingGate />
+      </StoreContextProvider>,
+    );
+
+    // When: the fallback dialog appears
+    const dialog = await screen.findByRole("dialog", { name: "Welcome to Atomicly" }, { timeout: 5000 });
+
+    // Then: Continue has focus, and Escape completes onboarding
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Continue" }));
+    fireEvent(dialog, new Event("cancel", { cancelable: true }));
+    expect(setPreferences).toHaveBeenCalledWith({ onboardingSeen: true });
+
+    // And: once onboarding is seen the dialog closes and focus goes back
+    rerender(
+      <StoreContextProvider value={testStoreContext({ preferences: testPreferences({ onboardingSeen: true }) })}>
+        <OnboardingGate />
+      </StoreContextProvider>,
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(opener);
+    opener.remove();
+  });
 });

@@ -129,6 +129,44 @@ describe("store habit mutations", () => {
     expect(result.current.habits[0].history[key]).toBeUndefined();
   });
 
+  it("completes an undone day that kept its reflection, and keeps it on undo", () => {
+    // Given a day that was un-checked but still holds a saved mood
+    const key = "2030-01-01";
+    const { result } = renderHook(() =>
+      useStore({
+        habits: [makeHabit({ [key]: { done: false, mood: 3 } })],
+        journal: [],
+        identity: { statement: "", values: [] },
+        weeklyReview: { wentWell: "", smallestFix: "", identityVote: "" },
+        completedLessons: [],
+        formationVerdicts: [],
+        preferences: {
+          theme: "light",
+          accentHue: 60,
+          remindersEnabled: true,
+          weeklyReviewNudge: true,
+          accountabilityNudge: false,
+          onboardingSeen: false,
+          lessonMode: "sequential",
+          timezone: "UTC",
+        },
+      }),
+    );
+    const id = result.current.habits[0].id;
+
+    // When the user checks it
+    act(() => result.current.toggleHabit(id, key));
+
+    // Then the day is done and the mood is kept
+    expect(result.current.habits[0].history[key]).toEqual({ done: true, mood: 3 });
+    expect(vi.mocked(toggleHabitAction)).toHaveBeenLastCalledWith(id, key, true);
+
+    // And un-checking keeps the reflection on a not-done entry
+    act(() => result.current.toggleHabit(id, key));
+    expect(result.current.habits[0].history[key]).toEqual({ done: false, mood: 3 });
+    expect(vi.mocked(toggleHabitAction)).toHaveBeenLastCalledWith(id, key, false);
+  });
+
   it("keeps newer check-in details when an earlier toggle for the same day fails", async () => {
     // Given a toggle whose server call is still pending
     let rejectToggle: (error: Error) => void = () => {};
