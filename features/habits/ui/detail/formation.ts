@@ -8,10 +8,14 @@ import type { FormationVerdict } from "@/lib/types";
 /** A habit becomes eligible for its formation review after 66 days. */
 export const FORMATION_DAYS = 66;
 
-/** Whole days between two YYYY-MM-DD keys (never negative). */
+/**
+ * Whole calendar days between two YYYY-MM-DD keys (never negative). Both keys
+ * are read as UTC midnights so a daylight-saving change in the user's local
+ * time zone can't shorten a day to 23 hours and undercount.
+ */
 export function daysBetween(fromKey: string, toKey: string): number {
-  const start = new Date(`${fromKey}T00:00:00`).getTime();
-  const end = new Date(`${toKey}T00:00:00`).getTime();
+  const start = new Date(`${fromKey}T00:00:00Z`).getTime();
+  const end = new Date(`${toKey}T00:00:00Z`).getTime();
   if (!Number.isFinite(start) || !Number.isFinite(end)) return 0;
   return Math.max(0, Math.floor((end - start) / 86_400_000));
 }

@@ -17,15 +17,17 @@ const NUDGES: ReadonlyArray<{ key: NudgeKey; label: string; hint: string }> = [
 
 /**
  * PreferencesSection — reminder switches and the welcome-tour replay. Every
- * change saves immediately (optimistic store write) and confirms with a toast.
+ * change saves immediately (optimistic store write) and confirms with a toast
+ * once the server has saved it; a failed save rolls back and the store says so.
  */
 export function PreferencesSection() {
   const { preferences, setPreferences, showToast } = useStoreContext();
 
-  const save = (patch: Partial<UserPreferences>, message: string) => {
+  const save = async (patch: Partial<UserPreferences>, message: string) => {
     clientLogger.info("Preference changed", { page: "settings", fields: Object.keys(patch) });
-    setPreferences(patch);
-    showToast(message);
+    if (await setPreferences(patch)) {
+      showToast(message);
+    }
   };
 
   return (
@@ -39,7 +41,7 @@ export function PreferencesSection() {
             <Switch
               checked={preferences[nudge.key]}
               aria-label={nudge.label}
-              onCheckedChange={(checked) => save({ [nudge.key]: checked }, `${nudge.label} ${checked ? "on" : "off"}`)}
+              onCheckedChange={(checked) => void save({ [nudge.key]: checked }, `${nudge.label} ${checked ? "on" : "off"}`)}
             />
           }
         />
@@ -53,7 +55,7 @@ export function PreferencesSection() {
             variant="secondary"
             size="sm"
             disabled={!preferences.onboardingSeen}
-            onClick={() => save({ onboardingSeen: false }, "Welcome tour restarted")}
+            onClick={() => void save({ onboardingSeen: false }, "Welcome tour restarted")}
           >
             Replay tour
           </Button>

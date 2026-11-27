@@ -149,12 +149,50 @@ describe("store settings mutations", () => {
       lessonMode: "random",
       timezone: "Australia/Sydney",
     });
-    act(() => result.current.setPreferences({ theme: "dark", accentHue: 145 }));
+    act(() => {
+      void result.current.setPreferences({ theme: "dark", accentHue: 145 });
+    });
     expect(result.current.preferences).toMatchObject({ theme: "dark", accentHue: 145 });
 
     await act(async () => {
       await Promise.resolve();
     });
     expect(result.current.preferences).toMatchObject({ timezone: "Australia/Sydney", accountabilityNudge: true, lessonMode: "random" });
+  });
+
+  it("rolls back a failed preference save, tells the user and resolves false", async () => {
+    // Given the server will reject the next preference save
+    vi.mocked(savePreferencesAction).mockRejectedValueOnce(new Error("network down"));
+    const { result } = renderHook(() =>
+      useStore({
+        habits: [],
+        journal: [],
+        identity: { statement: "", values: [] },
+        weeklyReview: { wentWell: "", smallestFix: "", identityVote: "" },
+        completedLessons: [],
+        formationVerdicts: [],
+        preferences: {
+          theme: "light",
+          accentHue: 60,
+          remindersEnabled: true,
+          weeklyReviewNudge: true,
+          accountabilityNudge: false,
+          onboardingSeen: true,
+          lessonMode: "sequential",
+          timezone: "UTC",
+        },
+      }),
+    );
+
+    // When the user turns daily reminders off
+    let saved: boolean | undefined;
+    await act(async () => {
+      saved = await result.current.setPreferences({ remindersEnabled: false });
+    });
+
+    // Then the switch returns to its saved value and a failure toast appears
+    expect(saved).toBe(false);
+    expect(result.current.preferences.remindersEnabled).toBe(true);
+    expect(result.current.toast?.msg).toBe("Couldn't save settings");
   });
 });

@@ -38,7 +38,7 @@ function mockSession(result: { name: string; email: string } | Error) {
 }
 
 function renderSettings(patch: Parameters<typeof testStoreContext>[0] = {}) {
-  const store = testStoreContext({ showToast: vi.fn(), setPreferences: vi.fn(), ...patch });
+  const store = testStoreContext({ showToast: vi.fn(), setPreferences: vi.fn(async () => true), ...patch });
   render(
     <StoreContextProvider value={store}>
       <SettingsView />
@@ -124,7 +124,7 @@ describe("SettingsView", () => {
     expect(store.showToast).toHaveBeenCalledWith("Profile updated");
   });
 
-  it("saves a reminder preference immediately and confirms it", () => {
+  it("saves a reminder preference immediately and confirms it", async () => {
     // Given: weekly review nudges are on
     mockSession({ name: "Ada", email: "ada@example.com" });
     const store = renderSettings();
@@ -136,7 +136,23 @@ describe("SettingsView", () => {
 
     // Then: the preference is saved and a toast confirms it
     expect(store.setPreferences).toHaveBeenCalledWith({ weeklyReviewNudge: false });
-    expect(store.showToast).toHaveBeenCalledWith("Weekly review nudge off");
+    await waitFor(() => expect(store.showToast).toHaveBeenCalledWith("Weekly review nudge off"));
+  });
+
+  it("does not confirm a reminder change that failed to save", async () => {
+    // Given: the store will roll the change back (the save failed)
+    mockSession({ name: "Ada", email: "ada@example.com" });
+    const store = renderSettings({ setPreferences: vi.fn(async () => false) });
+
+    // When: the user turns weekly review nudges off
+    fireEvent.click(screen.getByRole("switch", { name: "Weekly review nudge" }));
+
+    // Then: no success toast is shown (the store reports the failure itself)
+    await waitFor(() => expect(store.setPreferences).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(store.showToast).not.toHaveBeenCalledWith("Weekly review nudge off");
   });
 
   it("asks for confirmation before importing a chosen backup", async () => {
