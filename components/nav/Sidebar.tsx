@@ -51,6 +51,8 @@ export function Sidebar({ pathname, user }: { pathname: string; user: NavUser })
                   href={item.href}
                   className={styles.item}
                   aria-current={active ? "page" : undefined}
+                  aria-keyshortcuts={`Alt+Shift+${item.shortcut}`}
+                  title={`${item.label} (Alt+Shift+${item.shortcut})`}
                   onClick={() =>
                     clientLogger.info("Navigation clicked", {
                       event: "nav.navigate",

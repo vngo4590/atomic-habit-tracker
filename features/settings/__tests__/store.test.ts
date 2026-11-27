@@ -195,4 +195,73 @@ describe("store settings mutations", () => {
     expect(result.current.preferences.remindersEnabled).toBe(true);
     expect(result.current.toast?.msg).toBe("Couldn't save settings");
   });
+
+  describe("overlapping preference saves", () => {
+    const PREFS = {
+      theme: "light",
+      accentHue: 60,
+      remindersEnabled: true,
+      weeklyReviewNudge: true,
+      accountabilityNudge: false,
+      onboardingSeen: true,
+      lessonMode: "sequential",
+      timezone: "UTC",
+    } as const;
+    const renderSettings = () =>
+      renderHook(() =>
+        useStore({
+          habits: [],
+          journal: [],
+          identity: { statement: "", values: [] },
+          weeklyReview: { wentWell: "", smallestFix: "", identityVote: "" },
+          completedLessons: [],
+          formationVerdicts: [],
+          preferences: { ...PREFS },
+        }),
+      );
+
+    it("a failed older save restores its own field without undoing a newer save", async () => {
+      // Given a reminders save that will fail after a nudge save succeeds
+      let reject: (error: Error) => void = () => {};
+      vi.mocked(savePreferencesAction).mockReturnValueOnce(new Promise((_, r) => { reject = r; }));
+      const { result } = renderSettings();
+      let first: Promise<boolean> = Promise.resolve(true);
+      act(() => { first = result.current.setPreferences({ remindersEnabled: false }); });
+      await act(async () => {
+        await result.current.setPreferences({ weeklyReviewNudge: false });
+      });
+
+      // When the older save fails
+      await act(async () => {
+        reject(new Error("network down"));
+        await first;
+      });
+
+      // Then only the failed field rolls back
+      expect(result.current.preferences.remindersEnabled).toBe(true);
+      expect(result.current.preferences.weeklyReviewNudge).toBe(false);
+    });
+
+    it("a late older response does not overwrite a newer value for the same field", async () => {
+      // Given a dark-theme save that answers after a newer light-theme save
+      let resolve: (value: typeof PREFS | { theme: "dark" }) => void = () => {};
+      vi.mocked(savePreferencesAction).mockReturnValueOnce(new Promise((r) => { resolve = r as typeof resolve; }));
+      const { result } = renderSettings();
+      let first: Promise<boolean> = Promise.resolve(true);
+      act(() => { first = result.current.setPreferences({ theme: "dark" }); });
+      await act(async () => {
+        await result.current.setPreferences({ theme: "light", timezone: "Europe/Paris" });
+      });
+
+      // When the stale response finally arrives
+      await act(async () => {
+        resolve({ ...PREFS, theme: "dark" });
+        await first;
+      });
+
+      // Then the newer choice wins
+      expect(result.current.preferences.theme).toBe("light");
+      expect(result.current.preferences.timezone).toBe("Europe/Paris");
+    });
+  });
 });
