@@ -97,8 +97,10 @@
    background colour. */
 
 /* Set by MotionProvider when the animation chunk can't load: show Framer
-   Motion elements in their final state instead of frozen at opacity 0. */
-.motion-unavailable [style*="opacity"] {
+   Motion elements in their final state instead of frozen at their initial
+   opacity or transform (e.g. a bar stuck at scaleY(0)). */
+.motion-unavailable [style*="opacity"],
+.motion-unavailable [style*="transform"] {
   opacity: 1 !important;
   transform: none !important;
 }

@@ -36,17 +36,38 @@ function withLinks(habits: Habit[], links: Map<string, string | null>): Habit[] 
 }
 
 export function useStacksSlice(setHabits: Dispatch<SetStateAction<Habit[]>>): StacksSlice {
-  // Which request last touched each habit's link, so a slow response never
-  // overwrites a newer stack mutation of the same habit.
-  const linkOwner = useRef(new Map<string, number>());
+  // Links as last confirmed by the server (or as they were before any pending
+  // request touched them), plus the optimistic links of every request still in
+  // flight. The visible link is always confirmed + pending patches in request
+  // order, so any mix of late successes and failures settles correctly.
+  const confirmed = useRef(new Map<string, { link: string | null; request: number }>());
+  const pending = useRef(new Map<number, Map<string, string | null>>());
   const requestSeq = useRef(0);
+
+  /** Settle a request (optionally adopting the server's links) and redraw every tracked link. */
+  const settle = useCallback((request: number, serverLinks?: Habit[]) => {
+    pending.current.delete(request);
+    for (const habit of serverLinks ?? []) {
+      // Ignore a response older than one already adopted for this habit.
+      if ((confirmed.current.get(habit.id)?.request ?? 0) <= request) {
+        confirmed.current.set(habit.id, { link: habit.stackNextId ?? null, request });
+      }
+    }
+    const links = new Map([...confirmed.current].map(([id, { link }]) => [id, link] as const));
+    for (const patch of pending.current.values()) {
+      for (const [id, link] of patch) links.set(id, link);
+    }
+    if (pending.current.size === 0) confirmed.current.clear();
+    setHabits((currentHabits) => withLinks(currentHabits, links));
+  }, [setHabits]);
 
   /**
    * Apply an atomic stack mutation (insert, remove or reorder). Optimistically
-   * patches `stackNextId` locally, then reconciles only the links this request
-   * still owns. Other habit fields (check-ins, archive state) are never touched,
-   * so a late response cannot undo unrelated changes. Rejected promises throw a
-   * thin error with the server-supplied message so callers can surface a modal.
+   * patches `stackNextId` locally, then redraws links from confirmed + pending
+   * state when it settles. Other habit fields (check-ins, archive state) are
+   * never touched, so a late response cannot undo unrelated changes. Rejected
+   * promises throw a thin error with the server-supplied message so callers
+   * can surface a modal.
    */
   const applyStackMutation = useCallback(async (input: StackMutationInput) => {
     const logContext = {
@@ -55,20 +76,20 @@ export function useStacksSlice(setHabits: Dispatch<SetStateAction<Habit[]>>): St
       count: input.kind === "reorder" ? input.habitIds.length : undefined,
     };
     const request = ++requestSeq.current;
-    const owned = (id: string) => linkOwner.current.get(id) === request;
 
     await optimistic({
       apply: () => {
-        const previous = new Map<string, string | null>();
         setHabits((currentHabits) => {
           const next = new Map<string, string | null>();
           for (const { id, patch } of patchesFor(input, currentHabits)) {
             const habit = currentHabits.find((h) => h.id === id);
             if (!habit || patch.stackNextId === undefined) continue;
-            previous.set(id, habit.stackNextId ?? null);
+            if (!confirmed.current.has(id)) {
+              confirmed.current.set(id, { link: habit.stackNextId ?? null, request: 0 });
+            }
             next.set(id, patch.stackNextId ?? null);
-            linkOwner.current.set(id, request);
           }
+          pending.current.set(request, next);
           return withLinks(currentHabits, next);
         });
 
@@ -77,22 +98,11 @@ export function useStacksSlice(setHabits: Dispatch<SetStateAction<Habit[]>>): St
           ...logContext,
         });
 
-        // Restore only the links this request still owns; `rethrow` below lets the caller show a modal.
-        return () =>
-          setHabits((currentHabits) =>
-            withLinks(currentHabits, new Map([...previous].filter(([id]) => owned(id)))),
-          );
+        // `rethrow` below lets the caller show a modal after the rollback.
+        return () => settle(request);
       },
       action: () => applyStackMutationAction(input),
-      onSuccess: (updated) => {
-        // Adopt the server's links, but only for links no newer request has taken over.
-        const confirmed = new Map(
-          updated
-            .filter((h) => !linkOwner.current.has(h.id) || owned(h.id))
-            .map((h) => [h.id, h.stackNextId ?? null] as const),
-        );
-        setHabits((currentHabits) => withLinks(currentHabits, confirmed));
-      },
+      onSuccess: (updated) => settle(request, updated),
       failure: {
         log: "Habit stack mutation rolled back",
         event: "store.habit.stack_mutation_failed",
@@ -100,7 +110,7 @@ export function useStacksSlice(setHabits: Dispatch<SetStateAction<Habit[]>>): St
       },
       rethrow: true,
     });
-  }, [setHabits]);
+  }, [setHabits, settle]);
 
   return useMemo(() => ({ applyStackMutation }), [applyStackMutation]);
 }
