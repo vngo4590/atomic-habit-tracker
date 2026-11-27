@@ -1,8 +1,9 @@
-import type { NextRequest } from "next/server";
+import type { NextFetchEvent, NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { hasSessionUser, isProtectedPath, loginRedirectUrl } from "@/lib/auth/routes";
+import { sessionIssuedAt, shouldRefreshSessionCookie, withoutSessionRefresh } from "@/lib/auth/session-refresh";
 import {
   STATIC_SECURITY_HEADERS,
   STRICT_TRANSPORT_SECURITY,
@@ -61,7 +62,7 @@ function applySecurityHeaders(response: NextResponse, csp: string): NextResponse
   return response;
 }
 
-export default auth((request: NextRequest & { auth?: unknown }) => {
+function secureRequest(request: NextRequest & { auth?: unknown }): NextResponse {
   const { pathname } = request.nextUrl;
   const method = request.method;
 
@@ -124,7 +125,38 @@ export default auth((request: NextRequest & { auth?: unknown }) => {
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   return applySecurityHeaders(response, csp);
+}
+
+// Internal marker the Auth.js-wrapped handler uses to tell the outer proxy that
+// the current session token is still fresh. Never leaves the server.
+const SKIP_SESSION_REFRESH_HEADER = "x-atomicly-skip-session-refresh";
+
+const authProxy = auth((request: NextRequest & { auth?: unknown }) => {
+  const response = secureRequest(request);
+  if (!shouldRefreshSessionCookie(sessionIssuedAt(request.auth))) {
+    response.headers.set(SKIP_SESSION_REFRESH_HEADER, "1");
+  }
+  return response;
 });
+
+/**
+ * Proxy entry point: runs the Auth.js-wrapped proxy above, then drops the
+ * session cookie Auth.js re-issues on every response unless the token is due
+ * for its sliding refresh. Without this, any request in flight during sign-out
+ * (e.g. a link prefetch) re-writes the old session and silently signs the user
+ * back in (see lib/auth/session-refresh.ts).
+ */
+export default async function proxy(request: NextRequest, event: NextFetchEvent) {
+  // Auth.js types its wrapper as a route handler, but at runtime it forwards
+  // whatever (request, context) pair Next passes in — here the proxy event.
+  const run = authProxy as unknown as (req: NextRequest, ev: NextFetchEvent) => Promise<Response | undefined>;
+  const response = await run(request, event);
+  if (response?.headers.get(SKIP_SESSION_REFRESH_HEADER)) {
+    response.headers.delete(SKIP_SESSION_REFRESH_HEADER);
+    return withoutSessionRefresh(response);
+  }
+  return response;
+}
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],

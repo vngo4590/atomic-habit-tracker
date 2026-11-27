@@ -56,6 +56,11 @@ export const {
       if (typeof token.authTime === "number") {
         session.authTime = token.authTime;
       }
+      // Surface when the current token was minted so the proxy can throttle
+      // the sliding cookie refresh to SESSION_UPDATE_AGE_SECONDS.
+      if (typeof token.iat === "number") {
+        session.issuedAt = token.iat * 1000;
+      }
       return session;
     },
   },
