@@ -98,4 +98,67 @@ describe("stack mutations in the client store", () => {
     expect(a.stackNextId).toBeNull();
     expect(isDone(a.history[todayKey()])).toBe(true);
   });
+
+  describe("overlapping stack requests", () => {
+    const removeB = { kind: "remove", habitId: "b" } as const;
+    const linkOf = (result: ReturnType<typeof renderStore>["result"], id: string) =>
+      result.current.habits.find((h) => h.id === id)?.stackNextId ?? null;
+
+    /** Start a stack request whose server answer the test settles by hand. */
+    function deferStackRequest() {
+      const settle = { resolve: (_: Habit[]) => {}, reject: (_: Error) => {} };
+      vi.mocked(applyStackMutationAction).mockReturnValueOnce(
+        new Promise((resolve, reject) => Object.assign(settle, { resolve, reject })),
+      );
+      return settle;
+    }
+
+    it("never restores an unsaved link when both an insert and a later remove fail", async () => {
+      // Given an insert of B after A, then a removal of B, both still in flight
+      const insert = deferStackRequest();
+      const remove = deferStackRequest();
+      const { result } = renderStore();
+      let first: Promise<void> = Promise.resolve();
+      let second: Promise<void> = Promise.resolve();
+      act(() => { first = result.current.applyStackMutation(linkBAfterA); });
+      act(() => { second = result.current.applyStackMutation(removeB); });
+
+      // When both requests fail (insert first, then remove)
+      await act(async () => {
+        insert.reject(new Error("nope"));
+        await first.catch(() => {});
+      });
+      await act(async () => {
+        remove.reject(new Error("nope"));
+        await second.catch(() => {});
+      });
+
+      // Then A is back to the server's state: not linked to B
+      expect(linkOf(result, "a")).toBeNull();
+    });
+
+    it("keeps a confirmed link when an earlier request fails after it", async () => {
+      // Given an insert of B after A and a second identical insert, both in flight
+      const firstInsert = deferStackRequest();
+      const secondInsert = deferStackRequest();
+      const { result } = renderStore();
+      let first: Promise<void> = Promise.resolve();
+      let second: Promise<void> = Promise.resolve();
+      act(() => { first = result.current.applyStackMutation(linkBAfterA); });
+      act(() => { second = result.current.applyStackMutation(linkBAfterA); });
+
+      // When the second succeeds on the server and then the first fails
+      await act(async () => {
+        secondInsert.resolve([{ ...habit("a"), stackNextId: "b" }, habit("b")]);
+        await second;
+      });
+      await act(async () => {
+        firstInsert.reject(new Error("nope"));
+        await first.catch(() => {});
+      });
+
+      // Then the server-confirmed A→B link stays
+      expect(linkOf(result, "a")).toBe("b");
+    });
+  });
 });
