@@ -14,7 +14,7 @@ interface FadeInProps {
 
 export function FadeIn({ children, delay = 0, className, duration, y = 12 }: FadeInProps) {
   return (
-    <m.div
+    <m.div data-motion-fallback
       className={className}
       initial={{ opacity: 0, y }}
       animate={{ opacity: 1, y: 0 }}
@@ -31,7 +31,7 @@ export function FadeIn({ children, delay = 0, className, duration, y = 12 }: Fad
 
 export function FadeInView({ children, delay = 0, className, duration, y = 16 }: FadeInProps) {
   return (
-    <m.div
+    <m.div data-motion-fallback
       className={className}
       initial={{ opacity: 0, y }}
       whileInView={{ opacity: 1, y: 0 }}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type CSSProperties } from "react";
+import { isDone } from "@/features/habits";
 
 import { fmt, dateAdd, todayKey } from "@/lib/helpers";
 import type { Habit } from "@/lib/types";
@@ -49,7 +50,7 @@ export function HistoryWall({ habit }: { habit: Habit }) {
       const cols: DayCell[][] = [];
       for (let day = 6; day >= 0; day--) {
         const key = dateAdd(today, -day);
-        cols.push([{ key, done: Boolean(habit.history[key]), today: key === today }]);
+        cols.push([{ key, done: isDone(habit.history[key]), today: key === today }]);
       }
       return cols;
     }
@@ -63,7 +64,7 @@ export function HistoryWall({ habit }: { habit: Habit }) {
       for (let day = 6; day >= 0; day--) {
         const offset = week * 7 + day;
         const key = dateAdd(today, -offset);
-        col.push({ key, done: Boolean(habit.history[key]), today: key === today });
+        col.push({ key, done: isDone(habit.history[key]), today: key === today });
       }
       cols.push(col.reverse());
     }

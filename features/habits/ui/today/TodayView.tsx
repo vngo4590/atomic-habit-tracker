@@ -17,6 +17,7 @@ import { TodayInsights } from "./TodayInsights";
 import { TodaySearch } from "./TodaySearch";
 import styles from "./TodayView.module.css";
 import { useTodayData } from "./useTodayData";
+import { isDone as isDayDone } from "../../model/metrics";
 
 export interface TodayViewProps {
   /** First name for the greeting (from the signed-in user). */
@@ -49,7 +50,7 @@ export function TodayView({ userName }: TodayViewProps) {
   /** Check in (and ask for mood) or undo, depending on today's state. */
   const toggle = useCallback(
     (habit: Habit) => {
-      if (!habit.history[today]) setMoodHabit(habit);
+      if (!isDayDone(habit.history[today])) setMoodHabit(habit);
       toggleHabit(habit.id);
     },
     [toggleHabit, today],

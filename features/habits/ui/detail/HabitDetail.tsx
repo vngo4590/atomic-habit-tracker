@@ -17,6 +17,7 @@ import { formationStatus } from "./formation";
 import { HabitEditPanel, type HabitSentencePatch } from "./HabitEditPanel";
 import { OverviewTab } from "./OverviewTab";
 import styles from "./HabitDetail.module.css";
+import { isDone as isDayDone } from "../../model/metrics";
 
 const TabLoading = () => <Skeleton height={240} />;
 
@@ -101,7 +102,7 @@ export function HabitDetail() {
     );
   }
 
-  const doneToday = Boolean(habit.history[today]);
+  const doneToday = isDayDone(habit.history[today]);
   const verdict = (store.formationVerdicts ?? []).find((item) => item.habitId === habit.id);
 
   const savePatch = (field: string, patch: Partial<Habit>) => {

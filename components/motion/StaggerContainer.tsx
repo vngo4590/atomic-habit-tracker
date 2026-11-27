@@ -36,6 +36,7 @@ export function StaggerContainer({
 
   return (
     <m.div
+      data-motion-fallback
       className={className}
       style={style}
       variants={{
@@ -68,7 +69,7 @@ export function StaggerItem({ children, className }: StaggerItemProps) {
   }
 
   return (
-    <m.div className={className} variants={staggerItemVariants}>
+    <m.div data-motion-fallback className={className} variants={staggerItemVariants}>
       {children}
     </m.div>
   );

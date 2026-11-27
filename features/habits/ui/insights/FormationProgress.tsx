@@ -1,22 +1,25 @@
 import { Check, Circle } from "lucide-react";
 import { useId } from "react";
 
-import { Card } from "@/components/ui";
+import { Button, Card } from "@/components/ui";
 import type { Habit } from "@/lib/types";
 
 import { daysSince, FORMATION_DAYS } from "./formation";
 import styles from "./HallOfFame.module.css";
 import { Meter } from "./Meter";
+import { isDone as isDayDone } from "../../model/metrics";
 
 interface FormationProgressProps {
   habits: Habit[];
   today: string;
   streak: (habit: Habit) => number;
   completionRate: (habit: Habit, days?: number) => number;
+  /** Re-opens the review for habits past 66 days that were marked "keep practicing". */
+  onReview: (habit: Habit) => void;
 }
 
 /** Younger habits on their way to 66 days, closest to review first. */
-export function FormationProgress({ habits, today, streak, completionRate }: FormationProgressProps) {
+export function FormationProgress({ habits, today, streak, completionRate, onReview }: FormationProgressProps) {
   const headingId = useId();
   return (
     <Card as="section" padding="lg" aria-labelledby={headingId} className={styles.card}>
@@ -30,7 +33,7 @@ export function FormationProgress({ habits, today, streak, completionRate }: For
         <ul className={styles.rows} role="list">
           {habits.map((habit) => {
             const age = daysSince(habit.createdAt, today);
-            const doneToday = Boolean(habit.history[today]);
+            const doneToday = isDayDone(habit.history[today]);
             return (
               <li key={habit.id} className={styles.progressRow}>
                 <div className={styles.progressHead}>
@@ -58,6 +61,11 @@ export function FormationProgress({ habits, today, streak, completionRate }: For
                   <li className={styles.tag}>{streak(habit)}d active</li>
                   <li className={styles.tag}>{Math.round(completionRate(habit, 30) * 100)}% 30-day</li>
                 </ul>
+                {age >= FORMATION_DAYS ? (
+                  <Button size="sm" variant="secondary" aria-label={`Review ${habit.name} again`} onClick={() => onReview(habit)}>
+                    Review again
+                  </Button>
+                ) : null}
               </li>
             );
           })}

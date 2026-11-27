@@ -76,6 +76,7 @@ export function OnboardingOverlay({ onComplete }: { onComplete: () => void }) {
 
   return (
     <m.div
+      data-motion-fallback
       ref={dialogRef}
       className="overlay"
       role="dialog"
@@ -87,7 +88,7 @@ export function OnboardingOverlay({ onComplete }: { onComplete: () => void }) {
       transition={{ duration: 0.3 }}
     >
       <AnimatePresence mode="wait">
-        <m.div
+        <m.div data-motion-fallback
           key={step}
           className={`overlay-card ${styles.card}`}
           variants={slideUpVariants}
@@ -99,7 +100,7 @@ export function OnboardingOverlay({ onComplete }: { onComplete: () => void }) {
               the current step, rule-coloured beyond it. */}
           <div className={styles.progress}>
             {STEPS.map((item, index) => (
-              <m.span
+              <m.span data-motion-fallback
                 key={item.eyebrow}
                 data-testid="onboarding-progress-dot"
                 className={`${styles.progressDot} ${
