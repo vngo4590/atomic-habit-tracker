@@ -6,7 +6,7 @@
  * the habits slice's list through its `setHabits` setter.
  */
 
-import { type Dispatch, type SetStateAction, useCallback, useMemo } from "react";
+import { type Dispatch, type SetStateAction, useCallback, useMemo, useRef } from "react";
 
 import { clientLogger } from "@/lib/logger-client";
 import { optimistic } from "@/lib/store/optimistic";
@@ -22,13 +22,31 @@ import {
 
 export type StacksSlice = Pick<StoreState, "applyStackMutation">;
 
+type LinkPatch = { id: string; patch: Partial<Pick<Habit, "stackNextId">> };
+
+function patchesFor(input: StackMutationInput, list: Habit[]): LinkPatch[] {
+  if (input.kind === "insert") return stackInsertPatchesHelper(input.habitId, input.position, input.targetId, list);
+  if (input.kind === "remove") return stackRemovePatchesHelper(input.habitId, list);
+  return stackReorderPatchesHelper(input.habitIds);
+}
+
+/** Set `stackNextId` on the listed habits only, leaving every other field (and missing habits) alone. */
+function withLinks(habits: Habit[], links: Map<string, string | null>): Habit[] {
+  return habits.map((h) => (links.has(h.id) ? { ...h, stackNextId: links.get(h.id) ?? null } : h));
+}
+
 export function useStacksSlice(setHabits: Dispatch<SetStateAction<Habit[]>>): StacksSlice {
+  // Which request last touched each habit's link, so a slow response never
+  // overwrites a newer stack mutation of the same habit.
+  const linkOwner = useRef(new Map<string, number>());
+  const requestSeq = useRef(0);
+
   /**
-   * Apply an atomic stack mutation (insert or remove). Optimistically applies
-   * the patches locally and reconciles with the server response, or rolls
-   * back to the pre-mutation snapshot on failure. Rejected promises throw a
-   * thin error with the server-supplied message so callers can surface a
-   * modal dialog.
+   * Apply an atomic stack mutation (insert, remove or reorder). Optimistically
+   * patches `stackNextId` locally, then reconciles only the links this request
+   * still owns. Other habit fields (check-ins, archive state) are never touched,
+   * so a late response cannot undo unrelated changes. Rejected promises throw a
+   * thin error with the server-supplied message so callers can surface a modal.
    */
   const applyStackMutation = useCallback(async (input: StackMutationInput) => {
     const logContext = {
@@ -36,42 +54,22 @@ export function useStacksSlice(setHabits: Dispatch<SetStateAction<Habit[]>>): St
       habitId: "habitId" in input ? input.habitId : undefined,
       count: input.kind === "reorder" ? input.habitIds.length : undefined,
     };
+    const request = ++requestSeq.current;
+    const owned = (id: string) => linkOwner.current.get(id) === request;
 
     await optimistic({
       apply: () => {
-        let snapshot: Habit[] = [];
+        const previous = new Map<string, string | null>();
         setHabits((currentHabits) => {
-          snapshot = currentHabits;
-          const map = new Map(currentHabits.map((h) => [h.id, { ...h }]));
-          const list = Array.from(map.values());
-
-          if (input.kind === "insert") {
-            const patches = stackInsertPatchesHelper(input.habitId, input.position, input.targetId, list);
-            for (const { id, patch } of patches) {
-              const record = map.get(id);
-              if (record && patch.stackNextId !== undefined) {
-                record.stackNextId = patch.stackNextId ?? null;
-              }
-            }
-          } else if (input.kind === "remove") {
-            const patches = stackRemovePatchesHelper(input.habitId, list);
-            for (const { id, patch } of patches) {
-              const record = map.get(id);
-              if (record && patch.stackNextId !== undefined) {
-                record.stackNextId = patch.stackNextId ?? null;
-              }
-            }
-          } else {
-            // kind === "reorder"
-            const patches = stackReorderPatchesHelper(input.habitIds);
-            for (const { id, patch } of patches) {
-              const record = map.get(id);
-              if (record && patch.stackNextId !== undefined) {
-                record.stackNextId = patch.stackNextId ?? null;
-              }
-            }
+          const next = new Map<string, string | null>();
+          for (const { id, patch } of patchesFor(input, currentHabits)) {
+            const habit = currentHabits.find((h) => h.id === id);
+            if (!habit || patch.stackNextId === undefined) continue;
+            previous.set(id, habit.stackNextId ?? null);
+            next.set(id, patch.stackNextId ?? null);
+            linkOwner.current.set(id, request);
           }
-          return Array.from(map.values());
+          return withLinks(currentHabits, next);
         });
 
         clientLogger.info("Applying habit stack mutation", {
@@ -79,18 +77,21 @@ export function useStacksSlice(setHabits: Dispatch<SetStateAction<Habit[]>>): St
           ...logContext,
         });
 
-        // Roll back optimistic state; `rethrow` below lets the caller show a modal.
-        return () => setHabits(snapshot);
+        // Restore only the links this request still owns; `rethrow` below lets the caller show a modal.
+        return () =>
+          setHabits((currentHabits) =>
+            withLinks(currentHabits, new Map([...previous].filter(([id]) => owned(id)))),
+          );
       },
       action: () => applyStackMutationAction(input),
       onSuccess: (updated) => {
-        setHabits((currentHabits) => {
-          const byId = new Map(currentHabits.map((h) => [h.id, h] as const));
-          for (const habit of updated) {
-            byId.set(habit.id, habit);
-          }
-          return Array.from(byId.values());
-        });
+        // Adopt the server's links, but only for links no newer request has taken over.
+        const confirmed = new Map(
+          updated
+            .filter((h) => !linkOwner.current.has(h.id) || owned(h.id))
+            .map((h) => [h.id, h.stackNextId ?? null] as const),
+        );
+        setHabits((currentHabits) => withLinks(currentHabits, confirmed));
       },
       failure: {
         log: "Habit stack mutation rolled back",
