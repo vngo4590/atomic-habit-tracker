@@ -30,9 +30,11 @@ uses the full build. `npm run bundle:check` enforces a 230 KB first-load budget.
 
 **Fallback.** `MotionProvider` retries the feature chunk once; if it still
 fails it adds `motion-unavailable` to `<html>` (and logs
-`motion.features_failed`), and `app/styles/animations.css` forces inline
-`opacity`/`transform` back to visible so content never stays hidden at its
-`initial` state.
+`motion.features_failed`), and `app/styles/animations.css` resets
+`opacity`/`transform` on elements marked `data-motion-fallback` so content
+never stays hidden at its `initial` state. Add `data-motion-fallback` to any
+new `m.*` element whose `initial` hides it; leave it off drag/reorder items
+and decorative loops whose transforms must not be overridden.
 
 **Reduced motion.** CSS durations collapse via `tokens.css` under
 `prefers-reduced-motion`. Framer components must opt in themselves: feature

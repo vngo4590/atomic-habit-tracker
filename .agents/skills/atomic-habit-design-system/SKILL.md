@@ -52,7 +52,7 @@ Raw colour literals live **only** in `tokens.css`. Everything else reads semanti
 | `Skeleton` | Loading placeholders | `shape` block/text/circle with fixed `width`/`height` to avoid layout shift; `aria-hidden`. |
 | `Badge` | Short status labels | `tone` neutral/primary/warning/danger. Never colour-only meaning. |
 | `ProgressRing` | 0–1 progress | `role="progressbar"`; pass a `label`. |
-| `Modal` | Must-acknowledge errors, confirmations | Re-exported from `components/Modal.tsx`; labelled dialog, Esc/backdrop close, focuses its primary button. Destructive actions confirm first. |
+| `Modal` | Must-acknowledge errors | Re-exported from `components/Modal.tsx`; labelled dialog, Esc/backdrop close, focuses its primary button. Not for destructive confirms: `onClose` also fires on Esc and backdrop, so it cannot tell cancel from OK. Confirm destructive actions with `window.confirm` (see `features/pet/ui/PetCard.tsx`). |
 | `Toast` | Transient feedback | Re-exported from `components/Toast.tsx`; polite live region fed by `showToast` (`lib/store/toast.ts`). |
 
 Reach for a primitive before writing markup. If a pattern repeats in two features, promote it to `components/ui/` (under the 300-line ESLint `max-lines` cap, with a colocated CSS Module and a test in `components/ui/__tests__/`). `components/ui/package.json` marks the kit side-effect-free — keep modules free of top-level side effects so unused primitives tree-shake.
