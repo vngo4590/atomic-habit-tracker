@@ -1,0 +1,35 @@
+/* TodayView — page column. Whitespace separates the sections (MASTER:
+   "whitespace is structure"); the focus list comes first. */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: var(--reading-width);
+  margin: 0 auto;
+}
+
+.secondary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+/* ── Loading skeleton (same rhythm as the real page) ─────────────────── */
+.skeletonHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.skeletonText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.skeletonList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}

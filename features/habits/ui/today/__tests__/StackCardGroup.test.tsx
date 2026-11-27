@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { StackCardGroup } from "@/components/StackCardGroup";
+import { StackCardGroup } from "../StackCardGroup";
 import type { Habit } from "@/lib/types";
 
 function makeHabit(id: string, stackNextId?: string | null): Habit {
@@ -43,7 +43,6 @@ describe("StackCardGroup", () => {
         habit={habit}
         habits={[habit]}
         onCheck={vi.fn()}
-        onNavigate={vi.fn()}
         streak={() => 5}
       />,
     );
@@ -62,7 +61,6 @@ describe("StackCardGroup", () => {
         habit={habits[0]}
         habits={habits}
         onCheck={vi.fn()}
-        onNavigate={vi.fn()}
         streak={() => 5}
       />,
     );
@@ -87,7 +85,6 @@ describe("StackCardGroup", () => {
         habit={habits[0]}
         habits={habits}
         onCheck={vi.fn()}
-        onNavigate={vi.fn()}
         streak={() => 5}
       />,
     );
@@ -102,7 +99,6 @@ describe("StackCardGroup", () => {
         habit={habits[0]}
         habits={habits}
         onCheck={vi.fn()}
-        onNavigate={vi.fn()}
         streak={() => 5}
       />,
     );
@@ -127,7 +123,6 @@ describe("StackCardGroup", () => {
         habit={habits[0]}
         habits={habits}
         onCheck={vi.fn()}
-        onNavigate={vi.fn()}
         streak={() => 5}
       />,
     );
@@ -152,7 +147,6 @@ describe("StackCardGroup", () => {
         habit={habits[0]}
         habits={habits}
         onCheck={vi.fn()}
-        onNavigate={vi.fn()}
         streak={() => 5}
       />,
     );
@@ -175,7 +169,6 @@ describe("StackCardGroup", () => {
         habit={habits[1]}
         habits={habits}
         onCheck={vi.fn()}
-        onNavigate={vi.fn()}
         streak={() => 5}
       />,
     );
@@ -195,7 +188,6 @@ describe("StackCardGroup", () => {
         habit={habits[0]}
         habits={habits}
         onCheck={vi.fn()}
-        onNavigate={vi.fn()}
         streak={() => 5}
         today="2030-01-01"
       />,
@@ -215,12 +207,37 @@ describe("StackCardGroup", () => {
         habit={habit}
         habits={[habit]}
         onCheck={onCheck}
-        onNavigate={vi.fn()}
         streak={() => 5}
       />,
     );
 
-    fireEvent.click(screen.getByLabelText("Check"));
+    fireEvent.click(screen.getByRole("button", { name: "Mark Habit solo done" }));
     expect(onCheck).toHaveBeenCalledWith(expect.objectContaining({ id: "solo" }));
+  });
+
+  it("a solo top card links straight to the habit's detail page", () => {
+    const habit = makeHabit("solo");
+    render(<StackCardGroup habit={habit} habits={[habit]} onCheck={vi.fn()} streak={() => 0} />);
+    expect(screen.getByRole("link", { name: /^Habit solo/ }).getAttribute("href")).toBe("/habits/solo");
+  });
+
+  it("expand/collapse is a disclosure that keeps keyboard focus in the stack", () => {
+    // Given: a collapsed chain a -> b
+    const habits = [makeHabit("a", "b"), makeHabit("b")];
+    render(<StackCardGroup habit={habits[0]} habits={habits} onCheck={vi.fn()} streak={() => 0} />);
+    const expandButton = screen.getByRole("button", { name: /^Habit a/ });
+    expect(expandButton.getAttribute("aria-expanded")).toBe("false");
+
+    // When: the user expands it
+    fireEvent.click(expandButton);
+
+    // Then: focus lands on the first card's link
+    expect(document.activeElement).toBe(screen.getByRole("link", { name: /^Habit a/ }));
+
+    // When: they collapse it again
+    fireEvent.click(screen.getByRole("button", { name: "Collapse stack" }));
+
+    // Then: focus returns to the stack's expand control
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: /^Habit a/ }));
   });
 });
