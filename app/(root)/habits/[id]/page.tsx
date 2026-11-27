@@ -17,7 +17,7 @@ import {
   scheduleStateFromLabel,
   type Preset,
 } from "@/components/SchedulePicker";
-import { StackDiagram } from "@/components/StackDiagram";
+import { StackDiagram } from "@/features/stacks/ui";
 import { TabUnderline } from "@/components/TabUnderline";
 import {
   IconBack,

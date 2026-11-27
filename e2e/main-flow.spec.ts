@@ -355,7 +355,7 @@ test.describe("Chaining and reordering habits", () => {
     await page.goto(`/habits/${idA}`);
     await page.click('button:has-text("Stack")');
     await page.click('button:has-text("Link after…")');
-    await page.click(`[data-testid="stack-link-options"] .chip:has-text("${nameB}")`);
+    await page.click(`[data-testid="stack-link-options"] [data-chip]:has-text("${nameB}")`);
     await page.waitForSelector('text=Select a habit to link after:', { state: "hidden" });
 
     // Then: the two habits form a chain shown as Step 1 of 2.
