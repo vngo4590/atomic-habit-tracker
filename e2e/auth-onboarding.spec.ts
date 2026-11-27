@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import {
   STRONG_PASSWORD,
+  getPreferences,
   onboardingDialog,
   registerUser,
   uniqueEmail,
@@ -36,6 +37,7 @@ test.describe("registration and first-run onboarding", () => {
 
     // Then: the tour closes and the empty Today invites the first habit
     await expect(tour).toBeHidden();
+    await expect.poll(async () => (await getPreferences(page)).onboardingSeen).toBe(true);
     await expect(page.getByRole("heading", { name: "Build your first habit in three small steps" })).toBeVisible();
 
     // When: they reload the page
@@ -58,6 +60,7 @@ test.describe("registration and first-run onboarding", () => {
 
     // Then: it closes, and it does not come back on reload
     await expect(tour).toBeHidden();
+    await expect.poll(async () => (await getPreferences(page)).onboardingSeen).toBe(true);
     await page.reload();
     await expect(page.getByTestId("today-view")).toBeVisible();
     await expect(onboardingDialog(page)).toHaveCount(0);

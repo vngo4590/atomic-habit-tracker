@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 
-import { dismissOnboarding } from "./helpers";
+import { dismissOnboarding, dismissOnboardingIfPending } from "./helpers";
 
 /**
  * password-change.spec — end-to-end regression proof for the
@@ -121,11 +121,7 @@ async function loginUser(page: Page, email: string, password: string): Promise<v
   await page.waitForURL((url) => url.pathname === "/", { timeout: 15_000 });
 
   // A first-run user may still see the onboarding overlay in this context.
-  const skipOnboarding = page.locator('.overlay button:has-text("Skip")');
-  if (await skipOnboarding.isVisible().catch(() => false)) {
-    await skipOnboarding.click();
-    await expect(skipOnboarding).not.toBeVisible();
-  }
+  await dismissOnboardingIfPending(page);
 }
 
 /**

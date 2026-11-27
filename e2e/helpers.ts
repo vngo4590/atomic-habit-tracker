@@ -101,9 +101,9 @@ export async function getPreferences(page: Page): Promise<Record<string, unknown
   return body.data.preferences;
 }
 
-/** The first-run onboarding dialog. */
+/** The first-run onboarding dialog: the full tour (Skip) or its plain fallback (Continue). */
 export function onboardingDialog(page: Page) {
-  return page.getByRole("dialog").filter({ has: page.getByRole("button", { name: "Skip" }) });
+  return page.getByRole("dialog").filter({ has: page.getByRole("button", { name: /^(Skip|Continue)$/ }) });
 }
 
 /** The first-run onboarding overlay's Skip button. */
@@ -111,15 +111,26 @@ export function onboardingSkip(page: Page) {
   return onboardingDialog(page).getByRole("button", { name: "Skip" });
 }
 
-/** Dismiss the first-run onboarding overlay if it is showing. */
+/** Dismiss the first-run onboarding overlay, which must be showing or about to show. */
 export async function dismissOnboarding(page: Page): Promise<void> {
   // A brand-new account always gets the tour, but it mounts after hydration —
   // wait for it rather than racing it, then wait for the server to remember
   // the choice so a later full navigation does not show it again.
-  await expect(onboardingDialog(page)).toBeVisible();
-  await onboardingSkip(page).click();
-  await expect(onboardingDialog(page)).toBeHidden();
+  const dialog = onboardingDialog(page);
+  await expect(dialog).toBeVisible();
+  // The full tour always offers Skip; the fallback (tour chunk failed to load) only Continue.
+  const skip = dialog.getByRole("button", { name: "Skip" });
+  await ((await skip.count()) ? skip : dialog.getByRole("button", { name: "Continue" })).click();
+  await expect(dialog).toBeHidden();
   await expect.poll(async () => (await getPreferences(page)).onboardingSeen).toBe(true);
+}
+
+/**
+ * Dismiss onboarding only if the server says this user has not seen it yet.
+ * Deterministic for accounts whose state is unknown (e.g. the shared dev user).
+ */
+export async function dismissOnboardingIfPending(page: Page): Promise<void> {
+  if ((await getPreferences(page)).onboardingSeen !== true) await dismissOnboarding(page);
 }
 
 /** A password that satisfies the registration policy (letter, number, symbol). */

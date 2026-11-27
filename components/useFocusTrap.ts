@@ -21,13 +21,16 @@ const FOCUSABLE =
 export function useFocusTrap<T extends HTMLElement>(onEscape: () => void) {
   const ref = useRef<T>(null);
   const onEscapeRef = useRef(onEscape);
+  // Read during the first render: a child's `autoFocus` runs before effects,
+  // so by the time the effect below runs, focus is already inside the dialog.
+  const openerRef = useRef(typeof document === "undefined" ? null : (document.activeElement as HTMLElement | null));
 
   useEffect(() => {
     onEscapeRef.current = onEscape;
   }, [onEscape]);
 
   useEffect(() => {
-    const opener = document.activeElement as HTMLElement | null;
+    const opener = openerRef.current;
     const focusables = () => Array.from(ref.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []);
 
     if (ref.current && !ref.current.contains(document.activeElement)) {

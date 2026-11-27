@@ -479,9 +479,14 @@ test.describe("habit detail", () => {
     // When: the user opens the habit
     await page.goto(`/habits/${id}`);
 
-    // Then: it is not yet done today, but the history tab is available
+    // Then: it is not yet done today
     await expect(page.getByRole("button", { name: "Mark done" })).toBeVisible();
+
+    // And: the history's week view marks exactly the two logged days as done
     await page.getByRole("tab", { name: "History" }).click();
-    await expect(page.getByRole("tabpanel")).toBeVisible();
+    const panel = page.getByRole("tabpanel");
+    await expect(panel).toBeVisible();
+    await panel.getByRole("button", { name: "This week" }).click();
+    await expect(panel.locator('[aria-label$=" done"]')).toHaveCount(2);
   });
 });
