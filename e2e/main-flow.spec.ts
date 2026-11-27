@@ -334,7 +334,7 @@ test.describe("Reviewing analytics", () => {
     // Then: the page renders and the "Total check-ins" stat reflects the logs.
     await expect(page.getByRole("heading", { name: /analytics/i })).toBeVisible();
     await expect(page.locator('text=Daily completion')).toBeVisible();
-    const totalCard = page.locator('.card', { hasText: "Total check-ins" });
+    const totalCard = page.getByTestId("kpi-total-check-ins");
     await expect(totalCard).toContainText("2");
   });
 });
