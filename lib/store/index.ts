@@ -31,7 +31,7 @@ export function useStore(backendSnapshot: StoreSnapshot = defaultSnapshot): Stor
   // Stacks are a view over habits, so the stacks slice patches the habit list.
   const stacksSlice = useStacksSlice(habitsSlice.setHabits);
   const reflectionSlice = useReflectionSlice(backendSnapshot);
-  const settingsSlice = useSettingsSlice(backendSnapshot);
+  const settingsSlice = useSettingsSlice(backendSnapshot, showToast);
   const petSlice = usePetSlice(backendSnapshot, showToast);
 
   return useMemo(

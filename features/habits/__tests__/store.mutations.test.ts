@@ -9,7 +9,7 @@ import {
   updateJournalEntryAction,
 } from "@/features/reflection/actions";
 import { savePreferencesAction } from "@/features/settings/actions";
-import { updateHabitAction, deleteHabitAction } from "@/features/habits/actions";
+import { deleteHabitAction, logCheckInAction, toggleHabitAction, updateHabitAction } from "@/features/habits/actions";
 import { useStore } from "@/lib/store";
 import type { Habit } from "@/lib/types";
 
@@ -127,6 +127,98 @@ describe("store habit mutations", () => {
 
     act(() => result.current.toggleHabit(id, key));
     expect(result.current.habits[0].history[key]).toBeUndefined();
+  });
+
+  it("keeps newer check-in details when an earlier toggle for the same day fails", async () => {
+    // Given a toggle whose server call is still pending
+    let rejectToggle: (error: Error) => void = () => {};
+    vi.mocked(toggleHabitAction).mockReturnValueOnce(
+      new Promise((_, reject) => {
+        rejectToggle = reject;
+      }),
+    );
+    let resolveCheckIn: (habit: Habit | null) => void = () => {};
+    vi.mocked(logCheckInAction).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveCheckIn = resolve;
+      }),
+    );
+    const { result } = renderHook(() =>
+      useStore({
+        habits: [makeHabit({})],
+        journal: [],
+        identity: { statement: "", values: [] },
+        weeklyReview: { wentWell: "", smallestFix: "", identityVote: "" },
+        completedLessons: [],
+        formationVerdicts: [],
+        preferences: {
+          theme: "light",
+          accentHue: 60,
+          remindersEnabled: true,
+          weeklyReviewNudge: true,
+          accountabilityNudge: false,
+          onboardingSeen: false,
+          lessonMode: "sequential",
+          timezone: "UTC",
+        },
+      }),
+    );
+    const id = result.current.habits[0].id;
+    const key = "2030-01-01";
+    act(() => result.current.toggleHabit(id, key));
+
+    // When the user saves mood and journal details before the toggle fails
+    act(() => result.current.logCheckIn(id, { mood: 5, journal: "Felt good" }, key));
+    await act(async () => {
+      rejectToggle(new Error("network down"));
+      await Promise.resolve();
+    });
+
+    // Then the newer details stay on screen instead of being rolled back
+    expect(result.current.habits[0].history[key]).toEqual({ done: true, mood: 5, journal: "Felt good" });
+
+    // And the newer request still reconciles with the server's answer
+    await act(async () => {
+      resolveCheckIn({ ...result.current.habits[0], history: { [key]: { done: true, mood: 5, journal: "Saved" } } });
+      await Promise.resolve();
+    });
+    expect(result.current.habits[0].history[key]).toEqual({ done: true, mood: 5, journal: "Saved" });
+  });
+
+  it("rolls back a failed check-in that is still the latest change for that day", async () => {
+    // Given a habit with no entry for the day and a check-in that will fail
+    vi.mocked(logCheckInAction).mockRejectedValueOnce(new Error("network down"));
+    const { result } = renderHook(() =>
+      useStore({
+        habits: [makeHabit({})],
+        journal: [],
+        identity: { statement: "", values: [] },
+        weeklyReview: { wentWell: "", smallestFix: "", identityVote: "" },
+        completedLessons: [],
+        formationVerdicts: [],
+        preferences: {
+          theme: "light",
+          accentHue: 60,
+          remindersEnabled: true,
+          weeklyReviewNudge: true,
+          accountabilityNudge: false,
+          onboardingSeen: false,
+          lessonMode: "sequential",
+          timezone: "UTC",
+        },
+      }),
+    );
+    const id = result.current.habits[0].id;
+
+    // When the check-in is saved and the server rejects it
+    await act(async () => {
+      result.current.logCheckIn(id, { mood: 3 }, "2030-01-02");
+      await Promise.resolve();
+    });
+
+    // Then the unsaved entry is removed and the user is told
+    expect(result.current.habits[0].history["2030-01-02"]).toBeUndefined();
+    expect(result.current.toast?.msg).toBe("Couldn't save check-in details");
   });
 
   it("initializes from the backend snapshot without touching localStorage", () => {

@@ -7,19 +7,24 @@
  * `useStore` in `lib/store`. Writes go through the shared `optimistic()` helper.
  */
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { clientLogger } from "@/lib/logger-client";
-import { changedFields, optimistic } from "@/lib/store/optimistic";
+import { changedFields, optimistic, type ShowToast } from "@/lib/store/optimistic";
 import type { StoreSnapshot, StoreState, UserPreferences } from "@/lib/types";
 
 import { savePreferencesAction } from "./actions";
 
 export type SettingsSlice = Pick<StoreState, "preferences" | "setPreferences" | "lessonMode" | "setLessonMode">;
 
-export function useSettingsSlice(snapshot: Pick<StoreSnapshot, "preferences">): SettingsSlice {
+export function useSettingsSlice(snapshot: Pick<StoreSnapshot, "preferences">, showToast: ShowToast): SettingsSlice {
   const [lessonModeState, setLessonModeState] = useState(snapshot.preferences.lessonMode);
   const [preferences, setPreferencesState] = useState<UserPreferences>(snapshot.preferences);
+  const preferencesRef = useRef(preferences);
+  useEffect(() => {
+    preferencesRef.current = preferences;
+  }, [preferences]);
+  const saveVersion = useRef(0);
 
   /** Adopt the server's saved preferences (and its lesson mode mirror). */
   const reconcile = useCallback((saved: UserPreferences) => {
@@ -45,25 +50,51 @@ export function useSettingsSlice(snapshot: Pick<StoreSnapshot, "preferences">): 
     });
   }, [reconcile]);
 
-  const setPreferences = useCallback((patch: Partial<UserPreferences>) => {
-    setPreferencesState((current) => ({ ...current, ...patch }));
-    if (patch.lessonMode) {
-      setLessonModeState(patch.lessonMode);
-    }
+  const setPreferences = useCallback(async (patch: Partial<UserPreferences>) => {
+    const version = ++saveVersion.current;
+    // Remember the patched fields' old values so a failed save can restore them.
+    const before = preferencesRef.current;
+    const previous = Object.fromEntries(
+      Object.keys(patch).map((key) => [key, before[key as keyof UserPreferences]]),
+    ) as Partial<UserPreferences>;
+
     clientLogger.info("Saving preferences", {
       event: "store.preferences.save",
       fields: changedFields(patch),
     });
-    void optimistic({
+    let saved = false;
+    await optimistic({
+      apply: () => {
+        setPreferencesState((current) => ({ ...current, ...patch }));
+        if (patch.lessonMode) {
+          setLessonModeState(patch.lessonMode);
+        }
+        // Only undo while no newer preference save has started.
+        return () => {
+          if (version !== saveVersion.current) return;
+          setPreferencesState((current) => ({ ...current, ...previous }));
+          if (previous.lessonMode) {
+            setLessonModeState(previous.lessonMode);
+          }
+        };
+      },
       action: () => savePreferencesAction(patch),
-      onSuccess: reconcile,
+      onSuccess: (result) => {
+        saved = true;
+        if (version === saveVersion.current) {
+          reconcile(result);
+        }
+      },
       failure: {
         log: "Preferences save failed",
         event: "store.preferences.save_failed",
         context: { fields: changedFields(patch) },
+        toast: "Couldn't save settings",
       },
+      showToast,
     });
-  }, [reconcile]);
+    return saved;
+  }, [reconcile, showToast]);
 
   return useMemo(
     () => ({ preferences, setPreferences, lessonMode: lessonModeState, setLessonMode }),

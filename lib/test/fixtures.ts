@@ -166,7 +166,7 @@ export function testStoreContext(patch: Partial<StoreState> = {}): StoreState {
     formationVerdicts: snapshot.formationVerdicts,
     saveFormationVerdict: () => {},
     preferences: snapshot.preferences,
-    setPreferences: () => {},
+    setPreferences: async () => true,
     pets: snapshot.pets ?? [],
     petFeedsUsedToday: snapshot.petFeedsUsedToday ?? 0,
     adoptPet: async () => {},

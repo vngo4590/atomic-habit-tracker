@@ -17,6 +17,19 @@ describe("daysBetween", () => {
     expect(daysBetween("2030-01-11", "2030-01-01")).toBe(0);
   });
 
+  it("counts calendar days across a spring daylight-saving change", () => {
+    // Given a user in New York, where 2030-03-10 is only 23 hours long
+    const originalTz = process.env.TZ;
+    process.env.TZ = "America/New_York";
+    try {
+      // When / Then: Jan 10 -> Mar 17 is still 66 calendar days, so the review unlocks
+      expect(daysBetween("2030-01-10", "2030-03-17")).toBe(66);
+      expect(formationStatus("2030-01-10", "2030-03-17", undefined).kind).toBe("ready");
+    } finally {
+      process.env.TZ = originalTz;
+    }
+  });
+
   it("treats unparseable dates as day zero", () => {
     // Given: a corrupt createdAt
     // When / Then: no NaN leaks into the UI
