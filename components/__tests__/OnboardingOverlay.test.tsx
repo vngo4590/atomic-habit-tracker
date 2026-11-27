@@ -23,6 +23,16 @@ describe("OnboardingOverlay business logic", () => {
     expect(screen.getByText("Begin")).toBeTruthy();
   });
 
+  it("is announced as a modal dialog named by the current step title", () => {
+    // Given the onboarding overlay is rendered on top of Today
+    render(<OnboardingOverlay onComplete={vi.fn()} />);
+
+    // Then assistive tech sees a modal dialog titled by the Welcome step,
+    // so screen-reader users know the rest of the page is behind it.
+    const dialog = screen.getByRole("dialog", { name: "Build evidence, one vote at a time." });
+    expect(dialog.getAttribute("aria-modal")).toBe("true");
+  });
+
   it("shows three progress dots — one per onboarding step", () => {
     // Given the onboarding overlay is rendered
     const onComplete = vi.fn();

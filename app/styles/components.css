@@ -400,6 +400,11 @@ textarea.input {
   border-radius: var(--r-lg);
   width: 540px;
   max-width: 100%;
+  /* Tall dialogs (e.g. the formation questionnaire) must scroll inside the
+     card on short viewports instead of clipping their actions off-screen.
+     80px = the .overlay's 40px padding on both edges. */
+  max-height: calc(100dvh - 80px);
+  overflow-y: auto;
   padding: 44px 48px;
   box-shadow: var(--shadow);
 }

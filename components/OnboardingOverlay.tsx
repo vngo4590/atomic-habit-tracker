@@ -73,6 +73,9 @@ export function OnboardingOverlay({ onComplete }: { onComplete: () => void }) {
   return (
     <m.div
       className="overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="onboarding-title"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -104,7 +107,7 @@ export function OnboardingOverlay({ onComplete }: { onComplete: () => void }) {
             ))}
           </div>
           <div className="eyebrow">{current.eyebrow}</div>
-          <h2 className={`h1 ${styles.title}`}>{current.title}</h2>
+          <h2 id="onboarding-title" className={`h1 ${styles.title}`}>{current.title}</h2>
           <p className={`lede ${styles.body}`}>{current.body}</p>
           <div className={styles.footer}>
             <m.button
