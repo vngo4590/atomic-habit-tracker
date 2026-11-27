@@ -106,7 +106,7 @@ describe("stack mutations in the client store", () => {
 
     /** Start a stack request whose server answer the test settles by hand. */
     function deferStackRequest() {
-      const settle = { resolve: (_: Habit[]) => {}, reject: (_: Error) => {} };
+      const settle = {} as { resolve: (habits: Habit[]) => void; reject: (error: Error) => void };
       vi.mocked(applyStackMutationAction).mockReturnValueOnce(
         new Promise((resolve, reject) => Object.assign(settle, { resolve, reject })),
       );
