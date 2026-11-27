@@ -16,19 +16,35 @@ function isEditableTarget(target: EventTarget | null) {
 }
 
 /**
- * Global single-key navigation shortcuts (see SHORTCUTS). Ignored while the
- * user is typing or holding a modifier, so browser/OS shortcuts like Ctrl+R
- * keep working.
+ * The shortcut letter for an Alt+Shift+<key> press, or null for any other
+ * combination. A modifier is required so stray keystrokes (e.g. from speech
+ * input) never navigate (WCAG 2.1.4). `code` is used because Alt/Option+Shift
+ * changes `key` into another character on some layouts.
+ */
+export function shortcutKey(event: KeyboardEvent): string | null {
+  if (!event.altKey || !event.shiftKey || event.ctrlKey || event.metaKey) {
+    return null;
+  }
+  if (event.code === "Comma") {
+    return ",";
+  }
+  const letter = /^Key([A-Z])$/.exec(event.code);
+  return letter ? letter[1].toLowerCase() : null;
+}
+
+/**
+ * Global Alt+Shift navigation shortcuts (see SHORTCUTS). Ignored while the
+ * user is typing in a form field.
  */
 export function useNavShortcuts() {
   const router = useRouter();
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (isEditableTarget(event.target) || event.ctrlKey || event.metaKey || event.altKey) {
+      const key = shortcutKey(event);
+      if (!key || isEditableTarget(event.target)) {
         return;
       }
-      const key = event.key.toLowerCase();
       const href = SHORTCUTS.get(key);
       if (href) {
         event.preventDefault();

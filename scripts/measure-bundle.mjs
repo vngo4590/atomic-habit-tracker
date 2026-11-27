@@ -42,7 +42,12 @@ const gzCache = new Map();
 function gzipKb(file) {
   if (!gzCache.has(file)) {
     const path = join(NEXT_DIR, file);
-    gzCache.set(file, existsSync(path) ? gzipSync(readFileSync(path)).length / 1024 : 0);
+    // A referenced chunk missing on disk means the build is incomplete; never count it as 0 KB.
+    if (!existsSync(path)) {
+      console.error(`Missing chunk referenced by the build manifests: ${file}. Rebuild before measuring.`);
+      process.exit(1);
+    }
+    gzCache.set(file, gzipSync(readFileSync(path)).length / 1024);
   }
   return gzCache.get(file);
 }
