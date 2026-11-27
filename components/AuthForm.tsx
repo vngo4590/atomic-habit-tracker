@@ -32,6 +32,18 @@ interface AuthFormProps {
   footer: ReactNode;
 }
 
+/** Shown when the request never reaches the action (e.g. the proxy rate limiter answers 429). */
+const UNREACHABLE_STATE: AuthFormState = {
+  ok: false,
+  message: "We couldn't reach the server. Please wait a moment and try again.",
+};
+
+/** True for the framework's own control-flow errors (redirect / notFound), which must propagate. */
+function isNavigationError(error: unknown): boolean {
+  const digest = (error as { digest?: unknown } | null)?.digest;
+  return typeof digest === "string" && digest.startsWith("NEXT_");
+}
+
 /** Pull the first error for a given field out of the action state. */
 function fieldError(state: AuthFormState, field: "name" | "email" | "password") {
   return state.errors?.[field]?.[0];
@@ -53,7 +65,18 @@ export function AuthForm({
   includeName = false,
   footer,
 }: AuthFormProps) {
-  const [state, formAction, pending] = useActionState(action, INITIAL_STATE);
+  // A transport failure (429, network drop) would otherwise throw into the
+  // route error boundary; keep the user on the form with a readable message.
+  const safeAction = async (prev: AuthFormState, formData: FormData): Promise<AuthFormState> => {
+    try {
+      return await action(prev, formData);
+    } catch (error) {
+      if (isNavigationError(error)) throw error;
+      clientLogger.warn("Auth request failed", { event: "auth.submit_failed", mode: includeName ? "register" : "login" });
+      return UNREACHABLE_STATE;
+    }
+  };
+  const [state, formAction, pending] = useActionState(safeAction, INITIAL_STATE);
   const authMode = includeName ? "register" : "login";
 
   // Record safe auth intent metadata without exposing credentials.

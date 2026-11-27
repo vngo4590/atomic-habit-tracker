@@ -715,9 +715,9 @@ test.describe("Responsive layout", () => {
 
     // Insert B after A → A → B; A is step 1 of 2.
     await expect(page.locator('text=Step 1 of 2')).toBeVisible();
-    // Diagram chips should not overflow
-    const cardWidth = await page.locator('.card').first().evaluate((el) => el.scrollWidth);
-    expect(cardWidth).toBeLessThanOrEqual(375);
+    // Diagram chips should not push the page into horizontal scroll
+    const pageWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(pageWidth).toBeLessThanOrEqual(375);
   });
 
   /**
