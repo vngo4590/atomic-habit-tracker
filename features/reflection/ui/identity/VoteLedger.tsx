@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useId, useMemo } from "react";
 
 import { buttonClassName, Card, EmptyState } from "@/components/ui";
+import { identityClaim } from "@/features/habits";
 import type { Habit } from "@/lib/types";
 
 import styles from "./VoteLedger.module.css";
@@ -58,7 +59,7 @@ export function VoteLedger({ habits }: { habits: Habit[] }) {
           {ledger.map(([label, votes]) => (
             <li key={label} className={styles.row}>
               <div className={styles.rowText}>
-                <span className={styles.label}>I am {label}</span>
+                <span className={styles.label}>{identityClaim(label)}</span>
                 <span className={styles.votes}>
                   {votes} {votes === 1 ? "vote" : "votes"}
                 </span>

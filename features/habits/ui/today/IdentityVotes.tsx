@@ -1,4 +1,5 @@
 import { Card } from "@/components/ui";
+import { identityClaim } from "@/features/habits";
 
 import styles from "./IdentityVotes.module.css";
 
@@ -27,7 +28,7 @@ export function IdentityVotes({ statement, votes }: IdentityVotesProps) {
           {votes.map(([identity, count]) => (
             <li key={identity} className={styles.row}>
               <span>
-                I am <span className={styles.identity}>{identity}</span>
+                <span className={styles.identity}>{identityClaim(identity)}</span>
               </span>
               <span className={styles.count}>+{count}</span>
             </li>

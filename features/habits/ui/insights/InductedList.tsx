@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useId } from "react";
 
 import { buttonClassName, Card, EmptyState } from "@/components/ui";
+import { identityClaim } from "@/features/habits";
 import type { FormationVerdict, Habit } from "@/lib/types";
 
 import { FORMATION_DAYS } from "./formation";
@@ -33,7 +34,7 @@ export function InductedList({ items, longestStreak, completionRate }: InductedL
                 {habit.emoji}
               </span>
               <h3 className={styles.name}>{habit.name}</h3>
-              <p className={styles.meta}>I am {habit.identity}</p>
+              <p className={styles.meta}>{identityClaim(habit.identity)}</p>
               <dl className={styles.stats}>
                 <div>
                   <dt>Score</dt>

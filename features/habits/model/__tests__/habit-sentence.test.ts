@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   capitalizeFirst,
   composeHabitSentence,
+  identityClaim,
   lowercaseFirst,
   stripTrailingPunctuation,
   withCravingConnector,
@@ -172,5 +173,28 @@ describe("composeHabitSentence", () => {
     ).toBe(
       "I'll read 1 page about AI Prompting at morning, at my desk — so I can become a person who is amazing at AI.",
     );
+  });
+});
+
+describe("identityClaim", () => {
+  it("prefixes a noun-phrase identity with 'I am'", () => {
+    // Given an identity typed as a noun phrase, Then it reads as a claim
+    expect(identityClaim("a reader")).toBe("I am a reader");
+  });
+
+  it("keeps a first-person identity as written without doubling the subject", () => {
+    // Given identities the user already wrote in the first person
+    expect(identityClaim("I am a daily reader.")).toBe("I am a daily reader");
+    expect(identityClaim("I take care of my energy.")).toBe("I take care of my energy");
+    expect(identityClaim("i'm calm")).toBe("I'm calm");
+  });
+
+  it("does not treat words that merely start with 'i' as the pronoun", () => {
+    expect(identityClaim("an iron-willed runner")).toBe("I am an iron-willed runner");
+    expect(identityClaim("ideas person")).toBe("I am ideas person");
+  });
+
+  it("returns an empty string for blank input", () => {
+    expect(identityClaim("  . ")).toBe("");
   });
 });

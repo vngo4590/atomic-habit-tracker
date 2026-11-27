@@ -2,6 +2,7 @@ import { Hourglass } from "lucide-react";
 import { useId } from "react";
 
 import { Button, Card } from "@/components/ui";
+import { identityClaim } from "@/features/habits";
 import type { Habit } from "@/lib/types";
 
 import { daysSince } from "./formation";
@@ -36,7 +37,7 @@ export function ReadyForReview({ habits, today, onReview }: ReadyForReviewProps)
                 <span aria-hidden="true">{habit.emoji}</span> {habit.name}
               </span>
               <span className={styles.meta}>
-                {daysSince(habit.createdAt, today)} days · I am {habit.identity}
+                {daysSince(habit.createdAt, today)} days · {identityClaim(habit.identity)}
               </span>
             </div>
             <Button

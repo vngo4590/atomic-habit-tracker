@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Check, NotebookPen, Pencil, Trash2 } from "lucide-react";
 
 import { Button, PageHeader } from "@/components/ui";
-import { composeHabitSentence, formatScheduleLabel } from "@/features/habits";
+import { composeHabitSentence, formatScheduleLabel, identityClaim } from "@/features/habits";
 import type { Habit } from "@/lib/types";
 
 import styles from "./HabitDetail.module.css";
@@ -81,7 +81,7 @@ export function DetailHeader({
         actions={actions}
       />
       <p className={styles.identity}>
-        I am <em>{habit.identity}</em>. Each check-in is a vote for that.
+        <em>{identityClaim(habit.identity)}</em>. Each check-in is a vote for that.
       </p>
     </div>
   );
