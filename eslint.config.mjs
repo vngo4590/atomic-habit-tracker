@@ -19,7 +19,11 @@ const eslintConfig = defineConfig([
               group: ["@/features/*/*", "@/features/*/*/**"],
               message: "Import a feature through its public API: '@/features/<name>'.",
             },
-          ],
+            {
+              // Relative paths that climb out of this feature into another one's internals.
+              regex: "^(\\.\\./)+(features/)?[a-z][a-z-]*/(model|server|ui|store|actions|contracts)(/|$)",
+              message: "Import another feature through its public API: '@/features/<name>'.",
+            },          ],
         },
       ],
     },
@@ -40,8 +44,12 @@ const eslintConfig = defineConfig([
           patterns: [
             { group: ["@/features/*/*", "@/features/*/*/**"], message: "Use the feature's public API." },
             {
+              // Relative paths that climb out of this feature into another one's internals.
+              regex: "^(\\.\\./)+(features/)?[a-z][a-z-]*/(model|server|ui|store|actions|contracts)(/|$)",
+              message: "Import another feature through its public API: '@/features/<name>'.",
+            },            {
               // Aliased and relative paths to database/server modules, plus the Prisma packages.
-              group: ["@prisma/*", "**/db", "**/db/**", "**/repositories", "**/repositories/**", "**/generated/**", "**/server", "**/server/**"],
+              group: ["@prisma/*", "**/db", "**/db/**", "**/repositories", "**/repositories/**", "**/generated/**", "**/server", "**/server/**", "**/actions", "**/actions/**"],
               message: "model/ is pure: no I/O.",
             },
           ],
