@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useId, useMemo } from "react";
 
 import { buttonClassName, Card, EmptyState } from "@/components/ui";
-import { identityClaim } from "@/features/habits";
+import { identityClaim, isDone as isDayDone } from "@/features/habits";
 import type { Habit } from "@/lib/types";
 
 import styles from "./VoteLedger.module.css";
@@ -14,7 +14,7 @@ import styles from "./VoteLedger.module.css";
 export function tallyVotes(habits: Habit[]): Array<[label: string, votes: number]> {
   const tally = new Map<string, number>();
   habits.forEach((habit) => {
-    const votes = Object.keys(habit.history).filter((key) => Boolean(habit.history[key])).length;
+    const votes = Object.keys(habit.history).filter((key) => isDayDone(habit.history[key])).length;
     tally.set(habit.identity, (tally.get(habit.identity) ?? 0) + votes);
   });
   return Array.from(tally.entries()).sort((a, b) => b[1] - a[1]);

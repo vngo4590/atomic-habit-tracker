@@ -76,7 +76,7 @@ export function MoodCheckSheet({
 
   return (
     <AnimatePresence>
-      <m.div
+      <m.div data-motion-fallback
         className="overlay"
         role="dialog"
         aria-modal="true"
@@ -86,7 +86,7 @@ export function MoodCheckSheet({
         animate="visible"
         exit="exit"
       >
-        <m.div
+        <m.div data-motion-fallback
           className={`overlay-card ${styles.card}`}
           onClick={(event) => event.stopPropagation()}
           variants={overlayCardVariants}

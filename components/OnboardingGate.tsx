@@ -6,9 +6,27 @@ import { useStoreContext } from "@/components/StoreProvider";
 
 // Loaded on demand: only first-run users see it, so its code (and the
 // animation runtime it uses) stays out of every route's first-load bundle.
+// If its chunk fails to load (e.g. offline or a stale deploy), fall back to
+// a plain welcome dialog so the user can still dismiss onboarding.
 const OnboardingOverlay = dynamic(() =>
-  import("@/components/OnboardingOverlay").then((mod) => mod.OnboardingOverlay),
+  import("@/components/OnboardingOverlay")
+    .then((mod) => mod.OnboardingOverlay)
+    .catch(() => OnboardingFallback),
 );
+
+function OnboardingFallback({ onComplete }: { onComplete: () => void }) {
+  return (
+    <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="onboarding-fallback-title">
+      <div className="overlay-card">
+        <h2 id="onboarding-fallback-title">Welcome to Atomicly</h2>
+        <p>Build tiny habits, cast a vote for who you want to become each day, and reflect on your progress.</p>
+        <button type="button" className="btn btn-primary" autoFocus onClick={onComplete}>
+          Continue
+        </button>
+      </div>
+    </div>
+  );
+}
 
 /**
  * OnboardingGate — decides whether to render the first-run onboarding

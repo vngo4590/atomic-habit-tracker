@@ -83,7 +83,7 @@ export function Modal({
   return (
     <AnimatePresence>
       {open && (
-        <m.div
+        <m.div data-motion-fallback
           role="dialog"
           aria-modal="true"
           aria-labelledby="modal-title"
@@ -96,7 +96,7 @@ export function Modal({
           transition={{ duration: 0.18 }}
         >
           {/* Backdrop — clicking it dismisses the modal. */}
-          <m.div
+          <m.div data-motion-fallback
             onClick={() => handleClose("backdrop")}
             className={styles.backdrop}
             initial={{ opacity: 0 }}
@@ -106,7 +106,7 @@ export function Modal({
           {/* The dialog card itself. Layers our Modal.module.css class on
               top of the shared .card / .card-pad utility classes so it
               picks up the editorial border + padding tokens. */}
-          <m.div
+          <m.div data-motion-fallback
             className={`card card-pad ${styles.card}`}
             data-testid="modal-card"
             initial={{ opacity: 0, y: 12, scale: 0.97 }}

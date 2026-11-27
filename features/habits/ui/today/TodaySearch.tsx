@@ -11,6 +11,7 @@ import { isScheduledForDate } from "../../model/schedule";
 import { HabitCheckRow } from "./HabitCheckRow";
 import { searchHabits } from "./today-model";
 import styles from "./TodaySearch.module.css";
+import { isDone as isDayDone } from "../../model/metrics";
 
 export interface TodaySearchProps {
   habits: Habit[];
@@ -71,7 +72,7 @@ export function TodaySearch({ habits, today, streak, onToggle, onClose }: TodayS
           </div>
           <ul className={styles.list}>
             {results.map((habit) => {
-              const done = Boolean(habit.history[today]);
+              const done = isDayDone(habit.history[today]);
               return (
                 <li key={habit.id}>
                   <HabitCheckRow

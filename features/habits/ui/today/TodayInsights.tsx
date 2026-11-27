@@ -52,7 +52,7 @@ export function TodayInsights({ longest, topHabit, last14 }: TodayInsightsProps)
             const pct = day.total ? (day.done / day.total) * 100 : 0;
             const isToday = index === last14.length - 1;
             return (
-              <m.span
+              <m.span data-motion-fallback
                 key={day.key}
                 className={styles.bar}
                 data-level={barLevel(day, isToday)}
