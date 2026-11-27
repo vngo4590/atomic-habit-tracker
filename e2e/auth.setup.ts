@@ -10,7 +10,7 @@ setup("authenticate", async ({ page }) => {
 
   // Wait for redirect to the app after successful login
   await page.waitForURL("/", { timeout: 10000 });
-  await expect(page.locator('button:has-text("New habit")').first()).toBeVisible();
+  await expect(page.getByTestId("today-view")).toBeVisible();
 
   // Dismiss onboarding overlay if it appears
   const skipOnboarding = page.locator('.overlay button:has-text("Skip")');
