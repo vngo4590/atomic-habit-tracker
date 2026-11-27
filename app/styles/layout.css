@@ -4,7 +4,6 @@
  * Contains:
  *   • .app shell — single column on mobile, sidebar | main grid at ≥1024px.
  *   • .main content column + .main-inner reading width.
- *   • .page-header — flex header used at the top of every route.
  *
  * Navigation styles (sidebar, mobile top bar, bottom tab bar) live in the
  * CSS Modules under components/nav/. Page-content mobile overrides live in
@@ -45,12 +44,3 @@
   }
 }
 /* Page header — title row sitting above the rule line on every route. */
-.page-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-  padding-bottom: 22px;
-  border-bottom: 1px solid var(--rule);
-  margin-bottom: 32px;
-}

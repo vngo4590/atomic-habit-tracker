@@ -71,8 +71,7 @@
 /* Helpers. `.mono` used to switch to a monospace face for numbers; there is
    now a single family, so it keeps digits aligned with tabular figures. */
 .muted { color: var(--text-subtle); }
-.mono,
-.tabular { font-variant-numeric: tabular-nums; }
+.mono { font-variant-numeric: tabular-nums; }
 
 /* Field label — caption above an input. */
 .field-label {

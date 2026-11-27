@@ -23,17 +23,6 @@
     overflow-x: clip;
   }
   /* Page header collapses to a stacked column on mobile. */
-  .page-header {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 14px;
-    margin-bottom: 22px;
-    padding-bottom: 18px;
-  }
-  .page-header > div:last-child {
-    width: 100%;
-    flex-wrap: wrap;
-  }
 
   /* Headings scale down on mobile. */
   .h1 {
@@ -45,8 +34,7 @@
 
   /* Tighten card chrome on small screens. */
   .card { border-radius: var(--r-md); }
-  .card-pad,
-  .card-pad-lg { padding: 16px; }
+  .card-pad { padding: 16px; }
 
   /* iOS-friendly 44px tap targets for all interactive primitives. */
   .btn,
@@ -73,16 +61,6 @@
   }
 
   /* Habit library — sort row stretches to the page edge. */
-  .habit-library-toolbar { gap: 12px; }
-  .habit-sort-row {
-    justify-content: flex-start;
-    width: 100%;
-  }
-  .habit-sort-select {
-    flex: 1 1 auto;
-    width: 100% !important;
-    min-width: 0;
-  }
 
   /* Habit row reflows: check + name on row 1, metadata on row 2. */
   .habit-row {
@@ -104,18 +82,6 @@
   }
 
   /* Habit list (All Habits) — drop the table header and stack each row. */
-  .habit-list-header { display: none !important; }
-  .habit-list-row {
-    display: grid !important;
-    grid-template-columns: 1fr !important;
-    gap: 14px;
-    padding: 16px !important;
-  }
-  .habit-list-field {
-    display: block !important;
-    min-width: 0;
-  }
-  .habit-list-label { display: none !important; }
 
   /* Habit loop becomes a vertical stack. */
   .loop {
@@ -130,23 +96,6 @@
   .loop-arrow { display: none; }
 
   /* Overview/principle panels collapse to one column. */
-  .habit-overview-grid {
-    grid-template-columns: 1fr;
-  }
-  .principle-intro {
-    grid-template-columns: 1fr;
-  }
-  .principle-copy { padding: 22px; }
-  .principle-bubbles {
-    min-height: 210px;
-    border-left: 0;
-    border-top: 1px solid var(--rule);
-  }
-  .principle-bubble { width: 88px; }
-  .principle-bubble:nth-child(1) { left: 8%; top: 16%; }
-  .principle-bubble:nth-child(2) { left: 52%; top: 10%; }
-  .principle-bubble:nth-child(3) { left: 18%; top: 55%; }
-  .principle-bubble:nth-child(4) { left: 60%; top: 52%; }
 
   /* Overlays slide up from the bottom on mobile. */
   .overlay {
@@ -172,37 +121,10 @@
 
   /* Weekly review — horizontal scroll for 7-day cards so they fit on screen
      without stacking into a 900px+ tall column. */
-  .review-week-grid {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 6px;
-    scroll-snap-type: x proximity;
-  }
-  .review-day-card {
-    flex: 0 0 90px;
-    min-height: 100px;
-    padding: 10px;
-    scroll-snap-align: start;
-  }
-  .review-day-bar-container { height: 48px; }
 
   /* Wins / Slips stack vertically on mobile. */
-  .review-insights-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
 
   /* Past review rows collapse to a stacked layout on mobile. */
-  .review-past-row {
-    grid-template-columns: 1fr;
-    gap: 8px;
-    padding: 14px 0;
-  }
-  .review-past-row > button {
-    justify-self: start;
-  }
 
   /* Stack diagram — prevent the global flex-wrap rule from breaking
      horizontal drag reorder. The chain must stay single-line and scroll. */
@@ -247,13 +169,11 @@
   .main-inner svg {
     max-width: 100%;
   }
-  .main-inner .card > [style*="grid-template-columns: 2fr 1.4fr"],
-  .main-inner .click-row[style*="grid-template-columns: 2fr 1.4fr"] {
+  .main-inner .card > [style*="grid-template-columns: 2fr 1.4fr"] {
     grid-template-columns: 1fr !important;
     gap: 10px;
   }
-  .main-inner .card > [style*="grid-template-columns: 2fr 1.4fr"] > div:nth-child(n + 3),
-  .main-inner .click-row[style*="grid-template-columns: 2fr 1.4fr"] > div:nth-child(n + 3) {
+  .main-inner .card > [style*="grid-template-columns: 2fr 1.4fr"] > div:nth-child(n + 3) {
     display: flex;
     justify-content: space-between;
   }
@@ -311,9 +231,6 @@
   .main-inner [style*="gap: 32px"] { gap: 18px !important; }
 
   /* Page header buttons wrap onto a second row on mobile. */
-  .page-header > div:last-child[style*="display: flex"] {
-    flex-wrap: wrap !important;
-  }
 
   /* Habit detail title shouldn't be oversized on small screens. */
   .main-inner h1[style*="font-size: 52px"] {

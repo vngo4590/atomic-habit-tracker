@@ -4,7 +4,7 @@
  * Contains:
  *   • @keyframes used by component states (checkPop, lessonModePulse,
  *     principle-float, fadeUp, pulse, shimmer).
- *   • Animation utility classes (.fade-up, .skeleton, .focus-ring).
+ *   • Animation utility classes (.fade-up, .skeleton).
  *
  * Notes:
  *   • Framer Motion is the primary animation library (per AGENTS.md).
@@ -73,7 +73,3 @@
 /* Keyboard-only focus ring — applied to focusable elements that opt in.
    Uses two box-shadows to draw a halo around the element regardless of
    background colour. */
-.focus-ring:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
-}

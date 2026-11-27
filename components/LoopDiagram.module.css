@@ -3,7 +3,6 @@
 /* Intro lede above the loop grid. */
 .intro {
   margin-bottom: 24px;
-  font-style: italic;
 }
 
 /* ---- LoopEditableValue (inline edit) ---------------------------------- */
@@ -38,5 +37,4 @@
 /* Value variant — empty / placeholder. */
 .valueEmpty {
   color: var(--ink-3);
-  font-style: italic;
 }

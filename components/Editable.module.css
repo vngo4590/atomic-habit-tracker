@@ -13,7 +13,7 @@
 }
 
 /* Read-only display button — looks like text but is clickable. Common
-   shape: full-width, transparent, serif. Font-size/style/color vary by
+   shape: full-width, transparent, body font. Font-size/style/color vary by
    component and by whether the value is empty (see modifier classes
    below). */
 .display {
@@ -25,7 +25,6 @@
   border: none;
   padding: 4px 0;
   margin: 0;
-  font-family: var(--serif);
   line-height: 1.45;
 }
 
@@ -38,7 +37,6 @@
 
 /* EditableLine — empty (placeholder). */
 .displayLineEmpty {
-  font-style: italic;
   font-size: 14px;
   color: var(--ink-3);
 }
@@ -56,7 +54,6 @@
   font-size: 13.5px;
   color: var(--ink-3);
   line-height: 1.5;
-  font-style: italic;
 }
 
 /* Small "NOT SET YET" caption above the placeholder text when empty. */
