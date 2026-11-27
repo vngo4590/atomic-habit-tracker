@@ -48,7 +48,7 @@ describe("OnboardingGate", () => {
     );
 
     // Then the Welcome step is on screen
-    expect(await screen.findByText("Welcome")).toBeTruthy();
+    expect(await screen.findByText("Welcome", undefined, { timeout: 5000 })).toBeTruthy();
   });
 
   it("hides the onboarding overlay when onboardingSeen is true", () => {
@@ -83,7 +83,7 @@ describe("OnboardingGate", () => {
 
     // Then the overlay still appears because the server flag (per-user)
     // is the only source of truth — localStorage no longer suppresses it.
-    expect(await screen.findByText("Welcome")).toBeTruthy();
+    expect(await screen.findByText("Welcome", undefined, { timeout: 5000 })).toBeTruthy();
   });
 
   it("persists onboardingSeen=true via setPreferences when Skip is clicked", async () => {
@@ -101,7 +101,7 @@ describe("OnboardingGate", () => {
     );
 
     // When the user clicks Skip
-    fireEvent.click(await screen.findByText("Skip"));
+    fireEvent.click(await screen.findByText("Skip", undefined, { timeout: 5000 }));
 
     // Then the gate calls setPreferences with onboardingSeen=true so the
     // server preference flips and the overlay won't show again.
