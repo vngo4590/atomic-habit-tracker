@@ -4,11 +4,11 @@ import nextTs from "eslint-config-next/typescript";
 import { existsSync, readdirSync } from "node:fs";
 
 // A feature's public entry files (ADR-0001); everything else in it is private.
-const FEATURE_ENTRIES = ["index"];
+const FEATURE_ENTRIES = ["index", "actions", "server", "store", "contracts"];
 const features = existsSync("features")
   ? readdirSync("features", { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name)
   : [];
-const BOUNDARY_MESSAGE = "Import a feature through its public API: '@/features/<name>'.";
+const BOUNDARY_MESSAGE = "Import a feature through its public API: '@/features/<name>', '/actions', '/server', '/store' or '/contracts'.";
 
 /** Public entry files of every feature except `self`, relative to the repo root. */
 const publicEntries = (self) =>
@@ -41,8 +41,11 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   // Architecture fitness functions (see docs/architecture/adr/0001-*.md).
-  // Other modules may use a feature only through its public `index.ts`.
-  // Inside a feature, use relative imports.
+  // Other modules may use a feature only through its public entry points:
+  // `index` (client-safe), `actions` (server actions), `server` (server-only
+  // data access) and `store` (client-only cache slice, composed by
+  // `lib/store`), plus `contracts` (Zod schemas). The same list drives the
+  // resolved-path zones above. Inside a feature, use relative imports.
   {
     files: ["**/*.{ts,tsx}"],
     rules: {
@@ -51,11 +54,10 @@ const eslintConfig = defineConfig([
         {
           patterns: [
             {
-              group: ["@/features/*/*", "@/features/*/*/**"],
-              message: "Import a feature through its public API: '@/features/<name>'.",
+              group: ["@/features/*/*", "@/features/*/*/**", "!@/features/*/actions", "!@/features/*/server", "!@/features/*/store", "!@/features/*/contracts"],
+              message: BOUNDARY_MESSAGE,
             },
           ],
-
         },
       ],
     },
@@ -81,10 +83,9 @@ const eslintConfig = defineConfig([
             { name: "pg", message: "model/ is pure: no database drivers." },
           ],
           patterns: [
-            { group: ["@/features/*/*", "@/features/*/*/**"], message: "Use the feature's public API." },
+            { group: ["@/features/*/*", "@/features/*/*/**", "!@/features/*/contracts"], message: "model/ may use another feature's pure index or /contracts only." },
             {
-
-              // Aliased and relative paths to database/server modules, plus the Prisma packages.
+              // Aliased and relative paths to database/server/action modules, plus the Prisma packages.
               group: ["@prisma/*", "**/db", "**/db/**", "**/repositories", "**/repositories/**", "**/generated/**", "**/server", "**/server/**", "**/actions", "**/actions/**"],
               message: "model/ is pure: no I/O.",
             },
@@ -95,11 +96,16 @@ const eslintConfig = defineConfig([
   },
   // Keep new modules small and single-purpose (~300 lines, ignoring blank lines and comments).
   {
-    files: ["features/**/*.{ts,tsx}", "shared/**/*.{ts,tsx}"],
+    files: ["features/**/*.{ts,tsx}", "components/ui/**/*.{ts,tsx}"],
     ignores: ["**/__tests__/**", "**/*.test.{ts,tsx}"],
     rules: {
       "max-lines": ["error", { max: 300, skipBlankLines: true, skipComments: true }],
     },
+  },
+  // Tests may reach into internals to exercise them directly.
+  {
+    files: ["**/__tests__/**", "**/*.test.{ts,tsx}", "e2e/**"],
+    rules: { "no-restricted-imports": "off", "import/no-restricted-paths": "off" },
   },
   // Override default ignores of eslint-config-next.
   globalIgnores([

@@ -1,0 +1,76 @@
+"use server";
+
+/**
+ * Pet server actions: adopt, feed, bury and release pets for the signed-in
+ * user. Each validates its input with the pet contracts, logs the event,
+ * writes through the pet repositories and refreshes the `/pet` page.
+ */
+
+import { revalidatePath } from "next/cache";
+
+import { requireUserId } from "@/lib/auth/session";
+import { todayKey } from "@/lib/helpers";
+import { logger, redactUserId } from "@/lib/logger";
+import type { PetDraft } from "@/lib/types";
+
+import { petAdoptSchema, petBurySchema, petDeleteSchema, petFeedSchema } from "./contracts";
+import { adoptPet, buryPet, deletePet, feedPet, type AdoptResult, type FeedResult } from "./server";
+
+const log = logger.child({ module: "actions.pets" });
+
+/**
+ * Adopt a brand-new pet from a chosen temperament. The repository seeds a unique
+ * creature and enforces the ecosystem cap + monthly limit; we surface its result
+ * (a discriminated union) so the store can show the exact reason an adoption was
+ * refused — thrown error messages are stripped from server actions in production.
+ */
+export async function adoptPetAction(draft: PetDraft): Promise<AdoptResult> {
+  const userId = await requireUserId();
+  const input = petAdoptSchema.parse(draft);
+  log.info("Adopting pet", { event: "pet.adopted", userId: redactUserId(userId), temperament: input.temperament });
+
+  const result = await adoptPet(userId, input, Date.now());
+
+  revalidatePath("/pet");
+  return result;
+}
+
+/**
+ * Feed a pet by `amount`, spending from today's shared food pool. Returns the
+ * full result (including the clamped amount and whether the pet evolved) so the
+ * UI can celebrate appropriately.
+ */
+export async function feedPetAction(petId: string, amount: number): Promise<FeedResult> {
+  const userId = await requireUserId();
+  const input = petFeedSchema.parse({ petId, amount });
+  log.info("Feeding pet", { event: "pet.fed", userId: redactUserId(userId), petId: input.petId, amount: input.amount });
+
+  const result = await feedPet(userId, input.petId, input.amount, todayKey(), Date.now());
+
+  revalidatePath("/pet");
+  return result;
+}
+
+/** Lay a (dead) pet to rest, removing it from the graveyard. */
+export async function buryPetAction(petId: string): Promise<boolean> {
+  const userId = await requireUserId();
+  const input = petBurySchema.parse({ petId });
+  log.info("Burying pet", { event: "pet.buried", userId: redactUserId(userId), petId: input.petId });
+
+  const buried = await buryPet(userId, input.petId, Date.now());
+
+  revalidatePath("/pet");
+  return buried;
+}
+
+/** Release any pet (alive or dead) from the ecosystem at the user's request. */
+export async function deletePetAction(petId: string): Promise<boolean> {
+  const userId = await requireUserId();
+  const input = petDeleteSchema.parse({ petId });
+  log.info("Releasing pet", { event: "pet.released", userId: redactUserId(userId), petId: input.petId });
+
+  const deleted = await deletePet(userId, input.petId);
+
+  revalidatePath("/pet");
+  return deleted;
+}

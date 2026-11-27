@@ -8,6 +8,7 @@ import { ExpandableText } from "@/components/ExpandableText";
 import { MarkdownText } from "@/components/MarkdownText";
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
 import { useStoreContext } from "@/components/StoreProvider";
+import { isDone } from "@/features/habits";
 import { dateAdd, fmt, todayKey } from "@/lib/helpers";
 import { clientLogger } from "@/lib/logger-client";
 import type { WeeklyReview, WeeklyReviewAnswers } from "@/lib/types";
@@ -161,7 +162,7 @@ export default function ReviewPage() {
   const totals = useMemo(() => {
     const possible = days.length * habits.length;
     const done = days.reduce(
-      (sum, day) => sum + habits.filter((habit) => habit.history[day]).length,
+      (sum, day) => sum + habits.filter((habit) => isDone(habit.history[day])).length,
       0,
     );
     return { done, possible, pct: possible ? Math.round((done / possible) * 100) : 0 };
@@ -208,7 +209,7 @@ export default function ReviewPage() {
         {/* Horizontally scrollable on mobile, 7-column grid on desktop */}
         <div className="review-week-grid">
           {days.map((day) => {
-            const count = habits.filter((habit) => habit.history[day]).length;
+            const count = habits.filter((habit) => isDone(habit.history[day])).length;
             const pct = habits.length ? Math.round((count / habits.length) * 100) : 0;
             return (
               <motion.div

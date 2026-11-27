@@ -9,7 +9,7 @@ import { useStoreContext } from "@/components/StoreProvider";
 import { TabUnderline } from "@/components/TabUnderline";
 import { dateAdd, fmt, todayKey } from "@/lib/helpers";
 import { clientLogger } from "@/lib/logger-client";
-import { isScheduledForDate } from "@/lib/schedule";
+import { isScheduledForDate, isDone } from "@/features/habits";
 
 import styles from "./page.module.css";
 
@@ -40,7 +40,7 @@ export default function AnalyticsPage() {
     return Array.from({ length: range }, (_, index) => {
       const key = dateAdd(today, index - range + 1);
       const scheduled = habits.filter((habit) => isScheduledForDate(key, habit.schedule));
-      const done = scheduled.filter((habit) => habit.history[key]).length;
+      const done = scheduled.filter((habit) => isDone(habit.history[key])).length;
       return {
         label: fmt.short(key),
         pct: scheduled.length ? Math.round((done / scheduled.length) * 100) : 0,
@@ -55,7 +55,7 @@ export default function AnalyticsPage() {
       ? Math.round((habits.reduce((sum, habit) => sum + completionRate(habit), 0) / habits.length) * 100)
       : 0;
     const total = habits.reduce(
-      (sum, habit) => sum + Object.keys(habit.history).filter((key) => Boolean(habit.history[key])).length,
+      (sum, habit) => sum + Object.keys(habit.history).filter((key) => isDone(habit.history[key])).length,
       0
     );
     const best = [...habits].sort((a, b) => longestStreak(b) - longestStreak(a))[0];

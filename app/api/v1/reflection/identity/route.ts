@@ -1,7 +1,7 @@
 import { handleApiError, jsonOk, readJson, withApiUser } from "@/lib/api/http";
-import { identitySchema } from "@/lib/contracts/domain";
+import { identitySchema } from "@/features/reflection/contracts";
 import { logger } from "@/lib/logger";
-import { getIdentity, saveIdentity } from "@/lib/repositories/reflection";
+import { getIdentity, saveIdentity } from "@/features/reflection/server";
 
 const log = logger.child({ module: "api.v1.reflection.identity" });
 

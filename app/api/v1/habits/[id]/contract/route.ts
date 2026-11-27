@@ -1,7 +1,7 @@
 import { handleApiError, jsonError, jsonOk, readJson, withApiUser } from "@/lib/api/http";
-import { contractSchema } from "@/lib/contracts/domain";
+import { contractSchema } from "@/features/habits/contracts";
 import { logger } from "@/lib/logger";
-import { saveContract } from "@/lib/repositories/habits";
+import { saveContract } from "@/features/habits/server";
 
 const log = logger.child({ module: "api.v1.habits.contract" });
 

@@ -10,7 +10,7 @@ import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContai
 import { useStoreContext } from "@/components/StoreProvider";
 import { todayKey } from "@/lib/helpers";
 import { clientLogger } from "@/lib/logger-client";
-import { formatNextDayLabel, nextScheduledDateKey } from "@/lib/schedule";
+import { formatNextDayLabel, nextScheduledDateKey, isDone as isDayDone } from "@/features/habits";
 import type { Habit } from "@/lib/types";
 
 import styles from "./page.module.css";
@@ -49,7 +49,7 @@ export default function HabitsPage() {
   const filtered = useMemo(() => {
     const list = habits.filter((habit) => {
       if (filter === "all") return true;
-      const isDone = Boolean(habit.history[today]);
+      const isDone = isDayDone(habit.history[today]);
       if (filter === "done") return isDone;
       // upcoming = habits with a next scheduled day in the future
       const next = nextScheduledDateKey(today, habit.schedule);
@@ -75,7 +75,7 @@ export default function HabitsPage() {
   // Clicking the check on a not-yet-done habit opens the mood sheet so
   // the user can capture their mood + a journal note alongside the vote.
   const handleCheck = (habit: Habit) => {
-    const isDone = Boolean(habit.history[today]);
+    const isDone = isDayDone(habit.history[today]);
     if (!isDone) {
       setMoodHabit(habit);
     }
@@ -179,7 +179,7 @@ export default function HabitsPage() {
             const rate = Math.round(completionRate(habit) * 100);
             const nextDay = nextScheduledDateKey(today, habit.schedule);
             const nextLabel = formatNextDayLabel(nextDay);
-            const isDone = Boolean(habit.history[today]);
+            const isDone = isDayDone(habit.history[today]);
             return (
               <StaggerItem key={habit.id}>
                 <motion.div

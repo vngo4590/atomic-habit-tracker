@@ -1,0 +1,288 @@
+import { act, renderHook } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { todayKey } from "@/lib/helpers";
+import {
+  createJournalEntryAction,
+  markLessonReadAction,
+  saveIdentityAction,
+  updateJournalEntryAction,
+} from "@/features/reflection/actions";
+import { savePreferencesAction } from "@/features/settings/actions";
+import { updateHabitAction } from "@/features/habits/actions";
+import { useStore } from "@/lib/store";
+
+import { makeLocalStorageMock } from "@/lib/store/__tests__/store-test-helpers";
+
+// Pin "today" to a Wednesday so schedule-aware streak tests are deterministic.
+vi.mock("@/lib/helpers", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/helpers")>("@/lib/helpers");
+  return {
+    ...actual,
+    todayKey: (...args: unknown[]) => {
+      if (args.length > 0) return actual.todayKey(args[0] as never);
+      return "2030-01-09";
+    },
+  };
+});
+
+vi.mock("@/features/habits/actions", () => ({
+  createHabitAction: vi.fn(),
+  deleteHabitAction: vi.fn(),
+  logCheckInAction: vi.fn(async () => null),
+  saveFormationVerdictAction: vi.fn(),
+  toggleHabitAction: vi.fn(async () => null),
+  updateHabitAction: vi.fn(async () => null),
+}));
+vi.mock("@/features/stacks/actions", () => ({
+  applyStackMutationAction: vi.fn(),
+}));
+vi.mock("@/features/reflection/actions", () => ({
+  createJournalEntryAction: vi.fn(),
+  markLessonReadAction: vi.fn(),
+  saveIdentityAction: vi.fn(async (identity) => identity),
+  saveWeeklyReviewAction: vi.fn(),
+  updateJournalEntryAction: vi.fn(async () => null),
+}));
+vi.mock("@/features/settings/actions", () => ({
+  savePreferencesAction: vi.fn(),
+}));
+
+let localStorageMock: ReturnType<typeof makeLocalStorageMock>;
+
+describe("store reflection mutations", () => {
+  beforeEach(() => {
+    const store = new Map<string, string>();
+    localStorageMock = {
+      getItem: vi.fn((key: string) => store.get(key) ?? null),
+      setItem: vi.fn((key: string, value: string) => {
+        store.set(key, value);
+      }),
+      removeItem: vi.fn((key: string) => {
+        store.delete(key);
+      }),
+      clear: vi.fn(() => {
+        store.clear();
+      }),
+    };
+
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: localStorageMock,
+    });
+    vi.stubGlobal("localStorage", localStorageMock);
+    vi.useRealTimers();
+    vi.mocked(createJournalEntryAction).mockImplementation(async (entry) => ({
+      id: "saved-journal",
+      date: entry.date ?? todayKey(),
+      title: entry.title ?? "",
+      body: entry.body ?? "",
+      mood: entry.mood ?? "good",
+      tags: entry.tags ?? [],
+    }));
+    vi.mocked(saveIdentityAction).mockImplementation(async (identity) => identity);
+    vi.mocked(savePreferencesAction).mockImplementation(async (preferences) => ({
+      theme: "light",
+      accentHue: 60,
+      remindersEnabled: true,
+      weeklyReviewNudge: true,
+      accountabilityNudge: false,
+      onboardingSeen: false,
+      lessonMode: "sequential",
+      timezone: "UTC",
+      ...preferences,
+    }));
+    vi.mocked(markLessonReadAction).mockImplementation(async (lessonId) => [lessonId]);
+    vi.mocked(updateHabitAction).mockImplementation(async () => null);
+    vi.mocked(updateJournalEntryAction).mockImplementation(async () => null);
+  });
+
+  it("preserves identity statement spaces while async saves resolve out of order", async () => {
+    let resolveFirst: (identity: { statement: string; values: string[] }) => void = () => {};
+    let resolveSecond: (identity: { statement: string; values: string[] }) => void = () => {};
+    vi.mocked(saveIdentityAction)
+      .mockReturnValueOnce(new Promise((resolve) => { resolveFirst = resolve; }))
+      .mockReturnValueOnce(new Promise((resolve) => { resolveSecond = resolve; }));
+
+    const { result } = renderHook(() =>
+      useStore({
+        habits: [],
+        journal: [],
+        identity: { statement: "", values: [] },
+        weeklyReview: { wentWell: "", smallestFix: "", identityVote: "" },
+        completedLessons: [],
+        formationVerdicts: [],
+        preferences: {
+          theme: "light",
+          accentHue: 60,
+          remindersEnabled: true,
+          weeklyReviewNudge: true,
+          accountabilityNudge: false,
+          onboardingSeen: false,
+          lessonMode: "sequential",
+          timezone: "UTC",
+        },
+      }),
+    );
+
+    act(() => result.current.setIdentity({ statement: "I am ", values: [] }));
+    act(() => result.current.setIdentity({ statement: "I am a beautiful person", values: [] }));
+
+    await act(async () => {
+      resolveFirst({ statement: "I am", values: [] });
+      await Promise.resolve();
+    });
+    expect(result.current.identity.statement).toBe("I am a beautiful person");
+
+    await act(async () => {
+      resolveSecond({ statement: "I am a beautiful person", values: [] });
+      await Promise.resolve();
+    });
+    expect(result.current.identity.statement).toBe("I am a beautiful person");
+  });
+
+  it("updates existing journal entries instead of creating duplicates", async () => {
+    const { result } = renderHook(() =>
+      useStore({
+        habits: [],
+        journal: [{ id: "j1", date: "2030-01-01", title: "Old", body: "Draft", mood: "meh", tags: [] }],
+        identity: { statement: "", values: [] },
+        weeklyReview: { wentWell: "", smallestFix: "", identityVote: "" },
+        completedLessons: [],
+        formationVerdicts: [],
+        preferences: {
+          theme: "light",
+          accentHue: 60,
+          remindersEnabled: true,
+          weeklyReviewNudge: true,
+          accountabilityNudge: false,
+          onboardingSeen: false,
+          lessonMode: "sequential",
+          timezone: "UTC",
+        },
+      }),
+    );
+
+    act(() => result.current.updateJournal("j1", { title: "Edited", body: "Kept", mood: "good" }));
+
+    expect(result.current.journal).toHaveLength(1);
+    expect(result.current.journal[0]).toMatchObject({ id: "j1", title: "Edited", body: "Kept", mood: "good" });
+    expect(updateJournalEntryAction).toHaveBeenCalledWith("j1", { title: "Edited", body: "Kept", mood: "good" });
+  });
+
+  it("ignores any date in a journal update patch so entries stay anchored to their original day", async () => {
+    // Given: an existing journal entry dated 2030-01-01
+    const { result } = renderHook(() =>
+      useStore({
+        habits: [],
+        journal: [{ id: "j1", date: "2030-01-01", title: "Old", body: "Draft", mood: "meh", tags: [] }],
+        identity: { statement: "", values: [] },
+        weeklyReview: { wentWell: "", smallestFix: "", identityVote: "" },
+        completedLessons: [],
+        formationVerdicts: [],
+        preferences: {
+          theme: "light",
+          accentHue: 60,
+          remindersEnabled: true,
+          weeklyReviewNudge: true,
+          accountabilityNudge: false,
+          onboardingSeen: false,
+          lessonMode: "sequential",
+          timezone: "UTC",
+        },
+      }),
+    );
+
+    // When: a caller (maliciously or by mistake) tries to update the date along with other fields
+    act(() => result.current.updateJournal("j1", { date: "2099-12-31", title: "Edited", body: "Same", mood: "good" }));
+
+    // Then: the in-memory entry keeps its original date and the server action is not given a date either
+    expect(result.current.journal[0]).toMatchObject({ id: "j1", date: "2030-01-01", title: "Edited" });
+    expect(updateJournalEntryAction).toHaveBeenCalledWith("j1", { title: "Edited", body: "Same", mood: "good" });
+    const lastCall = vi.mocked(updateJournalEntryAction).mock.calls.at(-1);
+    expect(lastCall?.[1]).not.toHaveProperty("date");
+  });
+
+  it("keeps edits made to a pending journal entry when the create save returns", async () => {
+    let resolveCreate: (entry: { id: string; date: string; title: string; body: string; mood: string; tags: string[] }) => void = () => {};
+    vi.mocked(createJournalEntryAction).mockReturnValueOnce(new Promise((resolve) => { resolveCreate = resolve; }));
+
+    const { result } = renderHook(() =>
+      useStore({
+        habits: [],
+        journal: [],
+        identity: { statement: "", values: [] },
+        weeklyReview: { wentWell: "", smallestFix: "", identityVote: "" },
+        completedLessons: [],
+        formationVerdicts: [],
+        preferences: {
+          theme: "light",
+          accentHue: 60,
+          remindersEnabled: true,
+          weeklyReviewNudge: true,
+          accountabilityNudge: false,
+          onboardingSeen: false,
+          lessonMode: "sequential",
+          timezone: "UTC",
+        },
+      }),
+    );
+
+    act(() => result.current.addJournal({ title: "Original", body: "First", mood: "hard", tags: [] }));
+    const pendingId = result.current.journal[0].id;
+    act(() => result.current.updateJournal(pendingId, { title: "Edited before create finished", body: "Second", mood: "good" }));
+
+    await act(async () => {
+      resolveCreate({ id: "saved-journal", date: todayKey(), title: "Original", body: "First", mood: "hard", tags: [] });
+      await Promise.resolve();
+    });
+
+    expect(result.current.journal).toHaveLength(1);
+    expect(result.current.journal[0]).toMatchObject({
+      id: "saved-journal",
+      title: "Edited before create finished",
+      body: "Second",
+      mood: "good",
+    });
+    expect(updateJournalEntryAction).toHaveBeenCalledWith("saved-journal", {
+      date: todayKey(),
+      title: "Edited before create finished",
+      body: "Second",
+      mood: "good",
+      tags: [],
+    });
+  });
+
+  it("updates lesson progress and reconciles with the server response", async () => {
+    vi.mocked(markLessonReadAction).mockResolvedValueOnce([1, 3, 5]);
+    const { result } = renderHook(() =>
+      useStore({
+        habits: [],
+        journal: [],
+        identity: { statement: "", values: [] },
+        weeklyReview: { wentWell: "", smallestFix: "", identityVote: "" },
+        completedLessons: [1],
+        formationVerdicts: [],
+        preferences: {
+          theme: "light",
+          accentHue: 60,
+          remindersEnabled: true,
+          weeklyReviewNudge: true,
+          accountabilityNudge: false,
+          onboardingSeen: false,
+          lessonMode: "sequential",
+          timezone: "UTC",
+        },
+      }),
+    );
+
+    act(() => result.current.markLessonRead(3));
+    expect(result.current.completedLessons.has(3)).toBe(true);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect([...result.current.completedLessons].sort((a, b) => a - b)).toEqual([1, 3, 5]);
+    expect(markLessonReadAction).toHaveBeenCalledWith(3);
+  });
+});

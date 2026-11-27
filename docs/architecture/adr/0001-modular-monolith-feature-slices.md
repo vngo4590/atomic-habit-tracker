@@ -28,22 +28,41 @@ operational cost, and fast local feedback (CI is currently disabled).
 
 ## Decision
 
-Keep a single deployable Next.js app. Organise code into feature modules:
+Keep a single deployable Next.js app. Organise business capabilities into
+feature modules and keep `lib/` as the shared kernel for cross-cutting
+infrastructure (db, auth, security, logger, dates, http helpers, shared entity
+types). Moving that infrastructure would churn 100+ imports for no benefit.
 
 ```
 app/                  routes only - thin pages/layouts that compose feature UI
-features/<domain>/
+features/<domain>/    habits | stacks | reflection | settings | pet
   model/              pure domain logic (no React, no Prisma, no I/O)
-  server/             server actions + repositories ("server-only")
+  server/             repositories ("server-only")
   ui/                 feature components + CSS Modules + tests
-  contracts.ts        Zod schemas shared by client, actions and /api/v1
-  index.ts            public API; other modules import only from here
-shared/               cross-cutting primitives (ui kit, dates, logger, db, security)
+  contracts.ts        Zod schemas used by actions, /api/v1 and forms
+  actions.ts          "use server" actions (safe to import from client code)
+  store.ts            the feature's slice of the client cache (client-only)
+  index.ts            client-safe public API (pure model only)
+  server.ts           server-only public API (repositories) for routes/layouts
+components/ui/        design-system primitives (Button, Card, Sheet, ...)
+components/           app-shell components (Nav, StoreProvider, Toast, ...)
+lib/                  shared kernel (no business rules)
 ```
 
-Dependency direction is one-way: `app -> features -> shared`. A feature may use
-another feature only through its `index.ts`. `model/` stays pure so it can be
-unit-tested without mocks.
+Each feature has exactly three public entry points: `index.ts` (client-safe),
+`actions.ts` (server actions callable from the client) and `server.ts`
+(server-only data access). This split guarantees database code never reaches
+a browser bundle.
+
+Amendment (Phase B3): two more entry points were added. `store.ts` is the
+client-only cache slice composed by `lib/store`. `contracts.ts` is imported
+directly as `@/features/<x>/contracts` and is **not** re-exported from
+`index.ts`: Zod schemas are built at module load, so bundlers cannot
+tree-shake them, and re-exporting them added ~64 KB gz to every route.
+
+Dependency direction is one-way: `app -> features -> lib`. A feature may use
+another feature only through those entry points. `model/` stays pure so it can
+be unit-tested without mocks.
 
 Migration is incremental (strangler fig): move one feature at a time, keep
 re-export shims at old paths until callers move, delete shims last.

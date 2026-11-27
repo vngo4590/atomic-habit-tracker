@@ -1,6 +1,6 @@
 ---
 name: atomic-habit-habit-stacking
-description: Data model, helpers, mutation API, and UI behaviour for Atomicly habit stacks (the self-referencing `stackNextId` linked list). Use when touching `lib/stack.ts`, `lib/stack-errors.ts`, `applyStackMutationAction`, the Today-page `StackCardGroup`, or the habit-detail `StackDiagram`. Source of truth for cycle-safety, exclusivity, picker semantics, and `StackError` codes.
+description: Data model, helpers, mutation API, and UI behaviour for Atomicly habit stacks (the self-referencing `stackNextId` linked list). Use when touching `features/stacks/` (`model/stack.ts`, `model/stack-errors.ts`, `server/stacks.repository.ts`), `applyStackMutationAction`, the Today-page `StackCardGroup`, or the habit-detail `StackDiagram`. Source of truth for cycle-safety, exclusivity, picker semantics, and `StackError` codes.
 ---
 
 # Atomicly Habit Stacking
@@ -11,7 +11,7 @@ description: Data model, helpers, mutation API, and UI behaviour for Atomicly ha
 
 - `habit.stackNextId` is a nullable foreign key pointing to the next habit in the chain.
 - **Exclusivity (`@unique`)**: at most one habit may link to any given habit. The DB enforces this as a unique constraint on `stackNextId`.
-- **No cycles**: validation in `lib/repositories/habits.ts::validateStackLink` (called by both `updateHabit` and `applyStackMutation`) rejects any link that would form a cycle (direct or indirect).
+- **No cycles**: validation in `features/habits/server/stack-link.validator.ts::validateStackLink` (kept in habits so the server dependency stays one-way: stacks -> habits) (called by both `updateHabit` and `applyStackMutation`) rejects any link that would form a cycle (direct or indirect).
 - **Symmetric "Link before / Link after" picker** with chain-gravity:
   - **Anchor in a chain**: picker offers only **standalone** habits; the picked solo is inserted before/after the anchor inside the existing chain.
   - **Anchor is solo**: picker offers **every other habit** (chain members and other solos).
@@ -19,9 +19,9 @@ description: Data model, helpers, mutation API, and UI behaviour for Atomicly ha
     - If the picked is also solo, the natural reading applies — picked is inserted before/after the anchor (forming a new 2-chain anchored on current).
   - Server-side rule: the inserted habit (`habitId`) must be solo. Concretely, when the picked habit lives in a chain, `habitId = current, targetId = picked`; otherwise `habitId = picked, targetId = current`.
   - To move a habit already in a chain, first remove it from its stack to make it standalone again.
-- All stack-mutation errors are thrown as `StackError` (`lib/stack-errors.ts`) with a stable `code` (`self_reference` | `circular_stack` | `target_in_other_stack` | `source_in_other_stack` | `habit_not_found` | `target_not_found` | `invalid_reorder`) and a friendly message used directly in UI modals.
+- All stack-mutation errors are thrown as `StackError` (`features/stacks/model/stack-errors.ts`) with a stable `code` (`self_reference` | `circular_stack` | `target_in_other_stack` | `source_in_other_stack` | `habit_not_found` | `target_not_found` | `invalid_reorder`) and a friendly message used directly in UI modals.
 
-## 2. Core helpers (`lib/stack.ts`)
+## 2. Core helpers (`features/stacks/model/stack.ts`)
 
 - `getStackRoot(habit, habits)` — iterative + visited-set so corrupted/cyclic data is safe; returns the chain head.
 - `getStackChain(habit, habits)` — full ordered chain root → tail.
@@ -35,8 +35,8 @@ description: Data model, helpers, mutation API, and UI behaviour for Atomicly ha
 
 ## 3. Mutation API
 
-- **`applyStackMutationAction({ kind: "insert", habitId, position, targetId } | { kind: "remove", habitId } | { kind: "reorder", habitIds })`** in `lib/actions/domain.ts` is the canonical entry point for any stack change.
-- Internally calls `applyStackMutation` in `lib/repositories/habits.ts`, which runs inside `db.$transaction`:
+- **`applyStackMutationAction({ kind: "insert", habitId, position, targetId } | { kind: "remove", habitId } | { kind: "reorder", habitIds })`** in `features/stacks/actions.ts` is the canonical entry point for any stack change.
+- Internally calls `applyStackMutation` in `features/stacks/server/stacks.repository.ts`, which runs inside `db.$transaction`:
   1. Loads the user's habit graph.
   2. Validates per-kind: insert (source is solo, target exists, no self-reference, no cycle), remove (habit exists), reorder (`habitIds` set equals the current chain set rooted at any one of them — no merging chains, no add/drop members via reorder; duplicates rejected).
   3. Applies ordered patches via `tx.habit.update`.

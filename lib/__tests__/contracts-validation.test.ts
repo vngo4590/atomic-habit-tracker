@@ -5,12 +5,14 @@ import {
   formationVerdictSchema,
   habitCreateSchema,
   habitUpdateSchema,
+} from "@/features/habits/contracts";
+import {
   identitySchema,
   journalEntrySchema,
   lessonProgressSchema,
-  preferencesSchema,
   weeklyReviewSchema,
-} from "@/lib/contracts/domain";
+} from "@/features/reflection/contracts";
+import { preferencesSchema } from "@/features/settings/contracts";
 
 // ---------------------------------------------------------------------------
 // habitCreateSchema

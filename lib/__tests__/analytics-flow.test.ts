@@ -1,23 +1,30 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { dateAdd, todayKey } from "@/lib/helpers";
-import { completionRate, longestStreak, streak } from "@/lib/store";
+import { completionRate, longestStreak, streak } from "@/features/habits";
 import type { Habit } from "@/lib/types";
 
 // Prevent next-auth / next/server from loading through the store → action chain
-vi.mock("@/lib/actions/domain", () => ({
+vi.mock("@/features/habits/actions", () => ({
   createHabitAction: vi.fn(),
-  createJournalEntryAction: vi.fn(),
   deleteHabitAction: vi.fn(),
   logCheckInAction: vi.fn(async () => null),
-  markLessonReadAction: vi.fn(),
   saveFormationVerdictAction: vi.fn(),
-  saveIdentityAction: vi.fn(async (identity: unknown) => identity),
-  savePreferencesAction: vi.fn(),
-  saveWeeklyReviewAction: vi.fn(),
   toggleHabitAction: vi.fn(async () => null),
   updateHabitAction: vi.fn(async () => null),
+}));
+vi.mock("@/features/stacks/actions", () => ({
+  applyStackMutationAction: vi.fn(),
+}));
+vi.mock("@/features/reflection/actions", () => ({
+  createJournalEntryAction: vi.fn(),
+  markLessonReadAction: vi.fn(),
+  saveIdentityAction: vi.fn(async (identity: unknown) => identity),
+  saveWeeklyReviewAction: vi.fn(),
   updateJournalEntryAction: vi.fn(async () => null),
+}));
+vi.mock("@/features/settings/actions", () => ({
+  savePreferencesAction: vi.fn(),
 }));
 
 // ---------------------------------------------------------------------------

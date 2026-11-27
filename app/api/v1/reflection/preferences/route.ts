@@ -1,7 +1,7 @@
 import { handleApiError, jsonOk, readJson, withApiUser } from "@/lib/api/http";
-import { preferencesSchema } from "@/lib/contracts/domain";
+import { preferencesSchema } from "@/features/settings/contracts";
 import { logger } from "@/lib/logger";
-import { getPreferences, savePreferences } from "@/lib/repositories/reflection";
+import { getPreferences, savePreferences } from "@/features/settings/server";
 
 const log = logger.child({ module: "api.v1.reflection.preferences" });
 

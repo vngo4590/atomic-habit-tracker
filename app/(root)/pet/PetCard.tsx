@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { MoodSprite } from "@/components/pet/MoodSprite";
-import { formatAge, getTemperament, satietyCapacity, type PetView } from "@/lib/pet";
+import { formatAge, getTemperament, satietyCapacity, type PetView } from "@/features/pet";
 
 import styles from "./page.module.css";
 

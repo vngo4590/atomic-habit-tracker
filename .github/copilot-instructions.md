@@ -43,8 +43,8 @@ npm run prisma:migrate:deploy   # apply committed migrations
 
 ### Data Flow
 
-1. **Server:** `app/(root)/layout.tsx` calls `getStoreSnapshot(userId, todayKey())` to load all user data from PostgreSQL via Prisma repositories.
-2. **Client:** `components/StoreProvider.tsx` + `lib/store.ts` provide an optimistic in-memory cache around server actions. This is *not* a browser persistence layer.
+1. **Server:** `app/(root)/layout.tsx` calls `getStoreSnapshot(userId, todayKey())` (`lib/server/store-snapshot.ts`, a server-only composition root over each feature's `server` entry) to load all user data from PostgreSQL via Prisma repositories.
+2. **Client:** `components/StoreProvider.tsx` + `lib/store/` (composing the per-feature `features/<name>/store.ts` slices) provide an optimistic in-memory cache around server actions. This is *not* a browser persistence layer.
 3. **Mutations:** All writes go through server actions in `lib/actions/` (or `/api/v1` route handlers for mobile/external callers) with Zod contracts in `lib/contracts/`.
 4. **Browser localStorage** is limited to UI-only mirrors (`atomicly:theme`, `atomicly:accent`, `atomicly:theme-variant`).
 
@@ -52,11 +52,13 @@ Backend/deployment architecture notes live in `docs/architecture/backend-auth-mo
 
 ### Key Directories
 
-- `lib/repositories/` — Prisma data access (one file per entity).
+- `features/<name>/` — feature slices (`habits`, `stacks`, `reflection`, `settings`, `pet`) per ADR-0001: `index.ts` (client-safe API), `actions.ts`, `contracts.ts`, `server.ts` + `server/` repositories, `model/` pure logic. Import Zod schemas via `@/features/<name>/contracts`; never re-export contracts from `index.ts` (it drags Zod into every client bundle — check with `npm run bundle:report`).
+- `lib/repositories/` — remaining shared Prisma data access (auth users).
 - `lib/actions/` — Server actions that validate via contracts and call repositories.
 - `lib/contracts/` — Zod schemas for action inputs.
-- `lib/store.ts` — Client-side optimistic state and schedule-aware metrics (streak, completionRate).
-- `lib/schedule.ts` — Scheduling helpers; unscheduled days don't break streaks.
+- `features/<name>/` — Feature slices (habits, stacks) per ADR-0001: `model/`, `contracts.ts`, `actions.ts`, `server/`. Import via `@/features/<name>`, `/actions` or `/server` only.
+- `lib/store/` — Client store composition root (`index.ts` exports `useStore`/`StoreState`), shared `optimistic()` mutation helper, and toast state. Per-feature slices live in `features/<name>/store.ts`; schedule-aware metrics (streak, completionRate) come from `@/features/habits`.
+- `features/habits/model/schedule.ts` — Scheduling helpers; unscheduled days don't break streaks.
 - `components/motion/` — Reusable Framer Motion primitives (`FadeIn`, `StaggerContainer`, `HoverLift`, etc.).
 - `lib/animations.ts` — Shared spring presets, easing curves, and variants.
 

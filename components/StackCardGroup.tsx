@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useMemo, useState } from "react";
 
 import { IconCheck } from "@/components/Icons";
-import { getChainFrom } from "@/lib/stack";
-import { completionRate } from "@/lib/store";
+import { getChainFrom } from "@/features/stacks";
+import { completionRate, isDone as isDayDone } from "@/features/habits";
 import type { Habit } from "@/lib/types";
 
 import styles from "./StackCardGroup.module.css";
@@ -53,7 +53,7 @@ export function StackCardGroup({
   const upcoming = useMemo(() => {
     const subChain = getChainFrom(habit, habits);
     if (!today) return subChain;
-    return subChain.filter((h) => !h.history[today]);
+    return subChain.filter((h) => !isDayDone(h.history[today]));
   }, [habit, habits, today]);
 
   // Top card is always first; expanded view shows top + at most 2 upcoming.
@@ -67,7 +67,7 @@ export function StackCardGroup({
   const renderRow = (h: Habit, index: number, total: number, onClick: () => void) => {
     const activeStreak = streak(h);
     const rate = Math.round(completionRate(h) * 100);
-    const isDone = Boolean(today ? h.history[today] : Object.keys(h.history).length > 0);
+    const isDone = today ? isDayDone(h.history[today]) : Object.keys(h.history).some((key) => isDayDone(h.history[key]));
     return (
       <motion.div
         key={h.id}

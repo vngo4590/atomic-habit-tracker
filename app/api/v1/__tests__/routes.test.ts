@@ -35,28 +35,30 @@ vi.mock("@/lib/repositories/users", () => ({
   findAuthUserById: mocks.findAuthUserById,
 }));
 
-vi.mock("@/lib/repositories/habits", () => ({
+vi.mock("@/features/habits/server", () => ({
   createHabit: mocks.createHabit,
   getHabit: mocks.getHabit,
+  listFormationVerdicts: mocks.listFormationVerdicts,
   listHabits: mocks.listHabits,
   saveContract: mocks.saveContract,
+  saveFormationVerdict: mocks.saveFormationVerdict,
   updateHabit: mocks.updateHabit,
   upsertCheckIn: mocks.upsertCheckIn,
 }));
 
-vi.mock("@/lib/repositories/reflection", () => ({
+vi.mock("@/features/reflection/server", () => ({
   createJournalEntry: mocks.createJournalEntry,
   getIdentity: mocks.getIdentity,
-  getPreferences: mocks.getPreferences,
   getWeeklyReview: mocks.getWeeklyReview,
   listCompletedLessons: mocks.listCompletedLessons,
-  listFormationVerdicts: mocks.listFormationVerdicts,
   listJournalEntries: mocks.listJournalEntries,
   markLessonComplete: mocks.markLessonComplete,
-  saveFormationVerdict: mocks.saveFormationVerdict,
   saveIdentity: mocks.saveIdentity,
-  savePreferences: mocks.savePreferences,
   saveWeeklyReview: mocks.saveWeeklyReview,
+}));
+vi.mock("@/features/settings/server", () => ({
+  getPreferences: mocks.getPreferences,
+  savePreferences: mocks.savePreferences,
 }));
 
 describe("API v1 route contracts", () => {

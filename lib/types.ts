@@ -1,4 +1,13 @@
-import type { StackMutationInput } from "@/lib/contracts/domain";
+/**
+ * One atomic change to a habit stack: insert a habit before/after another,
+ * remove a habit from its stack, or reorder a whole stack. Defined here in the
+ * shared kernel so `lib/` never depends on a feature; the stacks feature's Zod
+ * schema (`stackMutationSchema`) is checked against this type at compile time.
+ */
+export type StackMutationInput =
+  | { kind: "insert"; habitId: string; position: "before" | "after"; targetId: string }
+  | { kind: "remove"; habitId: string }
+  | { kind: "reorder"; habitIds: string[] };
 
 export interface CheckIn {
   done: boolean;

@@ -1,8 +1,8 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { habitCreateSchema } from "@/lib/contracts/domain";
-import { createHabitAction } from "@/lib/actions/domain";
+import { habitCreateSchema } from "@/features/habits/contracts";
+import { createHabitAction } from "@/features/habits/actions";
 import { testHabit } from "@/lib/test/fixtures";
 import { useStore } from "@/lib/store";
 
@@ -10,19 +10,26 @@ import { useStore } from "@/lib/store";
 // Mocks — store tests need createHabitAction mocked so renderHook stays
 // deterministic; schema tests are pure and don't need mocks at all.
 // ---------------------------------------------------------------------------
-vi.mock("@/lib/actions/domain", () => ({
+vi.mock("@/features/habits/actions", () => ({
   createHabitAction: vi.fn(),
-  createJournalEntryAction: vi.fn(),
   deleteHabitAction: vi.fn(),
   logCheckInAction: vi.fn(async () => null),
-  markLessonReadAction: vi.fn(),
   saveFormationVerdictAction: vi.fn(),
-  saveIdentityAction: vi.fn(async (identity: unknown) => identity),
-  savePreferencesAction: vi.fn(),
-  saveWeeklyReviewAction: vi.fn(),
   toggleHabitAction: vi.fn(async () => null),
   updateHabitAction: vi.fn(async () => null),
+}));
+vi.mock("@/features/stacks/actions", () => ({
+  applyStackMutationAction: vi.fn(),
+}));
+vi.mock("@/features/reflection/actions", () => ({
+  createJournalEntryAction: vi.fn(),
+  markLessonReadAction: vi.fn(),
+  saveIdentityAction: vi.fn(async (identity: unknown) => identity),
+  saveWeeklyReviewAction: vi.fn(),
   updateJournalEntryAction: vi.fn(async () => null),
+}));
+vi.mock("@/features/settings/actions", () => ({
+  savePreferencesAction: vi.fn(),
 }));
 
 // ---------------------------------------------------------------------------

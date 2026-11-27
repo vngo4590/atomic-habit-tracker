@@ -2,7 +2,7 @@
 
 import { motion, type TargetAndTransition, type Transition } from "framer-motion";
 
-import type { MoodAnimation, Sprite } from "@/lib/pet";
+import type { MoodAnimation, Sprite } from "@/features/pet";
 
 import { PixelSprite } from "./PixelSprite";
 import styles from "./MoodSprite.module.css";

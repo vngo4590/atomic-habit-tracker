@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "lint:app": "eslint --no-error-on-unmatched-pattern app components features shared lib scripts",
+    "lint:app": "eslint --no-error-on-unmatched-pattern app components features lib scripts",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run",

@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 
-import type { Sprite } from "@/lib/pet";
+import type { Sprite } from "@/features/pet";
 
 import styles from "./PixelSprite.module.css";
 

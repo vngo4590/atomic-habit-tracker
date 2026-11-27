@@ -121,7 +121,7 @@ import "dotenv/config";
 import { hashPassword } from "../lib/auth/password";
 import { db } from "../lib/db/client";
 import { FormationDecision } from "../lib/generated/prisma/enums";
-import { MAX_ACTIVE_HABITS } from "../lib/habit-cap";
+import { MAX_ACTIVE_HABITS } from "../features/habits/model/habit-cap";
 
 const users = Number(process.env.ATOMICLY_RANDOM_USERS ?? "3");
 const habitsPerUser = Number(process.env.ATOMICLY_RANDOM_HABITS ?? "5");
@@ -337,7 +337,7 @@ async function main() {
       });
     }
 
-    // Reflect the active-habit cap (see lib/habit-cap.ts): a user may keep at
+    // Reflect the active-habit cap (see features/habits/model/habit-cap.ts): a user may keep at
     // most MAX_ACTIVE_HABITS *active* habits — ones that are not archived and
     // carry no `formed` formation verdict. So the seeded demo matches the
     // product rule, induct any surplus active habits into the Hall of Fame with
@@ -416,7 +416,7 @@ import "dotenv/config";
 import { hashPassword } from "../lib/auth/password";
 import { db } from "../lib/db/client";
 import { FormationDecision } from "../lib/generated/prisma/enums";
-import { MAX_ACTIVE_HABITS } from "../lib/habit-cap";
+import { MAX_ACTIVE_HABITS } from "../features/habits/model/habit-cap";
 
 const users = Number(process.env.ATOMICLY_HISTORY_USERS ?? "2");
 const habitsPerUser = Number(process.env.ATOMICLY_HISTORY_HABITS ?? "7");
@@ -713,7 +713,7 @@ async function main() {
       });
     }
 
-    // Reflect the active-habit cap (see lib/habit-cap.ts): a user may keep at
+    // Reflect the active-habit cap (see features/habits/model/habit-cap.ts): a user may keep at
     // most MAX_ACTIVE_HABITS *active* habits — ones that are not archived and
     // carry no `formed` formation verdict. Archiving and the verdict loop above
     // already retire some habits, but the remainder can still exceed the cap, so

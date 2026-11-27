@@ -1,8 +1,8 @@
 import { handleApiError, jsonError, jsonOk, readJson, withApiUser } from "@/lib/api/http";
-import { habitUpdateSchema } from "@/lib/contracts/domain";
+import { habitUpdateSchema } from "@/features/habits/contracts";
 import { logger } from "@/lib/logger";
-import { archiveHabit, getHabit, updateHabit } from "@/lib/repositories/habits";
-import { isStackError } from "@/lib/stack-errors";
+import { archiveHabit, getHabit, updateHabit } from "@/features/habits/server";
+import { isStackError } from "@/features/stacks";
 
 const log = logger.child({ module: "api.v1.habits.id" });
 

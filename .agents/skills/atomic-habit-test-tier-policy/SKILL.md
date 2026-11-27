@@ -26,15 +26,15 @@ Write unit tests for every piece of functionality. **No exceptions.**
 - Pure helper functions (`lib/helpers.ts`, `lib/date-keys.ts`, etc.)
 - Validation contracts (`lib/contracts/`)
 - Auth helpers (`lib/auth/credentials.ts`, `lib/auth/password.ts`, `lib/auth/routes.ts`, `lib/auth/session.ts`)
-- Store logic (`lib/store.ts` — computed values, optimistic mutations)
-- Server actions (`lib/actions/domain.ts`) — mock repositories and session
+- Store logic (`features/<name>/store.ts` slices + `lib/store/` composer/`optimistic()` helper — computed values, optimistic mutations, rollback)
+- Server actions (`features/*/actions.ts`) — mock repositories and session
 - Repository functions (`lib/repositories/`) — inject a mock Prisma client object
 - API response helpers (`lib/api/`)
 
 **Location:** `__tests__/` directory colocated with the source file.
 - `lib/helpers.ts` → `lib/__tests__/helpers.test.ts`
 - `lib/auth/routes.ts` → `lib/auth/__tests__/routes.test.ts`
-- `lib/repositories/habits.ts` → `lib/repositories/__tests__/habits.test.ts`
+- `features/habits/server/habits.repository.ts` → `features/habits/server/__tests__/habits-cap.test.ts`
 
 **Isolation:** Must not require Docker, a live database, network access, or seeded data. Use `vi.mock()` and injected mock objects. See `atomic-habit-test-mocking-patterns`.
 

@@ -13,7 +13,7 @@ import {
   type PetRecord,
   type PetView,
   type TemperamentId,
-} from "@/lib/pet";
+} from "@/features/pet";
 import type { CheckIn, Pet } from "@/lib/types";
 
 import { AdoptPanel } from "./AdoptPanel";

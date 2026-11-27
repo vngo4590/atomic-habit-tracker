@@ -30,9 +30,9 @@ import { MoodCheckSheet } from "@/components/MoodCheckSheet";
 import { NotesManager } from "@/components/NotesManager";
 import { useStoreContext } from "@/components/StoreProvider";
 import { todayKey } from "@/lib/helpers";
-import { composeHabitSentence } from "@/lib/habit-sentence";
+import { composeHabitSentence, isDone } from "@/features/habits";
 import { clientLogger } from "@/lib/logger-client";
-import { formatScheduleLabel } from "@/lib/schedule";
+import { formatScheduleLabel } from "@/features/habits";
 import type { CheckIn, Habit } from "@/lib/types";
 
 import styles from "./page.module.css";
@@ -190,7 +190,7 @@ export default function HabitDetailPage() {
     );
   }
 
-  const doneToday = Boolean(habit.history[today]);
+  const doneToday = isDone(habit.history[today]);
   const lawsHaveValues = [habit.cue, habit.craving, habit.twoMin, habit.reward].some((value) => value.trim());
   const loopHasValues = [habit.loopCue, habit.loopCraving, habit.loopResponse, habit.loopReward].some((value) => value.trim());
   const showLaws = lawsHaveValues || Boolean(revealed[habit.id]?.laws);

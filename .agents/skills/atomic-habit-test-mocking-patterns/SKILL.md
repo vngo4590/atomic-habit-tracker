@@ -12,11 +12,15 @@ This skill is the source of truth for **how to isolate the subject under test** 
 ## 1. Mocking server actions in component / store tests
 
 ```typescript
-vi.mock("@/lib/actions/domain", () => ({
+vi.mock("@/features/habits/actions", () => ({
   createHabitAction: vi.fn(),
   // ... list every action the module under test imports
 }));
+vi.mock("@/features/stacks/actions", () => ({ applyStackMutationAction: vi.fn() }));
+vi.mock("@/features/reflection/actions", () => ({ /* reflection actions */ }));
 ```
+
+Mock the public entry point (`@/features/<name>/actions` or `/server`), not the internal file: feature code imports its own repositories through the `./server` barrel, so the mock path must match.
 
 Use `vi.hoisted()` when mocks must be available before imports:
 
@@ -29,7 +33,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("@/lib/auth/session", () => ({ requireUserId: mocks.requireUserId }));
-vi.mock("@/lib/repositories/habits", () => ({ createHabit: mocks.createHabit }));
+vi.mock("@/features/habits/server", () => ({ createHabit: mocks.createHabit }));
 ```
 
 ## 2. Injecting a mock Prisma client
@@ -87,10 +91,10 @@ type IconProps = LucideProps;
 
 ## 7. `next-auth` / `next/server` ESM interop
 
-`next-auth` internally imports `next/server` (without `.js`), which fails in vitest on Node.js with ESM/CJS interop errors. If a test file or its imports transitively pull in `next-auth`, mock `@/lib/actions/domain` (or whichever local module imports `next-auth`) at the **very top** of the test file:
+`next-auth` internally imports `next/server` (without `.js`), which fails in vitest on Node.js with ESM/CJS interop errors. If a test file or its imports transitively pull in `next-auth`, mock `@/features/habits/actions`, `@/features/stacks/actions` and `@/features/reflection/actions` (or whichever local module imports `next-auth`) at the **very top** of the test file:
 
 ```typescript
-vi.mock("@/lib/actions/domain", () => ({
+vi.mock("@/features/habits/actions", () => ({
   createHabitAction: vi.fn(),
   toggleHabitAction: vi.fn(),
   // ... every exported action

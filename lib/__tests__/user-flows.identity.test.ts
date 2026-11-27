@@ -6,20 +6,28 @@ import { testHabit } from "@/lib/test/fixtures";
 import { makeSnapshot, installUserFlowMocksHook } from "./_user-flow-helpers";
 
 // vi.mock is only hoisted within the file that contains it, so each
-// split file installs its own @/lib/actions/domain mock.
-vi.mock("@/lib/actions/domain", () => ({
+// split file installs its own server-action mocks (habits, stacks and
+// the reflection and settings actions).
+vi.mock("@/features/habits/actions", () => ({
   createHabitAction: vi.fn(),
-  createJournalEntryAction: vi.fn(),
   deleteHabitAction: vi.fn(),
   logCheckInAction: vi.fn(async () => null),
-  markLessonReadAction: vi.fn(),
   saveFormationVerdictAction: vi.fn(),
-  saveIdentityAction: vi.fn(async (identity: unknown) => identity),
-  savePreferencesAction: vi.fn(),
-  saveWeeklyReviewAction: vi.fn(),
   toggleHabitAction: vi.fn(async () => null),
   updateHabitAction: vi.fn(async () => null),
+}));
+vi.mock("@/features/stacks/actions", () => ({
+  applyStackMutationAction: vi.fn(),
+}));
+vi.mock("@/features/reflection/actions", () => ({
+  createJournalEntryAction: vi.fn(),
+  markLessonReadAction: vi.fn(),
+  saveIdentityAction: vi.fn(async (identity: unknown) => identity),
+  saveWeeklyReviewAction: vi.fn(),
   updateJournalEntryAction: vi.fn(async () => null),
+}));
+vi.mock("@/features/settings/actions", () => ({
+  savePreferencesAction: vi.fn(),
 }));
 
 // Wire installUserFlowMocks() into beforeEach for every test in this file.

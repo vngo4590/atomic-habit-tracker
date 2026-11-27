@@ -10,7 +10,7 @@ import { Toast } from "@/components/Toast";
 import { requireCurrentUser } from "@/lib/auth/session";
 import { todayKey } from "@/lib/helpers";
 import { logger, redactUserId } from "@/lib/logger";
-import { getStoreSnapshot } from "@/lib/repositories/reflection";
+import { getStoreSnapshot } from "@/lib/server/store-snapshot";
 
 const log = logger.child({ module: "layout.root" });
 

@@ -1,7 +1,7 @@
 import { handleApiError, jsonError, jsonOk, readJson, withApiUser } from "@/lib/api/http";
-import { formationVerdictSchema } from "@/lib/contracts/domain";
+import { formationVerdictSchema } from "@/features/habits/contracts";
 import { logger } from "@/lib/logger";
-import { listFormationVerdicts, saveFormationVerdict } from "@/lib/repositories/reflection";
+import { listFormationVerdicts, saveFormationVerdict } from "@/features/habits/server";
 
 const log = logger.child({ module: "api.v1.reflection.formation-verdicts" });
 

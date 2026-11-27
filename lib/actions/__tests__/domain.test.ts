@@ -30,12 +30,13 @@ vi.mock("@/lib/auth/session", () => ({
   requireUserId: mocks.requireUserId,
 }));
 
-vi.mock("@/lib/repositories/habits", () => ({
+vi.mock("@/features/habits/server", () => ({
   createHabit: mocks.createHabit,
   updateHabit: mocks.updateHabit,
   archiveHabit: mocks.archiveHabit,
   upsertCheckIn: mocks.upsertCheckIn,
   getHabit: mocks.getHabit,
+  saveFormationVerdict: mocks.saveFormationVerdictRecord,
 }));
 
 vi.mock("@/lib/db/client", () => ({
@@ -47,14 +48,15 @@ vi.mock("@/lib/db/client", () => ({
   },
 }));
 
-vi.mock("@/lib/repositories/reflection", () => ({
+vi.mock("@/features/reflection/server", () => ({
   createJournalEntry: mocks.createJournalEntry,
   markLessonComplete: mocks.markLessonComplete,
-  saveFormationVerdict: mocks.saveFormationVerdictRecord,
   saveIdentity: mocks.saveIdentity,
-  savePreferences: mocks.savePreferences,
   saveWeeklyReview: mocks.saveWeeklyReview,
   updateJournalEntry: mocks.updateJournalEntry,
+}));
+vi.mock("@/features/settings/server", () => ({
+  savePreferences: mocks.savePreferences,
 }));
 
 describe("domain server actions", () => {
@@ -68,7 +70,7 @@ describe("domain server actions", () => {
   it("creates habits for the authenticated user and revalidates app paths", async () => {
     const habit = testHabit({ id: "habit_new", name: "Read" });
     mocks.createHabit.mockResolvedValue({ ok: true, habit });
-    const { createHabitAction } = await import("@/lib/actions/domain");
+    const { createHabitAction } = await import("@/features/habits/actions");
 
     await expect(createHabitAction({ name: "Read", identity: "reader", cue: "After coffee" })).resolves.toEqual({ ok: true, habit });
 
@@ -88,7 +90,7 @@ describe("domain server actions", () => {
     mocks.updateHabit.mockResolvedValue(habit);
     mocks.archiveHabit.mockResolvedValue(habit);
     mocks.upsertCheckIn.mockResolvedValue(habit);
-    const { deleteHabitAction, logCheckInAction, toggleHabitAction, updateHabitAction } = await import("@/lib/actions/domain");
+    const { deleteHabitAction, logCheckInAction, toggleHabitAction, updateHabitAction } = await import("@/features/habits/actions");
 
     await expect(updateHabitAction("habit_1", { name: "Updated" })).resolves.toEqual(habit);
     await expect(deleteHabitAction("habit_1")).resolves.toEqual(habit);
@@ -112,7 +114,7 @@ describe("domain server actions", () => {
     mocks.createJournalEntry.mockResolvedValue(entry);
     mocks.updateJournalEntry.mockResolvedValue({ ...entry, title: "Edited" });
     mocks.saveWeeklyReview.mockResolvedValue(review);
-    const { createJournalEntryAction, saveWeeklyReviewAction, updateJournalEntryAction } = await import("@/lib/actions/domain");
+    const { createJournalEntryAction, saveWeeklyReviewAction, updateJournalEntryAction } = await import("@/features/reflection/actions");
 
     await expect(createJournalEntryAction({ date: "2030-01-02", title: "Small win" })).resolves.toEqual(entry);
     await expect(updateJournalEntryAction("journal_1", { title: "Edited" })).resolves.toMatchObject({ title: "Edited" });
@@ -133,7 +135,7 @@ describe("domain server actions", () => {
     // Given: an existing journal entry the server can update
     const entry = testJournalEntry({ id: "journal_2" });
     mocks.updateJournalEntry.mockResolvedValue(entry);
-    const { updateJournalEntryAction } = await import("@/lib/actions/domain");
+    const { updateJournalEntryAction } = await import("@/features/reflection/actions");
 
     // When: a caller sends a patch that includes a new date alongside other fields
     await updateJournalEntryAction("journal_2", { date: "2099-12-31", title: "Edited", mood: "good" });
@@ -149,7 +151,9 @@ describe("domain server actions", () => {
     mocks.savePreferences.mockResolvedValue(testPreferences({ lessonMode: "random" }));
     mocks.markLessonComplete.mockResolvedValue([1, 2, 3]);
     mocks.saveFormationVerdictRecord.mockResolvedValue(testFormationVerdict());
-    const { markLessonReadAction, saveFormationVerdictAction, saveIdentityAction, savePreferencesAction } = await import("@/lib/actions/domain");
+    const { saveFormationVerdictAction } = await import("@/features/habits/actions");
+    const { markLessonReadAction, saveIdentityAction } = await import("@/features/reflection/actions");
+    const { savePreferencesAction } = await import("@/features/settings/actions");
 
     await expect(saveIdentityAction(testIdentity({ statement: "I show up" }))).resolves.toMatchObject({ statement: "I am someone who keeps promises to myself." });
     await expect(savePreferencesAction({ lessonMode: "random" })).resolves.toMatchObject({ lessonMode: "random" });
@@ -166,7 +170,7 @@ describe("domain server actions", () => {
 
   it("does not revalidate when repository validation fails", async () => {
     mocks.createHabit.mockRejectedValue(new ZodError([]));
-    const { createHabitAction } = await import("@/lib/actions/domain");
+    const { createHabitAction } = await import("@/features/habits/actions");
 
     await expect(createHabitAction({ name: "", identity: "reader" })).rejects.toBeInstanceOf(ZodError);
 
@@ -175,7 +179,8 @@ describe("domain server actions", () => {
 
   it("rejects unauthenticated actions before repository writes", async () => {
     mocks.requireUserId.mockRejectedValue(new Error("redirect:/login"));
-    const { createHabitAction, markLessonReadAction } = await import("@/lib/actions/domain");
+    const { createHabitAction } = await import("@/features/habits/actions");
+    const { markLessonReadAction } = await import("@/features/reflection/actions");
 
     await expect(createHabitAction({ name: "Read", identity: "reader" })).rejects.toThrow("redirect:/login");
     await expect(markLessonReadAction(1)).rejects.toThrow("redirect:/login");
@@ -193,11 +198,11 @@ describe("domain server actions", () => {
      * the actual validation logic is covered by the repository tests.
      */
     it("propagates a self-link rejection from the repository", async () => {
-      const { StackError } = await import("@/lib/stack-errors");
+      const { StackError } = await import("@/features/stacks");
       mocks.updateHabit.mockRejectedValue(
         new StackError("self_reference", "A habit cannot stack with itself."),
       );
-      const { updateHabitAction } = await import("@/lib/actions/domain");
+      const { updateHabitAction } = await import("@/features/habits/actions");
 
       await expect(updateHabitAction("habit_a", { stackNextId: "habit_a" })).rejects.toThrow(
         /cannot stack with itself/i,
@@ -205,11 +210,11 @@ describe("domain server actions", () => {
     });
 
     it("propagates an exclusivity rejection from the repository", async () => {
-      const { StackError } = await import("@/lib/stack-errors");
+      const { StackError } = await import("@/features/stacks");
       mocks.updateHabit.mockRejectedValue(
         new StackError("target_in_other_stack", "That habit is already part of another stack."),
       );
-      const { updateHabitAction } = await import("@/lib/actions/domain");
+      const { updateHabitAction } = await import("@/features/habits/actions");
 
       await expect(updateHabitAction("habit_a", { stackNextId: "habit_c" })).rejects.toThrow(
         /already part of another stack/i,
@@ -217,11 +222,11 @@ describe("domain server actions", () => {
     });
 
     it("propagates a cycle rejection from the repository", async () => {
-      const { StackError } = await import("@/lib/stack-errors");
+      const { StackError } = await import("@/features/stacks");
       mocks.updateHabit.mockRejectedValue(
         new StackError("circular_stack", "Linking these habits would create a circular stack."),
       );
-      const { updateHabitAction } = await import("@/lib/actions/domain");
+      const { updateHabitAction } = await import("@/features/habits/actions");
 
       await expect(updateHabitAction("habit_c", { stackNextId: "habit_a" })).rejects.toThrow(
         /circular stack/i,
@@ -230,7 +235,7 @@ describe("domain server actions", () => {
 
     it("allows valid stack links to reach the repository", async () => {
       mocks.updateHabit.mockResolvedValue(testHabit({ id: "habit_a" }));
-      const { updateHabitAction } = await import("@/lib/actions/domain");
+      const { updateHabitAction } = await import("@/features/habits/actions");
 
       await expect(updateHabitAction("habit_a", { stackNextId: "habit_b" })).resolves.toBeDefined();
       expect(mocks.updateHabit).toHaveBeenCalledWith(

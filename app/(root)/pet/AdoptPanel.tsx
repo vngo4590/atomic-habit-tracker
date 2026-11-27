@@ -9,7 +9,7 @@ import {
   randomSeed,
   TEMPERAMENTS,
   type TemperamentId,
-} from "@/lib/pet";
+} from "@/features/pet";
 
 import styles from "./page.module.css";
 

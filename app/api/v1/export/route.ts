@@ -1,8 +1,8 @@
-import { buildBackup } from "@/lib/backup/export";
+import { buildBackup } from "@/features/settings";
 import { withApiUser } from "@/lib/api/http";
 import { todayKey } from "@/lib/helpers";
 import { logger, redactUserId } from "@/lib/logger";
-import { getStoreSnapshot } from "@/lib/repositories/reflection";
+import { getStoreSnapshot } from "@/lib/server/store-snapshot";
 
 const log = logger.child({ module: "api.v1.export" });
 

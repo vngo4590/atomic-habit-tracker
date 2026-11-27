@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 
-import { formatScheduleLabel } from "@/lib/schedule";
+import { formatScheduleLabel } from "@/features/habits";
 
 import styles from "./SchedulePicker.module.css";
 
