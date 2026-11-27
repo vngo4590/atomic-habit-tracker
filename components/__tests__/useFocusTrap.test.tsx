@@ -45,4 +45,19 @@ describe("useFocusTrap", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(document.activeElement).toBe(replay);
   });
+
+  it("makes the page behind the dialog inert until it closes", () => {
+    // Given: the tour is open over the page
+    render(<Harness />);
+    const replay = screen.getByRole("button", { name: "Replay tour" });
+    fireEvent.click(replay);
+
+    // Then: the background control can't be focused or read while it is open
+    expect(replay.hasAttribute("inert")).toBe(true);
+    expect(screen.getByRole("dialog").hasAttribute("inert")).toBe(false);
+
+    // When: the tour closes, the page becomes interactive again
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(replay.hasAttribute("inert")).toBe(false);
+  });
 });

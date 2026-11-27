@@ -1,6 +1,15 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { checkInOn, cleanupHabits, dayKey, listHabits, seedHabit, setPreferences, unique } from "./helpers";
+import {
+  checkInOn,
+  cleanupHabits,
+  dayKey,
+  listHabits,
+  seedHabit,
+  setPreferences,
+  unique,
+  waitForSavedCheckIn,
+} from "./helpers";
 
 /**
  * Habit lifecycle journeys (AGENTS.md § App Context: Today, All Habits, habit
@@ -249,11 +258,12 @@ test.describe("Today check-ins", () => {
   test("a check-in made on Today persists across a reload", async ({ page }) => {
     // Given: a daily habit checked in from Today
     const name = unique("Floss");
-    await seedHabit(page, name, "a healthy person");
+    const id = await seedHabit(page, name, "a healthy person");
     await page.goto("/");
     await page.getByRole("button", { name: `Mark ${name} done` }).click();
     await closeMoodSheet(page);
     await expect(page.getByRole("heading", { name: "All done for today" })).toBeVisible();
+    await waitForSavedCheckIn(page, id, dayKey());
 
     // When: the page is reloaded
     await page.reload();

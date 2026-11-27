@@ -1,6 +1,15 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { checkInOn, dayKey, registerUser, seedHabit, unique } from "./helpers";
+import {
+  checkInOn,
+  dayKey,
+  registerUser,
+  seedHabit,
+  unique,
+  waitForSavedCheckIn,
+  waitForSavedJournalTitle,
+  waitForSavedWeeklyReview,
+} from "./helpers";
 
 /**
  * Reflection journeys (AGENTS.md § App Context: Journal, Weekly Review,
@@ -43,7 +52,8 @@ test.describe("journal", () => {
     await expect(page.getByText("Two-minute rule made the run happen.")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Your journal is empty" })).toHaveCount(0);
 
-    // And: it is still there after a reload
+    // And: once saved, it is still there after a reload
+    await waitForSavedJournalTitle(page, title);
     await page.reload();
     await expect(page.getByRole("heading", { level: 3, name: title })).toBeVisible();
   });
@@ -56,6 +66,7 @@ test.describe("journal", () => {
     await page.getByRole("textbox", { name: "Title" }).fill(title);
     await page.getByRole("button", { name: "Save entry" }).click();
     await expect(page.getByRole("heading", { level: 3, name: title })).toBeVisible();
+    await waitForSavedJournalTitle(page, title);
 
     // When: they edit its title and save
     const renamed = unique("Final draft");
@@ -67,6 +78,7 @@ test.describe("journal", () => {
     // Then: only the renamed entry is listed, also after a reload
     await expect(page.getByRole("heading", { level: 3, name: renamed })).toBeVisible();
     await expect(page.getByRole("heading", { level: 3, name: title })).toHaveCount(0);
+    await waitForSavedJournalTitle(page, renamed);
     await page.reload();
     await expect(page.getByRole("heading", { level: 3, name: renamed })).toBeVisible();
   });
@@ -94,7 +106,8 @@ test.describe("weekly review", () => {
     await expect(page.getByRole("heading", { name: "This week's review" })).toBeVisible();
     for (const answer of answers) await expect(page.getByText(answer)).toBeVisible();
 
-    // And: the review is still there after a reload
+    // And: once saved, the review is still there after a reload
+    await waitForSavedWeeklyReview(page, dayKey(-6), answers[2]);
     await page.reload();
     await expect(page.getByText("Read right after dinner.")).toBeVisible();
     await expect(page.getByRole("button", { name: "Write this week's review" })).toHaveCount(0);
@@ -122,7 +135,7 @@ test.describe("identity vote ledger", () => {
     // Given: a new user with one habit and no votes
     await registerUser(page, { prefix: "identity" });
     const name = unique("Run a mile");
-    await seedHabit(page, name, "a runner");
+    const id = await seedHabit(page, name, "a runner");
     await page.goto("/identity");
     await expect(page.getByRole("heading", { name: "No votes cast yet" })).toBeVisible();
 
@@ -131,6 +144,7 @@ test.describe("identity vote ledger", () => {
     await page.getByRole("button", { name: `Mark ${name} done` }).click();
     await closeMoodSheet(page);
     await expect(page.getByRole("heading", { name: "All done for today" })).toBeVisible();
+    await waitForSavedCheckIn(page, id, dayKey());
 
     // Then: the identity page counts one vote for "I am a runner"
     await page.goto("/identity");

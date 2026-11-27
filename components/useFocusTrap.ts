@@ -15,6 +15,8 @@ const FOCUSABLE =
  *    unreachable; if focus has fallen out (e.g. its button unmounted), Tab
  *    brings it back in.
  *  • Escape calls `onEscape`.
+ *  • The rest of the page is made `inert` while the dialog is open, so even
+ *    programmatic focus or a screen reader can't reach the controls behind it.
  *  • On close, focus returns to whatever was focused before it opened, or to
  *    the page's main region when that control no longer exists.
  */
@@ -32,6 +34,7 @@ export function useFocusTrap<T extends HTMLElement>(onEscape: () => void) {
   useEffect(() => {
     const opener = openerRef.current;
     const focusables = () => Array.from(ref.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []);
+    const inerted = makeBackgroundInert(ref.current);
 
     if (ref.current && !ref.current.contains(document.activeElement)) {
       (focusables()[0] ?? ref.current).focus();
@@ -66,6 +69,7 @@ export function useFocusTrap<T extends HTMLElement>(onEscape: () => void) {
     document.addEventListener("keydown", onKeyDown);
     return () => {
       document.removeEventListener("keydown", onKeyDown);
+      for (const element of inerted) element.removeAttribute("inert");
       if (opener?.isConnected && opener !== document.body) {
         opener.focus();
         return;
@@ -80,4 +84,17 @@ export function useFocusTrap<T extends HTMLElement>(onEscape: () => void) {
   }, []);
 
   return ref;
+}
+
+/** Sets `inert` on every sibling along the dialog's path to <body>; returns them so they can be restored. */
+function makeBackgroundInert(dialog: HTMLElement | null) {
+  const inerted: HTMLElement[] = [];
+  for (let node = dialog; node && node !== document.body; node = node.parentElement) {
+    for (const sibling of Array.from(node.parentElement?.children ?? [])) {
+      if (sibling === node || !(sibling instanceof HTMLElement) || sibling.hasAttribute("inert")) continue;
+      sibling.setAttribute("inert", "");
+      inerted.push(sibling);
+    }
+  }
+  return inerted;
 }

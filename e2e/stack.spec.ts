@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { dayKey, waitForSavedCheckIn } from "./helpers";
 
 /**
  * Helpers
@@ -657,6 +658,8 @@ test.describe("Today page stack cards", () => {
     if (await moodClose.isVisible().catch(() => false)) {
       await moodClose.click();
     }
+
+    await waitForSavedCheckIn(page, idA, dayKey());
 
     // Verify the habit shows as done on its detail page
     await openHabitDetail(page, idA);

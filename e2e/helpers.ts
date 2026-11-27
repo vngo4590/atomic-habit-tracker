@@ -87,6 +87,38 @@ export async function listHabits(
   return body.data?.habits ?? [];
 }
 
+/** Wait until the server has saved a completed check-in for `dateKey`. */
+export async function waitForSavedCheckIn(page: Page, habitId: string, dateKey: string): Promise<void> {
+  await expect
+    .poll(async () => {
+      const entry = (await listHabits(page)).find((habit) => habit.id === habitId)?.history[dateKey];
+      return entry === true || (typeof entry === "object" && entry !== null && (entry as { done?: boolean }).done === true);
+    })
+    .toBe(true);
+}
+
+/** Wait until the server lists a journal entry with this title. */
+export async function waitForSavedJournalTitle(page: Page, title: string): Promise<void> {
+  await expect
+    .poll(async () => {
+      const response = await page.request.get("/api/v1/reflection/journal");
+      const body = await response.json();
+      return (body.data?.entries ?? []).some((entry: { title?: string }) => entry.title === title);
+    })
+    .toBe(true);
+}
+
+/** Wait until the server has saved this week's review with the given final answer. */
+export async function waitForSavedWeeklyReview(page: Page, weekStartKey: string, identityVote: string): Promise<void> {
+  await expect
+    .poll(async () => {
+      const response = await page.request.get(`/api/v1/reflection/weekly-review?weekStartKey=${weekStartKey}`);
+      const body = await response.json();
+      return body.data?.review?.identityVote ?? null;
+    })
+    .toBe(identityVote);
+}
+
 /** Patch the signed-in user's saved preferences (theme, nudges, onboarding…). */
 export async function setPreferences(page: Page, patch: Record<string, unknown>): Promise<void> {
   const response = await page.request.patch("/api/v1/reflection/preferences", { data: patch });
