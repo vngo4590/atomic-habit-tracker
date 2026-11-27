@@ -95,7 +95,7 @@ Navigation (`components/nav/nav-items.ts`): Today, Habits, Reflect (`/journal` +
 | `/` | Today (`features/habits/ui/today/`) — focus list of undone habits scheduled for today, collapsible "Completed (n)" with undo, identity votes, quiet insights; first-run / rest-day / all-done empty states; stacked habits render as `StackCardGroup`; habit search across all habits |
 | `/habits` | Habit library (`features/habits/ui/library/`) — All / Done today / Upcoming tabs; check/undo circles; search and sort by streak, rate, newest, or name |
 | `/habits/new` | `NewHabitWizard` (`features/habits/ui/new/`) — 5-step guided wizard: habit → identity → cue & schedule → make it stick (optional four laws) → review; respects the active-habit cap |
-| `/habits/[id]` | Habit detail (`features/habits/ui/detail/`) with Overview reveal panels for the 4 laws and habit loop, plus journal/history/notes/contracts/**Stack** tabs |
+| `/habits/[id]` | Habit detail (`features/habits/ui/detail/`) with Overview reveal panels for the 4 laws and habit loop, plus Journal/History/Notes/**Stack** tabs; the habit contract opens as a `ContractSheet` from Overview |
 | `/analytics` | Adherence stats and charts (`features/habits/ui/insights/`) |
 | `/journal` | Journal entries (`features/reflection/ui/journal/`) |
 | `/review` | Weekly review (`features/reflection/ui/review/`) with current review display/edit, top-five past summaries, paged archive |

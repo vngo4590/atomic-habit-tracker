@@ -79,10 +79,10 @@ Reach for a primitive before writing markup. If a pattern repeats in two feature
 ## 6. Motion
 
 - Framer Motion loads through `LazyMotion` in `components/motion/MotionProvider.tsx` (wrapped in `app/(root)/layout.tsx`). **Use `m.*`, never `motion.*`** (ESLint error). `m` does not animate outside the provider (e.g. `(auth)` pages).
-- If the feature chunk fails to load (after one retry), `<html>` gets `motion-unavailable` and CSS shows content statically.
+- If the feature chunk fails to load (after one retry), `<html>` gets `motion-unavailable`. The fallback is opt-in: CSS only resets opacity/transform on elements marked `data-motion-fallback`, so add that attribute to every `m.*` element whose `initial` hides it (e.g. `opacity: 0`), or it stays invisible.
 - The shell (layout, nav, `PageTransition`, `Toast`) stays CSS-only; the route fade is the `page-enter` keyframe.
 - Timings come from `--duration-*` / `lib/animations.ts`; animate `transform`/`opacity` only; motion explains a change, it does not decorate.
-- Reduced motion: CSS durations collapse to 0.01ms automatically; Framer components must check `useReducedMotion()` (or `lib/hooks/useMotionReduced.ts`, which also treats narrow screens as reduced).
+- Reduced motion: only the `--duration-*` tokens collapse to 0.01ms automatically. CSS animations/transitions with literal timings (e.g. `.fade-up`, `.skeleton`) need their own `@media (prefers-reduced-motion: reduce)` rule; Framer components must check `useReducedMotion()` (or `lib/hooks/useMotionReduced.ts`, which also treats narrow screens as reduced).
 - Details: `atomic-habit-ui-animation`.
 
 ## 7. Accessibility bar (non-negotiable)
