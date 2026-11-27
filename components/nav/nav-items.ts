@@ -20,7 +20,7 @@ export interface NavItem {
   matches: readonly string[];
   /** Shown in the mobile bottom tab bar (Settings is reached via the avatar). */
   inTabBar: boolean;
-  /** Single-key shortcut shown as a hint in the sidebar. */
+  /** Alt+Shift+<key> shortcut; the key is shown as a hint in the sidebar. */
   shortcut: string;
 }
 
@@ -74,7 +74,7 @@ export function activeNavItem(pathname: string): NavItem | undefined {
 }
 
 /**
- * Keyboard shortcuts (lower-cased key → URL). The section keys mirror the
+ * Alt+Shift keyboard shortcuts (lower-cased key → URL). The section keys mirror the
  * sidebar hints; the extra keys are kept from the old nav so muscle memory
  * still reaches the individual Reflect/Insights pages directly.
  */

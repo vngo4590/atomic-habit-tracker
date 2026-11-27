@@ -240,8 +240,14 @@ describe("Nav — user footer", () => {
   });
 });
 
+/** Fire the Alt+Shift chord for a shortcut key ("t", "J" or ","). */
+function pressShortcut(key: string, target: Window | HTMLElement = window) {
+  const code = key === "," ? "Comma" : `Key${key.toUpperCase()}`;
+  fireEvent.keyDown(target, { key, code, altKey: true, shiftKey: true });
+}
+
 describe("Nav — keyboard shortcuts", () => {
-  it("maps section keys to the new IA (T, H, N, R, I, P, comma)", () => {
+  it("maps Alt+Shift section keys to the new IA (T, H, N, R, I, P, comma)", () => {
     // Given: the nav is listening for shortcuts
     render(<Nav user={ALICE} />);
 
@@ -257,7 +263,7 @@ describe("Nav — keyboard shortcuts", () => {
 
     // When: each key is pressed, Then: the router goes to its section
     for (const [key, href] of shortcuts) {
-      fireEvent.keyDown(window, { key });
+      pressShortcut(key);
       expect(routerPushMock).toHaveBeenLastCalledWith(href);
     }
     expect(routerPushMock).toHaveBeenCalledTimes(shortcuts.length);
@@ -276,7 +282,7 @@ describe("Nav — keyboard shortcuts", () => {
 
     // When/Then: each legacy key still reaches its page
     for (const [key, href] of shortcuts) {
-      fireEvent.keyDown(window, { key });
+      pressShortcut(key);
       expect(routerPushMock).toHaveBeenLastCalledWith(href);
     }
   });
@@ -292,20 +298,33 @@ describe("Nav — keyboard shortcuts", () => {
     );
 
     // When: the user types shortcut letters into them
-    fireEvent.keyDown(screen.getByTestId("test-input"), { key: "h" });
-    fireEvent.keyDown(screen.getByTestId("test-textarea"), { key: "j" });
+    pressShortcut("h", screen.getByTestId("test-input"));
+    pressShortcut("j", screen.getByTestId("test-textarea"));
 
     // Then: navigation is not triggered
     expect(routerPushMock).not.toHaveBeenCalled();
   });
 
-  it("ignores keys combined with a modifier (so Ctrl+R still reloads)", () => {
+  it("ignores bare letters so stray keystrokes never navigate (WCAG 2.1.4)", () => {
     // Given: the nav is listening for shortcuts
     render(<Nav user={ALICE} />);
 
-    // When: the user presses Ctrl+R and Cmd+T
-    fireEvent.keyDown(window, { key: "r", ctrlKey: true });
-    fireEvent.keyDown(window, { key: "t", metaKey: true });
+    // When: the user presses T, Shift+H and Alt+R without the full chord
+    fireEvent.keyDown(window, { key: "t", code: "KeyT" });
+    fireEvent.keyDown(window, { key: "H", code: "KeyH", shiftKey: true });
+    fireEvent.keyDown(window, { key: "r", code: "KeyR", altKey: true });
+
+    // Then: nothing navigates
+    expect(routerPushMock).not.toHaveBeenCalled();
+  });
+
+  it("ignores the chord combined with Ctrl or Cmd (so browser shortcuts keep working)", () => {
+    // Given: the nav is listening for shortcuts
+    render(<Nav user={ALICE} />);
+
+    // When: the user adds Ctrl or Cmd to the chord
+    fireEvent.keyDown(window, { key: "R", code: "KeyR", altKey: true, shiftKey: true, ctrlKey: true });
+    fireEvent.keyDown(window, { key: "T", code: "KeyT", altKey: true, shiftKey: true, metaKey: true });
 
     // Then: the browser shortcuts are left alone
     expect(routerPushMock).not.toHaveBeenCalled();
@@ -315,8 +334,8 @@ describe("Nav — keyboard shortcuts", () => {
     // Given: the nav is listening for shortcuts
     render(<Nav user={ALICE} />);
 
-    // When: the user presses L
-    fireEvent.keyDown(window, { key: "l" });
+    // When: the user presses Alt+Shift+L
+    pressShortcut("l");
 
     // Then: the router is not invoked
     expect(routerPushMock).not.toHaveBeenCalled();
