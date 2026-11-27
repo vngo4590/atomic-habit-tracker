@@ -18,8 +18,8 @@ const eslintConfig = defineConfig([
         {
           patterns: [
             {
-              group: ["@/features/*/*", "@/features/*/*/**", "!@/features/*/actions", "!@/features/*/server", "!@/features/*/store", "!@/features/*/contracts"],
-              message: "Import a feature through '@/features/<name>', '/actions', '/server', '/store' or '/contracts' only.",
+              group: ["@/features/*/*", "@/features/*/*/**", "!@/features/*/actions", "!@/features/*/server", "!@/features/*/store", "!@/features/*/contracts", "!@/features/*/ui"],
+              message: "Import a feature through '@/features/<name>', '/actions', '/server', '/store', '/contracts' or '/ui' only.",
             },
           ],
         },
