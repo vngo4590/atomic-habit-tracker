@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { dateAdd, todayKey } from "@/lib/helpers";
 import type { Habit, WeeklyReview } from "@/lib/types";
@@ -63,6 +63,12 @@ afterEach(() => {
   storeMock.habits = [];
   storeMock.weeklyReview = { wentWell: "", smallestFix: "", identityVote: "" };
   storeMock.weeklyReviews = [];
+});
+
+// Warm the lazily imported markdown renderer so findBy* resolves quickly
+// even when the whole suite is running in parallel.
+beforeAll(async () => {
+  await import("@/components/MarkdownText");
 });
 
 const currentWeekKey = () => dateAdd(todayKey(), -6);
@@ -238,7 +244,7 @@ describe("WeeklyReviewView", () => {
       render(<WeeklyReviewView />);
 
       // Then: the lazily loaded renderer produces real elements
-      expect((await screen.findByText("Bold win")).tagName).toBe("STRONG");
+      expect((await screen.findByText("Bold win", undefined, { timeout: 5000 })).tagName).toBe("STRONG");
       expect(screen.getByText("step one").tagName).toBe("LI");
       expect(screen.getByText("step two").tagName).toBe("LI");
       expect(screen.getByText("disciplined").tagName).toBe("EM");
@@ -288,7 +294,7 @@ describe("WeeklyReviewView", () => {
       fireEvent.click(screen.getByRole("button", { expanded: false }));
 
       // Then: each answer renders formatted markdown
-      expect((await screen.findByText("fix in bold")).tagName).toBe("STRONG");
+      expect((await screen.findByText("fix in bold", undefined, { timeout: 5000 })).tagName).toBe("STRONG");
       expect(screen.getByText("voter").tagName).toBe("EM");
     });
   });
