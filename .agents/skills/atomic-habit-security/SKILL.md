@@ -16,9 +16,11 @@ quick map of **what exists, where, and how to extend it safely.**
   enforcement point for headers, CSP, rate limiting, and the CSRF guard. Extend
   it; never add a parallel `middleware.ts`.
 - **Never weaken the CSP casually.** `script-src` uses a per-request nonce +
-  `'strict-dynamic'`. `style-src` uses `'unsafe-inline'` *without* a nonce on
-  purpose (Framer Motion / Tailwind emit inline `style` attributes; a style
-  nonce would disable `'unsafe-inline'` and break the UI). Any new inline
+  `'strict-dynamic'`. `style-src` carries the nonce (Next.js 16 stamps it on
+  `<link rel="stylesheet">`), which makes browsers ignore its `'unsafe-inline'`;
+  so `style-src-attr 'unsafe-inline'` is required for the inline `style`
+  attributes that Framer Motion and CSS-variable passthroughs emit. Removing it
+  silently blanks swatches, charts, and sparklines. Any new inline
   `<script>` must receive the nonce via `headers()` → `x-nonce`.
 - **Auth lookups must be timing-safe.** `lib/auth/credentials.ts` always runs a
   bcrypt compare (against `DUMMY_PASSWORD_HASH` for unknown users). Do not add an

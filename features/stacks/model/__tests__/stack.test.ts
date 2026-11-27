@@ -149,6 +149,14 @@ describe("getVisibleStackHabit", () => {
     const visible = getVisibleStackHabit(habits, "2030-01-01");
     expect(visible).toHaveLength(0);
   });
+
+  it("treats a reflection-only day as still undone", () => {
+    // Given: the root has only a mood logged today, not a completed check-in
+    const habits = [makeHabit("root", "a", { "2030-01-01": { done: false, mood: 3 } }), makeHabit("a")];
+
+    // When / Then: the root is still the next habit to do in the stack
+    expect(getVisibleStackHabit(habits, "2030-01-01").map((h) => h.id)).toEqual(["root"]);
+  });
 });
 
 describe("groupHabitsByStack", () => {

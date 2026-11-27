@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { Nav } from "@/components/Nav";
@@ -23,387 +23,321 @@ vi.mock("@/lib/actions/auth", () => ({
   logoutAction: vi.fn(),
 }));
 
-describe("Nav business logic", () => {
-  beforeEach(() => {
-    routerPushMock.mockClear();
-    usePathnameMock.mockReturnValue("/");
-    useStoreContextMock.mockReturnValue({ habits: [] as Habit[] });
+const ALICE = { name: "Alice", email: "alice@example.com" };
+
+/** Minimal habit with the given completion history (each key is one vote). */
+function makeHabit(id: string, history: Record<string, boolean>): Habit {
+  return {
+    id,
+    name: id,
+    emoji: "•",
+    cue: "",
+    craving: "",
+    response: "",
+    reward: "",
+    loopCue: "",
+    loopCraving: "",
+    loopResponse: "",
+    loopReward: "",
+    twoMin: "",
+    identity: "reader",
+    environment: "",
+    schedule: "Daily",
+    time: "Morning",
+    contract: "",
+    contractPartners: [],
+    history,
+    notes: [],
+    createdAt: "2024-01-01",
+  };
+}
+
+/** The desktop sidebar's destination list. */
+const sidebarNav = () => screen.getByRole("navigation", { name: "Main navigation" });
+/** The mobile bottom tab bar. */
+const tabBar = () => screen.getByRole("navigation", { name: "Primary" });
+/** Labels of the links currently marked aria-current="page" inside a nav. */
+const currentLabels = (nav: HTMLElement) =>
+  within(nav)
+    .getAllByRole("link")
+    .filter((link) => link.getAttribute("aria-current") === "page")
+    .map((link) => link.textContent?.replace(/.$/, "").trim() ?? "");
+
+beforeEach(() => {
+  routerPushMock.mockClear();
+  usePathnameMock.mockReturnValue("/");
+  useStoreContextMock.mockReturnValue({ habits: [] as Habit[] });
+});
+
+afterEach(() => {
+  cleanup();
+});
+
+describe("Nav — information architecture", () => {
+  it("lists the six ADR-0003 destinations in the sidebar", () => {
+    // Given/When: the nav renders
+    render(<Nav user={ALICE} />);
+
+    // Then: the sidebar offers exactly the new top-level sections, in order
+    const hrefs = within(sidebarNav())
+      .getAllByRole("link")
+      .map((link) => link.getAttribute("href"));
+    expect(hrefs).toEqual(["/", "/habits", "/journal", "/analytics", "/pet", "/settings"]);
+    for (const name of ["Today", "Habits", "Reflect", "Insights", "Pet", "Settings"]) {
+      expect(within(sidebarNav()).getByRole("link", { name: new RegExp(`^${name}`) })).toBeTruthy();
+    }
+    // And: the retired groups/labels are gone
+    expect(screen.queryByText("Practice")).toBeNull();
+    expect(screen.queryByText("All habits")).toBeNull();
   });
 
-  afterEach(() => {
-    cleanup();
+  it("puts 'New habit' as the sidebar's primary action", () => {
+    // Given/When: the nav renders
+    render(<Nav user={ALICE} />);
+
+    // Then: a New habit link to the wizard sits in the sidebar (outside the list)
+    const sidebar = screen.getByRole("complementary", { name: "Sidebar" });
+    expect(within(sidebar).getByRole("link", { name: "New habit" }).getAttribute("href")).toBe("/habits/new");
   });
 
-  it("renders all nav groups (Practice, Reflect, Become)", () => {
-    // Given the navigation sidebar
-    // When it is rendered
-    render(<Nav user={{ name: "Alice", email: "alice@example.com" }} />);
+  it("shows five tabs in the mobile bottom bar (Settings is behind the avatar)", () => {
+    // Given/When: the nav renders
+    render(<Nav user={ALICE} />);
 
-    // Then all four group labels are visible (the legacy "Learn" group was
-    // removed when the Atomic-Habits-derived lessons feature was retired)
-    expect(screen.getByText("Practice")).toBeTruthy();
-    expect(screen.getByText("Reflect")).toBeTruthy();
-    expect(screen.getByText("Companion")).toBeTruthy();
-    expect(screen.getByText("Become")).toBeTruthy();
-    expect(screen.queryByText("Learn")).toBeNull();
+    // Then: the bottom bar has Today, Habits, Reflect, Insights, Pet
+    const names = within(tabBar())
+      .getAllByRole("link")
+      .map((link) => link.textContent);
+    expect(names).toEqual(["Today", "Habits", "Reflect", "Insights", "Pet"]);
+  });
+});
 
-    // And all remaining nav items are present
-    expect(screen.getByText("Today")).toBeTruthy();
-    expect(screen.getByText("All habits")).toBeTruthy();
-    expect(screen.getByText("New habit")).toBeTruthy();
-    expect(screen.getByText("Analytics")).toBeTruthy();
-    expect(screen.getByText("Journal")).toBeTruthy();
-    expect(screen.getByText("Weekly review")).toBeTruthy();
-    expect(screen.queryByText("Daily lessons")).toBeNull();
-    expect(screen.getByText("Hall of Fame")).toBeTruthy();
-    expect(screen.getByText("Identity")).toBeTruthy();
-    expect(screen.getByText("Settings")).toBeTruthy();
+describe("Nav — active section", () => {
+  const cases: Array<[string, string]> = [
+    ["/", "Today"],
+    ["/habits", "Habits"],
+    ["/habits/abc123", "Habits"],
+    ["/habits/new", "Habits"],
+    ["/journal", "Reflect"],
+    ["/review", "Reflect"],
+    ["/reflect", "Reflect"],
+    ["/analytics", "Insights"],
+    ["/hall-of-fame", "Insights"],
+    ["/insights", "Insights"],
+    ["/pet", "Pet"],
+  ];
+
+  it.each(cases)("marks the right tab current on %s", (pathname, expected) => {
+    // Given: the user is on a page
+    usePathnameMock.mockReturnValue(pathname);
+
+    // When: the nav renders
+    render(<Nav user={ALICE} />);
+
+    // Then: exactly that section is aria-current in both the tab bar and sidebar
+    const tabCurrent = within(tabBar())
+      .getAllByRole("link")
+      .filter((link) => link.getAttribute("aria-current") === "page")
+      .map((link) => link.textContent);
+    expect(tabCurrent).toEqual([expected]);
+    expect(currentLabels(sidebarNav())).toEqual([expected]);
   });
 
-  it("highlights the active item based on the current path", () => {
-    // Given the user is on the All habits page
-    usePathnameMock.mockReturnValue("/habits");
+  it("treats Identity as part of Settings", () => {
+    // Given: the user is on the Identity page (reached from Settings)
+    usePathnameMock.mockReturnValue("/identity");
 
-    // When the nav is rendered
-    render(<Nav user={{ name: "Alice", email: "alice@example.com" }} />);
+    // When: the nav renders
+    render(<Nav user={ALICE} />);
 
-    // Then the All habits link has the active class
-    const activeLink = screen.getByText("All habits").closest("a");
-    expect(activeLink?.classList.contains("active")).toBe(true);
-
-    // And the Today link does not have the active class
-    const todayLink = screen.getByText("Today").closest("a");
-    expect(todayLink?.classList.contains("active")).toBe(false);
+    // Then: Settings is current in the sidebar and no bottom tab is
+    expect(currentLabels(sidebarNav())).toEqual(["Settings"]);
+    const tabCurrent = within(tabBar())
+      .getAllByRole("link")
+      .filter((link) => link.getAttribute("aria-current") === "page");
+    expect(tabCurrent).toHaveLength(0);
+    // And: the mobile avatar link (→ Settings) is marked current instead
+    const banner = screen.getByRole("banner");
+    expect(within(banner).getByRole("link", { name: "Settings", current: "page" })).toBeTruthy();
   });
+});
 
-  it("highlights All habits when viewing a specific habit detail page", () => {
-    // Given the user is on a habit detail page
+describe("Nav — mobile top bar", () => {
+  it("titles the bar with the current section and offers New habit + Settings", () => {
+    // Given: the user is on a habit detail page
     usePathnameMock.mockReturnValue("/habits/abc123");
 
-    // When the nav is rendered
-    render(<Nav user={{ name: "Alice", email: "alice@example.com" }} />);
+    // When: the nav renders
+    render(<Nav user={ALICE} />);
 
-    // Then the All habits link is still highlighted
-    const activeLink = screen.getByText("All habits").closest("a");
-    expect(activeLink?.classList.contains("active")).toBe(true);
+    // Then: the banner shows the section name, a labelled New habit button and
+    // the avatar shortcut to Settings
+    const banner = screen.getByRole("banner");
+    expect(within(banner).getByText("Habits")).toBeTruthy();
+    expect(within(banner).getByRole("link", { name: "New habit" }).getAttribute("href")).toBe("/habits/new");
+    expect(within(banner).getByRole("link", { name: "Settings" }).getAttribute("href")).toBe("/settings");
+    // And: it is flagged so floating help bubbles keep clear of it
+    expect(banner.hasAttribute("data-top-obstruction")).toBe(true);
   });
 
-  it("does not highlight All habits when on the New habit page", () => {
-    // Given the user is on the New habit page
-    usePathnameMock.mockReturnValue("/habits/new");
+  it("flags the bottom tab bar as a bottom obstruction for popovers", () => {
+    // Given/When: the nav renders
+    render(<Nav user={ALICE} />);
 
-    // When the nav is rendered
-    render(<Nav user={{ name: "Alice", email: "alice@example.com" }} />);
+    // Then: HelpTip can find the tab bar to keep bubbles above it
+    expect(tabBar().hasAttribute("data-bottom-obstruction")).toBe(true);
+  });
+});
 
-    // Then the All habits link is not highlighted
-    const habitsLink = screen.getByText("All habits").closest("a");
-    expect(habitsLink?.classList.contains("active")).toBe(false);
+describe("Nav — user footer", () => {
+  it("shows the user's initial in the avatar", () => {
+    // Given/When: a named user
+    render(<Nav user={ALICE} />);
 
-    // And the New habit link is highlighted
-    const newHabitLink = screen.getByText("New habit").closest("a");
-    expect(newHabitLink?.classList.contains("active")).toBe(true);
+    // Then: the sidebar avatar shows the first letter of the name
+    expect(screen.getByTestId("nav-avatar").textContent).toBe("A");
   });
 
-  it("shows the user's initials in the avatar", () => {
-    // Given a user with a name
-    // When the nav is rendered
-    const { container } = render(<Nav user={{ name: "Alice", email: "alice@example.com" }} />);
-
-    // Then the avatar shows the first initial
-    expect(container.querySelector(".avatar")?.textContent).toBe("A");
-  });
-
-  it("shows the first letter of the email when name is missing", () => {
-    // Given a user with no name but an email
-    // When the nav is rendered
+  it("falls back to the email's first letter when the name is missing", () => {
+    // Given/When: a user with no name
     render(<Nav user={{ name: null, email: "bob@example.com" }} />);
 
-    // Then the avatar shows the first initial of the email
-    expect(screen.getByText("B")).toBeTruthy();
+    // Then: the avatar uses the email initial
+    expect(screen.getByTestId("nav-avatar").textContent).toBe("B");
   });
 
   it("shows a default initial when both name and email are missing", () => {
-    // Given a user with no name and no email
-    // When the nav is rendered
-    const { container } = render(<Nav user={{ name: null, email: null }} />);
+    // Given/When: an anonymous-looking user
+    render(<Nav user={{ name: null, email: null }} />);
 
-    // Then the avatar shows the default initial
-    expect(container.querySelector(".avatar")?.textContent).toBe("A");
+    // Then: the avatar shows the default initial
+    expect(screen.getByTestId("nav-avatar").textContent).toBe("A");
   });
 
-  it("shows the total vote count in the sidebar foot", () => {
-    // Given a user with habits that have history entries
-    const habits: Habit[] = [
-      {
-        id: "h1",
-        name: "Read",
-        emoji: "•",
-        cue: "",
-        craving: "",
-        response: "",
-        reward: "",
-        loopCue: "",
-        loopCraving: "",
-        loopResponse: "",
-        loopReward: "",
-        twoMin: "",
-        identity: "reader",
-        environment: "",
-        schedule: "Daily",
-        time: "Morning",
-        contract: "",
-        contractPartners: [],
-        history: { "2024-01-01": true, "2024-01-02": true },
-        notes: [],
-        createdAt: "2024-01-01",
-      },
-      {
-        id: "h2",
-        name: "Write",
-        emoji: "•",
-        cue: "",
-        craving: "",
-        response: "",
-        reward: "",
-        loopCue: "",
-        loopCraving: "",
-        loopResponse: "",
-        loopReward: "",
-        twoMin: "",
-        identity: "writer",
-        environment: "",
-        schedule: "Daily",
-        time: "Morning",
-        contract: "",
-        contractPartners: [],
-        history: { "2024-01-01": true },
-        notes: [],
-        createdAt: "2024-01-01",
-      },
-    ];
+  it("shows the total vote count", () => {
+    // Given: two habits with 2 + 1 completed days
+    useStoreContextMock.mockReturnValue({
+      habits: [
+        makeHabit("read", { "2024-01-01": true, "2024-01-02": true }),
+        makeHabit("write", { "2024-01-01": true }),
+      ],
+    });
 
-    useStoreContextMock.mockReturnValue({ habits });
+    // When: the nav renders
+    render(<Nav user={ALICE} />);
 
-    // When the nav is rendered
-    render(<Nav user={{ name: "Alice", email: "alice@example.com" }} />);
-
-    // Then the sidebar foot shows the total vote count (2 + 1 = 3)
+    // Then: every completion counts as one vote
     expect(screen.getByText("3 votes cast")).toBeTruthy();
   });
 
-  it("navigates to the correct page when keyboard shortcuts are pressed", () => {
-    // Given the nav is rendered and listening for keyboard events
-    render(<Nav user={{ name: "Alice", email: "alice@example.com" }} />);
+  it("offers a labelled sign-out button", () => {
+    // Given/When: the nav renders
+    render(<Nav user={ALICE} />);
 
-    // When the user presses the 'h' key
-    fireEvent.keyDown(window, { key: "h" });
-
-    // Then the router navigates to the All habits page
-    expect(routerPushMock).toHaveBeenCalledWith("/habits");
-
-    // When the user presses the 't' key
-    fireEvent.keyDown(window, { key: "T" });
-
-    // Then the router navigates to the Today page
-    expect(routerPushMock).toHaveBeenCalledWith("/");
-
-    // When the user presses the 'a' key
-    fireEvent.keyDown(window, { key: "a" });
-
-    // Then the router navigates to Analytics
-    expect(routerPushMock).toHaveBeenCalledWith("/analytics");
+    // Then: sign out is a real submit button with an accessible name
+    const signOut = screen.getByRole("button", { name: "Sign out" });
+    expect(signOut.getAttribute("type")).toBe("submit");
   });
+});
 
-  it("does not fire shortcuts when the user is typing in an input", () => {
-    // Given the nav is rendered alongside an input field
-    render(
-      <div>
-        <input data-testid="test-input" />
-        <Nav user={{ name: "Alice", email: "alice@example.com" }} />
-      </div>,
-    );
+/** Fire the Alt+Shift chord for a shortcut key ("t", "J" or ","). */
+function pressShortcut(key: string, target: Window | HTMLElement = window) {
+  const code = key === "," ? "Comma" : `Key${key.toUpperCase()}`;
+  fireEvent.keyDown(target, { key, code, altKey: true, shiftKey: true });
+}
 
-    // When the user types 'h' inside the input
-    const input = screen.getByTestId("test-input");
-    fireEvent.keyDown(input, { key: "h" });
+describe("Nav — keyboard shortcuts", () => {
+  it("maps Alt+Shift section keys to the new IA (T, H, N, R, I, P, comma)", () => {
+    // Given: the nav is listening for shortcuts
+    render(<Nav user={ALICE} />);
 
-    // Then navigation is not triggered
-    expect(routerPushMock).not.toHaveBeenCalled();
-  });
-
-  it("does not fire shortcuts when the user is typing in a textarea", () => {
-    // Given the nav is rendered alongside a textarea
-    render(
-      <div>
-        <textarea data-testid="test-textarea" />
-        <Nav user={{ name: "Alice", email: "alice@example.com" }} />
-      </div>,
-    );
-
-    // When the user types 'j' inside the textarea
-    const textarea = screen.getByTestId("test-textarea");
-    fireEvent.keyDown(textarea, { key: "j" });
-
-    // Then navigation is not triggered
-    expect(routerPushMock).not.toHaveBeenCalled();
-  });
-
-  it("covers all remaining navigation shortcuts (T, H, N, A, J, W, F, I, comma)", () => {
-    // Given the nav is rendered
-    render(<Nav user={{ name: "Alice", email: "alice@example.com" }} />);
-
-    // When each shortcut key is pressed (note: the legacy "L" shortcut for
-    // /lessons was removed when the Atomic-Habits-derived Learn section was
-    // retired)
     const shortcuts: [string, string][] = [
       ["t", "/"],
       ["h", "/habits"],
       ["n", "/habits/new"],
-      ["a", "/analytics"],
-      ["j", "/journal"],
-      ["w", "/review"],
-      ["f", "/hall-of-fame"],
-      ["i", "/identity"],
+      ["r", "/journal"],
+      ["i", "/analytics"],
+      ["p", "/pet"],
       [",", "/settings"],
     ];
 
+    // When: each key is pressed, Then: the router goes to its section
     for (const [key, href] of shortcuts) {
-      fireEvent.keyDown(window, { key });
-      expect(routerPushMock).toHaveBeenCalledWith(href);
+      pressShortcut(key);
+      expect(routerPushMock).toHaveBeenLastCalledWith(href);
     }
-
-    // Then all 9 shortcuts resulted in navigation
-    expect(routerPushMock).toHaveBeenCalledTimes(9);
+    expect(routerPushMock).toHaveBeenCalledTimes(shortcuts.length);
   });
 
-  it("does not navigate when the legacy 'L' lessons shortcut is pressed", () => {
-    // Given the nav is rendered (the lessons shortcut has been removed)
-    render(<Nav user={{ name: "Alice", email: "alice@example.com" }} />);
+  it("keeps the old deep-link keys for individual Reflect/Insights pages (J, W, A, F)", () => {
+    // Given: the nav is listening for shortcuts
+    render(<Nav user={ALICE} />);
 
-    // When the user presses the legacy "L" key
-    fireEvent.keyDown(window, { key: "l" });
+    const shortcuts: [string, string][] = [
+      ["J", "/journal"],
+      ["w", "/review"],
+      ["a", "/analytics"],
+      ["f", "/hall-of-fame"],
+    ];
 
-    // Then the router is not invoked because /lessons is no longer in the nav
+    // When/Then: each legacy key still reaches its page
+    for (const [key, href] of shortcuts) {
+      pressShortcut(key);
+      expect(routerPushMock).toHaveBeenLastCalledWith(href);
+    }
+  });
+
+  it("ignores keys pressed while typing in an input or textarea", () => {
+    // Given: form fields alongside the nav
+    render(
+      <div>
+        <input data-testid="test-input" />
+        <textarea data-testid="test-textarea" />
+        <Nav user={ALICE} />
+      </div>,
+    );
+
+    // When: the user types shortcut letters into them
+    pressShortcut("h", screen.getByTestId("test-input"));
+    pressShortcut("j", screen.getByTestId("test-textarea"));
+
+    // Then: navigation is not triggered
     expect(routerPushMock).not.toHaveBeenCalled();
   });
-});
 
-describe("Mobile drawer navigation", () => {
-  beforeEach(() => {
-    routerPushMock.mockClear();
-    usePathnameMock.mockReturnValue("/");
-    useStoreContextMock.mockReturnValue({ habits: [] as Habit[] });
+  it("ignores bare letters so stray keystrokes never navigate (WCAG 2.1.4)", () => {
+    // Given: the nav is listening for shortcuts
+    render(<Nav user={ALICE} />);
+
+    // When: the user presses T, Shift+H and Alt+R without the full chord
+    fireEvent.keyDown(window, { key: "t", code: "KeyT" });
+    fireEvent.keyDown(window, { key: "H", code: "KeyH", shiftKey: true });
+    fireEvent.keyDown(window, { key: "r", code: "KeyR", altKey: true });
+
+    // Then: nothing navigates
+    expect(routerPushMock).not.toHaveBeenCalled();
   });
 
-  afterEach(() => {
-    cleanup();
+  it("ignores the chord combined with Ctrl or Cmd (so browser shortcuts keep working)", () => {
+    // Given: the nav is listening for shortcuts
+    render(<Nav user={ALICE} />);
+
+    // When: the user adds Ctrl or Cmd to the chord
+    fireEvent.keyDown(window, { key: "R", code: "KeyR", altKey: true, shiftKey: true, ctrlKey: true });
+    fireEvent.keyDown(window, { key: "T", code: "KeyT", altKey: true, shiftKey: true, metaKey: true });
+
+    // Then: the browser shortcuts are left alone
+    expect(routerPushMock).not.toHaveBeenCalled();
   });
 
-  it("renders a hamburger menu button with correct ARIA attributes", () => {
-    // Given the nav is rendered
-    render(<Nav user={{ name: "Alice", email: "alice@example.com" }} />);
+  it("does nothing for unmapped keys such as the retired 'L' lessons shortcut", () => {
+    // Given: the nav is listening for shortcuts
+    render(<Nav user={ALICE} />);
 
-    // Then the mobile menu button is present and accessible
-    const menuBtn = screen.getByLabelText("Open navigation menu");
-    expect(menuBtn).toBeTruthy();
-    expect(menuBtn.getAttribute("aria-expanded")).toBe("false");
-    expect(menuBtn.getAttribute("aria-controls")).toBe("mobile-nav-drawer");
-  });
+    // When: the user presses Alt+Shift+L
+    pressShortcut("l");
 
-  it("opens the drawer when the hamburger button is clicked", async () => {
-    // Given the nav is rendered
-    render(<Nav user={{ name: "Alice", email: "alice@example.com" }} />);
-
-    // When the user clicks the menu button
-    const menuBtn = screen.getByLabelText("Open navigation menu");
-    fireEvent.click(menuBtn);
-
-    // Then the drawer overlay appears
-    await waitFor(() => {
-      expect(screen.getByRole("dialog")).toBeTruthy();
-    });
-
-    // And the menu button reflects the open state
-    expect(menuBtn.getAttribute("aria-expanded")).toBe("true");
-  });
-
-  it("closes the drawer when the backdrop overlay is clicked", async () => {
-    // Given the drawer is open
-    render(<Nav user={{ name: "Alice", email: "alice@example.com" }} />);
-    fireEvent.click(screen.getByLabelText("Open navigation menu"));
-
-    await waitFor(() => {
-      expect(screen.getByRole("dialog")).toBeTruthy();
-    });
-
-    // When the user clicks the backdrop (outside the drawer panel)
-    const overlay = screen.getByRole("dialog");
-    fireEvent.click(overlay);
-
-    // Then the drawer is removed from the DOM
-    await waitFor(() => {
-      expect(screen.queryByRole("dialog")).toBeNull();
-    });
-  });
-
-  it("closes the drawer when a navigation link inside the drawer is clicked", async () => {
-    // Given the drawer is open
-    render(<Nav user={{ name: "Alice", email: "alice@example.com" }} />);
-    fireEvent.click(screen.getByLabelText("Open navigation menu"));
-
-    await waitFor(() => {
-      expect(screen.getByRole("dialog")).toBeTruthy();
-    });
-
-    // When the user clicks a nav item inside the drawer
-    const drawerLinks = screen.getAllByText("All habits");
-    // The drawer contains a second copy of the nav items, so we target the one inside the dialog.
-    const drawerLink = drawerLinks.find((el) => el.closest('[role="dialog"]'));
-    expect(drawerLink).toBeTruthy();
-    fireEvent.click(drawerLink!);
-
-    // Then the drawer closes
-    await waitFor(() => {
-      expect(screen.queryByRole("dialog")).toBeNull();
-    });
-  });
-
-  it("renders the full desktop sidebar content inside the mobile drawer", async () => {
-    // Given the drawer is open
-    render(<Nav user={{ name: "Alice", email: "alice@example.com" }} />);
-    fireEvent.click(screen.getByLabelText("Open navigation menu"));
-
-    await waitFor(() => {
-      expect(screen.getByRole("dialog")).toBeTruthy();
-    });
-
-    // Then all remaining nav groups are visible inside the drawer (same UI as desktop)
-    const drawer = screen.getByRole("dialog");
-    expect(drawer.textContent).toContain("Practice");
-    expect(drawer.textContent).toContain("Reflect");
-    expect(drawer.textContent).toContain("Companion");
-    expect(drawer.textContent).toContain("Become");
-    expect(drawer.textContent).not.toContain("Learn");
-
-    // And the brand and user footer are also present
-    expect(drawer.textContent).toContain("Atomicly");
-    expect(drawer.textContent).toContain("Alice");
-  });
-
-  it("marks the mobile drawer panel as scrollable", async () => {
-    // Given the drawer is open
-    const { container } = render(<Nav user={{ name: "Alice", email: "alice@example.com" }} />);
-    fireEvent.click(screen.getByLabelText("Open navigation menu"));
-
-    await waitFor(() => {
-      expect(screen.getByRole("dialog")).toBeTruthy();
-    });
-
-    // Then the drawer panel carries the scrollable class so content can scroll if it exceeds viewport height
-    const drawerPanel = container.querySelector(".mobile-drawer");
-    expect(drawerPanel).toBeTruthy();
-    // JSDOM does not resolve stylesheet rules through getComputedStyle,
-    // so we verify the class is present which maps to overflow-y: auto in globals.css.
-    expect(drawerPanel!.classList.contains("mobile-drawer")).toBe(true);
+    // Then: the router is not invoked
+    expect(routerPushMock).not.toHaveBeenCalled();
   });
 });

@@ -1,0 +1,30 @@
+/* Skeleton — placeholder block shown while content loads. A gentle opacity
+   pulse (opacity only — cheap to animate) signals activity. */
+.skeleton {
+  display: block;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+.text {
+  height: 1em;
+  border-radius: var(--radius-sm);
+}
+.circle {
+  border-radius: var(--radius-full);
+}
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+/* Reduced motion: hold steady — the grey block alone communicates loading. */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}

@@ -151,7 +151,7 @@ async function openStackTab(page: import("@playwright/test").Page, habitId: stri
 
 async function linkAfter(page: import("@playwright/test").Page, targetName: string) {
   await page.click('button:has-text("Link after…")');
-  await page.click(`.chip:has-text("${targetName}")`);
+  await page.click(`[data-chip]:has-text("${targetName}")`);
   // Wait for selector to close and server round-trip to finish
   await page.waitForSelector('text=Select a habit to link after:', { state: "hidden" });
   await page.waitForTimeout(800);
@@ -159,7 +159,7 @@ async function linkAfter(page: import("@playwright/test").Page, targetName: stri
 
 async function linkBefore(page: import("@playwright/test").Page, targetName: string) {
   await page.click('button:has-text("Link before…")');
-  await page.click(`.chip:has-text("${targetName}")`);
+  await page.click(`[data-chip]:has-text("${targetName}")`);
   await page.waitForSelector('text=Select a habit to link before:', { state: "hidden" });
   await page.waitForTimeout(800);
 }
@@ -196,8 +196,8 @@ test.describe("Habit stacking", () => {
 
     // A is the root of the chain → step 1 of 2.
     await expect(page.locator('text=Step 1 of 2')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Morning Read")')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Evening Journal")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Morning Read")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Evening Journal")')).toBeVisible();
   });
 
   test("linking three habits into a chain (anchor can be a chain member)", async ({ page }) => {
@@ -215,9 +215,9 @@ test.describe("Habit stacking", () => {
     await openStackTab(page, idB);
     await linkAfter(page, "Chain C");
     await expect(page.locator('text=Step 2 of 3')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Chain A")')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Chain B")')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Chain C")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Chain A")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Chain B")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Chain C")')).toBeVisible();
   });
 
   test("removing a habit from a stack shows empty state", async ({ page }) => {
@@ -228,8 +228,8 @@ test.describe("Habit stacking", () => {
     await openStackTab(page, idA);
     await linkAfter(page, "Remove Partner");
     await expect(page.locator('text=Step 1 of 2')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Remove Me")')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Remove Partner")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Remove Me")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Remove Partner")')).toBeVisible();
 
     await removeFromStack(page);
   });
@@ -246,9 +246,9 @@ test.describe("Habit stacking", () => {
     // Verify chain on C's page
     await openStackTab(page, idC);
     await expect(page.locator('text=Step 1 of 3')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Middle A")')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Middle B")')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Middle C")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Middle A")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Middle B")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Middle C")')).toBeVisible();
 
     // Simulate removing B via API: clear B → A first (exclusivity), then C → A
     await setStackNextId(page, idB, null);
@@ -257,9 +257,9 @@ test.describe("Habit stacking", () => {
     // Verify A links to C (A is step 2 of 2)
     await openStackTab(page, idA);
     await expect(page.locator('text=Step 2 of 2')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Middle A")')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Middle C")')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Middle B")')).not.toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Middle A")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Middle C")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Middle B")')).not.toBeVisible();
   });
 
   test("moving a habit from one stack to another", async ({ page }) => {
@@ -283,8 +283,8 @@ test.describe("Habit stacking", () => {
     // Verify B is step 2 of 2 in Y → B
     await openStackTab(page, idB);
     await expect(page.locator('text=Step 2 of 2')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Move Y")')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Move B")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Move Y")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Move B")')).toBeVisible();
 
     // Verify A is now solo
     await openStackTab(page, idA);
@@ -300,13 +300,13 @@ test.describe("Habit stacking", () => {
     await page.click('button:has-text("Link after…")');
 
     // Both solo habits visible initially.
-    await expect(page.locator('button.chip:has-text("Morning Stretch")')).toBeVisible();
-    await expect(page.locator('button.chip:has-text("Evening Read")')).toBeVisible();
+    await expect(page.locator('button[data-chip]:has-text("Morning Stretch")')).toBeVisible();
+    await expect(page.locator('button[data-chip]:has-text("Evening Read")')).toBeVisible();
 
     // Type to filter.
     await page.locator('[data-testid="stack-link-search"]').fill("stretch");
-    await expect(page.locator('button.chip:has-text("Morning Stretch")')).toBeVisible();
-    await expect(page.locator('button.chip:has-text("Evening Read")')).not.toBeVisible();
+    await expect(page.locator('button[data-chip]:has-text("Morning Stretch")')).toBeVisible();
+    await expect(page.locator('button[data-chip]:has-text("Evening Read")')).not.toBeVisible();
   });
 
   test("link selector caps the list at 10 with a Show-all expand", async ({ page }) => {
@@ -397,26 +397,26 @@ test.describe("Habit stacking", () => {
     // Verify chain on C's page
     await openStackTab(page, idC);
     await expect(page.locator('text=Step 1 of 3')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Cycle A")')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Cycle B")')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Cycle C")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Cycle A")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Cycle B")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Cycle C")')).toBeVisible();
 
     // Open A's stack tab: its chain is C → B → A, so selector should exclude C, B, A
     await openStackTab(page, idA);
     await page.click('button:has-text("Link after…")');
 
     // A should NOT see itself or its chain members in the selector
-    // Use button.chip to target selector chips (chain diagram uses div.chip)
-    await expect(page.locator('button.chip:has-text("Cycle A")')).not.toBeVisible();
-    await expect(page.locator('button.chip:has-text("Cycle B")')).not.toBeVisible();
-    await expect(page.locator('button.chip:has-text("Cycle C")')).not.toBeVisible();
+    // Use button[data-chip] to target selector chips (chain diagram uses div[data-chip])
+    await expect(page.locator('button[data-chip]:has-text("Cycle A")')).not.toBeVisible();
+    await expect(page.locator('button[data-chip]:has-text("Cycle B")')).not.toBeVisible();
+    await expect(page.locator('button[data-chip]:has-text("Cycle C")')).not.toBeVisible();
 
     // Cancel and try linking before A — same exclusions
     await page.click('button:has-text("Cancel")');
     await page.click('button:has-text("Link before…")');
-    await expect(page.locator('button.chip:has-text("Cycle A")')).not.toBeVisible();
-    await expect(page.locator('button.chip:has-text("Cycle B")')).not.toBeVisible();
-    await expect(page.locator('button.chip:has-text("Cycle C")')).not.toBeVisible();
+    await expect(page.locator('button[data-chip]:has-text("Cycle A")')).not.toBeVisible();
+    await expect(page.locator('button[data-chip]:has-text("Cycle B")')).not.toBeVisible();
+    await expect(page.locator('button[data-chip]:has-text("Cycle C")')).not.toBeVisible();
   });
 
   test("multiple stack updates in sequence", async ({ page }) => {
@@ -437,7 +437,7 @@ test.describe("Habit stacking", () => {
     await setStackNextId(page, idC, idA);
     await page.reload();
     await openStackTab(page, idA);
-    await expect(page.locator('.chip:has-text("Seq C")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Seq C")')).toBeVisible();
     await expect(page.locator('text=Step 2 of 2')).toBeVisible();
 
     // Remove link
@@ -448,8 +448,8 @@ test.describe("Habit stacking", () => {
     await page.reload();
     await openStackTab(page, idA);
     await expect(page.locator('text=Step 2 of 2')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Seq A")')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Seq B")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Seq A")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Seq B")')).toBeVisible();
   });
 
   test("adds a standalone habit after a mid-chain habit", async ({ page }) => {
@@ -470,10 +470,10 @@ test.describe("Habit stacking", () => {
     await linkAfter(page, "Mid Solo");
 
     await expect(page.locator('text=Step 2 of 4')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Mid Root")')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Mid Middle")')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Mid Solo")')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Mid Tail")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Mid Root")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Mid Middle")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Mid Solo")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Mid Tail")')).toBeVisible();
 
     // From the standalone's own POV the chain order is the same; verify it
     // also reports step 3 of 4 from there.
@@ -494,9 +494,9 @@ test.describe("Habit stacking", () => {
     await linkBefore(page, "Top Solo");
 
     await expect(page.locator('text=Step 2 of 3')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Top Solo")')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Top Root")')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Top Tail")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Top Solo")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Top Root")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Top Tail")')).toBeVisible();
     void idT;
   });
 
@@ -512,9 +512,9 @@ test.describe("Habit stacking", () => {
     await openStackTab(page, idT);
     await linkAfter(page, "Bot Solo");
     await expect(page.locator('text=Step 2 of 3')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Bot Root")')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Bot Tail")')).toBeVisible();
-    await expect(page.locator('.chip:has-text("Bot Solo")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Bot Root")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Bot Tail")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("Bot Solo")')).toBeVisible();
     void idR;
   });
 
@@ -540,10 +540,10 @@ test.describe("Habit stacking", () => {
 
     // M is now step 3 of 4: R → Solo → M → T
     await expect(page.locator('text=Step 3 of 4')).toBeVisible();
-    await expect(page.locator('.chip:has-text("MidBefore Root")')).toBeVisible();
-    await expect(page.locator('.chip:has-text("MidBefore Solo")')).toBeVisible();
-    await expect(page.locator('.chip:has-text("MidBefore Middle")')).toBeVisible();
-    await expect(page.locator('.chip:has-text("MidBefore Tail")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("MidBefore Root")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("MidBefore Solo")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("MidBefore Middle")')).toBeVisible();
+    await expect(page.locator('[data-chip]:has-text("MidBefore Tail")')).toBeVisible();
     void idR;
     void idT;
   });
@@ -564,11 +564,11 @@ test.describe("Habit stacking", () => {
     await page.click('button:has-text("Link after…")');
 
     // Chain members must not appear in the picker.
-    await expect(page.locator('button.chip:has-text("Excl X")')).not.toBeVisible();
-    await expect(page.locator('button.chip:has-text("Excl Y")')).not.toBeVisible();
-    await expect(page.locator('button.chip:has-text("Excl Z")')).not.toBeVisible();
+    await expect(page.locator('button[data-chip]:has-text("Excl X")')).not.toBeVisible();
+    await expect(page.locator('button[data-chip]:has-text("Excl Y")')).not.toBeVisible();
+    await expect(page.locator('button[data-chip]:has-text("Excl Z")')).not.toBeVisible();
     // The standalone must appear.
-    await expect(page.locator('button.chip:has-text("Excl Solo")')).toBeVisible();
+    await expect(page.locator('button[data-chip]:has-text("Excl Solo")')).toBeVisible();
     void idX;
     void idY;
     void idZ;
@@ -592,7 +592,7 @@ test.describe("Today page stack cards", () => {
 
     await page.goto("/");
     // Top card (root A) visible.
-    await expect(page.locator('.habit-list-row:has-text("Today Stack A")').first()).toBeVisible();
+    await expect(page.locator('[data-testid="habit-row"]:has-text("Today Stack A")').first()).toBeVisible();
     // Wallet peek slivers communicate that more habits exist behind the top card.
     const peeks = page.locator('[data-testid="stack-card-peek"]');
     await expect(peeks.first()).toBeVisible();
@@ -610,14 +610,14 @@ test.describe("Today page stack cards", () => {
 
     await page.goto("/");
     // The root habit (A) should be visible as the stack card
-    await expect(page.locator('.habit-list-row:has-text("Today Stack A")').first()).toBeVisible();
+    await expect(page.locator('[data-testid="habit-row"]:has-text("Today Stack A")').first()).toBeVisible();
   });
 
   test("solo habits still render as standalone rows", async ({ page }) => {
     await seedHabit(page, unique("Solo Habit"), "soloer");
 
     await page.goto("/");
-    const soloRow = page.locator('.habit-list-row:has-text("Solo Habit")').first();
+    const soloRow = page.locator('[data-testid="habit-row"]:has-text("Solo Habit")').first();
     await expect(soloRow).toBeVisible();
   });
 
@@ -636,7 +636,7 @@ test.describe("Today page stack cards", () => {
 
     await page.goto("/");
     // Click the root card (A) to expand the stack.
-    await page.locator('.habit-list-row:has-text("Expand A")').first().click();
+    await page.locator('[data-testid="habit-row"]:has-text("Expand A") button[aria-expanded]').first().click();
 
     // After expand, should see collapse button
     await expect(page.locator('button:has-text("Collapse stack")')).toBeVisible();
@@ -646,11 +646,11 @@ test.describe("Today page stack cards", () => {
     const idA = await seedHabit(page, unique("Check A"), "checker");
 
     await page.goto("/");
-    const row = page.locator('.habit-list-row:has-text("Check A")').first();
+    const row = page.locator('[data-testid="habit-row"]:has-text("Check A")').first();
     await expect(row).toBeVisible({ timeout: 10000 });
 
     // Click the check circle (not the row which would navigate)
-    await row.locator('button[aria-label="Check"]').click();
+    await row.getByRole("button", { name: /^Mark .* done$/ }).click();
 
     // A mood sheet may appear; close it if so
     const moodClose = page.locator('button:has-text("Skip")');
@@ -671,11 +671,11 @@ test.describe("Today page stack cards", () => {
     await setStackNextId(page, idB, idA);
 
     await page.goto("/");
-    const rowB = page.locator('.habit-list-row:has-text("Reveal B")').first();
+    const rowB = page.locator('[data-testid="habit-row"]:has-text("Reveal B")').first();
     await expect(rowB).toBeVisible();
 
     // Check off B
-    await rowB.locator('button[aria-label="Check"]').click();
+    await rowB.getByRole("button", { name: /^Mark .* done$/ }).click();
 
     const moodClose = page.locator('button:has-text("Skip")');
     if (await moodClose.isVisible().catch(() => false)) {
@@ -684,8 +684,8 @@ test.describe("Today page stack cards", () => {
 
     // B should disappear (done), A should now appear as first undone
     await page.reload();
-    await page.waitForSelector('button:has-text("New habit")', { timeout: 10000 });
-    await expect(page.locator('.habit-list-row:has-text("Reveal A")').first()).toBeVisible();
+    await page.waitForSelector('[data-testid="today-view"]', { timeout: 10000 });
+    await expect(page.locator('[data-testid="habit-row"]:has-text("Reveal A")').first()).toBeVisible();
   });
 });
 
@@ -699,7 +699,7 @@ test.describe("Responsive layout", () => {
   test("no layout overflow at mobile viewport", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto("/");
-    await page.waitForSelector('button:has-text("New habit")', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="today-view"]', { timeout: 10000 });
 
     const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
     expect(bodyWidth).toBeLessThanOrEqual(375);

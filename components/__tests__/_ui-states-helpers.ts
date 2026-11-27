@@ -135,7 +135,5 @@ export function teardownUiStateDom() {
   cleanup();
   document.documentElement.removeAttribute("data-theme");
   document.documentElement.removeAttribute("data-theme-variant");
-  document.documentElement.style.removeProperty("--accent");
-  document.documentElement.style.removeProperty("--accent-2");
-  document.documentElement.style.removeProperty("--accent-soft");
+  document.documentElement.style.removeProperty("--accent-hue");
 }

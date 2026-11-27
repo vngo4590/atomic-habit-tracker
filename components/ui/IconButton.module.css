@@ -1,0 +1,41 @@
+/* IconButton — a square, icon-only control. Always 44×44 so it is a
+   comfortable touch target even though the glyph is only 20px. */
+
+.iconButton {
+  appearance: none;
+  display: inline-grid;
+  place-items: center;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  flex-shrink: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+.iconButton:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.iconButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.iconButton > span {
+  display: inline-flex;
+}
+.iconButton svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* "secondary" adds a visible border for icon buttons that float on content. */
+.secondary {
+  background: var(--surface);
+  border-color: var(--border);
+}

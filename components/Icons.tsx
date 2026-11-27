@@ -11,6 +11,7 @@ import {
   LineChart,
   Link as LinkIcon,
   Menu,
+  NotebookPen,
   PawPrint,
   Pencil,
   Plus,
@@ -50,21 +51,7 @@ export function IconChart(props: IconProps) {
 }
 
 export function IconJournal(props: IconProps) {
-  return (
-    <svg
-      viewBox="0 0 14 14"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      {...props}
-    >
-      <path d="M3 2h7l2 2v8H3z" />
-      <path d="M5 5h5M5 8h4" />
-    </svg>
-  );
+  return <NotebookPen {...iconDefaults} {...props} />;
 }
 
 export function IconReview(props: IconProps) {

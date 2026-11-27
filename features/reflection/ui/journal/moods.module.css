@@ -1,0 +1,18 @@
+/* Token-based mood colours. Every mood surface sets `data-mood` to its tone
+   and reads the resulting --mood-color — no raw colour literals, so moods
+   follow the theme and accent hue automatically. */
+.tone {
+  --mood-color: var(--accent-2);
+}
+.tone[data-mood="good"] {
+  --mood-color: var(--primary);
+}
+.tone[data-mood="meh"] {
+  --mood-color: var(--text-subtle);
+}
+.tone[data-mood="hard"] {
+  --mood-color: var(--warning);
+}
+.tone[data-mood="custom"] {
+  --mood-color: var(--accent-2);
+}

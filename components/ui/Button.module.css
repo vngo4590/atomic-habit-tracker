@@ -1,0 +1,132 @@
+/* Button — the four calm variants from MASTER.md. Colours come only from
+   tokens so both themes and every accent hue work automatically. */
+
+.button {
+  appearance: none;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+.button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.button:disabled,
+.button[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* Sizes. md meets the 44px touch target; sm is for dense desktop rows and
+   still grows to 44px on touch devices (coarse pointers). */
+.md {
+  min-height: var(--tap-target);
+  padding: 0 var(--space-5);
+  font-size: var(--text-sm);
+}
+.sm {
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  font-size: var(--text-sm);
+}
+@media (pointer: coarse) {
+  .sm {
+    min-height: var(--tap-target);
+  }
+}
+
+/* Variants */
+.primary {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+.primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+.secondary {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+.secondary:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+.ghost {
+  background: transparent;
+  color: var(--text-muted);
+}
+.ghost:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.danger {
+  background: var(--danger);
+  color: var(--on-primary);
+}
+.danger:hover:not(:disabled) {
+  background: color-mix(in oklch, var(--danger) 88%, var(--text) 12%);
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+/* Label row (icon + text). While loading it stays in the layout so the
+   button never changes width, but is hidden under the spinner. */
+.content {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.contentHidden {
+  visibility: hidden;
+}
+
+/* Icon slot — Lucide icons at 18px to sit optically with 14px text. */
+.icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.spinner {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-full);
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+/* Reduced motion: slow the spinner right down rather than removing it, so
+   there is still a visible "busy" cue. */
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 2.4s;
+  }
+}

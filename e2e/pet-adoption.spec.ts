@@ -3,6 +3,7 @@ import {
   adoptPet,
   checkInOn,
   cleanupHabits,
+  openAdoptFlow,
   releaseAllPets,
   seedHabit,
   todayKey,
@@ -60,6 +61,7 @@ test.describe("Pet adoption + feeding", () => {
 
     // When: the user tries to adopt a second companion without releasing the first
     const blocked = unique("Nimbus ");
+    await openAdoptFlow(page);
     await page.getByRole("button", { name: "Fiery" }).click();
     await page.getByLabel("Name").fill(blocked);
     await page.getByRole("button", { name: new RegExp(`Adopt ${blocked}`, "i") }).click();

@@ -1,0 +1,38 @@
+/* EmptyState — centred icon + title + text + optional call to action. */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-3);
+  padding: var(--space-10) var(--space-6);
+}
+.icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  background: var(--primary-soft);
+  color: var(--on-primary-soft);
+}
+.icon svg {
+  width: 24px;
+  height: 24px;
+}
+.title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-heading);
+  color: var(--text);
+}
+.text {
+  margin: 0;
+  max-width: 44ch;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.action {
+  margin-top: var(--space-2);
+}

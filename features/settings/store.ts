@@ -7,66 +7,84 @@
  * `useStore` in `lib/store`. Writes go through the shared `optimistic()` helper.
  */
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { clientLogger } from "@/lib/logger-client";
-import { changedFields, optimistic } from "@/lib/store/optimistic";
+import { changedFields, optimistic, type ShowToast } from "@/lib/store/optimistic";
 import type { StoreSnapshot, StoreState, UserPreferences } from "@/lib/types";
 
 import { savePreferencesAction } from "./actions";
 
 export type SettingsSlice = Pick<StoreState, "preferences" | "setPreferences" | "lessonMode" | "setLessonMode">;
 
-export function useSettingsSlice(snapshot: Pick<StoreSnapshot, "preferences">): SettingsSlice {
-  const [lessonModeState, setLessonModeState] = useState(snapshot.preferences.lessonMode);
+export function useSettingsSlice(snapshot: Pick<StoreSnapshot, "preferences">, showToast: ShowToast): SettingsSlice {
   const [preferences, setPreferencesState] = useState<UserPreferences>(snapshot.preferences);
+  const preferencesRef = useRef(preferences);
+  useEffect(() => {
+    preferencesRef.current = preferences;
+  }, [preferences]);
+  const saveVersion = useRef(0);
+  // Version of the latest save that wrote each field. Overlapping saves only
+  // touch fields no newer save has written, so a late response or a failed
+  // older save can never undo a newer change to another (or the same) field.
+  const fieldVersion = useRef(new Map<keyof UserPreferences, number>());
 
-  /** Adopt the server's saved preferences (and its lesson mode mirror). */
-  const reconcile = useCallback((saved: UserPreferences) => {
-    setPreferencesState(saved);
-    setLessonModeState(saved.lessonMode);
-  }, []);
+  const setPreferences = useCallback(async (patch: Partial<UserPreferences>) => {
+    const version = ++saveVersion.current;
+    const fields = Object.keys(patch) as (keyof UserPreferences)[];
+    // Remember the patched fields' old values so a failed save can restore them.
+    const before = preferencesRef.current;
+    const previous = Object.fromEntries(fields.map((key) => [key, before[key]])) as Partial<UserPreferences>;
+    const ownsField = (key: keyof UserPreferences) => (fieldVersion.current.get(key) ?? 0) <= version;
 
-  const setLessonMode = useCallback((lessonMode: UserPreferences["lessonMode"]) => {
-    setLessonModeState(lessonMode);
-    setPreferencesState((current) => ({ ...current, lessonMode }));
-    clientLogger.info("Setting lesson mode", {
-      event: "store.preferences.lesson_mode",
-      lessonMode,
-    });
-    void optimistic({
-      action: () => savePreferencesAction({ lessonMode }),
-      onSuccess: reconcile,
-      failure: {
-        log: "Lesson mode save failed",
-        event: "store.preferences.lesson_mode_failed",
-        context: { lessonMode },
-      },
-    });
-  }, [reconcile]);
-
-  const setPreferences = useCallback((patch: Partial<UserPreferences>) => {
-    setPreferencesState((current) => ({ ...current, ...patch }));
-    if (patch.lessonMode) {
-      setLessonModeState(patch.lessonMode);
-    }
     clientLogger.info("Saving preferences", {
       event: "store.preferences.save",
       fields: changedFields(patch),
     });
-    void optimistic({
+    let saved = false;
+    await optimistic({
+      apply: () => {
+        fields.forEach((key) => fieldVersion.current.set(key, version));
+        setPreferencesState((current) => ({ ...current, ...patch }));
+        return () => {
+          const restore = fields.filter(ownsField);
+          setPreferencesState((current) => ({
+            ...current,
+            ...Object.fromEntries(restore.map((key) => [key, previous[key]])),
+          }));
+        };
+      },
       action: () => savePreferencesAction(patch),
-      onSuccess: reconcile,
+      onSuccess: (result) => {
+        saved = true;
+        // Adopt the server's values except where a newer save has taken over.
+        const adopt = (Object.keys(result) as (keyof UserPreferences)[]).filter(ownsField);
+        setPreferencesState((current) => ({
+          ...current,
+          ...Object.fromEntries(adopt.map((key) => [key, result[key]])),
+        }));
+      },
       failure: {
         log: "Preferences save failed",
         event: "store.preferences.save_failed",
         context: { fields: changedFields(patch) },
+        toast: "Couldn't save settings",
       },
+      showToast,
     });
-  }, [reconcile]);
+    return saved;
+  }, [showToast]);
+
+  const setLessonMode = useCallback((lessonMode: UserPreferences["lessonMode"]) => {
+    clientLogger.info("Setting lesson mode", {
+      event: "store.preferences.lesson_mode",
+      lessonMode,
+    });
+    void setPreferences({ lessonMode });
+  }, [setPreferences]);
 
   return useMemo(
-    () => ({ preferences, setPreferences, lessonMode: lessonModeState, setLessonMode }),
-    [preferences, setPreferences, lessonModeState, setLessonMode],
+    () => ({ preferences, setPreferences, lessonMode: preferences.lessonMode, setLessonMode }),
+    [preferences, setPreferences, setLessonMode],
   );
 }

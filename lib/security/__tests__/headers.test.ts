@@ -47,6 +47,15 @@ describe("buildContentSecurityPolicy", () => {
     expect(csp).toContain("style-src 'self' 'nonce-abc123' 'unsafe-inline'");
   });
 
+  it("allows inline style attributes without loosening <style> elements", () => {
+    // Given the nonce-based style-src (which disables 'unsafe-inline' there)
+    const csp = buildContentSecurityPolicy("abc123", false);
+    // Then style attributes (CSS-variable passthrough) are explicitly allowed
+    expect(csp).toContain("style-src-attr 'unsafe-inline'");
+    // And <style> elements still require the nonce (no style-src-elem bypass)
+    expect(csp).not.toContain("style-src-elem");
+  });
+
   it("locks down framing, objects, and base URI", () => {
     // Then clickjacking and injection-prone directives are hardened
     const csp = buildContentSecurityPolicy("nonce", false);

@@ -1,0 +1,67 @@
+/* StackCardGroup — wallet-style stack for habit chains on Today.
+   Peek count and depth arrive as data attributes (data-peeks, data-depth),
+   so no inline styles are needed. */
+
+/* Collapsed: the deck leaves room under the top card for the peek slivers. */
+.deck {
+  position: relative;
+}
+.deck[data-peeks="1"] {
+  padding-bottom: var(--space-2);
+}
+.deck[data-peeks="2"] {
+  padding-bottom: var(--space-4);
+}
+
+/* A peek sliver: an empty card inset behind the top card whose bottom edge
+   shows 8px below the card above it (depth 1 = nearest, depth 2 = furthest). */
+.peek {
+  position: absolute;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  pointer-events: none;
+}
+.peek[data-depth="1"] {
+  inset: var(--space-2) var(--space-2) 0;
+  opacity: 0.85;
+  z-index: 1;
+}
+.deck[data-peeks="2"] .peek[data-depth="1"] {
+  bottom: var(--space-2);
+}
+.peek[data-depth="2"] {
+  inset: var(--space-4) var(--space-4) 0;
+  opacity: 0.6;
+  z-index: 0;
+}
+
+.top {
+  position: relative;
+  z-index: 2;
+}
+
+/* "+N more in stack" hint under the stack. */
+.moreLine {
+  position: relative;
+  z-index: 2;
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--text-subtle);
+  text-align: center;
+}
+
+/* Expanded: a plain vertical list of the next links. */
+.expanded {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.expanded .moreLine {
+  margin: 0;
+}
+
+.collapseBtn {
+  align-self: center;
+}

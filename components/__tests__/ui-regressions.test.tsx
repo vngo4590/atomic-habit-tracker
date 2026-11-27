@@ -27,9 +27,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   document.documentElement.removeAttribute("data-theme");
-  document.documentElement.style.removeProperty("--accent");
-  document.documentElement.style.removeProperty("--accent-2");
-  document.documentElement.style.removeProperty("--accent-soft");
+  document.documentElement.style.removeProperty("--accent-hue");
   window.localStorage.clear();
 });
 
@@ -65,8 +63,8 @@ describe("UI regressions", () => {
     applyAppearance("dark", 145);
 
     expect(document.documentElement.dataset.theme).toBe("dark");
-    expect(document.documentElement.style.getPropertyValue("--accent")).toBe("oklch(62% 0.13 145)");
-    expect(document.documentElement.style.getPropertyValue("--accent-soft")).toBe("oklch(28% 0.05 145)");
+    // Every accent token is derived in CSS from this single hue variable.
+    expect(document.documentElement.style.getPropertyValue("--accent-hue")).toBe("145");
     expect(window.localStorage.getItem("atomicly:theme")).toBe("dark");
     expect(window.localStorage.getItem("atomicly:accent")).toBe("145");
   });

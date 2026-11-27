@@ -8,14 +8,14 @@ import { test, expect, type Page } from "@playwright/test";
  * WHY ONLY AN E2E TEST CAN PROVE THIS:
  * The bug was purely a rendered-geometry problem. The bubble opens *above* its
  * trigger by default, but on a phone the `/habits/new` heading sits right below
- * the fixed hamburger menu button, so an upward bubble slid underneath that
- * button and off the top of the screen. jsdom reports every element as a
+ * the fixed mobile top bar, so an upward bubble slid underneath that
+ * bar and off the top of the screen. jsdom reports every element as a
  * zero-sized box at (0,0), so a unit test can only check the maths we feed it —
  * it cannot prove the real browser paints the bubble in a readable place. This
  * spec measures real `getBoundingClientRect()` boxes in a real layout and
  * asserts the three user-visible invariants:
  *   1. the whole bubble is inside the viewport,
- *   2. it never overlaps the fixed mobile menu button,
+ *   2. it never overlaps the fixed mobile top bar,
  *   3. the bubble is the top-most element at its own centre (nothing covers it).
  *
  * It runs under both Playwright projects, so the desktop project proves we did
@@ -32,7 +32,7 @@ type TipGeometry = {
   placement: string | null;
   /** True when every edge of the bubble is inside the viewport. */
   withinViewport: boolean;
-  /** True when the bubble's box intersects the fixed mobile menu button. */
+  /** True when the bubble's box intersects the fixed mobile top bar. */
   overlapsMenuButton: boolean;
   /** True when the bubble itself is painted on top at its own centre point. */
   unobstructed: boolean;
@@ -40,12 +40,12 @@ type TipGeometry = {
   aboveTrigger: boolean;
   /** True when the bubble sits entirely below its trigger. */
   belowTrigger: boolean;
-  /** True when the fixed hamburger menu button is rendered (mobile layout). */
+  /** True when the fixed mobile top bar is rendered (mobile layout). */
   mobileMenuVisible: boolean;
   /**
    * True when the bubble genuinely fits in the gap between the trigger and the
    * highest usable point on screen (the viewport top, or the bottom of the
-   * fixed mobile menu button when that is in the way). Measured independently
+   * fixed mobile top bar when that is in the way). Measured independently
    * of the component's own decision so we can assert the rule it must follow.
    */
   hasRoomAbove: boolean;
@@ -75,9 +75,9 @@ async function openAndMeasureTip(page: Page, label: string): Promise<TipGeometry
     const tipRect = tip.getBoundingClientRect();
     const triggerRect = trigger.getBoundingClientRect();
 
-    // The hamburger button is `display: none` on desktop, so an empty box means
+    // The mobile top bar is `display: none` on desktop, so an empty box means
     // "no mobile chrome in the way".
-    const menuButton = document.querySelector<HTMLElement>(".mobile-menu-btn");
+    const menuButton = document.querySelector<HTMLElement>("[data-top-obstruction]");
     const menuRect = menuButton?.getBoundingClientRect() ?? null;
     const mobileMenuVisible = !!menuRect && menuRect.width > 0 && menuRect.height > 0;
     const overlapsMenuButton =
@@ -127,11 +127,11 @@ test.describe("HelpTip stays readable inside the viewport", () => {
     await expect(page.getByRole("button", { name: "How many habits can I have?" })).toBeVisible();
   });
 
-  test("keeps the heading help bubble on screen and clear of the mobile menu button", async ({
+  test("keeps the heading help bubble on screen and clear of the mobile top bar", async ({
     page,
   }) => {
     // Given: the Create Habit page, whose heading tip sits near the top of the
-    // screen — directly under the fixed hamburger button on a phone.
+    // screen — directly under the fixed mobile top bar on a phone.
     // When: the user taps the "?" beside the heading
     const geometry = await openAndMeasureTip(page, "How many habits can I have?");
 
@@ -144,7 +144,7 @@ test.describe("HelpTip stays readable inside the viewport", () => {
 
   test("only flips the bubble below the trigger when it cannot fit above", async ({ page }) => {
     // Given/When: the heading help tip is opened in whichever layout this
-    // project renders (mobile drawer nav vs. desktop sidebar).
+    // project renders (mobile top bar + tab bar vs. desktop sidebar).
     const geometry = await openAndMeasureTip(page, "How many habits can I have?");
 
     if (geometry.hasRoomAbove) {
@@ -162,11 +162,11 @@ test.describe("HelpTip stays readable inside the viewport", () => {
   });
 
   test("flips the heading bubble below the trigger in the mobile layout", async ({ page }) => {
-    // Given: the mobile layout, where the fixed hamburger button sits directly
+    // Given: the mobile layout, where the fixed mobile top bar sits directly
     // above the Create Habit heading. (Skipped on the desktop project, which
-    // has no hamburger button.)
+    // has no mobile top bar.)
     const geometry = await openAndMeasureTip(page, "How many habits can I have?");
-    test.skip(!geometry.mobileMenuVisible, "Desktop layout has no fixed mobile menu button.");
+    test.skip(!geometry.mobileMenuVisible, "Desktop layout has no fixed mobile top bar.");
 
     // Then: this is the exact regression case — the bubble must hang below.
     expect(geometry.placement).toBe("bottom");
@@ -180,7 +180,7 @@ test.describe("HelpTip stays readable inside the viewport", () => {
 
     if (geometry.fitsGrowingRight) {
       // Then: the bubble starts exactly where the "?" starts and grows to the
-      // right, so it can never reach back towards the top-left menu button.
+      // right, so it can never reach back towards the top-left corner.
       expect(Math.abs(geometry.leftEdgeDelta)).toBeLessThanOrEqual(1);
     } else {
       // Unless the trigger sits so close to the right edge that a right-growing
@@ -219,9 +219,9 @@ test.describe("HelpTip stays readable inside the viewport", () => {
 
   /**
    * The medium-window regression: at tablet-ish sizes the page scrolls under
-   * the fixed hamburger button, so the trigger itself can slip behind it. The
+   * the fixed mobile top bar, so the trigger itself can slip behind it. The
    * bubble is anchored to the trigger, so flipping it below is NOT enough — it
-   * has to be pushed back down past the menu. This sweep opens both tips on the
+   * has to be pushed back down past the bar. This sweep opens both tips on the
    * page at several window sizes and scroll offsets and demands the bubble stay
    * readable in every combination.
    */
@@ -265,7 +265,7 @@ test.describe("HelpTip stays readable inside the viewport", () => {
               const tip = document.querySelector<HTMLElement>('[role="tooltip"]');
               if (!tip) continue;
               const rect = tip.getBoundingClientRect();
-              const menu = document.querySelector<HTMLElement>(".mobile-menu-btn");
+              const menu = document.querySelector<HTMLElement>("[data-top-obstruction]");
               const menuRect =
                 menu && getComputedStyle(menu).display !== "none"
                   ? menu.getBoundingClientRect()

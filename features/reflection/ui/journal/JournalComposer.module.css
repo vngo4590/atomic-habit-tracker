@@ -1,0 +1,51 @@
+/* JournalComposer — compose box and inline editor share this form. */
+.composer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.heading {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-heading);
+  letter-spacing: var(--tracking-heading);
+  color: var(--text);
+}
+
+/* Optional prompt chips — quiet, secondary to the form itself. */
+.prompts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.prompt {
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-3);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+.prompt:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.prompt:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

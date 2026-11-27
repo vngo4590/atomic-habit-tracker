@@ -93,6 +93,11 @@ export function buildContentSecurityPolicy(
     // 'unsafe-inline' is kept as a fallback for older browsers and does NOT weaken
     // modern browsers (CSP3 ignores 'unsafe-inline' when a nonce is present).
     `style-src 'self' 'nonce-${nonce}' 'unsafe-inline'`,
+    // Style *attributes* (style="--hue: 160") carry per-item data into generic
+    // CSS classes. Because style-src has a nonce, browsers would block every
+    // server-rendered style attribute, so we allow attributes only. This does
+    // not allow <style> elements or any script; attribute CSS cannot execute JS.
+    "style-src-attr 'unsafe-inline'",
     // Images may be self-hosted, data URIs (icons), or blobs (generated sprites).
     "img-src 'self' blob: data:",
     // Fonts are bundled by next/font; data: covers inlined glyphs.

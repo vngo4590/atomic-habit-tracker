@@ -106,11 +106,16 @@ test.describe("Creating a habit", () => {
     const action = unique("Read 1 page about AI");
     await page.goto("/habits/new");
 
-    const blanks = page.locator(".input");
-    await blanks.nth(0).fill(action); // action (name)
-    await blanks.nth(1).fill("At morning"); // cue
-    await blanks.nth(2).fill("at my desk."); // place
-    await blanks.nth(3).fill("A person who is amazing at AI"); // identity
+    // The builder is a short wizard: habit → identity → cue & place →
+    // (optional) four laws → review.
+    await page.getByPlaceholder("read one page").fill(action); // action (name)
+    await page.click('button:has-text("Next")');
+    await page.getByPlaceholder("a reader").fill("A person who is amazing at AI"); // identity
+    await page.click('button:has-text("Next")');
+    await page.getByPlaceholder("after I pour my coffee").fill("At morning"); // cue
+    await page.getByPlaceholder("at my desk").fill("at my desk."); // place
+    await page.click('button:has-text("Next")');
+    await page.click('button:has-text("Skip")');
 
     // When: they create the habit
     await page.click('button:has-text("Create habit")');
@@ -182,8 +187,8 @@ test.describe("Writing a markdown journal entry", () => {
   test("markdown in a journal entry renders as formatted HTML", async ({ page }) => {
     // Given: a user composing a new journal entry written in markdown
     const title = unique("Markdown Reflection");
+    // The composer is always open at the top of the page.
     await page.goto("/journal");
-    await page.click('button:has-text("New entry")');
 
     await page.fill('input[placeholder="What happened today?"]', title);
     await page.fill(
@@ -235,61 +240,56 @@ test.describe("Reflecting with a weekly review", () => {
       await page.click('button:has-text("Edit review")');
     }
 
+    // The review is a 3-step wizard: one question per step.
     const reflection = unique("I showed up on the hard days");
-    await page.locator("textarea").nth(0).fill(reflection);
-    await page.locator("textarea").nth(1).fill("Lay my kit out the night before.");
-    await page.locator("textarea").nth(2).fill("Someone who runs whatever the weather.");
+    await page.getByLabel("What went well? Why?").fill(reflection);
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page.getByLabel("What didn't? What's the smallest fix?").fill("Lay my kit out the night before.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page.getByLabel("Who did I vote to become this week?").fill("Someone who runs whatever the weather.");
 
     // When: they save the review
-    await page.click('button:has-text("Save review")');
+    await page.getByRole("button", { name: "Save review" }).click();
 
     // Then: the saved reflection is shown back in the read-only review display.
-    await expect(page.locator('text=This week\'s review')).toBeVisible();
+    await expect(page.getByRole("heading", { name: "This week's review" })).toBeVisible();
     await expect(page.locator(`text=${reflection}`)).toBeVisible();
   });
 });
 
 /* -------------------------------------------------------------------------- */
-/* 5. Theme switching — every theme applies without breaking the UI           */
+/* 5. Theme switching — Light and Dark both apply without breaking the UI     */
 /* -------------------------------------------------------------------------- */
 
 test.describe("Switching themes", () => {
-  // Each theme card maps to the data-theme-variant + base data-theme it applies.
-  const THEMES: Array<{ label: string; variant: string; base: string }> = [
-    { label: "Bright", variant: "light", base: "light" },
-    { label: "Midnight", variant: "dark", base: "dark" },
-    { label: "Glass", variant: "glass", base: "light" },
-    { label: "Neon", variant: "neon", base: "dark" },
-    { label: "Fairy", variant: "fairy", base: "light" },
-    { label: "Starlight", variant: "stars", base: "dark" },
+  // ADR-0003: exactly two themes. Each button sets data-theme on <html>.
+  const THEMES: Array<{ label: string; theme: string }> = [
+    { label: "Light", theme: "light" },
+    { label: "Dark", theme: "dark" },
   ];
 
-  test("each theme applies its variant and keeps the UI intact", async ({ page }) => {
+  test("each theme applies and keeps the UI intact", async ({ page }) => {
     await page.goto("/settings");
     const html = page.locator("html");
-    const gallery = page.locator('[aria-label="Theme"]');
+    const picker = page.getByRole("group", { name: "Theme" });
 
     for (const theme of THEMES) {
-      // When: the user selects a theme from the gallery
-      await gallery.locator(`button:has-text("${theme.label}")`).click();
+      // When: the user selects a theme
+      await picker.getByRole("button", { name: theme.label }).click();
 
-      // Then: the document switches to that variant + its base light/dark mode
-      await expect(html).toHaveAttribute("data-theme-variant", theme.variant);
-      await expect(html).toHaveAttribute("data-theme", theme.base);
+      // Then: the document switches to that theme
+      await expect(html).toHaveAttribute("data-theme", theme.theme);
 
-      // And: the core UI is still intact (no blank screen / broken layout) —
-      // the Settings heading and the theme gallery remain visible on every
-      // viewport (the sidebar is intentionally hidden on mobile).
+      // And: the core UI is still intact (no blank screen / broken layout).
       await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
-      await expect(gallery).toBeVisible();
+      await expect(picker).toBeVisible();
     }
 
     // Leave the user on a stable default so later tests aren't affected.
-    await gallery.locator('button:has-text("Bright")').click();
-    await expect(html).toHaveAttribute("data-theme-variant", "light");
+    await picker.getByRole("button", { name: "Light" }).click();
+    await expect(html).toHaveAttribute("data-theme", "light");
   });
 });
-
 /* -------------------------------------------------------------------------- */
 /* 6. Identity ledger — check-ins accumulate as votes per identity            */
 /* -------------------------------------------------------------------------- */
@@ -311,10 +311,10 @@ test.describe("Tracking identity votes", () => {
     await page.goto("/identity");
 
     // Then: the ledger lists that identity with three votes of progress.
-    const row = page.locator(".eyebrow", { hasText: "Vote ledger" }).locator("xpath=ancestor::section");
+    const row = page.getByRole("region", { name: "Vote ledger" });
     await expect(row).toContainText(`I am ${identity}`);
-    await expect(row).toContainText("3");
-    await expect(row).toContainText("3 TOTAL");
+    await expect(row).toContainText("3 votes");
+    await expect(row).toContainText("3 votes total");
   });
 });
 
@@ -339,7 +339,7 @@ test.describe("Reviewing analytics", () => {
     // Then: the page renders and the "Total check-ins" stat reflects the logs.
     await expect(page.getByRole("heading", { name: /analytics/i })).toBeVisible();
     await expect(page.locator('text=Daily completion')).toBeVisible();
-    const totalCard = page.locator('.card', { hasText: "Total check-ins" });
+    const totalCard = page.getByTestId("kpi-total-check-ins");
     await expect(totalCard).toContainText("2");
   });
 });
@@ -363,7 +363,7 @@ test.describe("Chaining and reordering habits", () => {
     await page.goto(`/habits/${idA}`);
     await page.click('button:has-text("Stack")');
     await page.click('button:has-text("Link after…")');
-    await page.click(`[data-testid="stack-link-options"] .chip:has-text("${nameB}")`);
+    await page.click(`[data-testid="stack-link-options"] [data-chip]:has-text("${nameB}")`);
     await page.waitForSelector('text=Select a habit to link after:', { state: "hidden" });
 
     // Then: the two habits form a chain shown as Step 1 of 2.

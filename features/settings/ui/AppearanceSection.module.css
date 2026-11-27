@@ -1,0 +1,115 @@
+/* Appearance — theme segmented control, accent swatches and custom hue. */
+
+.segmented {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+.segment {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: calc(var(--radius-sm) - 2px);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+.segment:hover {
+  color: var(--text);
+}
+.segment[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+.segment:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.segment svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.75;
+}
+@media (pointer: coarse) {
+  .segment {
+    min-height: var(--tap-target);
+  }
+}
+
+/* Accent presets — pill buttons with a live colour dot. */
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.swatchButton {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap-target);
+  padding: 0 var(--space-4) 0 var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-standard);
+}
+.swatchButton:hover {
+  border-color: var(--border-strong);
+}
+.swatchButton[aria-pressed="true"] {
+  border-color: var(--text);
+  font-weight: var(--weight-medium);
+}
+.swatchButton:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Same lightness/chroma as the --primary token for each theme, so the swatch
+   previews the colour buttons will actually use (and --on-primary reads). */
+.swatch {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  background: oklch(0.48 0.09 var(--hue));
+  color: var(--on-primary);
+}
+:global([data-theme="dark"]) .swatch {
+  background: oklch(0.8 0.09 var(--hue));
+}
+.swatch svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.5;
+}
+
+.custom {
+  margin-top: var(--space-4);
+  display: grid;
+  gap: var(--space-2);
+}
+.customLabel {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}

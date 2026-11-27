@@ -1,7 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { HabitRow } from "@/components/HabitRow";
 import { MoodCheckSheet } from "@/components/MoodCheckSheet";
 import { Nav } from "@/components/Nav";
 import { Toast } from "@/components/Toast";
@@ -43,24 +42,6 @@ afterEach(() => {
 });
 
 describe("Accessibility", () => {
-  it("Check button has proper aria-label for Check and Uncheck states", () => {
-    // Given: a habit row that is not done
-    const { rerender } = render(
-      <HabitRow habit={makeHabit()} done={false} streak={0} onCheck={vi.fn()} onOpen={vi.fn()} />,
-    );
-
-    // Then: the check button is labelled Check
-    expect(screen.getByLabelText("Check")).toBeTruthy();
-
-    // When: rerendered as done
-    rerender(
-      <HabitRow habit={makeHabit()} done={true} streak={1} onCheck={vi.fn()} onOpen={vi.fn()} />,
-    );
-
-    // Then: the check button is labelled Uncheck
-    expect(screen.getByLabelText("Uncheck")).toBeTruthy();
-  });
-
   it.skip("Mood buttons have role and aria-pressed", () => {
     // Bug: MoodCheckSheet mood buttons are <button> elements but do not expose
     // aria-pressed to communicate their selected state to screen readers.

@@ -1,7 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { HabitRow } from "@/components/HabitRow";
 import AnalyticsPage from "@/app/(root)/analytics/page";
 import HallOfFamePage from "@/app/(root)/hall-of-fame/page";
 import HabitDetailPage from "@/app/(root)/habits/[id]/page";
@@ -45,18 +44,17 @@ afterEach(() => {
 });
 
 describe("Visual States", () => {
-  it("Cards render with proper padding and borders", () => {
+  it("Cards render as labelled sections", () => {
     // Given: the analytics page which renders multiple cards
     storeMock.habits = [];
 
     // When: the page renders
     render(<AnalyticsPage />);
 
-    // Then: card elements exist with expected classes
-    const cards = document.querySelectorAll(".card");
-    expect(cards.length).toBeGreaterThan(0);
-    const padded = document.querySelectorAll(".card-pad");
-    expect(padded.length).toBeGreaterThan(0);
+    // Then: each card is a section named by its heading
+    expect(screen.getByRole("region", { name: "Daily completion" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "By weekday" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "By habit" })).toBeTruthy();
   });
 
   it("Chips show active vs inactive states", () => {
@@ -66,13 +64,12 @@ describe("Visual States", () => {
     // When: the page renders
     render(<IdentityPage />);
 
-    // Then: the active value chip has the active class
-    const activeChips = document.querySelectorAll(".chip.active");
-    expect(activeChips.length).toBeGreaterThan(0);
-    expect(activeChips[0].textContent).toContain("Consistency");
+    // Then: the value renders as a chip with its own labelled remove control
+    const remove = screen.getByRole("button", { name: "Remove core value Consistency" });
+    expect(remove.closest("li")?.textContent).toContain("Consistency");
   });
 
-  it("Active tab has the accent underline class", () => {
+  it("Active tab is marked selected", () => {
     // Given: a habit exists and we are on the detail page
     storeMock.habits = [makeHabit()];
     paramsMock.current = { id: "habit_1" };
@@ -80,8 +77,8 @@ describe("Visual States", () => {
     // When: the detail page renders (default tab is overview)
     render(<HabitDetailPage />);
 
-    // Then: the Overview tab carries the active class
-    const activeTab = document.querySelector(".tab.active");
+    // Then: the Overview tab is the selected tab
+    const activeTab = document.querySelector('[role="tab"][aria-selected="true"]');
     expect(activeTab).toBeTruthy();
     expect(activeTab?.textContent).toBe("Overview");
   });
@@ -112,23 +109,6 @@ describe("Visual States", () => {
     expect(fiftyBar).toBeTruthy();
   });
 
-  it("Streak pill only renders when streak is greater than 0", () => {
-    // Given: a habit row with zero streak
-    const { rerender } = render(
-      <HabitRow habit={makeHabit()} done={false} streak={0} onCheck={vi.fn()} onOpen={vi.fn()} />,
-    );
-
-    // Then: no streak pill is present
-    expect(screen.queryByText("0")).toBeNull();
-
-    // When: rerendered with a positive streak
-    rerender(
-      <HabitRow habit={makeHabit()} done={false} streak={5} onCheck={vi.fn()} onOpen={vi.fn()} />,
-    );
-
-    // Then: the streak pill appears
-    expect(screen.getByText("5")).toBeTruthy();
-  });
 });
 
 // ---------------------------------------------------------------------------

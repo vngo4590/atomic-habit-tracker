@@ -1,0 +1,5 @@
+/* Plain-text stand-in shown while the markdown renderer loads. */
+.plain {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

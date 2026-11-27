@@ -148,3 +148,17 @@ export function composeHabitSentence(
 
   return body;
 }
+
+/**
+ * Turn a stored identity into an "I am ..." claim without doubling the
+ * subject. Users type identities either as a noun phrase ("a reader") or as a
+ * full first-person clause ("I take care of my energy.", "I am a runner").
+ * The former gets "I am " prepended; the latter is shown as written. Trailing
+ * punctuation is dropped so callers can add their own full stop.
+ */
+export function identityClaim(identity: string): string {
+  const trimmed = stripTrailingPunctuation(identity);
+  if (!trimmed) return "";
+  if (/^(i|i'm|i’m)(\s|$)/iu.test(trimmed)) return `I${trimmed.slice(1)}`;
+  return `I am ${trimmed}`;
+}

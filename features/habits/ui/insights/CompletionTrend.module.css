@@ -1,0 +1,74 @@
+/* CompletionTrend — chart card with caption and a disclosure data table. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-heading);
+}
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+.caption {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.details {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-2);
+}
+.summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-target);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--primary);
+  cursor: pointer;
+}
+.summary:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.tableWrap {
+  max-height: 20rem;
+  overflow: auto;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+.table th,
+.table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+.table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-weight: var(--weight-medium);
+}
+.table tbody th {
+  font-weight: var(--weight-regular);
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

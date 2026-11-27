@@ -1,0 +1,124 @@
+/* Mobile navigation (below 1024px): fixed top bar + fixed bottom tab bar.
+   Both are hidden on desktop, where the Sidebar is shown instead. The main
+   column reserves space for them in app/styles/layout.css. */
+
+/* ── Top bar ────────────────────────────────────────────────────────────── */
+.topBar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  height: calc(var(--topbar-height) + env(safe-area-inset-top, 0px));
+  padding: env(safe-area-inset-top, 0px) max(var(--space-2), env(safe-area-inset-right, 0px)) 0
+    max(var(--page-gutter), env(safe-area-inset-left, 0px));
+  background: color-mix(in oklch, var(--bg) 92%, transparent);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(8px);
+}
+.title {
+  overflow: hidden;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.topActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+/* 44px hit area around a 32px avatar. */
+.avatarLink {
+  display: grid;
+  place-items: center;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  border-radius: var(--radius-full);
+  text-decoration: none;
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--primary-soft);
+  color: var(--on-primary-soft);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+.avatarLink[aria-current="page"] .avatar {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+/* ── Bottom tab bar ─────────────────────────────────────────────────────── */
+.tabBar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+.tabList {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  height: var(--tabbar-height);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tabItem {
+  display: flex;
+}
+.tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: var(--tap-target);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.tab:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -4px;
+  border-radius: var(--radius-sm);
+}
+.tabIcon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 30px;
+  border-radius: var(--radius-full);
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+.tab[aria-current="page"] {
+  color: var(--text);
+  font-weight: var(--weight-semibold);
+}
+.tab[aria-current="page"] .tabIcon {
+  background: var(--primary-soft);
+  color: var(--on-primary-soft);
+}
+
+@media (min-width: 1024px) {
+  .topBar,
+  .tabBar {
+    display: none;
+  }
+}

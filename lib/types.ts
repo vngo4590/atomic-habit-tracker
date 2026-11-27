@@ -97,7 +97,8 @@ export interface StoreState {
   formationVerdicts: FormationVerdict[];
   saveFormationVerdict: (verdict: FormationVerdict) => void;
   preferences: UserPreferences;
-  setPreferences: (preferences: Partial<UserPreferences>) => void;
+  /** Saves optimistically; resolves `true` once the server has saved, `false` after a rollback. */
+  setPreferences: (preferences: Partial<UserPreferences>) => Promise<boolean>;
   pets: Pet[];
   petFeedsUsedToday: number;
   adoptPet: (draft: PetDraft) => Promise<void>;

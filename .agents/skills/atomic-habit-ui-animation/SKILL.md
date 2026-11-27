@@ -40,7 +40,7 @@ import { spring, ease, duration, fadeUpVariants, staggerContainerVariants, toast
 - **Springs**: `gentle`, `snappy`, `bouncy`, `stiff`
 - **Easing**: `smooth` `[0.4,0,0.2,1]`, `enter`, `exit`, `bounce`
 - **Durations**: `fast` 0.15s, `base` 0.25s, `slow` 0.4s, `slower` 0.6s
-- **Variants**: `fadeUpVariants`, `scaleInVariants`, `slideUpVariants`, `staggerItemVariants`, `navItemVariants`, `toastVariants`, `overlayVariants`
+- **Variants**: `fadeUpVariants`, `scaleInVariants`, `slideUpVariants`, `staggerItemVariants`, `toastVariants`, `overlayVariants`
 
 ## Design Tokens (`globals.css`)
 

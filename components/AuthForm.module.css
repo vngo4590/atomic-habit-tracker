@@ -1,46 +1,134 @@
-/* Module styles for AuthForm — the centred sign-in / register card. */
+/* AuthForm — the calm, centred sign-in / register screen. */
 
-/* Full-viewport background with a centred card. */
 .shell {
   min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   place-items: center;
-  padding: 24px;
+  padding: var(--space-6) var(--page-gutter, var(--space-4));
   background: var(--bg);
 }
 
-/* Card width — narrow but not fixed: stays under 440px on desktop and
-   stretches to 100% on mobile. */
+.column {
+  display: grid;
+  gap: var(--space-4);
+  width: min(420px, 100%);
+}
+
+/* Brand lock-up — mirrors the sidebar mark (ring + accent dot). */
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  color: var(--text);
+}
+.brandMark {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: var(--text);
+}
+.brandMark::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: var(--radius-full);
+  background: var(--bg);
+}
+.brandMark::before {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  z-index: 1;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+}
+.brandName {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-heading);
+}
+
+.valueLine {
+  margin: 0 auto var(--space-2);
+  max-width: 34ch;
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
 .card {
-  width: min(440px, 100%);
+  padding: var(--space-6);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+@media (min-width: 768px) {
+  .card {
+    padding: var(--space-8);
+  }
 }
 
-/* Title spacing — between the eyebrow and the form. */
+.eyebrow {
+  margin: 0;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
 .title {
-  margin-top: 8px;
-  margin-bottom: 22px;
+  margin: var(--space-1) 0 var(--space-6);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-heading);
+  letter-spacing: var(--tracking-heading);
+  color: var(--text);
 }
 
-/* The form layout — single vertical column with 14px gutters. */
 .form {
   display: grid;
-  gap: 14px;
+  gap: var(--space-4);
 }
 
-/* Validation error text shown beneath each input. */
-.fieldError {
-  color: oklch(52% 0.18 25);
-  font-size: 12px;
+/* Submission-level feedback. Errors use the danger role on its soft wash. */
+.error,
+.message {
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+}
+.error {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.message {
+  background: var(--surface-2);
+  color: var(--text);
 }
 
-/* Submission-level error/info banner. */
-.formMessage {
-  color: oklch(52% 0.18 25);
-  font-size: 13px;
-}
-
-/* Footer paragraph beneath the form (e.g. "Need an account? Register"). */
 .footer {
-  margin-top: 18px;
-  font-size: 13px;
+  margin: 0;
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.footer a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-target);
+  font-weight: var(--weight-medium);
+  color: var(--primary);
+  text-underline-offset: 3px;
+}
+.footer a:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }

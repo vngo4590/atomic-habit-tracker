@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import TodayPage from "@/app/(root)/page";
+import { TodayView } from "@/features/habits/ui";
 
 import {
   makeHabit,
@@ -52,16 +52,16 @@ describe("Schedule-aware Today counts", () => {
     ];
 
     // When: the Today page renders
-    render(<TodayPage />);
+    render(<TodayView />);
 
-    // Then: the widget shows 1/1 (only the Weekdays habit counts)
-    expect(screen.getByText("/1")).toBeTruthy();
-    expect(screen.getByText("All done - well done.")).toBeTruthy();
-    expect(screen.getByText("A clean sweep.")).toBeTruthy();
+    // Then: the header shows 1 of 1 (only the Weekdays habit counts) and the
+    // calm all-done state replaces the focus list
+    expect(screen.getByText("1 of 1 done")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "All done for today" })).toBeTruthy();
 
     // And: the identity vote section only shows the scheduled+done habit
-    expect(screen.getByText("professional")).toBeTruthy();
-    expect(screen.queryByText("relaxer")).toBeNull();
+    expect(screen.getByText("I am professional")).toBeTruthy();
+    expect(screen.queryByText("I am relaxer")).toBeNull();
 
     vi.useRealTimers();
   });
@@ -77,11 +77,11 @@ describe("Schedule-aware Today counts", () => {
       makeHabit({ id: "h3", schedule: "Weekends", history: {}, identity: "relaxer" }),
     ];
 
-    render(<TodayPage />);
+    render(<TodayView />);
 
-    // Then: 1/2 with 1 habit remaining (only the two Weekdays habits count)
-    expect(screen.getByText("/2")).toBeTruthy();
-    expect(screen.getByText("1 habits remaining")).toBeTruthy();
+    // Then: 1 of 2 with 1 habit left (only the two Weekdays habits count)
+    expect(screen.getByText("1 of 2 done")).toBeTruthy();
+    expect(screen.getByText("1 left")).toBeTruthy();
 
     vi.useRealTimers();
   });

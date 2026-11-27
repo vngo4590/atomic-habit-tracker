@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 
 import { AppearanceSync } from "@/components/AppearanceSync";
-import { ClickFX } from "@/components/ClickFX";
 import { Nav } from "@/components/Nav";
 import { OnboardingGate } from "@/components/OnboardingGate";
 import { PageTransition } from "@/components/motion/PageTransition";
@@ -43,7 +42,6 @@ export default async function RootGroupLayout({ children }: { children: ReactNod
   return (
     <StoreProvider backendSnapshot={backendSnapshot}>
       <AppearanceSync />
-      <ClickFX />
       <div className="app">
         <Nav user={{ name: user.name, email: user.email }} />
         <main className="main">

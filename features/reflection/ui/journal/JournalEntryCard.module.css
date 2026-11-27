@@ -1,0 +1,62 @@
+/* JournalEntryCard — calm reading card with a mood-coloured left rule.
+   --mood-color comes from moods.module.css via data-mood. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-5);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--mood-color);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+@media (min-width: 768px) {
+  .card {
+    padding: var(--space-5) var(--space-6);
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  min-width: 0;
+}
+.date {
+  font-size: var(--text-sm);
+  color: var(--text-subtle);
+}
+.mood {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  background: color-mix(in oklch, var(--mood-color) 14%, var(--surface));
+  color: var(--text);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-heading);
+  letter-spacing: var(--tracking-heading);
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.body {
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+  color: var(--text-muted);
+}

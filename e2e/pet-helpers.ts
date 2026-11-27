@@ -99,7 +99,7 @@ export async function releaseAllPets(page: Page): Promise<void> {
     await expect(page.getByRole("heading", { name: "Pet Ecosystem" })).toBeVisible();
     const removable = page.getByRole("button", { name: /^release$|lay to rest/i });
     await expect(
-      page.getByText("Your ecosystem is empty").or(removable.first()),
+      page.getByRole("heading", { name: "Adopt your first companion" }).or(removable.first()),
     ).toBeVisible();
     const count = await removable.count();
     if (count === 0) return;
@@ -112,9 +112,20 @@ export async function releaseAllPets(page: Page): Promise<void> {
   throw new Error("releaseAllPets: pets still present after 12 release attempts");
 }
 
+/**
+ * Open the focused adopt flow (from the empty state or the page header) unless
+ * it is already open, e.g. after a refused adoption.
+ */
+export async function openAdoptFlow(page: Page): Promise<void> {
+  const flow = page.getByRole("heading", { name: "Adopt a companion", exact: true });
+  if (await flow.isVisible()) return;
+  await page.getByRole("button", { name: "Adopt a companion", exact: true }).click();
+  await expect(flow).toBeVisible();
+}
+
 /** Adopt a companion that MUST succeed, asserting its card appears. */
 export async function adoptPet(page: Page, temperament: string, petName: string): Promise<void> {
-  await expect(page.getByText("Adopt a companion", { exact: true })).toBeVisible();
+  await openAdoptFlow(page);
   await page.getByRole("button", { name: temperament }).click();
   await page.getByLabel("Name").fill(petName);
   await page.getByRole("button", { name: new RegExp(`Adopt ${petName}`, "i") }).click();

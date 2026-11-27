@@ -1,0 +1,28 @@
+/* Card — the standard raised surface: white (or dark) panel, hairline
+   border, small shadow, md radius (MASTER: cards = md). */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  color: var(--text);
+}
+
+/* Padding presets — none for edge-to-edge lists, md default, lg for hero. */
+.padNone {
+  padding: 0;
+}
+.padMd {
+  padding: var(--space-4);
+}
+.padLg {
+  padding: var(--space-6);
+}
+@media (min-width: 768px) {
+  .padMd {
+    padding: var(--space-5);
+  }
+  .padLg {
+    padding: var(--space-8);
+  }
+}

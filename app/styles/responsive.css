@@ -1,23 +1,16 @@
 /* ============================================================================
- * responsive.css — mobile breakpoint overrides (<= 900px).
+ * responsive.css — page-content overrides for small screens (<= 900px) and
+ * narrow desktops (1024–1180px).
  *
  * Strategy:
  *   • Desktop styles are the default; this file *progressively reshapes*
- *     them for narrower viewports.
- *   • The sidebar becomes a hamburger-triggered drawer.
+ *     page content for narrower viewports.
  *   • Multi-column grids collapse to single column.
  *   • Tap targets (.btn, .check, .chip, .input) grow to the iOS 44px floor.
  *
- * The .mobile-menu-btn / .mobile-drawer-overlay / .mobile-drawer classes
- * are only used on mobile. They sit at the file root (outside the media
- * query) so the `display: none` default keeps them off the desktop tree.
+ * The app shell itself (top bar / bottom tab bar below 1024px, sidebar
+ * above) is mobile-first in layout.css and components/nav/*.module.css.
  * ============================================================================ */
-
-/* Mobile-only hamburger button — hidden on desktop so it does not become
-   an extra grid item inside .app and break the sidebar + main layout. */
-.mobile-menu-btn {
-  display: none;
-}
 
 @media (max-width: 900px) {
   html, body {
@@ -25,134 +18,23 @@
     overflow-x: hidden;
   }
 
-  /* Switch the app shell from sidebar+main grid to single-column flow. */
-  .app {
-    display: block;
-    height: auto;
-    min-height: 100dvh;
-  }
-
-  /* Hide the desktop sidebar on mobile — navigation now lives in a drawer. */
-  .sidebar {
-    display: none;
-  }
-
-  /* Fixed hamburger button that opens the mobile navigation drawer.
-     Anchored below the device safe-area inset so it never hides behind a
-     notch or status bar on iOS/Android. */
-  .mobile-menu-btn {
-    position: fixed;
-    z-index: 80;
-    top: calc(12px + env(safe-area-inset-top, 0px));
-    left: calc(12px + env(safe-area-inset-left, 0px));
-    width: 40px;
-    height: 40px;
-    border-radius: var(--r-md);
-    border: 1px solid var(--rule);
-    background: var(--bg-elev);
-    color: var(--ink);
-    opacity: 0.7;
-    display: grid;
-    place-items: center;
-    cursor: pointer;
-    box-shadow: var(--shadow-sm);
-    transition:
-      background var(--transition-fast),
-      transform var(--transition-fast);
-  }
-  .mobile-menu-btn:hover {
-    background: var(--bg-sunk);
-    transform: scale(1.05);
-  }
-  .mobile-menu-btn:active {
-    transform: scale(0.95);
-  }
-
-  /* Backdrop overlay behind the mobile drawer. Tapping it closes the menu. */
-  .mobile-drawer-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 100;
-    background: oklch(from var(--bg) l c h / 0.6);
-    backdrop-filter: blur(4px);
-    display: flex;
-  }
-
-  /* The drawer panel itself — same look as the desktop sidebar but slides
-     in from the left. */
-  .mobile-drawer {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    width: 260px;
-    max-width: 80vw;
-    height: 100dvh;
-    padding: 22px 14px;
-    background: var(--bg-sunk);
-    border-right: 1px solid var(--rule);
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-  .mobile-drawer .desktop-nav { display: block; }
-  .mobile-drawer .nav-item {
-    /* Restore desktop-sized nav items inside the drawer. */
-    flex-direction: row;
-    justify-content: flex-start;
-    gap: 10px;
-    padding: 7px 10px;
-    font-size: 13.5px;
-    text-align: left;
-    min-height: auto;
-  }
-  .mobile-drawer .nav-item .ni-key {
-    display: inline-flex;
-    margin-left: auto;
-  }
-  .mobile-drawer .nav-icon {
-    width: 14px;
-    height: 14px;
-  }
-
-  /* Main column on mobile — full bleed, looser padding.
-     Top padding reserves room for the fixed hamburger button (40px square
-     anchored at top:12px), plus the device safe-area inset on notched
-     phones, so page headings never sit behind the menu trigger. */
-  .main {
-    overflow: visible;
-    min-width: 0;
-  }
+  /* Clip accidental horizontal overflow from legacy inline layouts. */
   .main-inner {
-    width: 100%;
-    max-width: none;
-    padding: calc(64px + env(safe-area-inset-top, 0px)) 16px 28px;
     overflow-x: clip;
   }
-
   /* Page header collapses to a stacked column on mobile. */
-  .page-header {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 14px;
-    margin-bottom: 22px;
-    padding-bottom: 18px;
-  }
-  .page-header > div:last-child {
-    width: 100%;
-    flex-wrap: wrap;
-  }
 
   /* Headings scale down on mobile. */
   .h1 {
-    font-size: 34px !important;
-    line-height: 1.08;
+    font-size: var(--text-2xl) !important;
+    line-height: var(--leading-heading);
   }
-  .h2 { font-size: 23px; }
-  .lede { font-size: 17px; }
+  .h2 { font-size: var(--text-lg); }
+  .lede { font-size: var(--text-base); }
 
   /* Tighten card chrome on small screens. */
   .card { border-radius: var(--r-md); }
-  .card-pad,
-  .card-pad-lg { padding: 16px; }
+  .card-pad { padding: 16px; }
 
   /* iOS-friendly 44px tap targets for all interactive primitives. */
   .btn,
@@ -179,16 +61,6 @@
   }
 
   /* Habit library — sort row stretches to the page edge. */
-  .habit-library-toolbar { gap: 12px; }
-  .habit-sort-row {
-    justify-content: flex-start;
-    width: 100%;
-  }
-  .habit-sort-select {
-    flex: 1 1 auto;
-    width: 100% !important;
-    min-width: 0;
-  }
 
   /* Habit row reflows: check + name on row 1, metadata on row 2. */
   .habit-row {
@@ -210,18 +82,6 @@
   }
 
   /* Habit list (All Habits) — drop the table header and stack each row. */
-  .habit-list-header { display: none !important; }
-  .habit-list-row {
-    display: grid !important;
-    grid-template-columns: 1fr !important;
-    gap: 14px;
-    padding: 16px !important;
-  }
-  .habit-list-field {
-    display: block !important;
-    min-width: 0;
-  }
-  .habit-list-label { display: none !important; }
 
   /* Habit loop becomes a vertical stack. */
   .loop {
@@ -236,23 +96,6 @@
   .loop-arrow { display: none; }
 
   /* Overview/principle panels collapse to one column. */
-  .habit-overview-grid {
-    grid-template-columns: 1fr;
-  }
-  .principle-intro {
-    grid-template-columns: 1fr;
-  }
-  .principle-copy { padding: 22px; }
-  .principle-bubbles {
-    min-height: 210px;
-    border-left: 0;
-    border-top: 1px solid var(--rule);
-  }
-  .principle-bubble { width: 88px; }
-  .principle-bubble:nth-child(1) { left: 8%; top: 16%; }
-  .principle-bubble:nth-child(2) { left: 52%; top: 10%; }
-  .principle-bubble:nth-child(3) { left: 18%; top: 55%; }
-  .principle-bubble:nth-child(4) { left: 60%; top: 52%; }
 
   /* Overlays slide up from the bottom on mobile. */
   .overlay {
@@ -266,11 +109,11 @@
     padding: 22px !important;
   }
 
-  /* Toast moves to a centred banner above the tab bar. */
+  /* Toast becomes a full-width banner (its bottom offset clears the tab
+     bar — see the <1024px block below). */
   .toast {
     left: 16px;
     right: 16px;
-    bottom: 92px;
     transform: none;
     justify-content: center;
     border-radius: var(--r-md);
@@ -278,37 +121,10 @@
 
   /* Weekly review — horizontal scroll for 7-day cards so they fit on screen
      without stacking into a 900px+ tall column. */
-  .review-week-grid {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 6px;
-    scroll-snap-type: x proximity;
-  }
-  .review-day-card {
-    flex: 0 0 90px;
-    min-height: 100px;
-    padding: 10px;
-    scroll-snap-align: start;
-  }
-  .review-day-bar-container { height: 48px; }
 
   /* Wins / Slips stack vertically on mobile. */
-  .review-insights-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
 
   /* Past review rows collapse to a stacked layout on mobile. */
-  .review-past-row {
-    grid-template-columns: 1fr;
-    gap: 8px;
-    padding: 14px 0;
-  }
-  .review-past-row > button {
-    justify-self: start;
-  }
 
   /* Stack diagram — prevent the global flex-wrap rule from breaking
      horizontal drag reorder. The chain must stay single-line and scroll. */
@@ -353,13 +169,11 @@
   .main-inner svg {
     max-width: 100%;
   }
-  .main-inner .card > [style*="grid-template-columns: 2fr 1.4fr"],
-  .main-inner .click-row[style*="grid-template-columns: 2fr 1.4fr"] {
+  .main-inner .card > [style*="grid-template-columns: 2fr 1.4fr"] {
     grid-template-columns: 1fr !important;
     gap: 10px;
   }
-  .main-inner .card > [style*="grid-template-columns: 2fr 1.4fr"] > div:nth-child(n + 3),
-  .main-inner .click-row[style*="grid-template-columns: 2fr 1.4fr"] > div:nth-child(n + 3) {
+  .main-inner .card > [style*="grid-template-columns: 2fr 1.4fr"] > div:nth-child(n + 3) {
     display: flex;
     justify-content: space-between;
   }
@@ -417,9 +231,6 @@
   .main-inner [style*="gap: 32px"] { gap: 18px !important; }
 
   /* Page header buttons wrap onto a second row on mobile. */
-  .page-header > div:last-child[style*="display: flex"] {
-    flex-wrap: wrap !important;
-  }
 
   /* Habit detail title shouldn't be oversized on small screens. */
   .main-inner h1[style*="font-size: 52px"] {
@@ -429,17 +240,20 @@
 }
 
 /* ============================================================================
- * Tablet breakpoint — narrower desktop windows (901–1180px).
- * Shrinks the sidebar and main padding so the reading column doesn't crush.
+ * Mobile shell (< 1024px) — floating UI must clear the fixed bottom tab bar.
  * ============================================================================ */
-@media (min-width: 901px) and (max-width: 1180px) {
-  .app {
-    grid-template-columns: 204px 1fr;
+@media (max-width: 1023px) {
+  .toast {
+    bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom, 0px) + var(--space-4));
   }
+}
+
+/* ============================================================================
+ * Narrow desktop (1024–1180px) — trims the main padding so the reading
+ * column doesn't crush next to the 240px sidebar.
+ * ============================================================================ */
+@media (min-width: 1024px) and (max-width: 1180px) {
   .main-inner {
-    padding: 30px 32px 72px;
-  }
-  .h1 {
-    font-size: 40px;
+    padding: var(--space-8) var(--space-8) var(--space-16);
   }
 }

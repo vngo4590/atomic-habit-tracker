@@ -1,0 +1,59 @@
+/* IdentityVotes — today's votes per identity; quiet, secondary card. */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  box-shadow: none;
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.statement {
+  margin: 0;
+  max-width: var(--reading-width);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--text);
+}
+
+.empty {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.identity {
+  font-weight: var(--weight-semibold);
+  color: var(--text);
+}
+
+.count {
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--primary);
+}

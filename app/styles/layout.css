@@ -1,202 +1,46 @@
 /* ============================================================================
- * layout.css — application shell (sidebar + main column + page header).
+ * layout.css — application shell (main column + page header).
  *
  * Contains:
- *   • .app grid (sidebar | main).
- *   • .sidebar (left nav rail).
- *   • Brand + nav items (.brand, .brand-mark, .nav-group, .nav-item, etc.).
+ *   • .app shell — single column on mobile, sidebar | main grid at ≥1024px.
  *   • .main content column + .main-inner reading width.
- *   • .page-header — flex header used at the top of every route.
  *
- * Mobile overrides for this file live in responsive.css (drawer nav, single-
- * column main). Keep them together when reading.
+ * Navigation styles (sidebar, mobile top bar, bottom tab bar) live in the
+ * CSS Modules under components/nav/. Page-content mobile overrides live in
+ * responsive.css.
  * ============================================================================ */
 
-/* Top-level app shell — fixed 232px sidebar, fluid main column. */
+/* Mobile-first shell: one column. The fixed top bar and bottom tab bar
+   (components/nav/MobileNav) overlay the page, so .main reserves room for
+   them — including the notch / home-indicator safe areas. */
 .app {
-  display: grid;
-  grid-template-columns: 232px 1fr;
-  height: 100vh;
-  min-height: 760px;
+  min-height: 100dvh;
 }
-
-.sidebar {
-  background: var(--bg-sunk);
-  border-right: 1px solid var(--rule);
-  padding: 22px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  overflow-y: auto;
-}
-
-/* Brand mark — a tri-layer circle that doubles as the favicon shape. */
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 8px 22px;
-}
-.brand-mark {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--ink);
-  position: relative;
-  flex-shrink: 0;
-}
-.brand-mark::after {
-  content: "";
-  position: absolute;
-  inset: 5px;
-  border-radius: 50%;
-  background: var(--bg);
-}
-.brand-mark::before {
-  content: "";
-  position: absolute;
-  inset: 9px;
-  border-radius: 50%;
-  background: var(--accent);
-}
-.brand-name {
-  font-family: var(--display);
-  font-size: 19px;
-  line-height: 1;
-}
-.brand-sub {
-  font-family: var(--mono);
-  font-size: 9.5px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-  margin-top: 3px;
-}
-
-/* Section heading inside the sidebar (e.g. "MAIN", "ACCOUNT"). */
-.nav-group {
-  font-family: var(--mono);
-  font-size: 9.5px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--ink-4);
-  padding: 14px 8px 6px;
-}
-
-/* Nav item — a button styled as a row that highlights on hover and shows
-   a small "active" capsule with a left-arrow nudge. */
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 10px;
-  border-radius: var(--r-md);
-  color: var(--ink-2);
-  cursor: pointer;
-  font-size: 13.5px;
-  border: none;
-  background: transparent;
-  text-align: left;
-  width: 100%;
-  position: relative;
-  transition:
-    background var(--transition-fast),
-    color var(--transition-fast),
-    transform var(--transition-fast),
-    box-shadow var(--transition-fast);
-}
-/* Keep the icon, label, and shortcut key painted above the sliding pill. */
-.nav-item > .nav-icon,
-.nav-item > span:not(.nav-active-pill) {
-  position: relative;
-  z-index: 1;
-}
-.nav-item:hover {
-  background: var(--bg);
-  color: var(--ink);
-  transform: translateX(2px);
-}
-.nav-item.active {
-  color: var(--ink);
-}
-/* The animated active highlight. Framer Motion slides this element between nav
-   items via a shared layoutId; the visual treatment (raised card look) lives
-   here so the motion carries the highlight with it. */
-.nav-active-pill {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  border-radius: var(--r-md);
-  background: var(--bg-elev);
-  box-shadow: 0 0 0 1px var(--rule), var(--shadow-sm);
-}
-.nav-item .ni-key {
-  margin-left: auto;
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--ink-4);
-}
-.nav-icon {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-  color: var(--ink-3);
-}
-.nav-item.active .nav-icon {
-  color: var(--accent);
-}
-
-/* Sidebar footer (avatar + identity line). */
-.sidebar-foot {
-  margin-top: auto;
-  padding: 14px 8px 4px;
-  border-top: 1px solid var(--rule);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: var(--bg);
-  font-family: var(--serif);
-  font-size: 14px;
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-}
-.who-name {
-  font-size: 12.5px;
-  color: var(--ink);
-  line-height: 1.2;
-}
-.who-id {
-  font-size: 10.5px;
-  color: var(--ink-3);
-  font-style: italic;
-  line-height: 1.3;
-}
-
-/* Main column — scrollable. .main-inner caps the reading width. */
 .main {
-  overflow-y: auto;
   position: relative;
+  min-width: 0;
+  padding-top: calc(var(--topbar-height) + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom, 0px));
 }
 .main-inner {
-  max-width: 1100px;
+  max-width: var(--content-width);
   margin: 0 auto;
-  padding: 36px 56px 80px;
+  padding: var(--space-6) var(--page-gutter) var(--space-12);
 }
 
-/* Page header — title row sitting above the rule line on every route. */
-.page-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-  padding-bottom: 22px;
-  border-bottom: 1px solid var(--rule);
-  margin-bottom: 32px;
+/* Desktop: fixed-width sidebar + independently scrolling main column. */
+@media (min-width: 1024px) {
+  .app {
+    display: grid;
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+    height: 100vh;
+  }
+  .main {
+    padding: 0;
+    overflow-y: auto;
+  }
+  .main-inner {
+    padding: var(--space-10) var(--page-gutter) var(--space-16);
+  }
 }
+/* Page header — title row sitting above the rule line on every route. */

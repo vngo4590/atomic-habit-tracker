@@ -1,0 +1,29 @@
+/* ProgressRing — circular progress (e.g. today's completion). */
+.ring {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.svg {
+  display: block;
+  /* Start the arc at 12 o'clock instead of 3 o'clock. */
+  transform: rotate(-90deg);
+}
+.track {
+  stroke: var(--surface-2);
+}
+.indicator {
+  stroke: var(--primary);
+  transition: stroke-dashoffset var(--duration-slow) var(--ease-standard);
+}
+.label {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}

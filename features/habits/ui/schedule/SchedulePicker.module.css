@@ -1,0 +1,102 @@
+/* SchedulePicker — preset chips + seven-day toggle row. */
+
+.fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend {
+  margin-bottom: var(--space-2);
+  padding: 0;
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.preset,
+.day {
+  appearance: none;
+  min-height: var(--tap-target);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+.preset:hover,
+.day:hover {
+  border-color: var(--border-strong);
+}
+.preset:focus-visible,
+.day:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.preset {
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-full);
+}
+.preset[aria-pressed="true"] {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--on-primary-soft);
+  font-weight: var(--weight-semibold);
+}
+
+/* Seven equal columns — always one row, even on a 320px phone. */
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+.day {
+  padding: 0;
+  border-radius: var(--radius-md);
+  font-weight: var(--weight-medium);
+}
+.day[aria-pressed="true"] {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
+}
+.day[aria-pressed="true"]:hover {
+  background: var(--primary-hover);
+}
+
+.key {
+  display: flex;
+  gap: var(--space-4);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+.keyItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.swatch {
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.swatchOn {
+  border-color: var(--primary);
+  background: var(--primary);
+}

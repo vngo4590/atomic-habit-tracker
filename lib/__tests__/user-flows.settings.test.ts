@@ -40,9 +40,8 @@ describe("Flow 6: Settings & Appearance", () => {
     expect(result.current.preferences.theme).toBe("light");
 
     // When: They switch to dark mode
-    act(() => result.current.setPreferences({ theme: "dark" }));
     await act(async () => {
-      await Promise.resolve();
+      await result.current.setPreferences({ theme: "dark" });
     });
 
     // Then: The theme is saved and applied
@@ -53,9 +52,8 @@ describe("Flow 6: Settings & Appearance", () => {
     expect(window.localStorage.getItem("atomicly:theme")).toBe("dark");
 
     // When: They change accent to Sage (hue 145)
-    act(() => result.current.setPreferences({ accentHue: 145 }));
     await act(async () => {
-      await Promise.resolve();
+      await result.current.setPreferences({ accentHue: 145 });
     });
 
     // Then: The accent color updates
@@ -64,9 +62,8 @@ describe("Flow 6: Settings & Appearance", () => {
     expect(window.localStorage.getItem("atomicly:accent")).toBe("145");
 
     // When: They toggle off daily reminders
-    act(() => result.current.setPreferences({ remindersEnabled: false }));
     await act(async () => {
-      await Promise.resolve();
+      await result.current.setPreferences({ remindersEnabled: false });
     });
 
     // Then: The preference is saved

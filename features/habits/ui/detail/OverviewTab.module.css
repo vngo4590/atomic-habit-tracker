@@ -1,0 +1,95 @@
+/* OverviewTab — the habit's design: laws + loop on the left, environment,
+   contract and mood on the right (single column on mobile). */
+
+.grid {
+  display: grid;
+  gap: var(--space-6);
+}
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    align-items: start;
+  }
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.cardTitle {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--text);
+}
+.cardHeader .cardTitle {
+  margin: 0;
+}
+
+.hint {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-subtle);
+}
+
+.loop {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.loopActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.contractActive {
+  border-color: var(--primary);
+}
+
+.contractText {
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-height: var(--tap-target);
+  padding: var(--space-2) 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-base);
+  line-height: 1.6;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+.contractText:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.partners {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.empty {
+  margin: 0;
+  line-height: 1.6;
+  color: var(--text-muted);
+}

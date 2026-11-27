@@ -4,11 +4,11 @@ import nextTs from "eslint-config-next/typescript";
 import { existsSync, readdirSync } from "node:fs";
 
 // A feature's public entry files (ADR-0001); everything else in it is private.
-const FEATURE_ENTRIES = ["index", "actions", "server", "store", "contracts"];
+const FEATURE_ENTRIES = ["index", "actions", "server", "store", "contracts", "ui/index"];
 const features = existsSync("features")
   ? readdirSync("features", { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name)
   : [];
-const BOUNDARY_MESSAGE = "Import a feature through its public API: '@/features/<name>', '/actions', '/server', '/store' or '/contracts'.";
+const BOUNDARY_MESSAGE = "Import a feature through its public API: '@/features/<name>', '/actions', '/server', '/store', '/contracts' or '/ui'.";
 
 /** Public entry files of every feature except `self`, relative to the repo root. */
 const publicEntries = (self) =>
@@ -54,7 +54,7 @@ const eslintConfig = defineConfig([
         {
           patterns: [
             {
-              group: ["@/features/*/*", "@/features/*/*/**", "!@/features/*/actions", "!@/features/*/server", "!@/features/*/store", "!@/features/*/contracts"],
+              group: ["@/features/*/*", "@/features/*/*/**", "!@/features/*/actions", "!@/features/*/server", "!@/features/*/store", "!@/features/*/contracts", "!@/features/*/ui"],
               message: BOUNDARY_MESSAGE,
             },
           ],

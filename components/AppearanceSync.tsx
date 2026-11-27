@@ -3,23 +3,30 @@
 import { useEffect } from "react";
 
 import { useStoreContext } from "@/components/StoreProvider";
-import { applyAppearance, readStoredVariant } from "@/lib/appearance";
-import { getTheme, isThemeVariantId } from "@/lib/themes";
+import { applyAppearance, readLegacyTheme } from "@/lib/appearance";
 
+/**
+ * AppearanceSync — keeps <html> in step with the user's saved theme and
+ * accent hue. Renders nothing; mounted once in the authenticated layout.
+ *
+ * One-time migration: if the browser still remembers a retired decorative
+ * theme (e.g. "neon"), it wins once — mapped to its nearest supported theme —
+ * and is written back to the server preference so every device agrees.
+ * applyAppearance then deletes the legacy key so this only ever happens once.
+ */
 export function AppearanceSync() {
   const store = useStoreContext();
   const { accentHue, theme } = store.preferences;
+  const { setPreferences } = store;
 
   useEffect(() => {
-    // The named theme variant lives only in localStorage. When a valid one is
-    // stored it is the source of truth for the look (and dictates the base
-    // light/dark mode), so a dark-based theme like "neon" survives a reload
-    // instead of being overwritten by the server-persisted base preference.
-    const storedVariant = readStoredVariant();
-    const variant = isThemeVariantId(storedVariant) ? storedVariant : undefined;
-    const base = variant ? getTheme(variant).base : theme;
-    applyAppearance(base, accentHue, variant);
-  }, [accentHue, theme]);
+    const legacy = readLegacyTheme();
+    const resolved = legacy ?? theme;
+    applyAppearance(resolved, accentHue);
+    if (legacy && legacy !== theme) {
+      setPreferences({ theme: legacy });
+    }
+  }, [accentHue, theme, setPreferences]);
 
   return null;
 }

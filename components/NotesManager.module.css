@@ -37,8 +37,6 @@
 .empty {
   text-align: center;
   color: var(--ink-3);
-  font-style: italic;
-  font-family: var(--serif);
   font-size: 16px;
   padding: 40px 20px;
 }
