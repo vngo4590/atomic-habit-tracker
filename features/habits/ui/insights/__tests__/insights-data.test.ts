@@ -69,9 +69,9 @@ describe("formation grouping", () => {
     // When: grouped on 1 Apr 2030
     const groups = groupForFormation(habits, verdicts, "2030-04-01");
 
-    // Then: reviewed habits never reappear as ready or in progress
+    // Then: reviewed habits are not re-prompted; "keep practicing" stays in progress
     expect(groups.ready.map((item) => item.id)).toEqual(["old"]);
-    expect(groups.inProgress.map((item) => item.id)).toEqual(["young"]);
+    expect(groups.inProgress.map((item) => item.id)).toEqual(["notYet", "young"]);
     expect(groups.inducted.map((item) => item.habit.id)).toEqual(["formed"]);
   });
 });

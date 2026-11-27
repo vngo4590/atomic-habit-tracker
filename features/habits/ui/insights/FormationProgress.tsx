@@ -38,11 +38,11 @@ export function FormationProgress({ habits, today, streak, completionRate }: For
                     <span aria-hidden="true">{habit.emoji}</span> {habit.name}
                   </span>
                   <span className={styles.count}>
-                    {age} / {FORMATION_DAYS} days
+                    {age < FORMATION_DAYS ? `${age} / ${FORMATION_DAYS} days` : `${age} days · keep practicing`}
                   </span>
                 </div>
                 <Meter
-                  pct={(age / FORMATION_DAYS) * 100}
+                  pct={Math.min(100, (age / FORMATION_DAYS) * 100)}
                   label={`${habit.name} formation progress`}
                   valueText={`${age} of ${FORMATION_DAYS} days`}
                 />
