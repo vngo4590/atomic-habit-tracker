@@ -1,0 +1,117 @@
+/* MoodPicker + CustomMoodPanel. Mood colour arrives as --mood-color from
+   moods.module.css (token-mapped per data-mood tone). */
+
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.legend {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text);
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Mood chip — pill toggle, 44px tall for touch. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap-target);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+.chip:hover {
+  border-color: var(--mood-color);
+}
+.chip[aria-pressed="true"] {
+  border-color: var(--mood-color);
+  background: color-mix(in oklch, var(--mood-color) 14%, var(--surface));
+  box-shadow: inset 0 0 0 1px var(--mood-color);
+}
+.chip:focus-visible,
+.emojiButton:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Disclosed custom-mood builder. */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+.step {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-muted);
+}
+.emojiGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--tap-target), 1fr));
+  gap: var(--space-1);
+  max-height: 200px;
+  overflow-y: auto;
+}
+.emojiButton {
+  min-width: var(--tap-target);
+  min-height: var(--tap-target);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-size: var(--text-xl);
+  line-height: 1;
+  cursor: pointer;
+}
+.emojiButton:hover {
+  background: var(--surface);
+}
+.emojiButton[aria-pressed="true"] {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+.typeRow,
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.typeLabel {
+  flex-shrink: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.typeInput {
+  width: 72px;
+  text-align: center;
+}
+.namePreview {
+  flex-shrink: 0;
+  font-size: var(--text-xl);
+  line-height: 1;
+}
+.nameInput {
+  flex: 1;
+  min-width: 0;
+}

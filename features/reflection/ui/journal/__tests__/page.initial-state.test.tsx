@@ -1,7 +1,7 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import JournalPage from "@/app/(root)/journal/page";
+import { JournalView } from "../JournalView";
 import { testJournalEntry } from "@/lib/test/fixtures";
 
 import { makeStore, setStore, storeRef } from "./helpers";
@@ -17,18 +17,18 @@ afterEach(() => {
   cleanup();
 });
 
-describe("JournalPage initial state", () => {
+describe("JournalView initial state", () => {
   beforeEach(() => {
     setStore(makeStore({ journal: [] }));
   });
 
-  it("shows the three prompt shortcut cards and the New entry button", () => {
+  it("shows the composer heading and the three prompt shortcuts", () => {
     // Given: no journal entries
-    render(<JournalPage />);
+    render(<JournalView />);
 
     // When: the page renders in its default state
-    // Then: all three prompts and the CTA button are visible
-    expect(screen.getByRole("button", { name: "New entry" })).toBeTruthy();
+    // Then: the composer heading and all three prompts are visible
+    expect(screen.getByRole("heading", { level: 2, name: "How did today go?" })).toBeTruthy();
     expect(screen.getByText("What habit felt automatic today?")).toBeTruthy();
     expect(screen.getByText("Where did friction show up?")).toBeTruthy();
     expect(screen.getByText("What is one tiny adjustment for tomorrow?")).toBeTruthy();
@@ -42,7 +42,7 @@ describe("JournalPage initial state", () => {
         testJournalEntry({ id: "j2", title: "Second reflection" }),
       ],
     }));
-    render(<JournalPage />);
+    render(<JournalView />);
 
     // When: the page renders
     // Then: both entry titles appear in the list
@@ -58,12 +58,12 @@ describe("JournalPage initial state", () => {
         testJournalEntry({ id: "j_new", date: "2030-01-10", title: "Newer entry" }),
       ],
     }));
-    render(<JournalPage />);
+    render(<JournalView />);
 
     // When: the page renders
-    const headings = screen.getAllByRole("heading", { level: 2 });
+    const headings = screen.getAllByRole("heading", { level: 3 });
 
-    // Then: the newest entry appears first
+    // Then: the newest entry appears first (entry titles are level-3 headings under week groups)
     expect(headings[0].textContent).toBe("Newer entry");
     expect(headings[1].textContent).toBe("Older entry");
   });
@@ -73,7 +73,7 @@ describe("JournalPage initial state", () => {
     setStore(makeStore({
       journal: [testJournalEntry({ body: "Kept the cue visible all morning." })],
     }));
-    render(<JournalPage />);
+    render(<JournalView />);
 
     // When: the page renders
     // Then: the body paragraph is visible
@@ -83,11 +83,11 @@ describe("JournalPage initial state", () => {
   it("omits the body paragraph when the entry body is empty", () => {
     // Given: an entry with no body
     setStore(makeStore({ journal: [testJournalEntry({ body: "" })] }));
-    render(<JournalPage />);
+    render(<JournalView />);
 
     // When: the page renders
     // Then: no body paragraph is rendered
-    expect(screen.queryByRole("paragraph")).toBeNull();
+    expect(within(screen.getByRole("article")).queryByRole("paragraph")).toBeNull();
   });
 });
 

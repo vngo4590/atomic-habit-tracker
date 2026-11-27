@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import JournalPage from "@/app/(root)/journal/page";
+import { JournalView } from "../JournalView";
 import { makeStore, setStore, storeRef } from "./helpers";
 
 // Install the StoreProvider mock for this test file. The factory reads
@@ -15,13 +15,12 @@ afterEach(() => {
   cleanup();
 });
 
-describe("JournalPage custom picker pre-population", () => {
+describe("JournalView custom picker pre-population", () => {
   it("pre-fills the label input from an existing label-only custom mood", () => {
     // Given: a custom label-only mood is already set and the picker is reopened
     const addJournal = vi.fn();
     setStore(makeStore({ journal: [], addJournal }));
-    render(<JournalPage />);
-    fireEvent.click(screen.getByRole("button", { name: "New entry" }));
+    render(<JournalView />);
     fireEvent.change(screen.getByPlaceholderText("What happened today?"), {
       target: { value: "Entry" },
     });
@@ -44,8 +43,7 @@ describe("JournalPage custom picker pre-population", () => {
     // Given: a combined mood "🌟 Energized" is already set and the picker is reopened
     const addJournal = vi.fn();
     setStore(makeStore({ journal: [], addJournal }));
-    render(<JournalPage />);
-    fireEvent.click(screen.getByRole("button", { name: "New entry" }));
+    render(<JournalView />);
     fireEvent.change(screen.getByPlaceholderText("What happened today?"), {
       target: { value: "Entry" },
     });

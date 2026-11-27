@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import JournalPage from "@/app/(root)/journal/page";
+import { JournalView } from "../JournalView";
 import { makeStore, setStore, storeRef } from "./helpers";
 
 // Install the StoreProvider mock for this test file. The factory reads
@@ -15,13 +15,12 @@ afterEach(() => {
   cleanup();
 });
 
-describe("JournalPage custom mood stored value", () => {
+describe("JournalView custom mood stored value", () => {
   it("stores 'emoji label' when both an emoji and a label are provided", () => {
     // Given: the user picks an emoji and types a label
     const addJournal = vi.fn();
     setStore(makeStore({ journal: [], addJournal }));
-    render(<JournalPage />);
-    fireEvent.click(screen.getByRole("button", { name: "New entry" }));
+    render(<JournalView />);
     fireEvent.change(screen.getByPlaceholderText("What happened today?"), {
       target: { value: "Inspired session" },
     });
@@ -43,8 +42,7 @@ describe("JournalPage custom mood stored value", () => {
     // Given: the user selects an emoji but leaves the label empty
     const addJournal = vi.fn();
     setStore(makeStore({ journal: [], addJournal }));
-    render(<JournalPage />);
-    fireEvent.click(screen.getByRole("button", { name: "New entry" }));
+    render(<JournalView />);
     fireEvent.change(screen.getByPlaceholderText("What happened today?"), {
       target: { value: "Quick note" },
     });
@@ -63,8 +61,7 @@ describe("JournalPage custom mood stored value", () => {
     // Given: the user types a mood label without selecting an emoji
     const addJournal = vi.fn();
     setStore(makeStore({ journal: [], addJournal }));
-    render(<JournalPage />);
-    fireEvent.click(screen.getByRole("button", { name: "New entry" }));
+    render(<JournalView />);
     fireEvent.change(screen.getByPlaceholderText("What happened today?"), {
       target: { value: "Morning walk" },
     });
@@ -85,8 +82,7 @@ describe("JournalPage custom mood stored value", () => {
     // Given: the user types a padded label
     const addJournal = vi.fn();
     setStore(makeStore({ journal: [], addJournal }));
-    render(<JournalPage />);
-    fireEvent.click(screen.getByRole("button", { name: "New entry" }));
+    render(<JournalView />);
     fireEvent.change(screen.getByPlaceholderText("What happened today?"), {
       target: { value: "Good morning" },
     });
@@ -107,8 +103,7 @@ describe("JournalPage custom mood stored value", () => {
     // Given: the user applies a custom mood then changes their mind to a preset
     const addJournal = vi.fn();
     setStore(makeStore({ journal: [], addJournal }));
-    render(<JournalPage />);
-    fireEvent.click(screen.getByRole("button", { name: "New entry" }));
+    render(<JournalView />);
     fireEvent.change(screen.getByPlaceholderText("What happened today?"), {
       target: { value: "Changed my mind" },
     });

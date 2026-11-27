@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import JournalPage from "@/app/(root)/journal/page";
+import { JournalView } from "../JournalView";
 import { makeStore, setStore, storeRef } from "./helpers";
 
 // Install the StoreProvider mock for this test file. The factory reads
@@ -15,11 +15,10 @@ afterEach(() => {
   cleanup();
 });
 
-describe("JournalPage custom mood picker", () => {
+describe("JournalView custom mood picker", () => {
   beforeEach(() => {
     setStore(makeStore({ journal: [] }));
-    render(<JournalPage />);
-    fireEvent.click(screen.getByRole("button", { name: "New entry" }));
+    render(<JournalView />);
   });
 
   it("shows the emoji grid and mood label input when Custom is clicked", () => {

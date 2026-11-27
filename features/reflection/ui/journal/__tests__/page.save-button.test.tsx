@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import JournalPage from "@/app/(root)/journal/page";
+import { JournalView } from "../JournalView";
 import { makeStore, setStore, storeRef } from "./helpers";
 
 // Install the StoreProvider mock for this test file. The factory reads
@@ -15,11 +15,10 @@ afterEach(() => {
   cleanup();
 });
 
-describe("JournalPage Save entry button state", () => {
+describe("JournalView Save entry button state", () => {
   beforeEach(() => {
     setStore(makeStore({ journal: [] }));
-    render(<JournalPage />);
-    fireEvent.click(screen.getByRole("button", { name: "New entry" }));
+    render(<JournalView />);
   });
 
   it("disables Save entry when the title is empty", () => {

@@ -182,8 +182,8 @@ test.describe("Writing a markdown journal entry", () => {
   test("markdown in a journal entry renders as formatted HTML", async ({ page }) => {
     // Given: a user composing a new journal entry written in markdown
     const title = unique("Markdown Reflection");
+    // The composer is always open at the top of the page.
     await page.goto("/journal");
-    await page.click('button:has-text("New entry")');
 
     await page.fill('input[placeholder="What happened today?"]', title);
     await page.fill(

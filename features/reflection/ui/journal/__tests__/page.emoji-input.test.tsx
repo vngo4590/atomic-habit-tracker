@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import JournalPage from "@/app/(root)/journal/page";
+import { JournalView } from "../JournalView";
 import { makeStore, setStore, storeRef } from "./helpers";
 
 // Install the StoreProvider mock for this test file. The factory reads
@@ -15,13 +15,12 @@ afterEach(() => {
   cleanup();
 });
 
-describe("JournalPage custom emoji keyboard input", () => {
+describe("JournalView custom emoji keyboard input", () => {
   it("allows typing a custom emoji that is not in the preset grid", () => {
     // Given: the picker is open
     const addJournal = vi.fn();
     setStore(makeStore({ journal: [], addJournal }));
-    render(<JournalPage />);
-    fireEvent.click(screen.getByRole("button", { name: "New entry" }));
+    render(<JournalView />);
     fireEvent.change(screen.getByPlaceholderText("What happened today?"), {
       target: { value: "Party time" },
     });
@@ -47,8 +46,7 @@ describe("JournalPage custom emoji keyboard input", () => {
     // Given: the picker is open
     const addJournal = vi.fn();
     setStore(makeStore({ journal: [], addJournal }));
-    render(<JournalPage />);
-    fireEvent.click(screen.getByRole("button", { name: "New entry" }));
+    render(<JournalView />);
     fireEvent.change(screen.getByPlaceholderText("What happened today?"), {
       target: { value: "Big win" },
     });
