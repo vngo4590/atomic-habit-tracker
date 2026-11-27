@@ -47,6 +47,39 @@ describe("FormationQuestionnaire (Hall of Fame induction review)", () => {
     });
   });
 
+  describe("keyboard", () => {
+    it("moves focus in on open, wraps Tab inside, closes on Escape and returns focus to the opener", () => {
+      // Given a Review button that opens the questionnaire
+      const onClose = vi.fn();
+      const opener = document.createElement("button");
+      document.body.appendChild(opener);
+      opener.focus();
+      const { unmount } = render(<FormationQuestionnaire habit={habit} onClose={onClose} onSubmit={vi.fn()} />);
+
+      // Then focus starts on the dialog's first control (Close), not the page behind
+      const close = screen.getByRole("button", { name: "Close" });
+      expect(document.activeElement).toBe(close);
+
+      // When Shift+Tab is pressed on the first control, focus wraps to the last enabled one
+      fireEvent.keyDown(close, { key: "Tab", shiftKey: true });
+      const textarea = screen.getByLabelText("Reflection");
+      expect(document.activeElement).toBe(textarea);
+
+      // And Tab from the last control wraps back to the first
+      fireEvent.keyDown(textarea, { key: "Tab" });
+      expect(document.activeElement).toBe(close);
+
+      // When Escape is pressed, the dialog asks to close
+      fireEvent.keyDown(close, { key: "Escape" });
+      expect(onClose).toHaveBeenCalledTimes(1);
+
+      // And once it is gone, focus returns to the Review button
+      unmount();
+      expect(document.activeElement).toBe(opener);
+      opener.remove();
+    });
+  });
+
   describe("induction verdict", () => {
     it("keeps the verdict buttons disabled until all five questions are rated, then inducts the habit", () => {
       // Given the questionnaire is open

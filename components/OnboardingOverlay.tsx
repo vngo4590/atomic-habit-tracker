@@ -7,6 +7,7 @@ import { slideUpVariants } from "@/lib/animations";
 import { clientLogger } from "@/lib/logger-client";
 
 import styles from "./OnboardingOverlay.module.css";
+import { useFocusTrap } from "./useFocusTrap";
 
 /** Ordered onboarding steps shown after a user signs up. Each step has its
     own eyebrow/title/body and the button label at the bottom of the card.
@@ -70,8 +71,12 @@ export function OnboardingOverlay({ onComplete }: { onComplete: () => void }) {
     onComplete();
   };
 
+  // Keep keyboard focus inside the tour; Escape behaves like Skip.
+  const dialogRef = useFocusTrap<HTMLDivElement>(handleDismiss);
+
   return (
     <m.div
+      ref={dialogRef}
       className="overlay"
       role="dialog"
       aria-modal="true"
@@ -117,9 +122,12 @@ export function OnboardingOverlay({ onComplete }: { onComplete: () => void }) {
             >
               Skip
             </m.button>
+            {/* autoFocus: each step remounts this card, so focus lands on the
+                new step's primary action instead of falling back to the page. */}
             <m.button
               className="btn btn-primary"
               onClick={next}
+              autoFocus
               whileHover={{ y: -1 }}
               whileTap={{ scale: 0.97 }}
             >

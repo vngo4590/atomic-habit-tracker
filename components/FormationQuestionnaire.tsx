@@ -6,6 +6,7 @@ import { clientLogger } from "@/lib/logger-client";
 import type { FormationVerdict, Habit } from "@/lib/types";
 
 import styles from "./FormationQuestionnaire.module.css";
+import { useFocusTrap } from "./useFocusTrap";
 
 /** The five formation questions. Order matters — used as index keys in the
     ratings record so the user's score per question is stable. */
@@ -37,6 +38,8 @@ export function FormationQuestionnaire({
   const baseId = useId();
   const titleId = `${baseId}-title`;
   const reflectionId = `${baseId}-reflection`;
+  // Keep keyboard focus inside the dialog; Escape behaves like Close.
+  const dialogRef = useFocusTrap<HTMLDivElement>(onClose);
 
   // True once the user has rated all five questions.
   const complete = QUESTIONS.every((_, index) => ratings[index]);
@@ -73,7 +76,7 @@ export function FormationQuestionnaire({
   };
 
   return (
-    <div className="overlay" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+    <div ref={dialogRef} className="overlay" role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <div className={`overlay-card ${styles.card}`}>
         <div className={styles.header}>
           <div>

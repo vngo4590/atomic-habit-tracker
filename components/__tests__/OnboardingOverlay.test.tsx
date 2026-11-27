@@ -99,6 +99,36 @@ describe("OnboardingOverlay business logic", () => {
     });
   });
 
+  it("focuses each step's primary action, keeps Tab inside the tour, and skips on Escape", async () => {
+    // Given the tour opens over a page that has its own main region
+    const main = document.createElement("main");
+    document.body.appendChild(main);
+    const onComplete = vi.fn();
+    const { unmount } = render(<OnboardingOverlay onComplete={onComplete} />);
+
+    // Then focus starts on Begin, not behind the overlay
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Begin" }));
+
+    // When Tab is pressed on the last control, focus wraps to Skip
+    fireEvent.keyDown(document.activeElement!, { key: "Tab" });
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Skip" }));
+
+    // When the user advances, focus follows to the new step's primary action
+    fireEvent.click(screen.getByRole("button", { name: "Begin" }));
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByRole("button", { name: "Continue" }));
+    });
+
+    // When Escape is pressed, the tour is dismissed like Skip
+    fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+    expect(onComplete).toHaveBeenCalledTimes(1);
+
+    // And after it closes focus lands on the page's main region, not nowhere
+    unmount();
+    expect(document.activeElement).toBe(main);
+    main.remove();
+  });
+
   it("completes onboarding immediately when Skip is clicked", () => {
     // Given the onboarding overlay is on the Welcome step
     const onComplete = vi.fn();
