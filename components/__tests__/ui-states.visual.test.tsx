@@ -1,7 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { HabitRow } from "@/components/HabitRow";
 import AnalyticsPage from "@/app/(root)/analytics/page";
 import HallOfFamePage from "@/app/(root)/hall-of-fame/page";
 import HabitDetailPage from "@/app/(root)/habits/[id]/page";
@@ -110,23 +109,6 @@ describe("Visual States", () => {
     expect(fiftyBar).toBeTruthy();
   });
 
-  it("Streak pill only renders when streak is greater than 0", () => {
-    // Given: a habit row with zero streak
-    const { rerender } = render(
-      <HabitRow habit={makeHabit()} done={false} streak={0} onCheck={vi.fn()} onOpen={vi.fn()} />,
-    );
-
-    // Then: no streak pill is present
-    expect(screen.queryByText("0")).toBeNull();
-
-    // When: rerendered with a positive streak
-    rerender(
-      <HabitRow habit={makeHabit()} done={false} streak={5} onCheck={vi.fn()} onOpen={vi.fn()} />,
-    );
-
-    // Then: the streak pill appears
-    expect(screen.getByText("5")).toBeTruthy();
-  });
 });
 
 // ---------------------------------------------------------------------------

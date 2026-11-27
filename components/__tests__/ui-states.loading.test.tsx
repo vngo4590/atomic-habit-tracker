@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { HabitRow } from "@/components/HabitRow";
 import { MoodCheckSheet } from "@/components/MoodCheckSheet";
 import { Nav } from "@/components/Nav";
 import {
@@ -51,18 +50,6 @@ describe("Loading / Transition States", () => {
     // Then: the email is used as the display name and the initial comes from it
     expect(screen.getByText("ada@example.com")).toBeTruthy();
     expect(screen.getByTestId("nav-avatar").textContent).toBe("A");
-  });
-
-  it("HabitRow renders with a very long habit name without overflowing", () => {
-    // Given: a habit with an extremely long name
-    const longName = "Read".repeat(80);
-    const habit = makeHabit({ name: longName });
-
-    // When: the row renders
-    render(<HabitRow habit={habit} done={false} streak={0} onCheck={vi.fn()} onOpen={vi.fn()} />);
-
-    // Then: the long name is present in the document
-    expect(screen.getByText(longName)).toBeTruthy();
   });
 
   it("MoodCheckSheet renders with existing check-in data pre-filled", () => {

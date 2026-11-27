@@ -60,8 +60,8 @@ describe("Schedule-aware Today counts", () => {
     expect(screen.getByRole("heading", { name: "All done for today" })).toBeTruthy();
 
     // And: the identity vote section only shows the scheduled+done habit
-    expect(screen.getByText("professional")).toBeTruthy();
-    expect(screen.queryByText("relaxer")).toBeNull();
+    expect(screen.getByText("I am professional")).toBeTruthy();
+    expect(screen.queryByText("I am relaxer")).toBeNull();
 
     vi.useRealTimers();
   });
