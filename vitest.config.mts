@@ -16,7 +16,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./lib/test/setup.ts'],
-    exclude: ['node_modules', 'e2e'],
+    // `.next` holds build output (incl. `.next/standalone` copies of tests).
+    exclude: ['**/node_modules/**', 'e2e', '.next/**'],
     // Fail individual tests quickly so CI doesn't hang on unresolved promises.
     testTimeout: 5000,
     hookTimeout: 5000,
