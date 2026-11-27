@@ -32,7 +32,7 @@ The app is implemented with Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, 
 | `/reflect` | Reflect hub — redirects to `/journal` (tabs: Journal \| Weekly review) |
 | `/insights` | Insights hub — redirects to `/analytics` (tabs: Analytics \| Hall of Fame) |
 
-Navigation (ADR-0003): a 240px sidebar on desktop (≥1024px) with Today, Habits, Reflect, Insights, Pet, Settings and a "New habit" button; below 1024px a top bar (section title, New habit, avatar → Settings) plus a fixed bottom tab bar (Today, Habits, Reflect, Insights, Pet). Identity is linked from Settings. Single-key shortcuts: T, H, N, R, I, P, `,` (plus J, W, A, F for individual pages). Nav code lives in `components/nav/`.
+Navigation (ADR-0003): a 240px sidebar on desktop (≥1024px) with Today, Habits, Reflect, Insights, Pet, Settings and a "New habit" button; below 1024px a top bar (section title, New habit, avatar → Settings) plus a fixed bottom tab bar (Today, Habits, Reflect, Insights, Pet). Identity is linked from Settings. Keyboard shortcuts use **Alt+Shift**+key: T, H, N, R, I, P, `,` (plus J, W, A, F for individual pages); they are ignored while typing in a field. Nav code lives in `components/nav/` (`nav-items.ts` is the single source of truth for items and shortcuts).
 
 ## Quick Start With Docker
 
@@ -141,11 +141,20 @@ npm run typecheck
 npm run lint:app
 ```
 
-Run a production build:
+Run a production build, then check every route's first-load JS against the 230 KB (gzipped) budget (`scripts/measure-bundle.mjs`; `npm run bundle:report` prints sizes without failing):
 
 ```bash
 npm run build
+npm run bundle:check
 ```
+
+Run the Playwright end-to-end suite (needs a migrated, seeded local database; it starts `npm run dev` itself). Set `RATE_LIMIT_DISABLED=true` in the dev server's environment if repeated logins trip the in-process rate limiter:
+
+```bash
+npm run test:e2e
+```
+
+GitHub Actions (`.github/workflows/ci-cd.yml`, which runs typecheck, `lint:app`, tests, build and `bundle:check`) is currently disabled at the repository level on purpose, so run these checks locally before pushing.
 
 Validate the local Kubernetes overlay without applying it to a cluster:
 
@@ -295,20 +304,27 @@ Notes:
 
 ## Project Structure
 
-- `app/`: Next.js App Router routes and layouts.
-- `app/(root)/`: shared sidebar shell and all app screens. Each route has a co-located `page.module.css` for page-specific styles.
+- `app/`: Next.js App Router routes and layouts. Route files are thin: they compose UI from `features/*/ui`.
+- `app/(root)/`: shared app shell (sidebar / mobile bars) and all app screens.
 - `app/styles/`: modular global stylesheet partials (see "Styles & Design Tokens" below).
 - `app/globals.css`: thin entry point that `@import`s the modular partials in cascade order.
-- `components/`: reusable client UI components. Each non-trivial component has a co-located `Component.module.css` next to it. For example, `components/PasswordInput.tsx` is the shared password field with a built-in show/hide visibility toggle, used by the auth forms and the Settings change-password form.
-- `lib/`: types, helpers, auth/db helpers, repositories, server actions, store cache logic, and unit tests.
+- `features/<name>/`: feature slices (`habits`, `stacks`, `reflection`, `settings`, `pet`) — `model/` pure domain logic, `server/` Prisma repositories, `ui/` components + CSS Modules, `store.ts` client cache slice, `actions.ts` server actions, `contracts.ts` Zod schemas. Other code imports a feature only through `@/features/<name>` and its `/actions`, `/server`, `/store`, `/contracts`, `/ui` entry points (enforced by `eslint.config.mjs`; see ADR-0001).
+- `components/`: app-shell client components (`StoreProvider`, `Toast`, `Modal`, `AuthForm`, onboarding). Each non-trivial component has a co-located `Component.module.css`. For example, `components/PasswordInput.tsx` is the shared password field with a built-in show/hide visibility toggle, used by the auth forms and the Settings change-password form.
+- `components/ui/`: design-system primitives (import from `@/components/ui`).
+- `components/nav/`: sidebar, mobile top/tab bars, hub section tabs, keyboard shortcuts.
+- `components/motion/`: Framer Motion primitives and the `LazyMotion` `MotionProvider`.
+- `lib/`: shared kernel — types, helpers, date keys, logger, auth/db/security helpers, `lib/store/` (store composition + `optimistic()`), `lib/server/store-snapshot.ts`, auth actions/contracts/user repository, and unit tests.
 - `scripts/`: local automation helpers, including Docker/PostgreSQL database management.
 - `k8s/local/`: local Docker Desktop Kubernetes overlay for the app deployment and migration job.
 - `reference_ui/`: original reference implementation used during the port.
 - `Dockerfile`: multi-stage container build with `runner` and `migrator` targets.
 - `docs/architecture/backend-auth-mobile.md`: backend, auth, database, and deployment architecture notes.
 - `docs/architecture/security.md`: security architecture — threat model, app + infra controls (CSP, rate limiting, timing-safe auth, Front Door WAF, origin lockdown, Postgres TLS), and residual risks.
+- `docs/architecture/adr/`: architecture decision records (0001 modular monolith, 0002 client state, 0003 calm-minimal design system).
+- `design-system/atomicly/MASTER.md`: design-system source of truth (palette, type, spacing, a11y bar).
 - `openspec/changes/`: active OpenSpec changes.
-- `openspec/changes/archive/`: archived OpenSpec changes, including the completed reference UI port and backend/auth/mobile architecture work.
+- `openspec/changes/archive/`: archived OpenSpec changes (the password-visibility and password-change-session work).
+- `openspec/specs/`: canonical specs promoted from archived changes.
 - `.agents/skills/`: project-local skills shared by all agents.
 
 ## Styles & Design Tokens
@@ -318,14 +334,14 @@ The styling layer is intentionally modular. There is **no monolithic global styl
 | Layer | Location | Purpose |
 | --- | --- | --- |
 | Design tokens | `app/styles/tokens.css` | Calm semantic tokens from `design-system/atomicly/MASTER.md` (colour, type scale, spacing, radius, shadow, motion); light on `:root`, dark on `[data-theme="dark"]`; accent derived from `--accent-hue` (OKLCH); legacy variable names aliased. |
-| Element baseline | `app/styles/base.css` | Reset, `<body>` baseline, scrollbar styling. |
+| Element baseline | `app/styles/base.css` | Reset, `<body>` baseline, global `:focus-visible` ring, scrollbar styling. |
 | Typography | `app/styles/typography.css` | `.h1`/`.h2`/`.h3`, `.lede`, `.markdown-body`, text helpers. |
 | App shell | `app/styles/layout.css` | `.app` grid, `.main`, `.page-header` (nav styles live in `components/nav/*.module.css`). |
 | Component classes | `app/styles/components.css` | `.card`, `.btn`, `.input`, `.chip`, `.habit-row`, `.loop`, `.principle-*`, `.stack-*`, etc. |
-| Animations | `app/styles/animations.css` | `@keyframes` + animation utility classes (`.fade-up`, `.skeleton`, `.glass`, `.focus-ring`). |
-| Responsive | `app/styles/responsive.css` | Mobile (`max-width: 900px`) and tablet (`901–1180px`) page-content overrides. |
-| Per-component | `components/*.module.css` | Locally-scoped CSS Module next to the component. |
-| Per-page | `app/(root)/*/page.module.css` | Locally-scoped CSS Module next to the page. |
+| Animations | `app/styles/animations.css` | `@keyframes` + animation utility classes (`.fade-up`, `.skeleton`, `page-enter`, and the `.motion-unavailable` fallback). |
+| Responsive | `app/styles/responsive.css` | Mobile (`max-width: 900px`), below-desktop (`max-width: 1023px`) and small-desktop (`1024–1180px`) page-content overrides. |
+| Per-component | `components/**/*.module.css`, `features/*/ui/**/*.module.css` | Locally-scoped CSS Module next to the component. |
+| Per-page | `features/*/ui/**/*.module.css` | Page views live in the feature's `ui/` folder; the `app/(root)/*/page.tsx` route files are thin and carry no styles. |
 
 `app/globals.css` is a thin entry file that `@import`s the partials in cascade order (Tailwind preflight → tokens → base → typography → layout → components → animations → responsive).
 
@@ -340,11 +356,11 @@ Rules that make raising a pet meaningful:
 - **Shared daily pool.** `availableFood = earnedToday − feedsUsedToday`, spent across all pets via the feed stepper.
 - **Caps.** At most **3 alive pets** at once, and only **one adoption per calendar month** — but **releasing a pet immediately frees that month's slot**, so a delete-then-adopt works instantly.
 
-`components/pet/MoodSprite.tsx` wraps `components/pet/PixelSprite.tsx` with mood-driven idle loops; all 8 moods (`dead`, `sick`, `hungry`, `sleeping`, `content`, `happy`, `excited`, `inLove`) are reachable from satiety/health/recency/time-of-day. Adding/applying the schema requires a running local Postgres (`npm run db:setup`, or `npm run prisma:migrate:deploy` against a configured database).
+`features/pet/ui/MoodSprite.tsx` wraps `features/pet/ui/PixelSprite.tsx` with mood-driven idle loops; all 8 moods (`dead`, `sick`, `hungry`, `sleeping`, `content`, `happy`, `excited`, `inLove`) are reachable from satiety/health/recency/time-of-day. Adding/applying the schema requires a running local Postgres (`npm run db:setup`, or `npm run prisma:migrate:deploy` against a configured database).
 
 **Inline `style={{}}` is reserved for dynamic CSS-variable passthrough** (e.g. `style={{ "--mood-color": item.color }}`) so a generic module class can theme against per-data values. Every such usage is documented inline.
 
-See `.agents/skills/atomic-habit-workflow/SKILL.md` for the full styling convention.
+See `.agents/skills/atomic-habit-css-conventions/SKILL.md` and `.agents/skills/atomic-habit-design-system/SKILL.md` for the full styling and design-system conventions.
 
 ## Implementation Notes
 
@@ -358,6 +374,6 @@ See `.agents/skills/atomic-habit-workflow/SKILL.md` for the full styling convent
 - Auth pages (`/login`, `/register`) redirect already-authenticated users to the main app flow.
 - **Data backup & restore.** Settings → Data offers a full account export and import. Export downloads an authoritative, versioned JSON envelope built server-side from the database at `GET /api/v1/export` (`features/settings/model/backup-export.ts`). Import merges a previously exported file: it validates against `features/settings/model/backup-envelope.ts`, then upserts every record by id / natural key inside one transaction via `mergeBackup` (`features/settings/server/backup-import.ts`) — additive only, never deleting existing data, and idempotent on re-import. Pets are exported for portability but intentionally **not** imported (the ecosystem is procedural, mortal, and adoption-capped). The flow runs through `importDataAction` (`features/settings/actions.ts`).
 - **Active-habit cap.** A user may have at most **3 active habits** at once. "Active" means not archived (`archivedAt == null`) and not inducted into the Hall of Fame (no `FormationVerdict` with `decision = formed`). The rule is enforced server-side as the source of truth: `createHabit` (`features/habits/server/habits.repository.ts`) counts active habits via `countActiveHabits` and returns a discriminated `{ ok: false, reason: "cap" }` result (mirrored by `createHabitAction` and a 409 from `POST /api/v1/habits`). The client mirrors it through the shared predicate in `features/habits/model/habit-cap.ts` (`MAX_ACTIVE_HABITS`, `activeHabitCount`, `remainingHabitSlots`): the new-habit page disables submission and explains the cap, and the optimistic store rolls back with a Toast on refusal. Inducted habits stay trackable but free a slot; existing over-cap data is grandfathered (never force-archived).
-- The active OpenSpec change is `max-3-active-habits`.
-- Deployment architecture specs live under `openspec/specs/deployment-architecture/`; provider choices and deployment notes are in `docs/architecture/backend-auth-mobile.md`.
+- The active OpenSpec changes are `max-3-active-habits` and `fix-helptip-mobile-overflow`.
+- Provider choices and deployment notes are in `docs/architecture/backend-auth-mobile.md`.
 - Security controls (CSP nonce, security headers, rate limiting, same-origin CSRF guard, and timing-safe auth) are enforced in `proxy.ts` + `lib/security/*`; edge protection is Azure Front Door + WAF with the App Service origin locked to the Front Door. See `docs/architecture/security.md`.
