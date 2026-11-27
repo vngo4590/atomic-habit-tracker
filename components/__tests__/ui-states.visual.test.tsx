@@ -72,7 +72,7 @@ describe("Visual States", () => {
     expect(activeChips[0].textContent).toContain("Consistency");
   });
 
-  it("Active tab has the accent underline class", () => {
+  it("Active tab is marked selected", () => {
     // Given: a habit exists and we are on the detail page
     storeMock.habits = [makeHabit()];
     paramsMock.current = { id: "habit_1" };
@@ -80,8 +80,8 @@ describe("Visual States", () => {
     // When: the detail page renders (default tab is overview)
     render(<HabitDetailPage />);
 
-    // Then: the Overview tab carries the active class
-    const activeTab = document.querySelector(".tab.active");
+    // Then: the Overview tab is the selected tab
+    const activeTab = document.querySelector('[role="tab"][aria-selected="true"]');
     expect(activeTab).toBeTruthy();
     expect(activeTab?.textContent).toBe("Overview");
   });

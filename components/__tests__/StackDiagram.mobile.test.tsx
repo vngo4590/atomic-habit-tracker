@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { StackDiagram } from "@/components/StackDiagram";
+import { StackDiagram } from "@/features/stacks/ui";
 
 import {
   StackContextProvider,
@@ -36,9 +36,9 @@ describe("StackDiagram", () => {
   describe("mobile-friendly chain layout", () => {
     // Given: a habit is part of a multi-item chain
     // When: the StackDiagram renders the chain list
-    // Then: the Reorder.Group uses the 'stack-chain-list' class for mobile
-    //       overflow control and to prevent the global flex-wrap override
-    it("applies the stack-chain-list class to the chain Reorder.Group", () => {
+    // Then: the Reorder.Group carries the module's chainList class, which
+    //       scrolls horizontally instead of wrapping on narrow screens
+    it("applies the chainList scroll class to the chain Reorder.Group", () => {
       const habits = [makeHabit("root", "a"), makeHabit("a", "b"), makeHabit("b")];
       render(
         <StackContextProvider habits={habits}>
@@ -47,7 +47,7 @@ describe("StackDiagram", () => {
       );
 
       const chainList = screen.getByTestId("stack-chain-list");
-      expect(chainList.classList.contains("stack-chain-list")).toBe(true);
+      expect(chainList.className).toMatch(/chainList/);
     });
 
     // Given: a chain with many items
@@ -70,7 +70,7 @@ describe("StackDiagram", () => {
       const chips = screen.getAllByTestId("stack-chain-chip");
       expect(chips.length).toBe(5);
       // Each chip's parent Reorder.Item carries the .chipItem class from
-      // StackDiagram.module.css, which sets flex-shrink: 0. We assert the
+      // StackChain.module.css, which sets flex-shrink: 0. We assert the
       // class rather than the computed style because jsdom does not
       // resolve external CSS modules at runtime.
       chips.forEach((chip) => {
