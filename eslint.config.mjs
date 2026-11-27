@@ -4,7 +4,7 @@ import nextTs from "eslint-config-next/typescript";
 import { existsSync, readdirSync } from "node:fs";
 
 // A feature's public entry files; everything else in it is private.
-const FEATURE_ENTRIES = ["index", "actions", "server", "store", "contracts"];
+const FEATURE_ENTRIES = ["index", "actions", "server", "store", "contracts", "ui/index"];
 const features = existsSync("features")
   ? readdirSync("features", { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name)
   : [];
@@ -23,7 +23,7 @@ const featureBoundaryZones = features.map((name) => ({
       .filter((other) => other !== name)
       .flatMap((other) => FEATURE_ENTRIES.flatMap((entry) => [`./${other}/${entry}.ts`, `./${other}/${entry}.tsx`])),
   ],
-  message: "Import another feature through its public API: '@/features/<name>' (or /actions, /server, /store, /contracts).",
+  message: "Import another feature through its public API: '@/features/<name>' (or /actions, /server, /store, /contracts, /ui).",
 }));
 
 const eslintConfig = defineConfig([
