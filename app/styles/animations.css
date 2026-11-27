@@ -31,12 +31,14 @@
 }
 .fade-up { animation: fadeUp 0.25s ease-out both; }
 
-/* Route enter — PageTransition remounts this wrapper on each navigation. */
+/* Route enter — PageTransition remounts this wrapper on each navigation.
+   `backwards` (not `both`) so no stacking context lingers after the fade;
+   otherwise modals rendered inside the page sit beneath the mobile nav. */
 @keyframes pageEnter {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: none; }
 }
-.page-enter { animation: pageEnter 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.page-enter { animation: pageEnter 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
 
 /* Toast enter — uses the standalone translate/scale properties so it composes
    with the toast's own centring `transform` (which mobile resets to none). */
