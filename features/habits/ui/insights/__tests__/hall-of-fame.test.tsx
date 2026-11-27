@@ -114,6 +114,22 @@ describe("HallOfFameView", () => {
     expect(screen.getByRole("dialog", { name: "Review Floss" })).toBeTruthy();
   });
 
+  it("lets a keep-practicing habit be reviewed again", async () => {
+    // Given: a 70-day-old habit whose last verdict was "keep practicing"
+    storeMock.habits = [makeHabit({ id: "old", name: "Floss", createdAt: dateAdd(todayKey(), -70) })];
+    storeMock.formationVerdicts = [{ habitId: "old", formed: false, score: 2 } as FormationVerdict];
+
+    render(<HallOfFameView />);
+
+    // When: the user re-opens its review from the in-progress list
+    const progress = within(screen.getByRole("region", { name: "In progress" }));
+    expect(progress.getByText(/keep practicing/)).toBeTruthy();
+    fireEvent.click(progress.getByRole("button", { name: "Review Floss again" }));
+
+    // Then: the questionnaire opens for that habit
+    expect(await screen.findByRole("dialog", { name: "Review Floss" })).toBeTruthy();
+  });
+
   it("shows inducted habits as cards with score, best streak and adherence", () => {
     // Given: a habit with a formed verdict
     storeMock.habits = [makeHabit({ id: "h", name: "Meditate", createdAt: dateAdd(todayKey(), -80) })];

@@ -71,6 +71,7 @@ export function HallOfFameView() {
             today={today}
             streak={streak}
             completionRate={completionRate}
+            onReview={openReview}
           />
         ) : null}
       </div>

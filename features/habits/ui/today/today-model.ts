@@ -10,6 +10,7 @@ import { dateAdd } from "@/lib/helpers";
 import type { Habit } from "@/lib/types";
 
 import { isScheduledForDate, nextScheduledDateKey } from "../../model/schedule";
+import { isDone as isDayDone } from "../../model/metrics";
 
 /** One entry in the focus list: a lone habit, or the visible top of a chain. */
 export type TodayItem =
@@ -37,8 +38,8 @@ export function buildTodayItems(scheduledUndone: Habit[], habits: Habit[], today
     seenChains.add(root.id);
     const fullChain = getChainFrom(root, habits);
     const firstVisible =
-      fullChain.find((h) => isScheduledForDate(today, h.schedule) && !h.history[today]) ??
-      fullChain.find((h) => !h.history[today]) ??
+      fullChain.find((h) => isScheduledForDate(today, h.schedule) && !isDayDone(h.history[today])) ??
+      fullChain.find((h) => !isDayDone(h.history[today])) ??
       fullChain[0];
     if (firstVisible) items.push({ kind: "stack", rootId: root.id, visible: firstVisible });
   }
@@ -58,7 +59,7 @@ export function recentDays(habits: Habit[], today: string, days = 14): DayTally[
   for (let i = days - 1; i >= 0; i--) {
     const key = dateAdd(today, -i);
     const scheduled = habits.filter((habit) => isScheduledForDate(key, habit.schedule));
-    out.push({ key, done: scheduled.filter((habit) => habit.history[key]).length, total: scheduled.length });
+    out.push({ key, done: scheduled.filter((habit) => isDayDone(habit.history[key])).length, total: scheduled.length });
   }
   return out;
 }

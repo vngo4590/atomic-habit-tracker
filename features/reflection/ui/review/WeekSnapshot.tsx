@@ -7,6 +7,7 @@ import { fmt } from "@/lib/helpers";
 import type { Habit } from "@/lib/types";
 
 import styles from "./WeekSnapshot.module.css";
+import { isDone as isDayDone } from "@/features/habits";
 
 interface WeekSnapshotProps {
   /** The seven date keys being reviewed, oldest first. */
@@ -18,7 +19,7 @@ interface WeekSnapshotProps {
 /** Percent of habits checked in on `day` (0 when there are no habits). */
 function dayPercent(habits: Habit[], day: string) {
   if (!habits.length) return 0;
-  return Math.round((habits.filter((habit) => habit.history[day]).length / habits.length) * 100);
+  return Math.round((habits.filter((habit) => isDayDone(habit.history[day])).length / habits.length) * 100);
 }
 
 /**
@@ -29,7 +30,7 @@ function dayPercent(habits: Habit[], day: string) {
 export function WeekSnapshot({ days, habits, completionRate }: WeekSnapshotProps) {
   const headingId = useId();
   const possible = days.length * habits.length;
-  const done = days.reduce((sum, day) => sum + habits.filter((habit) => habit.history[day]).length, 0);
+  const done = days.reduce((sum, day) => sum + habits.filter((habit) => isDayDone(habit.history[day])).length, 0);
   const pct = possible ? Math.round((done / possible) * 100) : 0;
   const wins = habits.filter((habit) => completionRate(habit, 7) >= 0.85);
   const slips = habits.filter((habit) => completionRate(habit, 7) < 0.5);

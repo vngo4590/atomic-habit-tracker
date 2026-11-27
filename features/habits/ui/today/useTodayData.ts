@@ -5,6 +5,7 @@ import { useMemo, useSyncExternalStore } from "react";
 import type { Habit } from "@/lib/types";
 
 import { isScheduledForDate } from "../../model/schedule";
+import { isDone as isDayDone } from "../../model/metrics";
 import {
   buildTodayItems,
   greetingFor,
@@ -24,8 +25,8 @@ import {
 export function useTodayData(habits: Habit[], streak: (habit: Habit) => number, today: string) {
   return useMemo(() => {
     const scheduledToday = habits.filter((habit) => isScheduledForDate(today, habit.schedule));
-    const scheduledUndone = scheduledToday.filter((habit) => !habit.history[today]);
-    const doneToday = scheduledToday.filter((habit) => habit.history[today]);
+    const scheduledUndone = scheduledToday.filter((habit) => !isDayDone(habit.history[today]));
+    const doneToday = scheduledToday.filter((habit) => isDayDone(habit.history[today]));
 
     // Longest active streak and the habit holding it (first wins on ties).
     let topHabit: Habit | null = null;
