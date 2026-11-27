@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useEffect, useRef } from "react";
 
 import { useStoreContext } from "@/components/StoreProvider";
 
@@ -15,16 +16,47 @@ const OnboardingOverlay = dynamic(() =>
 );
 
 function OnboardingFallback({ onComplete }: { onComplete: () => void }) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  // Remember what had focus before the dialog opened (read during the first
+  // render, before anything inside the dialog can take focus).
+  const opener = useRef(typeof document === "undefined" ? null : document.activeElement);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    const previous = opener.current;
+    if (!dialog) return;
+    // showModal() makes the rest of the page inert and traps focus natively.
+    if (typeof dialog.showModal === "function") {
+      if (!dialog.open) dialog.showModal();
+    } else {
+      dialog.setAttribute("open", "");
+    }
+    dialog.querySelector("button")?.focus();
+    return () => {
+      if (dialog.open && typeof dialog.close === "function") dialog.close();
+      if (previous instanceof HTMLElement) previous.focus();
+    };
+  }, []);
+
   return (
-    <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="onboarding-fallback-title">
+    <dialog
+      ref={dialogRef}
+      className="overlay"
+      aria-labelledby="onboarding-fallback-title"
+      onCancel={(event) => {
+        // Escape behaves like Continue, matching Skip on the full tour.
+        event.preventDefault();
+        onComplete();
+      }}
+    >
       <div className="overlay-card">
         <h2 id="onboarding-fallback-title">Welcome to Atomicly</h2>
         <p>Build tiny habits, cast a vote for who you want to become each day, and reflect on your progress.</p>
-        <button type="button" className="btn btn-primary" autoFocus onClick={onComplete}>
+        <button type="button" className="btn btn-primary" onClick={onComplete}>
           Continue
         </button>
       </div>
-    </div>
+    </dialog>
   );
 }
 

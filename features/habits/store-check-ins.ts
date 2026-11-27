@@ -8,6 +8,7 @@
  */
 
 import { type Dispatch, type SetStateAction, useCallback, useRef } from "react";
+import { flushSync } from "react-dom";
 
 import { todayKey } from "@/lib/helpers";
 import { clientLogger } from "@/lib/logger-client";
@@ -71,31 +72,46 @@ export function useCheckInMutations(setHabits: Dispatch<SetStateAction<Habit[]>>
       let hadEntry = false;
       let previousEntry: Habit["history"][string] | undefined;
 
-      setHabits((currentHabits) =>
-        currentHabits.map((habit) => {
-          if (habit.id !== id) {
-            return habit;
-          }
-
-          const history = { ...habit.history };
-          const previous = history[dateKey];
-          hadEntry = Object.prototype.hasOwnProperty.call(habit.history, dateKey);
-          previousEntry = previous;
-
-          if (previous && !payload) {
-            delete history[dateKey];
-            shouldComplete = false;
-          } else {
-            const prevObject = isCheckIn(previous) ? previous : {};
-            history[dateKey] = { done: true, ...prevObject, ...(payload ?? {}) };
-            if (!previous) {
-              toastIdentity = habit.identity;
-              toastVotes = Object.keys(history).filter((key) => isDone(history[key])).length;
+      // flushSync runs the updater now, so `shouldComplete` and the toast are
+      // derived from the latest state before the server call below (React may
+      // otherwise defer it, e.g. on a rapid second click).
+      flushSync(() =>
+        setHabits((currentHabits) =>
+          currentHabits.map((habit) => {
+            if (habit.id !== id) {
+              return habit;
             }
-          }
 
-          return { ...habit, history };
-        }),
+            const history = { ...habit.history };
+            const previous = history[dateKey];
+            hadEntry = Object.prototype.hasOwnProperty.call(habit.history, dateKey);
+            previousEntry = previous;
+
+            // A stored `{ done: false }` entry (mood/journal kept after an undo)
+            // is not done: checking it completes the day and keeps its fields.
+            const wasDone = isDone(previous);
+            const prevObject = isCheckIn(previous) ? previous : {};
+            if (wasDone && !payload) {
+              shouldComplete = false;
+              const retained: Partial<CheckIn> = { ...prevObject };
+              delete retained.done;
+              if (Object.keys(retained).length) history[dateKey] = { ...retained, done: false };
+              else delete history[dateKey];
+            } else {
+              history[dateKey] = {
+                ...prevObject,
+                done: true,
+                ...(payload ?? {}),
+              };
+              if (!wasDone) {
+                toastIdentity = habit.identity;
+                toastVotes = Object.keys(history).filter((key) => isDone(history[key])).length;
+              }
+            }
+
+            return { ...habit, history };
+          }),
+        ),
       );
 
       clientLogger.info("Habit toggled", {
@@ -156,7 +172,7 @@ export function useCheckInMutations(setHabits: Dispatch<SetStateAction<Habit[]>>
           hadEntry = Object.prototype.hasOwnProperty.call(habit.history, dateKey);
           previousEntry = previous;
           const prevObject = isCheckIn(previous) ? previous : {};
-          history[dateKey] = { done: true, ...prevObject, ...payload };
+          history[dateKey] = { ...prevObject, done: true, ...payload };
           if (Object.prototype.hasOwnProperty.call(payload, "mood") && payload.mood === undefined) {
             delete (history[dateKey] as CheckIn).mood;
           }

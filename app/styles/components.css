@@ -394,6 +394,19 @@ textarea.input {
   place-items: center;
   padding: 40px;
 }
+/* Native <dialog> variant (onboarding fallback): drop the UA modal box styles. */
+dialog.overlay {
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  color: inherit;
+}
+dialog.overlay::backdrop {
+  background: transparent;
+}
 .overlay-card {
   background: var(--bg-elev);
   border: 1px solid var(--rule);
