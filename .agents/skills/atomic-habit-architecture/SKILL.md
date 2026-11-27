@@ -68,7 +68,7 @@ k8s/local/         # Docker Desktop Kubernetes manifests
 ### Import rules (`eslint.config.mjs`)
 
 - Outside a feature, import it **only** through `@/features/<name>` (pure model), `/actions`, `/server`, `/store`, `/contracts` or `/ui`. Deep imports (`@/features/habits/model/metrics`) and relative paths that climb into another feature are lint errors.
-- `features/*/model/**` may not import `react`, `server-only`, `pg`, `@prisma/*`, db/repositories/generated, any `server`, or any `actions` — keep it pure and unit-testable. Across features it may only use another feature's `index`, `/contracts`, `/actions`, `/server` entry points.
+- `features/*/model/**` may not import `react`, `server-only`, `pg`, `@prisma/*`, db/repositories/generated, any `server`, or any `actions` — keep it pure and unit-testable. Across features it may only use another feature's pure `index` barrel and `/contracts` (never `/actions`, `/server`, `/store` or `/ui`).
 - Inside a feature, use relative imports (e.g. actions import repositories via `./server`).
 - Server-side dependencies between features stay one-way (e.g. stacks → habits; the stack-link validator lives in `features/habits/server/`).
 - Never re-export `contracts.ts` (Zod) from `index.ts`: it added ~64 KB gz to every route. `npm run bundle:check` enforces a 230 KB gz first-load budget.

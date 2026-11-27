@@ -17,7 +17,7 @@ These are the non-negotiable design rules for any change spanning more than one 
 | **O — Open/closed** | Extend with new variants, not new conditionals branching on `kind`. Example: add a new mood by appending to `MOODS`, not by `if (mood === "anger") { ... }`. |
 | **L — Liskov substitution** | A new variant component must satisfy the same prop contract as its siblings. Don't sneak in extra required props at one call site. |
 | **I — Interface segregation** | Props interfaces should expose only what each call site needs. Don't add `onEverything` callbacks; split into focused props. |
-| **D — Dependency inversion** | Dependencies point one way: `app/` → `features/` → `lib/` (and `components/`). `lib/` never imports from a feature or from `components/`; `features/*/model/` is pure and imports no I/O. Server actions live in `features/<name>/actions.ts` and depend on that feature's `server/` repositories, never the other way around. Cross-feature access goes through public entry points only (see `atomic-habit-architecture` § Import rules). |
+| **D — Dependency inversion** | Dependencies point one way: `app/` → `features/` → `lib/` (and `components/`). `lib/` never imports from a feature or from `components/` — except the two composition roots, `lib/store/index.ts` (composes feature store slices) and `lib/server/store-snapshot.ts` (composes feature repositories); `features/*/model/` is pure and imports no I/O. Server actions live in `features/<name>/actions.ts` and depend on that feature's `server/` repositories, never the other way around. Cross-feature access goes through public entry points only (see `atomic-habit-architecture` § Import rules). |
 
 ## 2. GRASP
 

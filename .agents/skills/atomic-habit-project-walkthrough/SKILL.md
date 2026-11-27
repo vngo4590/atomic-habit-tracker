@@ -51,7 +51,7 @@ For **all** local dev commands (DB lifecycle, seed/demo data, validation, kube o
 
 ## Routes (one-line summary)
 
-Primary navigation (`components/nav/nav-items.ts`): **Today**, **Habits**, **Reflect** (journal/review/identity), **Insights** (analytics/hall of fame), **Pet**, plus **Settings** via the avatar menu. Each has an Alt+Shift shortcut (T/H/R/I/P/,). Route `page.tsx` files are thin shells that render views from `@/features/<name>/ui`.
+Primary navigation (`components/nav/nav-items.ts`): **Today**, **Habits**, **Reflect** (journal/review), **Insights** (analytics/hall of fame), **Pet**, **Settings** (settings/identity). Each has an Alt+Shift shortcut (T/H/R/I/P/,). Route `page.tsx` files are thin shells that render views from `@/features/<name>/ui`.
 
 | Route | Screen |
 |---|---|
