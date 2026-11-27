@@ -43,6 +43,23 @@ describe("analytics data", () => {
     expect(rates.slice(2).every((rate) => rate.total === 0)).toBe(true);
     expect(totalCheckIns(habits)).toBe(1);
   });
+
+  it("treats structured check-ins by their done flag, alongside legacy true entries", () => {
+    // Given: Monday has a structured done entry and a legacy true entry;
+    // Tuesday has only a reflection that was left undone
+    const habits = [
+      habit("a", { history: { "2030-01-07": { done: true, mood: 4 }, "2030-01-08": { done: false, mood: 2 } } }),
+      habit("b", { history: { "2030-01-07": true } }),
+    ];
+
+    // When: the two days are bucketed
+    const rates = weekdayRates(habits, ["2030-01-07", "2030-01-08"]);
+
+    // Then: Monday counts both, Tuesday's undone reflection does not count
+    expect(rates[0]).toEqual({ label: "Mon", pct: 100, total: 2 });
+    expect(rates[1]).toEqual({ label: "Tue", pct: 0, total: 2 });
+    expect(totalCheckIns(habits)).toBe(2);
+  });
 });
 
 describe("formation grouping", () => {

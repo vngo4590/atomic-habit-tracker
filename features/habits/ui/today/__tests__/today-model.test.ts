@@ -102,6 +102,17 @@ describe("votesByIdentity", () => {
     // Then: only the scheduled, completed votes count
     expect(votesByIdentity(habits, MONDAY)).toEqual([["reader", 2]]);
   });
+
+  it("does not count a reflection that was left undone as a vote", () => {
+    // Given: one structured done entry, one undone entry that kept its mood
+    const habits = [
+      habit({ id: "1", identity: "reader", history: { [MONDAY]: { done: true, mood: 4 } } }),
+      habit({ id: "2", identity: "writer", history: { [MONDAY]: { done: false, mood: 2 } } }),
+    ];
+
+    // Then: only the completed check-in votes
+    expect(votesByIdentity(habits, MONDAY)).toEqual([["reader", 1]]);
+  });
 });
 
 describe("nextScheduledHabit", () => {
