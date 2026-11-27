@@ -100,7 +100,6 @@ CSRF).
   lock-out-the-victim DoS. State is in-memory/per-instance (same caveat as the
   rate limiter).
 - **Session revocation gate:** `isSessionRevoked` (`lib/auth/session-policy.ts`)
-- **Session revocation gate:** `isSessionRevoked` (`lib/auth/session-policy.ts`)
   rejects any JWT whose issue time (`authTime`) is strictly **before** the user's
   revocation cutoff (`sessionsValidFrom`). "Sign out everywhere"
   (`signOutEverywhereAction`) advances the cutoff to **now**, which revokes
@@ -124,6 +123,14 @@ CSRF).
   revocation of all devices use "Sign out everywhere" first. The user-facing
   copy reflects this honestly ("You're still signed in on this device") rather
   than claiming all other devices were signed out.
+- **Sign-out vs in-flight requests:** `proxy.ts` drops the session cookie that
+  Auth.js re-issues on every response unless the token is due for its sliding
+  refresh (`lib/auth/session-refresh.ts`), so a request in flight during sign-out
+  (e.g. a link prefetch) cannot silently sign the user back in. **Residual risk:**
+  once a token is old enough to be refreshed (24 h), a request already in flight
+  at sign-out can still re-issue it. Closing that window needs per-session
+  server-side revocation (a `sid` store checked by the proxy), a Prisma schema
+  change deferred to a follow-up. "Sign out everywhere" revokes such tokens.
 
 ### Bot challenge — Cloudflare Turnstile (`lib/security/turnstile.ts`, `components/TurnstileWidget.tsx`)
 
