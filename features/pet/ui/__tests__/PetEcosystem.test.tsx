@@ -163,8 +163,9 @@ describe("PetEcosystem", () => {
     const adoptPet = vi.fn();
     const store = testStoreContext({ habits: [], pets: [], petFeedsUsedToday: 0, adoptPet });
 
-    // When the user names a pet and adopts it
+    // When the user opens the adopt flow, names a pet and adopts it
     renderEcosystem(store);
+    fireEvent.click(screen.getByRole("button", { name: "Adopt a companion" }));
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Sunny" } });
     fireEvent.click(screen.getByRole("button", { name: /Adopt Sunny/i }));
 
@@ -205,7 +206,67 @@ describe("PetEcosystem", () => {
     // When the ecosystem renders
     renderEcosystem(store);
 
-    // Then there is no adopt panel
+    // Then there is no way to start another adoption
     expect(screen.queryByText(/Adopt a companion/i)).toBeNull();
+  });
+
+  it("invites a first adoption when no companion is alive, and opens the adopt flow", () => {
+    // Given an ecosystem with no living pets
+    const store = testStoreContext({ habits: [], pets: [], petFeedsUsedToday: 0 });
+    renderEcosystem(store);
+    expect(screen.getByRole("heading", { name: "Adopt your first companion" })).toBeTruthy();
+
+    // When the user takes the call to action
+    fireEvent.click(screen.getByRole("button", { name: "Adopt a companion" }));
+
+    // Then the focused adopt flow replaces the empty state and takes focus
+    const heading = screen.getByRole("heading", { name: "Adopt a companion" });
+    expect(document.activeElement).toBe(heading);
+    expect(screen.queryByRole("heading", { name: "Adopt your first companion" })).toBeNull();
+
+    // When they close it, the invitation returns
+    fireEvent.click(screen.getByRole("button", { name: "Close adopt panel" }));
+    expect(screen.getByRole("heading", { name: "Adopt your first companion" })).toBeTruthy();
+  });
+
+  it("closes the adopt flow once the new companion arrives", () => {
+    // Given one living pet and the adopt flow open from the page header
+    const store = testStoreContext({ habits: [], pets: [makePet()], petFeedsUsedToday: 0 });
+    const { rerender } = renderEcosystem(store);
+    fireEvent.click(screen.getByRole("button", { name: "Adopt a companion" }));
+    expect(screen.getByRole("heading", { name: "Adopt a companion" })).toBeTruthy();
+
+    // When the adoption lands in the store
+    rerender(
+      <StoreContextProvider value={{ ...store, pets: [makePet(), makePet({ id: "pet_2", name: "Sunny" })] }}>
+        <PetEcosystem />
+      </StoreContextProvider>,
+    );
+
+    // Then the flow closes and the new companion's card is shown
+    expect(screen.queryByRole("heading", { name: "Adopt a companion" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Sunny" })).toBeTruthy();
+  });
+
+  it("explains how food is earned", () => {
+    // Given the ecosystem
+    renderEcosystem(testStoreContext({ habits: [], pets: [makePet()], petFeedsUsedToday: 0 }));
+
+    // When the user opens the explanation
+    fireEvent.click(screen.getByText("How to earn food"));
+
+    // Then each source and its reward is listed
+    expect(screen.getByText("Complete a habit")).toBeTruthy();
+    expect(screen.getByText("+3 food")).toBeTruthy();
+    expect(screen.getByText("Save a weekly review")).toBeTruthy();
+  });
+
+  it("reports each vital as an accessible meter", () => {
+    // Given a pet at full health
+    renderEcosystem(testStoreContext({ habits: [], pets: [makePet()], petFeedsUsedToday: 0 }));
+
+    // Then health is exposed as a 0-100 meter
+    const health = screen.getByRole("meter", { name: "Health" });
+    expect(health.getAttribute("aria-valuenow")).toBe("100");
   });
 });

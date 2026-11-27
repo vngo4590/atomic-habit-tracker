@@ -1,8 +1,8 @@
 "use client";
 
-import { motion, type TargetAndTransition, type Transition } from "framer-motion";
+import { motion, useReducedMotion, type TargetAndTransition, type Transition } from "framer-motion";
 
-import type { MoodAnimation, Sprite } from "@/features/pet";
+import type { MoodAnimation, Sprite } from "..";
 
 import { PixelSprite } from "./PixelSprite";
 import styles from "./MoodSprite.module.css";
@@ -56,12 +56,15 @@ export function MoodSprite({
   /** Whether to float little hearts (used for the "in love" mood). */
   showHearts?: boolean;
 }) {
-  const motionProps = ANIMATIONS[animation];
+  // Users who ask for reduced motion get a still sprite: the mood is still
+  // conveyed by the face + label next to it, so nothing is lost.
+  const reduceMotion = useReducedMotion();
+  const motionProps = ANIMATIONS[reduceMotion ? "none" : animation];
   const isDead = animation === "none";
 
   return (
     <div className={styles.wrap}>
-      {showHearts ? (
+      {showHearts && !reduceMotion ? (
         <div className={styles.hearts} aria-hidden="true">
           <motion.span
             className={styles.heart}
