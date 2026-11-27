@@ -7,7 +7,7 @@
  * helper. Used by `useHabitsSlice` in `./store.ts`.
  */
 
-import { type Dispatch, type SetStateAction, useCallback } from "react";
+import { type Dispatch, type SetStateAction, useCallback, useRef } from "react";
 
 import { todayKey } from "@/lib/helpers";
 import { clientLogger } from "@/lib/logger-client";
@@ -21,7 +21,48 @@ function isCheckIn(value: Habit["history"][string]): value is CheckIn {
   return typeof value === "object" && value !== null;
 }
 
+/** Put back one habit's entry for one day, leaving everything else as it is now. */
+function restoreEntry(
+  habits: Habit[],
+  id: string,
+  dateKey: string,
+  hadEntry: boolean,
+  previousEntry: Habit["history"][string] | undefined,
+) {
+  return habits.map((habit) => {
+    if (habit.id !== id) {
+      return habit;
+    }
+    const history = { ...habit.history };
+    if (hadEntry) {
+      history[dateKey] = previousEntry as Habit["history"][string];
+    } else {
+      delete history[dateKey];
+    }
+    return { ...habit, history };
+  });
+}
+
 export function useCheckInMutations(setHabits: Dispatch<SetStateAction<Habit[]>>, showToast: ShowToast) {
+  // Which request "owns" each habit/day. A toggle or check-in that finishes
+  // after a newer one for the same habit/day must not roll back or overwrite
+  // the newer state, so both mutations claim ownership and check it.
+  const owners = useRef(new Map<string, number>());
+  const nextToken = useRef(0);
+  const claim = useCallback((id: string, dateKey: string) => {
+    const key = `${id}|${dateKey}`;
+    const token = ++nextToken.current;
+    owners.current.set(key, token);
+    return {
+      owns: () => owners.current.get(key) === token,
+      release: () => {
+        if (owners.current.get(key) === token) {
+          owners.current.delete(key);
+        }
+      },
+    };
+  }, []);
+
   const toggleHabit = useCallback(
     (id: string, dateKey = todayKey(), payload: Partial<CheckIn> | null = null) => {
       let toastIdentity: string | null = null;
@@ -65,31 +106,23 @@ export function useCheckInMutations(setHabits: Dispatch<SetStateAction<Habit[]>>
         includesCheckIn: Boolean(payload),
       });
 
+      const ownership = claim(id, dateKey);
       void optimistic({
         // The optimistic change was applied above (it also decides the toast).
-        // Rolling back restores only this habit's entry for `dateKey`, so
-        // unrelated edits made while the request was in flight survive.
-        apply: () => () =>
-          setHabits((currentHabits) =>
-            currentHabits.map((habit) => {
-              if (habit.id !== id) {
-                return habit;
-              }
-              const history = { ...habit.history };
-              if (hadEntry) {
-                history[dateKey] = previousEntry as Habit["history"][string];
-              } else {
-                delete history[dateKey];
-              }
-              return { ...habit, history };
-            }),
-          ),
+        // Rolling back restores only this habit's entry for `dateKey`, and
+        // only while no newer toggle/check-in for that day has taken over.
+        apply: () => () => {
+          if (ownership.owns()) {
+            setHabits((currentHabits) => restoreEntry(currentHabits, id, dateKey, hadEntry, previousEntry));
+          }
+          ownership.release();
+        },
         action: () => toggleHabitAction(id, dateKey, shouldComplete),
         onSuccess: (saved) => {
-          if (!saved) {
-            return;
+          if (saved && ownership.owns()) {
+            setHabits((currentHabits) => currentHabits.map((habit) => (habit.id === id ? saved : habit)));
           }
-          setHabits((currentHabits) => currentHabits.map((habit) => (habit.id === id ? saved : habit)));
+          ownership.release();
         },
         failure: {
           log: "Habit toggle failed",
@@ -104,11 +137,14 @@ export function useCheckInMutations(setHabits: Dispatch<SetStateAction<Habit[]>>
         showToast(`Vote cast for "${toastIdentity}"`, `${toastVotes} total`);
       }
     },
-    [setHabits, showToast],
+    [setHabits, showToast, claim],
   );
 
   const logCheckIn = useCallback(
     (id: string, payload: Partial<CheckIn>, dateKey = todayKey()) => {
+      let hadEntry = false;
+      let previousEntry: Habit["history"][string] | undefined;
+
       setHabits((currentHabits) =>
         currentHabits.map((habit) => {
           if (habit.id !== id) {
@@ -117,6 +153,8 @@ export function useCheckInMutations(setHabits: Dispatch<SetStateAction<Habit[]>>
 
           const history = { ...habit.history };
           const previous = history[dateKey];
+          hadEntry = Object.prototype.hasOwnProperty.call(habit.history, dateKey);
+          previousEntry = previous;
           const prevObject = isCheckIn(previous) ? previous : {};
           history[dateKey] = { done: true, ...prevObject, ...payload };
           if (Object.prototype.hasOwnProperty.call(payload, "mood") && payload.mood === undefined) {
@@ -138,22 +176,31 @@ export function useCheckInMutations(setHabits: Dispatch<SetStateAction<Habit[]>>
         hasJournal: payload.journal !== undefined,
       });
 
+      const ownership = claim(id, dateKey);
       void optimistic({
+        apply: () => () => {
+          if (ownership.owns()) {
+            setHabits((currentHabits) => restoreEntry(currentHabits, id, dateKey, hadEntry, previousEntry));
+          }
+          ownership.release();
+        },
         action: () => logCheckInAction(id, dateKey, payload),
         onSuccess: (saved) => {
-          if (!saved) {
-            return;
+          if (saved && ownership.owns()) {
+            setHabits((currentHabits) => currentHabits.map((habit) => (habit.id === id ? saved : habit)));
           }
-          setHabits((currentHabits) => currentHabits.map((habit) => (habit.id === id ? saved : habit)));
+          ownership.release();
         },
         failure: {
           log: "Habit check-in failed",
           event: "store.check-in.save_failed",
           context: { habitId: id, dateKey },
+          toast: "Couldn't save check-in details",
         },
+        showToast,
       });
     },
-    [setHabits],
+    [setHabits, showToast, claim],
   );
 
   return { toggleHabit, logCheckIn };

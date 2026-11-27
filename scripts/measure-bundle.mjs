@@ -23,7 +23,14 @@ const NEXT_DIR = ".next";
 const args = process.argv.slice(2);
 const asJson = args.includes("--json");
 const budgetIndex = args.indexOf("--budget");
-const budgetKb = budgetIndex >= 0 ? Number(args[budgetIndex + 1]) : null;
+const budgetRaw = budgetIndex >= 0 ? args[budgetIndex + 1] : undefined;
+const budgetKb = budgetIndex >= 0 ? Number(budgetRaw) : null;
+
+// A bad budget would make every comparison false and silently pass the gate.
+if (budgetIndex >= 0 && (budgetRaw === undefined || budgetRaw.trim() === "" || !Number.isFinite(budgetKb) || budgetKb < 0)) {
+  console.error(`Invalid --budget value: ${JSON.stringify(budgetRaw)}. Pass a non-negative number of KB.`);
+  process.exit(1);
+}
 
 if (!existsSync(join(NEXT_DIR, "build-manifest.json"))) {
   console.error("No .next build found. Run `npm run build` first.");
@@ -68,11 +75,11 @@ for (const manifestPath of findManifests(appDir)) {
     const pageEntry = Object.keys(entryFiles).find((k) => k.endsWith(`${key}`) || k.endsWith(`/app${key}`));
     if (!pageEntry) continue;
 
-    const files = new Set([...sharedFiles, ...entryFiles[pageEntry]]);
-    const totalKb = [...files].reduce((sum, f) => sum + gzipKb(f), 0);
-    const routeOnlyKb = entryFiles[pageEntry]
-      .filter((f) => !sharedFiles.includes(f))
-      .reduce((sum, f) => sum + gzipKb(f), 0);
+    // The page needs every segment's entry chunks (root and group layouts too),
+    // not just its own, so union and de-duplicate all of them.
+    const routeFiles = new Set(Object.values(entryFiles).flat().filter((f) => !sharedFiles.includes(f)));
+    const totalKb = [...sharedFiles, ...routeFiles].reduce((sum, f) => sum + gzipKb(f), 0);
+    const routeOnlyKb = [...routeFiles].reduce((sum, f) => sum + gzipKb(f), 0);
 
     // "/(root)/habits/[id]/page" -> "/habits/[id]"
     const route = key.replace(/\/page$/, "").replace(/\/\([^)]+\)/g, "") || "/";
