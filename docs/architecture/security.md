@@ -43,9 +43,11 @@ not `middleware.ts`) and the auth modules. They are unit-tested under
 Applied to every response:
 
 - **Content-Security-Policy** — per-request nonce on `script-src` plus
-  `'strict-dynamic'`; `style-src 'unsafe-inline'` (required by Framer Motion /
-  Tailwind server-rendered inline styles — a nonce there would *disable*
-  `'unsafe-inline'`); `frame-ancestors 'none'`; `object-src 'none'`;
+  `'strict-dynamic'`; `style-src` carries the nonce (Next.js 16 stamps it on
+  stylesheet links), which disables its `'unsafe-inline'`, so a separate
+  `style-src-attr 'unsafe-inline'` allows server-rendered inline `style`
+  attributes (Framer Motion, CSS-variable passthrough) without allowing
+  un-nonced `<style>` elements; `frame-ancestors 'none'`; `object-src 'none'`;
   `base-uri 'self'`. `'unsafe-eval'` is added only in development.
   The nonce is generated per request, stamped onto the request header
   (`x-nonce`) so Server Components can read it via `headers()`, and onto the
