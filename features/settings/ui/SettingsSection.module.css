@@ -1,0 +1,91 @@
+/* SettingsSection + SettingRow — calm grouped rows inside a card. */
+
+.section {
+  /* Leave breathing room above the heading when jumping to an #anchor. */
+  scroll-margin-top: var(--space-6);
+  overflow: hidden;
+}
+
+.header {
+  padding: var(--space-5) var(--space-5) var(--space-3);
+}
+.title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-heading);
+  letter-spacing: var(--tracking-heading);
+  color: var(--text);
+}
+.description {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.danger {
+  border-color: color-mix(in oklch, var(--danger) 35%, var(--border));
+}
+.danger .title {
+  color: var(--danger);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border);
+}
+
+/* Label/value on the left, action on the right; stacks below 560px. */
+.rowMain {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+@media (min-width: 560px) {
+  .rowMain {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.rowText {
+  min-width: 0;
+}
+.label {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text);
+}
+.value {
+  margin-top: 2px;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+.hint {
+  margin: 2px 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-subtle);
+}
+
+.action {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+/* Inline editor revealed under a row (name, password, import confirm). */
+.panel {
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}

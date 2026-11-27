@@ -16,18 +16,7 @@ vi.mock("@/lib/logger-client", () => ({
   clientLogger: { info: vi.fn(), error: vi.fn() },
 }));
 
-// Render framer-motion's motion.button as a plain button so jsdom can drive it.
-vi.mock("framer-motion", () => ({
-  motion: {
-    button: (p: Record<string, unknown>) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { children, whileTap, ...props } = p;
-      return <button {...props}>{children as React.ReactNode}</button>;
-    },
-  },
-}));
-
-import { ChangePasswordForm } from "@/app/(root)/settings/ChangePasswordForm";
+import { ChangePasswordForm } from "../ChangePasswordForm";
 
 afterEach(() => {
   cleanup();
