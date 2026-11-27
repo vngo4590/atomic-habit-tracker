@@ -53,7 +53,7 @@ export function StackCardGroup({
   const upcoming = useMemo(() => {
     const subChain = getChainFrom(habit, habits);
     if (!today) return subChain;
-    return subChain.filter((h) => !h.history[today]);
+    return subChain.filter((h) => !isDayDone(h.history[today]));
   }, [habit, habits, today]);
 
   // Top card is always first; expanded view shows top + at most 2 upcoming.

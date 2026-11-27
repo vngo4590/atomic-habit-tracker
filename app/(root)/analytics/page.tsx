@@ -40,7 +40,7 @@ export default function AnalyticsPage() {
     return Array.from({ length: range }, (_, index) => {
       const key = dateAdd(today, index - range + 1);
       const scheduled = habits.filter((habit) => isScheduledForDate(key, habit.schedule));
-      const done = scheduled.filter((habit) => habit.history[key]).length;
+      const done = scheduled.filter((habit) => isDone(habit.history[key])).length;
       return {
         label: fmt.short(key),
         pct: scheduled.length ? Math.round((done / scheduled.length) * 100) : 0,

@@ -42,7 +42,7 @@ export default function TodayPage() {
   useEffect(() => {
     clientLogger.info("Page viewed", { page: "today" });
   }, []);
-  const scheduledUndone = scheduledToday.filter((habit) => !habit.history[today]);
+  const scheduledUndone = scheduledToday.filter((habit) => !isDayDone(habit.history[today]));
 
   /**
    * Build today's render list. Each scheduled-undone habit is either:
@@ -72,8 +72,8 @@ export default function TodayPage() {
       seenChains.add(root.id);
       const fullChain = getChainFrom(root, habits);
       const firstVisible =
-        fullChain.find((h) => isScheduledForDate(today, h.schedule) && !h.history[today]) ??
-        fullChain.find((h) => !h.history[today]) ??
+        fullChain.find((h) => isScheduledForDate(today, h.schedule) && !isDayDone(h.history[today])) ??
+        fullChain.find((h) => !isDayDone(h.history[today])) ??
         fullChain[0];
       if (firstVisible) {
         items.push({ kind: "stack", rootId: root.id, visible: firstVisible });
@@ -95,7 +95,7 @@ export default function TodayPage() {
   }, [habits, searchQuery]);
 
   // Completion stats — only count habits actually scheduled for today.
-  const doneScheduledToday = scheduledToday.filter((habit) => habit.history[today]).length;
+  const doneScheduledToday = scheduledToday.filter((habit) => isDayDone(habit.history[today])).length;
   const pct = scheduledToday.length ? Math.round((doneScheduledToday / scheduledToday.length) * 100) : 0;
   const hour = new Date().getHours();
   const greet =
@@ -107,7 +107,7 @@ export default function TodayPage() {
     for (let i = 13; i >= 0; i--) {
       const key = dateAdd(today, -i);
       const scheduled = habits.filter((habit) => isScheduledForDate(key, habit.schedule));
-      const done = scheduled.filter((habit) => habit.history[key]).length;
+      const done = scheduled.filter((habit) => isDayDone(habit.history[key])).length;
       days.push({ key, done, total: scheduled.length });
     }
     return days;
