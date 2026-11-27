@@ -1,0 +1,65 @@
+/* TodayHeader — greeting/date left, progress + search right. Compact so the
+   habit list is visible straight away on a phone. */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.text {
+  min-width: 0;
+}
+
+.date {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-heading);
+  letter-spacing: var(--tracking-heading);
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.aside {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.progressText {
+  /* Hidden on narrow phones — the ring already shows the percentage. */
+  display: none;
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+@media (min-width: 480px) {
+  .progressText {
+    display: block;
+  }
+}
+
+@media (min-width: 768px) {
+  .title {
+    font-size: var(--text-3xl);
+  }
+}

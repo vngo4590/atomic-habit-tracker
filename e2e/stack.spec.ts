@@ -592,7 +592,7 @@ test.describe("Today page stack cards", () => {
 
     await page.goto("/");
     // Top card (root A) visible.
-    await expect(page.locator('.habit-list-row:has-text("Today Stack A")').first()).toBeVisible();
+    await expect(page.locator('[data-testid="habit-row"]:has-text("Today Stack A")').first()).toBeVisible();
     // Wallet peek slivers communicate that more habits exist behind the top card.
     const peeks = page.locator('[data-testid="stack-card-peek"]');
     await expect(peeks.first()).toBeVisible();
@@ -610,14 +610,14 @@ test.describe("Today page stack cards", () => {
 
     await page.goto("/");
     // The root habit (A) should be visible as the stack card
-    await expect(page.locator('.habit-list-row:has-text("Today Stack A")').first()).toBeVisible();
+    await expect(page.locator('[data-testid="habit-row"]:has-text("Today Stack A")').first()).toBeVisible();
   });
 
   test("solo habits still render as standalone rows", async ({ page }) => {
     await seedHabit(page, unique("Solo Habit"), "soloer");
 
     await page.goto("/");
-    const soloRow = page.locator('.habit-list-row:has-text("Solo Habit")').first();
+    const soloRow = page.locator('[data-testid="habit-row"]:has-text("Solo Habit")').first();
     await expect(soloRow).toBeVisible();
   });
 
@@ -636,7 +636,7 @@ test.describe("Today page stack cards", () => {
 
     await page.goto("/");
     // Click the root card (A) to expand the stack.
-    await page.locator('.habit-list-row:has-text("Expand A")').first().click();
+    await page.locator('[data-testid="habit-row"]:has-text("Expand A") button[aria-expanded]').first().click();
 
     // After expand, should see collapse button
     await expect(page.locator('button:has-text("Collapse stack")')).toBeVisible();
@@ -646,11 +646,11 @@ test.describe("Today page stack cards", () => {
     const idA = await seedHabit(page, unique("Check A"), "checker");
 
     await page.goto("/");
-    const row = page.locator('.habit-list-row:has-text("Check A")').first();
+    const row = page.locator('[data-testid="habit-row"]:has-text("Check A")').first();
     await expect(row).toBeVisible({ timeout: 10000 });
 
     // Click the check circle (not the row which would navigate)
-    await row.locator('button[aria-label="Check"]').click();
+    await row.getByRole("button", { name: /^Mark .* done$/ }).click();
 
     // A mood sheet may appear; close it if so
     const moodClose = page.locator('button:has-text("Skip")');
@@ -671,11 +671,11 @@ test.describe("Today page stack cards", () => {
     await setStackNextId(page, idB, idA);
 
     await page.goto("/");
-    const rowB = page.locator('.habit-list-row:has-text("Reveal B")').first();
+    const rowB = page.locator('[data-testid="habit-row"]:has-text("Reveal B")').first();
     await expect(rowB).toBeVisible();
 
     // Check off B
-    await rowB.locator('button[aria-label="Check"]').click();
+    await rowB.getByRole("button", { name: /^Mark .* done$/ }).click();
 
     const moodClose = page.locator('button:has-text("Skip")');
     if (await moodClose.isVisible().catch(() => false)) {
@@ -684,8 +684,8 @@ test.describe("Today page stack cards", () => {
 
     // B should disappear (done), A should now appear as first undone
     await page.reload();
-    await page.waitForSelector('button:has-text("New habit")', { timeout: 10000 });
-    await expect(page.locator('.habit-list-row:has-text("Reveal A")').first()).toBeVisible();
+    await page.waitForSelector('[data-testid="today-view"]', { timeout: 10000 });
+    await expect(page.locator('[data-testid="habit-row"]:has-text("Reveal A")').first()).toBeVisible();
   });
 });
 
@@ -699,7 +699,7 @@ test.describe("Responsive layout", () => {
   test("no layout overflow at mobile viewport", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto("/");
-    await page.waitForSelector('button:has-text("New habit")', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="today-view"]', { timeout: 10000 });
 
     const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
     expect(bodyWidth).toBeLessThanOrEqual(375);
