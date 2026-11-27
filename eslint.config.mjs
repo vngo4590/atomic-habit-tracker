@@ -1,6 +1,30 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
+import { existsSync, readdirSync } from "node:fs";
+
+// A feature's public entry files; everything else in it is private.
+const FEATURE_ENTRIES = ["index", "actions", "server", "store", "contracts", "ui/index"];
+const features = existsSync("features")
+  ? readdirSync("features", { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name)
+  : [];
+
+/**
+ * Resolved-path boundary check: code inside a feature may reach another
+ * feature only through its public entry files, however the import is written
+ * (alias or relative). Shared code outside `features/` is unaffected.
+ */
+const featureBoundaryZones = features.map((name) => ({
+  target: `./features/${name}`,
+  from: "./features",
+  except: [
+    `./${name}`,
+    ...features
+      .filter((other) => other !== name)
+      .flatMap((other) => FEATURE_ENTRIES.flatMap((entry) => [`./${other}/${entry}.ts`, `./${other}/${entry}.tsx`])),
+  ],
+  message: "Import another feature through its public API: '@/features/<name>' (or /actions, /server, /store, /contracts, /ui).",
+}));
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -28,14 +52,15 @@ const eslintConfig = defineConfig([
               group: ["@/features/*/*", "@/features/*/*/**", "!@/features/*/actions", "!@/features/*/server", "!@/features/*/store", "!@/features/*/contracts", "!@/features/*/ui"],
               message: "Import a feature through '@/features/<name>', '/actions', '/server', '/store', '/contracts' or '/ui' only.",
             },
-            {
-              // Relative paths that climb out of this feature into another one's internals.
-              regex: "^(\\.\\./)+(features/)?[a-z][a-z-]*/(model|server|ui|store|actions|contracts)(/|$)",
-              message: "Import another feature through its public API: '@/features/<name>'.",
-            },
           ],
         },
       ],
+    },
+  },
+  {
+    files: ["features/**/*.{ts,tsx}"],
+    rules: {
+      "import/no-restricted-paths": ["error", { zones: featureBoundaryZones }],
     },
   },
   // Pure domain logic must stay free of React, the database and server code,
@@ -53,11 +78,6 @@ const eslintConfig = defineConfig([
           ],
           patterns: [
             { group: ["@/features/*/*", "@/features/*/*/**", "!@/features/*/actions", "!@/features/*/server", "!@/features/*/contracts"], message: "Use the feature's public API." },
-            {
-              // Relative paths that climb out of this feature into another one's internals.
-              regex: "^(\\.\\./)+(features/)?[a-z][a-z-]*/(model|server|ui|store|actions|contracts)(/|$)",
-              message: "Import another feature through its public API: '@/features/<name>'.",
-            },
             {
               // Aliased and relative paths to database/server/action modules, plus the Prisma packages.
               group: ["@prisma/*", "**/db", "**/db/**", "**/repositories", "**/repositories/**", "**/generated/**", "**/server", "**/server/**", "**/actions", "**/actions/**"],
@@ -79,7 +99,7 @@ const eslintConfig = defineConfig([
   // Tests may reach into internals to exercise them directly.
   {
     files: ["**/__tests__/**", "**/*.test.{ts,tsx}", "e2e/**"],
-    rules: { "no-restricted-imports": "off" },
+    rules: { "no-restricted-imports": "off", "import/no-restricted-paths": "off" },
   },
   // Override default ignores of eslint-config-next.
   globalIgnores([

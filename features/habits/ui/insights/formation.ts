@@ -15,7 +15,7 @@ export function daysSince(dateKey: string, today: string = todayKey()): number {
 export interface FormationGroups {
   /** Old enough for review and not yet reviewed. */
   ready: Habit[];
-  /** Younger than FORMATION_DAYS and not yet reviewed. */
+  /** Younger than FORMATION_DAYS and not yet reviewed, or reviewed as "keep practicing". */
   inProgress: Habit[];
   /** Habits whose verdict says the habit is formed. */
   inducted: Array<{ habit: Habit; verdict: FormationVerdict }>;
@@ -27,13 +27,15 @@ export function groupForFormation(
   verdicts: FormationVerdict[],
   today: string = todayKey(),
 ): FormationGroups {
-  const reviewed = new Set(verdicts.map((verdict) => verdict.habitId));
-  const pending = habits.filter((habit) => !reviewed.has(habit.id));
+  const verdictOf = new Map(verdicts.map((verdict) => [verdict.habitId, verdict]));
   const byId = new Map(habits.map((habit) => [habit.id, habit]));
+  // A "keep practicing" verdict keeps the habit in progress rather than hiding it.
+  const isReady = (habit: Habit) =>
+    !verdictOf.has(habit.id) && daysSince(habit.createdAt, today) >= FORMATION_DAYS;
   return {
-    ready: pending.filter((habit) => daysSince(habit.createdAt, today) >= FORMATION_DAYS),
-    inProgress: pending
-      .filter((habit) => daysSince(habit.createdAt, today) < FORMATION_DAYS)
+    ready: habits.filter(isReady),
+    inProgress: habits
+      .filter((habit) => !verdictOf.get(habit.id)?.formed && !isReady(habit))
       .sort((a, b) => daysSince(b.createdAt, today) - daysSince(a.createdAt, today)),
     inducted: verdicts.flatMap((verdict) => {
       const habit = byId.get(verdict.habitId);
