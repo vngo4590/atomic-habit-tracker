@@ -66,7 +66,7 @@ describe("TodayView header", () => {
 });
 
 describe("TodayView focus list", () => {
-  it("checks a habit in with one tap and opens the mood sheet", () => {
+  it("checks a habit in with one tap and opens the mood sheet", async () => {
     // Given: one undone daily habit
     storeMock.habits = [makeHabit({ id: "h1", name: "Read" })];
     render(<TodayView />);
@@ -76,7 +76,8 @@ describe("TodayView focus list", () => {
 
     // Then: the optimistic toggle fires and the mood sheet asks how it went
     expect(storeMock.toggleHabit).toHaveBeenCalledWith("h1");
-    expect(screen.getByRole("dialog")).toBeTruthy();
+    // The sheet is lazy-loaded, so wait for its chunk to resolve
+    expect(await screen.findByRole("dialog")).toBeTruthy();
   });
 
   it("links each habit row to its detail page", () => {

@@ -24,16 +24,12 @@ function OnboardingFallback({ onComplete }: { onComplete: () => void }) {
   useEffect(() => {
     const dialog = dialogRef.current;
     const previous = opener.current;
-    if (!dialog) return;
     // showModal() makes the rest of the page inert and traps focus natively.
-    if (typeof dialog.showModal === "function") {
-      if (!dialog.open) dialog.showModal();
-    } else {
-      dialog.setAttribute("open", "");
-    }
-    dialog.querySelector("button")?.focus();
+    if (dialog?.showModal) dialog.showModal();
+    else dialog?.setAttribute("open", "");
+    dialog?.querySelector("button")?.focus();
     return () => {
-      if (dialog.open && typeof dialog.close === "function") dialog.close();
+      dialog?.close?.();
       if (previous instanceof HTMLElement) previous.focus();
     };
   }, []);
@@ -51,7 +47,7 @@ function OnboardingFallback({ onComplete }: { onComplete: () => void }) {
     >
       <div className="overlay-card">
         <h2 id="onboarding-fallback-title">Welcome to Atomicly</h2>
-        <p>Build tiny habits, cast a vote for who you want to become each day, and reflect on your progress.</p>
+        <p>Build tiny habits and cast a daily vote for who you want to become.</p>
         <button type="button" className="btn btn-primary" onClick={onComplete}>
           Continue
         </button>

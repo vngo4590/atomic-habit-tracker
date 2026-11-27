@@ -4,6 +4,8 @@ declare module "next-auth" {
   interface Session {
     /** Epoch ms when this session was issued; used for server-side revocation. */
     authTime?: number;
+    /** Epoch ms when the current (possibly slid) session token was minted. */
+    issuedAt?: number;
     user: {
       id: string;
     } & DefaultSession["user"];

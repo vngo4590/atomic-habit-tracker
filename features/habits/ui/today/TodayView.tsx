@@ -1,8 +1,8 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
-import { MoodCheckSheet } from "@/components/MoodCheckSheet";
 import { useStoreContext } from "@/components/StoreProvider";
 import { todayKey } from "@/lib/helpers";
 import { clientLogger } from "@/lib/logger-client";
@@ -18,6 +18,11 @@ import { TodaySearch } from "./TodaySearch";
 import styles from "./TodayView.module.css";
 import { useTodayData } from "./useTodayData";
 import { isDone as isDayDone } from "../../model/metrics";
+
+// Only opens after a check-in, so its code stays out of Today's first load.
+const MoodCheckSheet = dynamic(() => import("@/components/MoodCheckSheet").then((mod) => mod.MoodCheckSheet), {
+  ssr: false,
+});
 
 export interface TodayViewProps {
   /** First name for the greeting (from the signed-in user). */

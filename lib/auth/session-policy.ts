@@ -8,6 +8,9 @@ export const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60; // 30 days
 // How often the session cookie is re-issued ("slid") on activity. Keeping this
 // well below the max age bounds token churn while still refreshing the expiry on
 // any active day. updateAge < maxAge is what makes the window sliding, not fixed.
+// Auth.js ignores updateAge for JWT sessions, so proxy.ts enforces it itself
+// (lib/auth/session-refresh.ts) — which also stops in-flight requests from
+// re-writing the cookie after sign-out.
 export const SESSION_UPDATE_AGE_SECONDS = 24 * 60 * 60; // 1 day
 
 /**

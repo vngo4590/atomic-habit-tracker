@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 
 import { clientLogger } from "@/lib/logger-client";
 import type { FormationVerdict, Habit } from "@/lib/types";
 
 import styles from "./FormationQuestionnaire.module.css";
+import { useFocusTrap } from "./useFocusTrap";
 
 /** The five formation questions. Order matters — used as index keys in the
     ratings record so the user's score per question is stable. */
@@ -34,6 +35,11 @@ export function FormationQuestionnaire({
 }) {
   const [ratings, setRatings] = useState<Record<number, number>>({});
   const [reflection, setReflection] = useState("");
+  const baseId = useId();
+  const titleId = `${baseId}-title`;
+  const reflectionId = `${baseId}-reflection`;
+  // Keep keyboard focus inside the dialog; Escape behaves like Close.
+  const dialogRef = useFocusTrap<HTMLDivElement>(onClose);
 
   // True once the user has rated all five questions.
   const complete = QUESTIONS.every((_, index) => ratings[index]);
@@ -70,12 +76,12 @@ export function FormationQuestionnaire({
   };
 
   return (
-    <div className="overlay">
+    <div ref={dialogRef} className="overlay" role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <div className={`overlay-card ${styles.card}`}>
         <div className={styles.header}>
           <div>
             <div className="eyebrow">Formation review</div>
-            <h2 className={`h2 ${styles.title}`}>{habit.name}</h2>
+            <h2 id={titleId} className={`h2 ${styles.title}`}>{habit.name}</h2>
           </div>
           <button className="btn btn-sm" onClick={onClose}>Close</button>
         </div>
@@ -83,11 +89,13 @@ export function FormationQuestionnaire({
         <div className={styles.questions}>
           {QUESTIONS.map((question, index) => (
             <div key={question}>
-              <div className="field-label">{question}</div>
-              <div className={styles.ratingRow}>
+              <div id={`${baseId}-q${index}`} className="field-label">{question}</div>
+              <div className={styles.ratingRow} role="group" aria-labelledby={`${baseId}-q${index}`}>
                 {[1, 2, 3, 4, 5].map((value) => (
                   <button
                     key={value}
+                    type="button"
+                    aria-pressed={ratings[index] === value}
                     className={`btn btn-sm ${ratings[index] === value ? "btn-primary" : ""}`}
                     onClick={() => setRatings((current) => ({ ...current, [index]: value }))}
                   >
@@ -99,9 +107,9 @@ export function FormationQuestionnaire({
           ))}
         </div>
 
-        <label className={`field-label ${styles.reflectionLabel}`}>Reflection</label>
+        <label htmlFor={reflectionId} className={`field-label ${styles.reflectionLabel}`}>Reflection</label>
         <textarea
-          className="input"
+                  id={reflectionId}          className="input"
           rows={4}
           value={reflection}
           onChange={(event) => setReflection(event.target.value)}

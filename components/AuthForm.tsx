@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useActionState } from "react";
+import { Component, useActionState } from "react";
 
 import { Button, Field, Input } from "@/components/ui";
 // Type-only import: the runtime contracts module pulls Zod into the client
@@ -32,6 +32,18 @@ interface AuthFormProps {
   footer: ReactNode;
 }
 
+/** Shown when the request never reaches the action (e.g. the proxy rate limiter answers 429). */
+const UNREACHABLE_STATE: AuthFormState = {
+  ok: false,
+  message: "We couldn't reach the server. Please wait a moment and try again.",
+};
+
+/** True for the framework's own control-flow errors (redirect / notFound), which must propagate. */
+function isNavigationError(error: unknown): boolean {
+  const digest = (error as { digest?: unknown } | null)?.digest;
+  return typeof digest === "string" && digest.startsWith("NEXT_");
+}
+
 /** Pull the first error for a given field out of the action state. */
 function fieldError(state: AuthFormState, field: "name" | "email" | "password") {
   return state.errors?.[field]?.[0];
@@ -44,7 +56,47 @@ function fieldError(state: AuthFormState, field: "name" | "email" | "password") 
  * through React's `useActionState` so server validation errors surface inline
  * under each field without a full page reload.
  */
-export function AuthForm({
+export function AuthForm(props: AuthFormProps) {
+  // The boundary remounts the form with a readable alert if the action call
+  // itself fails (429, network drop) instead of crashing to the route error page.
+  return (
+    <TransportErrorBoundary mode={props.includeName ? "register" : "login"}>
+      {(failed) => <AuthFormBody {...props} initialState={failed ? UNREACHABLE_STATE : INITIAL_STATE} />}
+    </TransportErrorBoundary>
+  );
+}
+
+interface TransportErrorBoundaryProps {
+  mode: "login" | "register";
+  children: (failed: boolean) => ReactNode;
+}
+
+/**
+ * Catches errors thrown by the submitted server action on the client. The real
+ * server action is handed to `useActionState` untouched (wrapping it would drop
+ * the metadata React needs for native, no-JavaScript form submission), so a
+ * hydrated transport failure surfaces here instead.
+ */
+class TransportErrorBoundary extends Component<TransportErrorBoundaryProps, { error: unknown }> {
+  state = { error: null as unknown };
+
+  static getDerivedStateFromError(error: unknown) {
+    return { error };
+  }
+
+  componentDidCatch() {
+    clientLogger.warn("Auth request failed", { event: "auth.submit_failed", mode: this.props.mode });
+  }
+
+  render() {
+    // redirect()/notFound() are framework control flow, not failures — let them through.
+    if (isNavigationError(this.state.error)) throw this.state.error;
+    // React remounts the failed subtree, so the form starts fresh showing the alert.
+    return this.props.children(this.state.error !== null);
+  }
+}
+
+function AuthFormBody({
   action,
   callbackUrl,
   eyebrow,
@@ -52,8 +104,9 @@ export function AuthForm({
   submitLabel,
   includeName = false,
   footer,
-}: AuthFormProps) {
-  const [state, formAction, pending] = useActionState(action, INITIAL_STATE);
+  initialState,
+}: AuthFormProps & { initialState: AuthFormState }) {
+  const [state, formAction, pending] = useActionState(action, initialState);
   const authMode = includeName ? "register" : "login";
 
   // Record safe auth intent metadata without exposing credentials.

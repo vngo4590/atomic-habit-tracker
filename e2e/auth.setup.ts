@@ -1,5 +1,7 @@
 import { test as setup, expect } from "@playwright/test";
 
+import { dismissOnboardingIfPending } from "./helpers";
+
 const authFile = "e2e/.auth/user.json";
 
 setup("authenticate", async ({ page }) => {
@@ -12,12 +14,8 @@ setup("authenticate", async ({ page }) => {
   await page.waitForURL("/", { timeout: 10000 });
   await expect(page.getByTestId("today-view")).toBeVisible();
 
-  // Dismiss onboarding overlay if it appears
-  const skipOnboarding = page.locator('.overlay button:has-text("Skip")');
-  if (await skipOnboarding.isVisible().catch(() => false)) {
-    await skipOnboarding.click();
-    await expect(skipOnboarding).not.toBeVisible();
-  }
+  // Dismiss the onboarding overlay if this user has not seen it yet
+  await dismissOnboardingIfPending(page);
 
   await page.context().storageState({ path: authFile });
 });
