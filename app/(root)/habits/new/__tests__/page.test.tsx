@@ -1,5 +1,5 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Habit } from "@/lib/types";
 
@@ -24,114 +24,136 @@ vi.mock("@/components/StoreProvider", () => ({
 
 import NewHabitPage from "@/app/(root)/habits/new/page";
 
+const next = () => fireEvent.click(screen.getByRole("button", { name: "Next" }));
+
+/** Fill the name step and advance to the identity step. */
+function toIdentityStep(name = "read one page") {
+  fireEvent.change(screen.getByPlaceholderText("read one page"), { target: { value: name } });
+  next();
+}
+
+/** Identity chips are the suggestion buttons in the identity step. */
+function identityChips(): string[] {
+  const group = screen.queryByTestId("identity-suggestions");
+  if (!group) return [];
+  return within(group)
+    .getAllByRole("button")
+    .map((el) => el.textContent ?? "");
+}
+
+/** Walk the whole wizard and land on the review step. */
+function completeWizard({ name, cue = "", identity }: { name: string; cue?: string; identity: string }) {
+  toIdentityStep(name);
+  fireEvent.change(screen.getByPlaceholderText("a reader"), { target: { value: identity } });
+  next();
+  fireEvent.change(screen.getByPlaceholderText("after I pour my coffee"), { target: { value: cue } });
+  next();
+  fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+}
+
+beforeEach(() => {
+  storeMock.habits = [];
+  storeMock.formationVerdicts = [];
+  storeMock.addHabit.mockClear();
+  routerMock.push.mockClear();
+});
+
 afterEach(() => {
   cleanup();
 });
 
-describe("NewHabitPage", () => {
-  it("renders all seven day-of-week toggle buttons", () => {
+describe("NewHabitPage wizard", () => {
+  it("starts on the habit step and blocks Next with an inline error until a habit is entered", () => {
+    // Given: the wizard on step one
     render(<NewHabitPage />);
+    expect(screen.getByText("Step 1 of 5")).toBeTruthy();
 
-    // Then: every day abbreviation is present as a toggle button
-    expect(screen.getByRole("button", { name: "Sun" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Mon" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Tue" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Wed" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Thu" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Fri" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Sat" })).toBeTruthy();
+    // When: the user tries to continue without typing anything
+    next();
+
+    // Then: they stay on the step and see an error next to the field
+    expect(screen.getByRole("alert").textContent).toMatch(/add what you'll do/i);
+    expect(screen.getByText("Step 1 of 5")).toBeTruthy();
   });
 
-  
-  it("renders a legend explaining scheduled vs off day pills", () => {
-    // Given: the create-habit page mounted
+  it("fills the habit from a one-tap example", () => {
+    // Given: the first step
     render(<NewHabitPage />);
+    // When: the user taps an example
+    fireEvent.click(screen.getByRole("button", { name: "do 10 push-ups" }));
+    // Then: the field holds it
+    expect((screen.getByPlaceholderText("read one page") as HTMLInputElement).value).toBe("do 10 push-ups");
+  });
 
-    // Then: the day-selector legend is present with both states labelled
+  it("renders all seven day toggles, a legend and no select elements on the cue step", () => {
+    // Given: the user reaches the cue & schedule step
+    const { container } = render(<NewHabitPage />);
+    toIdentityStep();
+    fireEvent.change(screen.getByPlaceholderText("a reader"), { target: { value: "a reader" } });
+    next();
+
+    // Then: every weekday is a toggle and the legend explains the states
+    for (const day of ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]) {
+      expect(screen.getByRole("button", { name: day })).toBeTruthy();
+    }
     expect(screen.getByLabelText("Day selector legend")).toBeTruthy();
     expect(screen.getByText("Scheduled")).toBeTruthy();
     expect(screen.getByText("Off")).toBeTruthy();
-  });
-
-  it("renders no select elements (the cue connector dropdown was removed)", () => {
-    // Given: the new habit page — the cue is now a single free-text blank and
-    // the Time block control was removed earlier, so no <select> remains
-    const { container } = render(<NewHabitPage />);
-
-    // When: looking for <select> elements in the page
-    const selects = container.querySelectorAll("select");
-
-    // Then: there are none, and no Time block exists
-    expect(selects.length).toBe(0);
-    expect(screen.queryByText("Time block")).toBeNull();
+    // And: the cue is free text, not a dropdown
+    expect(container.querySelectorAll("select").length).toBe(0);
   });
 
   it("stores the cue exactly as the user typed it, including the connector", () => {
-    // Given: a fresh page with the action, cue and identity blanks filled,
-    // where the user typed the whole cue clause ("after I pour my coffee")
-    storeMock.habits = [];
-    storeMock.addHabit.mockClear();
+    // Given: a user who typed the whole cue clause
     render(<NewHabitPage />);
-    fireEvent.change(screen.getByPlaceholderText("read one page"), { target: { value: "read one page" } });
-    fireEvent.change(screen.getByPlaceholderText("after I pour my coffee"), {
-      target: { value: "after I pour my coffee" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("a reader"), { target: { value: "a reader" } });
+    completeWizard({ name: "read one page", cue: "after I pour my coffee", identity: "a reader" });
 
-    // When: the user submits
+    // When: they create the habit from the review step
     fireEvent.click(screen.getByRole("button", { name: "Create habit" }));
 
-    // Then: the synthesised law cue leads with the typed connector (not doubled)
+    // Then: the law cue leads with the typed connector and the loop cue is verbatim
     expect(storeMock.addHabit).toHaveBeenCalledTimes(1);
     const created = storeMock.addHabit.mock.calls[0][0];
     expect(created.cue).toBe("After I pour my coffee.");
-    // And: the loop cue stores the full clause so the summary reads it back
     expect(created.loopCue).toBe("after I pour my coffee");
+    expect(routerMock.push).toHaveBeenCalledWith("/habits");
   });
 
   it("supplies a 'when' for a bare cue that lacks a connector", () => {
-    // Given: a user who typed only the bare cue clause
-    storeMock.habits = [];
-    storeMock.addHabit.mockClear();
     render(<NewHabitPage />);
-    fireEvent.change(screen.getByPlaceholderText("read one page"), { target: { value: "read one page" } });
-    fireEvent.change(screen.getByPlaceholderText("after I pour my coffee"), {
-      target: { value: "I pour my coffee" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("a reader"), { target: { value: "a reader" } });
-
-    // When: the user submits
+    completeWizard({ name: "read one page", cue: "I pour my coffee", identity: "a reader" });
     fireEvent.click(screen.getByRole("button", { name: "Create habit" }));
-
-    // Then: the law cue gets a leading "when" while loopCue stays bare
     const created = storeMock.addHabit.mock.calls[0][0];
     expect(created.cue).toBe("When I pour my coffee.");
     expect(created.loopCue).toBe("I pour my coffee");
   });
 
-  it("shows habit-derived identities as chips but excludes core values from the Identity page", () => {
-    // Given: a profile with core values and habits with their own identities
+  it("previews the composed habit sentence on the review step", () => {
+    render(<NewHabitPage />);
+    completeWizard({ name: "read one page", cue: "after I pour my coffee", identity: "a reader" });
+    expect(screen.getByTestId("habit-sentence-preview").textContent).toBe(
+      "I'll read one page after I pour my coffee — so I can become a reader.",
+    );
+  });
+
+  it("shows habit-derived identities as chips but excludes core values", () => {
+    // Given: core values plus habits with their own identities
     storeMock.identity = { statement: "I am disciplined.", values: ["Discipline", "Health"] };
     storeMock.habits = [
       { id: "h1", name: "Read", identity: "a reader" },
       { id: "h2", name: "Run", identity: "a runner" },
     ] as Habit[];
-
-    // When: the new habit page renders
     render(<NewHabitPage />);
-
-    // Then: habit-derived identity chips are visible
-    const chips = Array.from(document.querySelectorAll(".identity-chip")).map((el) => el.textContent);
-    expect(chips).toContain("a reader");
-    expect(chips).toContain("a runner");
-
-    // And: core values from the Identity page are NOT shown as chips
+    // When: the user reaches the identity step
+    toIdentityStep();
+    // Then: only habit-derived identities are offered
+    const chips = identityChips();
+    expect(chips).toEqual(expect.arrayContaining(["a reader", "a runner"]));
     expect(chips).not.toContain("Discipline");
     expect(chips).not.toContain("Health");
   });
 
   it("only shows the top 5 most-used identities by default", () => {
-    // Given: 6 habits with different identities, where "a reader" appears most
     storeMock.habits = [
       { id: "h1", name: "Read", identity: "a reader" },
       { id: "h2", name: "Read 2", identity: "a reader" },
@@ -141,109 +163,113 @@ describe("NewHabitPage", () => {
       { id: "h6", name: "Lift", identity: "athlete" },
       { id: "h7", name: "Sleep", identity: "rested" },
     ] as Habit[];
-
     render(<NewHabitPage />);
-
-    // Then: only 5 chips are shown (top 5 by frequency)
-    const chips = Array.from(document.querySelectorAll(".identity-chip")).map((el) => el.textContent);
+    toIdentityStep();
+    const chips = identityChips();
     expect(chips).toHaveLength(5);
-    // "a reader" appears twice so it should be first
     expect(chips[0]).toBe("a reader");
-    // "rested" appears once and is last among the top 5
-    expect(chips).toContain("a runner");
-    expect(chips).toContain("mindful");
-    expect(chips).toContain("writer");
-    expect(chips).toContain("athlete");
     expect(chips).not.toContain("rested");
   });
 
-  it("filters identity chips when typing in the identity input", () => {
-    // Given: habits with various identities
+  it("filters identity chips as the user types, and fills the field on tap", () => {
     storeMock.habits = [
       { id: "h1", name: "Read", identity: "a reader" },
       { id: "h2", name: "Run", identity: "a runner" },
       { id: "h3", name: "Write", identity: "writer" },
     ] as Habit[];
-
     render(<NewHabitPage />);
+    toIdentityStep();
+    const input = screen.getByPlaceholderText("a reader") as HTMLInputElement;
 
-    // When: the user types "run" in the identity input
-    fireEvent.change(screen.getByPlaceholderText("a reader"), { target: { value: "run" } });
+    fireEvent.change(input, { target: { value: "run" } });
+    expect(identityChips()).toEqual(["a runner"]);
 
-    // Then: only matching chips are shown (case-insensitive)
-    const chips = Array.from(document.querySelectorAll(".identity-chip")).map((el) => el.textContent);
-    expect(chips).toContain("a runner");
-    expect(chips).not.toContain("a reader");
-    expect(chips).not.toContain("writer");
+    fireEvent.click(screen.getByRole("button", { name: "a runner" }));
+    expect(input.value).toBe("a runner");
+
+    fireEvent.change(input, { target: { value: "pilot" } });
+    expect(identityChips()).toEqual([]);
   });
 
-  it("shows no chips when the typed identity does not match any existing one", () => {
-    storeMock.habits = [
-      { id: "h1", name: "Read", identity: "a reader" },
-      { id: "h2", name: "Run", identity: "a runner" },
-    ] as Habit[];
-
+  it("blocks the identity step until an identity is entered", () => {
     render(<NewHabitPage />);
+    toIdentityStep();
+    next();
+    expect(screen.getByRole("alert").textContent).toMatch(/who this habit helps you become/i);
+    expect(screen.getByText("Step 2 of 5")).toBeTruthy();
+  });
 
-    // When: the user types a brand-new identity
-    fireEvent.change(screen.getByPlaceholderText("a reader"), { target: { value: "pilot" } });
+  it("uses custom four-law wording from the optional step", () => {
+    // Given: a user who opens "Make it stick" and writes their own reward
+    render(<NewHabitPage />);
+    toIdentityStep();
+    fireEvent.change(screen.getByPlaceholderText("a reader"), { target: { value: "a reader" } });
+    next();
+    next();
+    fireEvent.change(screen.getByLabelText("4. Make it satisfying"), { target: { value: "Tick the box." } });
 
-    // Then: the chip area is empty, implying a new identity
-    const chips = document.querySelectorAll(".identity-chip");
-    expect(chips.length).toBe(0);
+    // When: they continue and create
+    next();
+    fireEvent.click(screen.getByRole("button", { name: "Create habit" }));
+
+    // Then: their wording is kept while the others use the defaults
+    const created = storeMock.addHabit.mock.calls[0][0];
+    expect(created.reward).toBe("Tick the box.");
+    expect(created.twoMin).toBe("Just read one page for two minutes.");
+  });
+
+  it("returns to an earlier step from the review's Edit button", () => {
+    render(<NewHabitPage />);
+    completeWizard({ name: "read one page", identity: "a reader" });
+    fireEvent.click(screen.getByRole("button", { name: "Edit identity" }));
+    expect(screen.getByText("Step 2 of 5")).toBeTruthy();
+    expect((screen.getByPlaceholderText("a reader") as HTMLInputElement).value).toBe("a reader");
   });
 
   // -------------------------------------------------------------------------
   // Active-habit cap UX
   // -------------------------------------------------------------------------
-  it("disables submission and explains the cap when the user has 3 active habits", () => {
-    // Given: exactly three active (non-inducted) habits
+  it("disables creation and explains the cap when the user has 3 active habits", () => {
+    // Given: three active (non-inducted) habits
     storeMock.habits = [
       { id: "h1", name: "Read", identity: "a reader" },
       { id: "h2", name: "Run", identity: "a runner" },
       { id: "h3", name: "Write", identity: "a writer" },
     ] as Habit[];
-    storeMock.formationVerdicts = [];
-    storeMock.addHabit.mockClear();
     render(<NewHabitPage />);
 
-    // Fill the required fields so only the cap can be blocking submission.
-    fireEvent.change(screen.getByPlaceholderText("read one page"), { target: { value: "meditate" } });
-    fireEvent.change(screen.getByPlaceholderText("a reader"), { target: { value: "calm" } });
-
-    // Then: the cap message and a HelpTip explaining the mechanic are shown
+    // Then: the cap message and its help tip are shown up front
     expect(screen.getByText(/reached the maximum of 3 active habits/i)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Why can't I add a habit?" })).toBeTruthy();
 
-    // And: the Create button is disabled and clicking it does nothing
+    // And: even with every answer filled in, Create stays disabled
+    completeWizard({ name: "meditate", identity: "calm" });
     const createButton = screen.getByRole("button", { name: "Create habit" }) as HTMLButtonElement;
     expect(createButton.disabled).toBe(true);
     fireEvent.click(createButton);
     expect(storeMock.addHabit).not.toHaveBeenCalled();
   });
 
-  it("keeps submission available when one of three habits is inducted (frees a slot)", () => {
-    // Given: three habits where one is inducted into the Hall of Fame
+  it("keeps creation available when one of three habits is inducted (frees a slot)", () => {
     storeMock.habits = [
       { id: "h1", name: "Read", identity: "a reader" },
       { id: "h2", name: "Run", identity: "a runner" },
       { id: "h3", name: "Write", identity: "a writer" },
     ] as Habit[];
     storeMock.formationVerdicts = [{ habitId: "h2", formed: true }];
-    storeMock.addHabit.mockClear();
     render(<NewHabitPage />);
 
-    // Fill the required fields
-    fireEvent.change(screen.getByPlaceholderText("read one page"), { target: { value: "meditate" } });
-    fireEvent.change(screen.getByPlaceholderText("a reader"), { target: { value: "calm" } });
-
-    // Then: there is no cap message and the Create button is enabled
     expect(screen.queryByText(/reached the maximum of 3 active habits/i)).toBeNull();
+    completeWizard({ name: "meditate", identity: "calm" });
     const createButton = screen.getByRole("button", { name: "Create habit" }) as HTMLButtonElement;
     expect(createButton.disabled).toBe(false);
-
-    // And: submitting actually creates the habit
     fireEvent.click(createButton);
     expect(storeMock.addHabit).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the heading help tip explaining the habit cap", () => {
+    render(<NewHabitPage />);
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(within(heading).getByRole("button", { name: "How many habits can I have?" })).toBeTruthy();
   });
 });

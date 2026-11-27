@@ -106,11 +106,16 @@ test.describe("Creating a habit", () => {
     const action = unique("Read 1 page about AI");
     await page.goto("/habits/new");
 
-    const blanks = page.locator(".input");
-    await blanks.nth(0).fill(action); // action (name)
-    await blanks.nth(1).fill("At morning"); // cue
-    await blanks.nth(2).fill("at my desk."); // place
-    await blanks.nth(3).fill("A person who is amazing at AI"); // identity
+    // The builder is a short wizard: habit → identity → cue & place →
+    // (optional) four laws → review.
+    await page.getByPlaceholder("read one page").fill(action); // action (name)
+    await page.click('button:has-text("Next")');
+    await page.getByPlaceholder("a reader").fill("A person who is amazing at AI"); // identity
+    await page.click('button:has-text("Next")');
+    await page.getByPlaceholder("after I pour my coffee").fill("At morning"); // cue
+    await page.getByPlaceholder("at my desk").fill("at my desk."); // place
+    await page.click('button:has-text("Next")');
+    await page.click('button:has-text("Skip")');
 
     // When: they create the habit
     await page.click('button:has-text("Create habit")');

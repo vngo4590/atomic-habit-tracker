@@ -4,3 +4,4 @@
  */
 export { HabitsLibrary } from "./library/HabitsLibrary";
 export { HabitsSkeleton } from "./HabitsSkeleton";
+export { NewHabitWizard } from "./new/NewHabitWizard";

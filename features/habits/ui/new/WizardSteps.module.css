@@ -1,0 +1,130 @@
+/* Shared step-body styles for the create-habit wizard. */
+
+.suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.suggestionsLabel {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chip {
+  appearance: none;
+  min-height: var(--tap-target);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-standard), background var(--duration-fast) var(--ease-standard);
+}
+.chip:hover {
+  border-color: var(--border-strong);
+}
+.chip[aria-pressed="true"] {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--on-primary-soft);
+}
+.chip:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* "Make it stick" — optional four-law disclosure. */
+.intro {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.disclosure {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.disclosure > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  list-style: none;
+}
+.disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+.disclosure > summary:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.chevron {
+  color: var(--text-muted);
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+.disclosure[open] .chevron {
+  transform: rotate(180deg);
+}
+.lawFields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-4) var(--space-4);
+}
+
+/* Review step. */
+.sentence {
+  margin: 0;
+  padding: var(--space-4);
+  border-left: 3px solid var(--primary);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: var(--text-lg);
+  line-height: 1.5;
+}
+
+.summary {
+  display: grid;
+  margin: 0;
+}
+.summaryRow {
+  display: grid;
+  grid-template-columns: minmax(6rem, 8rem) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+.summaryRow:last-child {
+  border-bottom: 0;
+}
+.summaryRow dt {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+.summaryRow dd {
+  margin: 0;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.empty {
+  color: var(--text-subtle);
+}

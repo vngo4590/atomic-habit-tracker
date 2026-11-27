@@ -1,0 +1,73 @@
+/* NewHabitWizard — /habits/new layout. */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: var(--reading-width);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.title {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  line-height: 1.3;
+  border-radius: var(--radius-sm);
+}
+.title:focus {
+  outline: none;
+}
+.title:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  animation: stepIn var(--duration-base) var(--ease-standard) both;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+.footerEnd {
+  display: flex;
+  gap: var(--space-2);
+}
+
+@keyframes stepIn {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .body {
+    animation: none;
+  }
+}
