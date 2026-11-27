@@ -37,10 +37,15 @@ const eslintConfig = defineConfig([
           paths: [
             { name: "react", message: "model/ is pure: no React." },
             { name: "server-only", message: "model/ is pure: no server-only code." },
+            { name: "pg", message: "model/ is pure: no database drivers." },
           ],
           patterns: [
             { group: ["@/features/*/*", "@/features/*/*/**", "!@/features/*/actions", "!@/features/*/server", "!@/features/*/contracts"], message: "Use the feature's public API." },
-            { group: ["@/lib/db/**", "@/lib/repositories/**", "@/lib/generated/**", "**/server/**", "@/features/*/server", "@/features/*/actions", "**/actions"], message: "model/ is pure: no I/O." },
+            {
+              // Aliased and relative paths to database/server/action modules, plus the Prisma packages.
+              group: ["@prisma/*", "**/db", "**/db/**", "**/repositories", "**/repositories/**", "**/generated/**", "**/server", "**/server/**", "**/actions"],
+              message: "model/ is pure: no I/O.",
+            },
           ],
         },
       ],

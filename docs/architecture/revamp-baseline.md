@@ -31,10 +31,15 @@ Shared framework JS: **168.3 KB**
 | /hall-of-fame | 249.4 | 81.1 |
 | /identity | 248.7 | 80.3 |
 
-Observation: even `/login` ships ~85 KB route-specific JS, so the root layout
-pulls heavy client code (Framer Motion, the store, the nav) into every page.
-`/habits/[id]`, `/journal` and `/review` add ~40 KB more, most likely the
-Markdown renderer.
+Method: first-load = shared framework files + the union of every segment's
+`entryJSFiles` (root layout, group layout and page), de-duplicated and gzipped.
+
+Observation: even `/login` (which renders under `app/(auth)/layout.tsx`, not
+the app shell) ships ~85 KB route-specific JS. That is not explained by the
+`(root)` shell (`StoreProvider`, `Nav`), which `/login` never loads, so the
+weight comes from the login page's own client imports and shared chunks;
+attribute it with chunk analysis before optimising. `/habits/[id]`,
+`/journal` and `/review` add ~40 KB more, most likely the Markdown renderer.
 
 Phase D targets: no route above **200 KB** first-load, and `/` at least 25 %
 below baseline (<= 190 KB).
