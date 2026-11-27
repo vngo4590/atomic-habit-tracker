@@ -9,6 +9,7 @@ import type { Habit } from "@/lib/types";
 
 import { HabitCheckRow } from "./HabitCheckRow";
 import styles from "./StackCardGroup.module.css";
+import { isDone as isDayDone } from "../../model/metrics";
 
 /** Expanded view shows the top card plus at most two upcoming links. */
 const MAX_VISIBLE = 3;
@@ -46,7 +47,7 @@ export function StackCardGroup({ habit, habits, onCheck, streak, today }: StackC
   const upcoming = useMemo(() => {
     const subChain = getChainFrom(habit, habits);
     if (!today) return subChain;
-    return subChain.filter((h) => !h.history[today]);
+    return subChain.filter((h) => !isDayDone(h.history[today]));
   }, [habit, habits, today]);
 
   // Move focus only after a user-initiated expand/collapse (not on mount).
@@ -62,7 +63,7 @@ export function StackCardGroup({ habit, habits, onCheck, streak, today }: StackC
     setExpanded(next);
   };
 
-  const isDone = (h: Habit) => Boolean(today ? h.history[today] : Object.keys(h.history).length > 0);
+  const isDone = (h: Habit) => Boolean(today ? isDayDone(h.history[today]) : Object.keys(h.history).some((key) => isDayDone(h.history[key])));
   const top = upcoming[0];
   if (!top) return null;
 

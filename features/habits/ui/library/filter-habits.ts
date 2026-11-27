@@ -6,6 +6,7 @@
 import type { Habit } from "@/lib/types";
 
 import { nextScheduledDateKey } from "../../model/schedule";
+import { isDone as isDayDone } from "../../model/metrics";
 
 export type LibraryFilter = "all" | "done" | "upcoming";
 export type LibrarySort = "streak" | "rate" | "newest" | "name";
@@ -34,7 +35,7 @@ export interface LibraryQuery {
 
 /** True when the habit has been checked in on `today`. */
 export function isDoneOn(habit: Habit, today: string): boolean {
-  return Boolean(habit.history[today]);
+  return isDayDone(habit.history[today]);
 }
 
 function matchesFilter(habit: Habit, filter: LibraryFilter, today: string): boolean {

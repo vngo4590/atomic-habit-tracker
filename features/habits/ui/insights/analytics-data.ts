@@ -2,6 +2,7 @@ import { dateAdd, fmt } from "@/lib/helpers";
 import type { Habit } from "@/lib/types";
 
 import { isScheduledForDate } from "../../model/schedule";
+import { isDone as isDayDone } from "../../model/metrics";
 
 /** Date ranges offered by the analytics range control (days). */
 export const RANGES = [14, 30, 90] as const;
@@ -42,7 +43,7 @@ export function rangeKeys(today: string, days: number): string[] {
 export function dailyCompletion(habits: Habit[], keys: string[]): DayPoint[] {
   return keys.map((key) => {
     const scheduled = habits.filter((habit) => isScheduledForDate(key, habit.schedule));
-    const done = scheduled.filter((habit) => habit.history[key]).length;
+    const done = scheduled.filter((habit) => isDayDone(habit.history[key])).length;
     return {
       key,
       label: fmt.short(key),
@@ -75,7 +76,7 @@ export function weekdayRates(habits: Habit[], keys: string[]): WeekdayRate[] {
 /** All-time count of completed check-ins across habits. */
 export function totalCheckIns(habits: Habit[]): number {
   return habits.reduce(
-    (sum, habit) => sum + Object.keys(habit.history).filter((key) => Boolean(habit.history[key])).length,
+    (sum, habit) => sum + Object.keys(habit.history).filter((key) => isDayDone(habit.history[key])).length,
     0,
   );
 }

@@ -137,6 +137,33 @@ describe("stack mutations in the client store", () => {
       expect(linkOf(result, "a")).toBeNull();
     });
 
+    it("keeps a confirmed removal while an older insert is still in flight", async () => {
+      // Given an insert of B after A, then a removal of B, both in flight
+      const insert = deferStackRequest();
+      const remove = deferStackRequest();
+      const { result } = renderStore();
+      let first: Promise<void> = Promise.resolve();
+      let second: Promise<void> = Promise.resolve();
+      act(() => { first = result.current.applyStackMutation(linkBAfterA); });
+      act(() => { second = result.current.applyStackMutation(removeB); });
+
+      // When the removal succeeds first
+      await act(async () => {
+        remove.resolve([habit("a"), habit("b")]);
+        await second;
+      });
+
+      // Then A is unlinked even though the older insert has not settled
+      expect(linkOf(result, "a")).toBeNull();
+
+      // And a late success of the older insert does not relink it
+      await act(async () => {
+        insert.resolve([{ ...habit("a"), stackNextId: "b" }, habit("b")]);
+        await first;
+      });
+      expect(linkOf(result, "a")).toBeNull();
+    });
+
     it("keeps a confirmed link when an earlier request fails after it", async () => {
       // Given an insert of B after A and a second identical insert, both in flight
       const firstInsert = deferStackRequest();

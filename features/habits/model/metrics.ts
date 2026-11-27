@@ -12,9 +12,13 @@ import type { Habit } from "@/lib/types";
 
 import { isScheduledForDate } from "./schedule";
 
-/** A history entry counts as "done" when any truthy value was recorded for that day. */
+/**
+ * A history entry counts as "done" when the day was completed: `true` for
+ * legacy boolean entries, or `done: true` for structured check-ins (an
+ * unchecked day can still keep a mood or journal note).
+ */
 export function isDone(value: Habit["history"][string] | undefined) {
-  return Boolean(value);
+  return typeof value === "object" && value !== null ? value.done : Boolean(value);
 }
 
 /**
