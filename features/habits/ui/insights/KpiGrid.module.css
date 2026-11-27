@@ -1,0 +1,39 @@
+/* KpiGrid — three calm stat tiles; one column on small phones. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-muted);
+}
+.value {
+  margin: 0;
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-heading);
+  letter-spacing: var(--tracking-heading);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.detail {
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--text-sm);
+  color: var(--text-subtle);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

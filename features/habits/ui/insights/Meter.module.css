@@ -1,0 +1,28 @@
+/* Meter — shared bar for weekday rates, per-habit completion and formation progress. */
+.track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--surface-2);
+}
+.fill {
+  width: var(--pct, 0%);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary);
+  transform-origin: left center;
+  animation: grow var(--duration-slow) var(--ease-standard) both;
+}
+.track[data-tone="warning"] .fill {
+  background: var(--warning);
+}
+@keyframes grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fill {
+    animation: none;
+  }
+}

@@ -1,0 +1,123 @@
+/* WeekSnapshot — compact last-7-days context above the review. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-heading);
+}
+.totals {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Seven vertical bars; the value sits above, the weekday below. */
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+.value {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.track {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 32px;
+  height: 72px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.fill {
+  position: absolute;
+  inset: auto 0 0;
+  height: var(--pct);
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  transition: height var(--duration-slow) var(--ease-standard);
+}
+.label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: var(--text-xs);
+  color: var(--text-subtle);
+}
+.date {
+  color: var(--text);
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.lists {
+  display: grid;
+  gap: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+@media (min-width: 768px) {
+  .lists {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.listTitle {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-muted);
+}
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.listItem {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+}
+.habitName {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: var(--weight-medium);
+}
+.habitRate {
+  flex-shrink: 0;
+  color: var(--text-subtle);
+  font-variant-numeric: tabular-nums;
+}
+.empty {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-subtle);
+}

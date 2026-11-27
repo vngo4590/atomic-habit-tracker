@@ -73,7 +73,7 @@ describe("Empty States", () => {
     expect(screen.getAllByText("New habit").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("Analytics page with no habits shows 0 or - for all stats", () => {
+  it("Analytics page with no habits shows zeroed stats and empty sections", () => {
     // Given: no habits exist
     storeMock.habits = [];
 
@@ -83,7 +83,7 @@ describe("Empty States", () => {
     // Then: stats cards show zeroed or placeholder values
     expect(screen.getByText("0%")).toBeTruthy();
     expect(screen.getAllByText("0").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText("-")).toBeTruthy();
+    expect(screen.getByText("No streaks yet")).toBeTruthy();
     expect(screen.getByText("No weekday data yet")).toBeTruthy();
   });
 
@@ -108,29 +108,31 @@ describe("Empty States", () => {
     render(<ReviewPage />);
 
     // Then: the past-reviews section shows the empty copy
-    expect(screen.getByText("No past reviews yet.")).toBeTruthy();
+    expect(screen.getByText(/No past reviews yet\./)).toBeTruthy();
   });
 
-  it("Hall of Fame with no habits shows the not-ready message", () => {
+  it("Hall of Fame with no habits explains how induction works", () => {
     // Given: no habits exist
     storeMock.habits = [];
 
     // When: the Hall of Fame page renders
     render(<HallOfFamePage />);
 
-    // Then: the ready-for-review section shows the empty copy
-    expect(screen.getByText("No habits have reached 66 days yet.")).toBeTruthy();
+    // Then: the inducted section explains the 66-day review instead of a bare list
+    expect(screen.getByText("No inducted habits yet")).toBeTruthy();
+    expect(screen.getByText(/After 66 days a habit becomes ready for review/)).toBeTruthy();
   });
 
-  it("Identity page with empty statement shows placeholder text", () => {
+  it("Identity page with empty statement invites the user to write one", () => {
     // Given: the identity statement is blank
     storeMock.identity = { statement: "", values: [] };
 
     // When: the Identity page renders
     render(<IdentityPage />);
 
-    // Then: the placeholder prompt is visible
-    expect(screen.getByText("No identity statement yet. Click this section to write one.")).toBeTruthy();
+    // Then: the empty state and its call to action are visible
+    expect(screen.getByText("No identity statement yet")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Write your statement" })).toBeTruthy();
   });
 });
 

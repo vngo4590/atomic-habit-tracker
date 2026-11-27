@@ -1,0 +1,89 @@
+/* VoteLedger — identities ranked by votes, with calm proportional bars. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-heading);
+}
+.subtitle {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.total {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.total strong {
+  color: var(--text);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.rowText {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.label {
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  overflow-wrap: anywhere;
+}
+.votes {
+  flex-shrink: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--surface-2);
+}
+.fill {
+  width: var(--pct, 0%);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary);
+  transform-origin: left center;
+  animation: grow var(--duration-slow) var(--ease-standard) both;
+}
+@keyframes grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fill {
+    animation: none;
+  }
+}

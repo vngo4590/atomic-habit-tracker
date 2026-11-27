@@ -13,3 +13,5 @@ export { TodaySkeleton } from "./today/TodaySkeleton";
 export { HabitsLibrary } from "./library/HabitsLibrary";
 export { NewHabitWizard } from "./new/NewHabitWizard";
 export { HabitDetail } from "./detail/HabitDetail";
+export { AnalyticsView } from "./insights/AnalyticsView";
+export { HallOfFameView } from "./insights/HallOfFameView";

@@ -1,0 +1,70 @@
+/* HabitBreakdown — name + % on one line, bar, then streak meta. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-heading);
+}
+.subtitle {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap-target);
+  min-width: 0;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.name:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.name:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.pct {
+  flex-shrink: 0;
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
