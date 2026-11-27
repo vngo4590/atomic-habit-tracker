@@ -19,6 +19,20 @@ vi.mock("@/lib/helpers", async () => {
 });
 
 describe("streak calculations", () => {
+  it("does not count an unchecked day that only kept a mood or note", () => {
+    // Given: today done, yesterday a structured check-in with done: false
+    const today = todayKey();
+    const habit = makeHabit({
+      [today]: { done: true },
+      [dateAdd(today, -1)]: { done: false, mood: 3, journal: "rest day" },
+      [dateAdd(today, -2)]: true,
+    });
+
+    // Then: the not-done day breaks the streak and is not a completion
+    expect(streak(habit)).toBe(1);
+    expect(longestStreak(habit)).toBe(1);
+  });
+
   it("counts consecutive days ending today", () => {
     const today = todayKey();
     const habit = makeHabit({

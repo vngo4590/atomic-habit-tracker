@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { isDone } from "@/features/habits";
 import { useEffect, useMemo, useState } from "react";
 
 import { StaggerContainer, StaggerItem } from "@/components/motion/StaggerContainer";
@@ -170,7 +171,7 @@ export default function HallOfFamePage() {
               const pct = Math.round((age / FORMATION_DAYS) * 100);
               const activeStreak = streak(habit);
               const adherence = Math.round(completionRate(habit, 30) * 100);
-              const doneToday = Boolean(habit.history[today]);
+              const doneToday = isDone(habit.history[today]);
               return (
                 <div key={habit.id}>
                   <div className={styles.progressHeader}>

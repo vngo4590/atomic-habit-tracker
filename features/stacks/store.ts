@@ -54,8 +54,11 @@ export function useStacksSlice(setHabits: Dispatch<SetStateAction<Habit[]>>): St
       }
     }
     const links = new Map([...confirmed.current].map(([id, { link }]) => [id, link] as const));
-    for (const patch of pending.current.values()) {
-      for (const [id, link] of patch) links.set(id, link);
+    for (const [pendingRequest, patch] of pending.current) {
+      for (const [id, link] of patch) {
+        // An older in-flight request must not hide a newer confirmed link.
+        if (pendingRequest > (confirmed.current.get(id)?.request ?? 0)) links.set(id, link);
+      }
     }
     if (pending.current.size === 0) confirmed.current.clear();
     setHabits((currentHabits) => withLinks(currentHabits, links));

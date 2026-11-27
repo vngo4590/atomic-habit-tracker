@@ -13,7 +13,7 @@ import { useStoreContext } from "@/components/StoreProvider";
 import { dateAdd, fmt, todayKey } from "@/lib/helpers";
 import { useMotionReduced } from "@/lib/hooks/useMotionReduced";
 import { clientLogger } from "@/lib/logger-client";
-import { completionRate, isScheduledForDate } from "@/features/habits";
+import { completionRate, isScheduledForDate, isDone as isDayDone } from "@/features/habits";
 import { getChainFrom, getStackRoot, isInStack } from "@/features/stacks";
 import type { Habit } from "@/lib/types";
 
@@ -118,7 +118,7 @@ export default function TodayPage() {
   const votes = useMemo(() => {
     const tally = new Map<string, number>();
     habits.forEach((habit) => {
-      if (habit.history[today] && isScheduledForDate(today, habit.schedule)) {
+      if (isDayDone(habit.history[today]) && isScheduledForDate(today, habit.schedule)) {
         tally.set(habit.identity, (tally.get(habit.identity) ?? 0) + 1);
       }
     });
@@ -147,7 +147,7 @@ export default function TodayPage() {
   ) => {
     const activeStreak = streak(habit);
     const rate = Math.round(completionRate(habit) * 100);
-    const isDone = Boolean(habit.history[today]);
+    const isDone = isDayDone(habit.history[today]);
     const isScheduled = isScheduledForDate(today, habit.schedule);
     return (
       <motion.div

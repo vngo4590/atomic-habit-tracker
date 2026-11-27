@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { isDone } from "@/features/habits";
 import { useEffect, useMemo, useState } from "react";
 
 import { IconClose } from "@/components/Icons";
@@ -30,7 +31,7 @@ export default function IdentityPage() {
   const ledger = useMemo(() => {
     const tally = new Map<string, number>();
     habits.forEach((habit) => {
-      const votes = Object.keys(habit.history).filter((key) => Boolean(habit.history[key])).length;
+      const votes = Object.keys(habit.history).filter((key) => isDone(habit.history[key])).length;
       tally.set(habit.identity, (tally.get(habit.identity) ?? 0) + votes);
     });
     return Array.from(tally.entries()).sort((a, b) => b[1] - a[1]);

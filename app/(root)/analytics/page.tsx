@@ -9,7 +9,7 @@ import { useStoreContext } from "@/components/StoreProvider";
 import { TabUnderline } from "@/components/TabUnderline";
 import { dateAdd, fmt, todayKey } from "@/lib/helpers";
 import { clientLogger } from "@/lib/logger-client";
-import { isScheduledForDate } from "@/features/habits";
+import { isScheduledForDate, isDone } from "@/features/habits";
 
 import styles from "./page.module.css";
 
@@ -55,7 +55,7 @@ export default function AnalyticsPage() {
       ? Math.round((habits.reduce((sum, habit) => sum + completionRate(habit), 0) / habits.length) * 100)
       : 0;
     const total = habits.reduce(
-      (sum, habit) => sum + Object.keys(habit.history).filter((key) => Boolean(habit.history[key])).length,
+      (sum, habit) => sum + Object.keys(habit.history).filter((key) => isDone(habit.history[key])).length,
       0
     );
     const best = [...habits].sort((a, b) => longestStreak(b) - longestStreak(a))[0];
