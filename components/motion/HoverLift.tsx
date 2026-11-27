@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import type { ReactNode } from "react";
 
 interface HoverLiftProps {
@@ -12,12 +12,12 @@ interface HoverLiftProps {
 
 export function HoverLift({ children, className, y = -2, shadow = "var(--shadow-md)" }: HoverLiftProps) {
   return (
-    <motion.div
+    <m.div
       className={className}
       whileHover={{ y, boxShadow: shadow, borderColor: "var(--rule-strong)" }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
     >
       {children}
-    </motion.div>
+    </m.div>
   );
 }

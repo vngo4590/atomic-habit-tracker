@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { useState } from "react";
 
 import { slideUpVariants } from "@/lib/animations";
@@ -71,7 +71,7 @@ export function OnboardingOverlay({ onComplete }: { onComplete: () => void }) {
   };
 
   return (
-    <motion.div
+    <m.div data-motion-fallback
       className="overlay"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -79,7 +79,7 @@ export function OnboardingOverlay({ onComplete }: { onComplete: () => void }) {
       transition={{ duration: 0.3 }}
     >
       <AnimatePresence mode="wait">
-        <motion.div
+        <m.div data-motion-fallback
           key={step}
           className={`overlay-card ${styles.card}`}
           variants={slideUpVariants}
@@ -91,7 +91,7 @@ export function OnboardingOverlay({ onComplete }: { onComplete: () => void }) {
               the current step, rule-coloured beyond it. */}
           <div className={styles.progress}>
             {STEPS.map((item, index) => (
-              <motion.span
+              <m.span data-motion-fallback
                 key={item.eyebrow}
                 data-testid="onboarding-progress-dot"
                 className={`${styles.progressDot} ${
@@ -107,24 +107,24 @@ export function OnboardingOverlay({ onComplete }: { onComplete: () => void }) {
           <h2 className={`h1 ${styles.title}`}>{current.title}</h2>
           <p className={`lede ${styles.body}`}>{current.body}</p>
           <div className={styles.footer}>
-            <motion.button
+            <m.button
               className="btn"
               onClick={handleDismiss}
               whileTap={{ scale: 0.97 }}
             >
               Skip
-            </motion.button>
-            <motion.button
+            </m.button>
+            <m.button
               className="btn btn-primary"
               onClick={next}
               whileHover={{ y: -1 }}
               whileTap={{ scale: 0.97 }}
             >
               {current.action}
-            </motion.button>
+            </m.button>
           </div>
-        </motion.div>
+        </m.div>
       </AnimatePresence>
-    </motion.div>
+    </m.div>
   );
 }

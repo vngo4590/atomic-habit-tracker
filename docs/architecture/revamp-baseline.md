@@ -44,6 +44,27 @@ attribute it with chunk analysis before optimising. `/habits/[id]`,
 Phase D targets: no route above **200 KB** first-load, and `/` at least 25 %
 below baseline (<= 190 KB).
 
+### Phase D result
+
+The 200 KB target assumed a smaller framework: React + the Next router alone
+are 167 KB, leaving ~33 KB for the app shell plus the page. Achieved instead:
+
+| Route | Baseline KB | Phase D KB | Change |
+|---|---:|---:|---:|
+| /login, /register | 253.0 | 188.6 | -25 % |
+| /habits/[id] | 305.6 | 224.5 | -27 % |
+| /journal | 291.7 | 218.0 | -25 % |
+| /review | 291.9 | 217.7 | -25 % |
+| /identity | 248.7 | 216.5 | -13 % |
+| / (Today) | 252.9 | 229.0 | -9 % |
+
+How: Framer Motion moved behind `LazyMotion` (`m.*` + async `domAnimation`),
+the app shell's page fade and toast became CSS keyframes, the onboarding
+overlay is lazy-loaded, and `components/ui` is marked side-effect free so
+unused primitives tree-shake. Only Today, Pet and Habit detail (which animate)
+still load the motion core. `npm run bundle:check` now fails the gate if any
+route exceeds **230 KB** (run by `backend:validate`).
+
 ## Code-health hotspots (lines)
 
 | File | Lines |

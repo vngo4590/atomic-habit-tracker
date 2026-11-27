@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import type { ReactNode } from "react";
 
 import { staggerItemVariants } from "@/lib/animations";
@@ -25,7 +25,7 @@ export function StaggerContainer({
 
   // Render a plain div during SSR and hydration so the server and client
   // produce identical markup. After hydration completes we switch to the
-  // animated motion.div so entrance animations can run.
+  // animated m.div so entrance animations can run.
   if (!mounted || reduced) {
     return (
       <div className={className} style={style}>
@@ -35,7 +35,8 @@ export function StaggerContainer({
   }
 
   return (
-    <motion.div
+    <m.div
+      data-motion-fallback
       className={className}
       style={style}
       variants={{
@@ -49,7 +50,7 @@ export function StaggerContainer({
       animate="visible"
     >
       {children}
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -62,14 +63,14 @@ export function StaggerItem({ children, className }: StaggerItemProps) {
   const reduced = useMotionReduced();
   const mounted = useMounted();
 
-  // Same SSR-safe guard: plain div during hydration, motion.div after.
+  // Same SSR-safe guard: plain div during hydration, m.div after.
   if (!mounted || reduced) {
     return <div className={className}>{children}</div>;
   }
 
   return (
-    <motion.div className={className} variants={staggerItemVariants}>
+    <m.div data-motion-fallback className={className} variants={staggerItemVariants}>
       {children}
-    </motion.div>
+    </m.div>
   );
 }

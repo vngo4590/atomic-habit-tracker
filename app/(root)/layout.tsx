@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { AppearanceSync } from "@/components/AppearanceSync";
 import { Nav } from "@/components/Nav";
 import { OnboardingGate } from "@/components/OnboardingGate";
+import { MotionProvider } from "@/components/motion/MotionProvider";
 import { PageTransition } from "@/components/motion/PageTransition";
 import { StoreProvider } from "@/components/StoreProvider";
 import { Toast } from "@/components/Toast";
@@ -42,16 +43,18 @@ export default async function RootGroupLayout({ children }: { children: ReactNod
   return (
     <StoreProvider backendSnapshot={backendSnapshot}>
       <AppearanceSync />
-      <div className="app">
-        <Nav user={{ name: user.name, email: user.email }} />
-        <main className="main">
-          <div className="main-inner">
-            <PageTransition>{children}</PageTransition>
-          </div>
-        </main>
-        <OnboardingGate />
-        <Toast />
-      </div>
+      <MotionProvider>
+        <div className="app">
+          <Nav user={{ name: user.name, email: user.email }} />
+          <main className="main">
+            <div className="main-inner">
+              <PageTransition>{children}</PageTransition>
+            </div>
+          </main>
+          <OnboardingGate />
+          <Toast />
+        </div>
+      </MotionProvider>
     </StoreProvider>
   );
 }

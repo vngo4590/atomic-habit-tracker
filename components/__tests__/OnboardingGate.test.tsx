@@ -36,7 +36,7 @@ afterEach(() => {
 
 describe("OnboardingGate", () => {
 
-  it("shows the onboarding overlay when onboardingSeen is false", () => {
+  it("shows the onboarding overlay when onboardingSeen is false", async () => {
     // Given a fresh user whose server-side preference is onboardingSeen=false
     const store = testStoreContext({ preferences: testPreferences({ onboardingSeen: false }) });
 
@@ -48,7 +48,7 @@ describe("OnboardingGate", () => {
     );
 
     // Then the Welcome step is on screen
-    expect(screen.getByText("Welcome")).toBeTruthy();
+    expect(await screen.findByText("Welcome", undefined, { timeout: 5000 })).toBeTruthy();
   });
 
   it("hides the onboarding overlay when onboardingSeen is true", () => {
@@ -66,7 +66,7 @@ describe("OnboardingGate", () => {
     expect(screen.queryByText("Welcome")).toBeNull();
   });
 
-  it("does NOT consult localStorage when deciding visibility (regression guard)", () => {
+  it("does NOT consult localStorage when deciding visibility (regression guard)", async () => {
     // Given a stale legacy localStorage flag from a previous browser session
     // (e.g. left over by a different account on the same machine)
     window.localStorage.setItem(LEGACY_KEY, "true");
@@ -83,10 +83,10 @@ describe("OnboardingGate", () => {
 
     // Then the overlay still appears because the server flag (per-user)
     // is the only source of truth — localStorage no longer suppresses it.
-    expect(screen.getByText("Welcome")).toBeTruthy();
+    expect(await screen.findByText("Welcome", undefined, { timeout: 5000 })).toBeTruthy();
   });
 
-  it("persists onboardingSeen=true via setPreferences when Skip is clicked", () => {
+  it("persists onboardingSeen=true via setPreferences when Skip is clicked", async () => {
     // Given the gate is rendering the overlay
     const setPreferences = vi.fn();
     const store = testStoreContext({
@@ -101,7 +101,7 @@ describe("OnboardingGate", () => {
     );
 
     // When the user clicks Skip
-    fireEvent.click(screen.getByText("Skip"));
+    fireEvent.click(await screen.findByText("Skip", undefined, { timeout: 5000 }));
 
     // Then the gate calls setPreferences with onboardingSeen=true so the
     // server preference flips and the overlay won't show again.

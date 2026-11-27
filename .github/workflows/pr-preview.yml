@@ -179,6 +179,8 @@ jobs:
         timeout-minutes: 5
       - run: npm run build
         timeout-minutes: 10
+      - run: npm run bundle:check
+        timeout-minutes: 2
 
   # -------------------------------------------------------------------------
   # BUILD-IMAGE — build runner + migrator images and push to the SHARED

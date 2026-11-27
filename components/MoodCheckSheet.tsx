@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 
 import { IconClose } from "@/components/Icons";
@@ -76,7 +76,7 @@ export function MoodCheckSheet({
 
   return (
     <AnimatePresence>
-      <motion.div
+      <m.div data-motion-fallback
         className="overlay"
         role="dialog"
         aria-modal="true"
@@ -86,7 +86,7 @@ export function MoodCheckSheet({
         animate="visible"
         exit="exit"
       >
-        <motion.div
+        <m.div data-motion-fallback
           className={`overlay-card ${styles.card}`}
           onClick={(event) => event.stopPropagation()}
           variants={overlayCardVariants}
@@ -94,7 +94,7 @@ export function MoodCheckSheet({
           animate="visible"
           exit="exit"
         >
-          <motion.button
+          <m.button
             className={`btn btn-ghost btn-sm ${styles.closeBtn}`}
             onClick={onClose}
             aria-label="Close"
@@ -102,7 +102,7 @@ export function MoodCheckSheet({
             whileTap={{ scale: 0.9 }}
           >
             <IconClose className={styles.closeIcon} />
-          </motion.button>
+          </m.button>
 
           <div className={styles.headerRow}>
             <div>
@@ -120,7 +120,7 @@ export function MoodCheckSheet({
             {MOODS.map((item) => {
               const active = mood === item.value;
               return (
-                <motion.button
+                <m.button
                   key={item.value}
                   onClick={() => handleMoodSelect(item.value, item.label)}
                   whileHover={{ y: -3 }}
@@ -139,19 +139,19 @@ export function MoodCheckSheet({
                   // module class can theme border + tint generically.
                   style={{ ["--mood-color" as string]: item.color }}
                 >
-                  <motion.span
+                  <m.span
                     className={`${styles.moodFace} ${active ? "" : styles.moodFaceInactive}`}
                     animate={active ? { scale: [1, 1.2, 1] } : {}}
                     transition={{ duration: 0.3 }}
                   >
                     {item.face}
-                  </motion.span>
+                  </m.span>
                   <span
                     className={`mono ${styles.moodLabel} ${active ? styles.moodLabelActive : ""}`}
                   >
                     {item.label}
                   </span>
-                </motion.button>
+                </m.button>
               );
             })}
           </div>
@@ -176,20 +176,20 @@ export function MoodCheckSheet({
           </div>
 
           <div className={styles.actions}>
-            <motion.button className="btn btn-ghost" onClick={onClose} whileTap={{ scale: 0.97 }}>
+            <m.button className="btn btn-ghost" onClick={onClose} whileTap={{ scale: 0.97 }}>
               Skip - just mark it done
-            </motion.button>
-            <motion.button
+            </m.button>
+            <m.button
               className="btn btn-primary"
               onClick={handleSave}
               whileHover={{ y: -1 }}
               whileTap={{ scale: 0.97 }}
             >
               Save check-in
-            </motion.button>
+            </m.button>
           </div>
-        </motion.div>
-      </motion.div>
+        </m.div>
+      </m.div>
     </AnimatePresence>
   );
 }

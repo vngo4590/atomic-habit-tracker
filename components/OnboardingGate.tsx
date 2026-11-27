@@ -1,7 +1,64 @@
 "use client";
 
-import { OnboardingOverlay } from "@/components/OnboardingOverlay";
+import dynamic from "next/dynamic";
+import { useEffect, useRef } from "react";
+
 import { useStoreContext } from "@/components/StoreProvider";
+
+// Loaded on demand: only first-run users see it, so its code (and the
+// animation runtime it uses) stays out of every route's first-load bundle.
+// If its chunk fails to load (e.g. offline or a stale deploy), fall back to
+// a plain welcome dialog so the user can still dismiss onboarding.
+const OnboardingOverlay = dynamic(() =>
+  import("@/components/OnboardingOverlay")
+    .then((mod) => mod.OnboardingOverlay)
+    .catch(() => OnboardingFallback),
+);
+
+function OnboardingFallback({ onComplete }: { onComplete: () => void }) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  // Remember what had focus before the dialog opened (read during the first
+  // render, before anything inside the dialog can take focus).
+  const opener = useRef(typeof document === "undefined" ? null : document.activeElement);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    const previous = opener.current;
+    if (!dialog) return;
+    // showModal() makes the rest of the page inert and traps focus natively.
+    if (typeof dialog.showModal === "function") {
+      if (!dialog.open) dialog.showModal();
+    } else {
+      dialog.setAttribute("open", "");
+    }
+    dialog.querySelector("button")?.focus();
+    return () => {
+      if (dialog.open && typeof dialog.close === "function") dialog.close();
+      if (previous instanceof HTMLElement) previous.focus();
+    };
+  }, []);
+
+  return (
+    <dialog
+      ref={dialogRef}
+      className="overlay"
+      aria-labelledby="onboarding-fallback-title"
+      onCancel={(event) => {
+        // Escape behaves like Continue, matching Skip on the full tour.
+        event.preventDefault();
+        onComplete();
+      }}
+    >
+      <div className="overlay-card">
+        <h2 id="onboarding-fallback-title">Welcome to Atomicly</h2>
+        <p>Build tiny habits, cast a vote for who you want to become each day, and reflect on your progress.</p>
+        <button type="button" className="btn btn-primary" onClick={onComplete}>
+          Continue
+        </button>
+      </div>
+    </dialog>
+  );
+}
 
 /**
  * OnboardingGate — decides whether to render the first-run onboarding
