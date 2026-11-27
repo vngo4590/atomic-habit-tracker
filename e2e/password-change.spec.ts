@@ -1,5 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { dismissOnboarding } from "./helpers";
+
 /**
  * password-change.spec — end-to-end regression proof for the
  * `fix-password-change-session-survival` change.
@@ -97,13 +99,9 @@ async function registerUser(page: Page): Promise<string> {
   // and against the live per-PR preview URL that CI sets via BASE_URL.
   await page.waitForURL((url) => url.pathname === "/", { timeout: 15_000 });
 
-  // A first-run user may see the onboarding overlay; dismiss it so it can never
-  // intercept a later click on the Settings controls.
-  const skipOnboarding = page.locator('.overlay button:has-text("Skip")');
-  if (await skipOnboarding.isVisible().catch(() => false)) {
-    await skipOnboarding.click();
-    await expect(skipOnboarding).not.toBeVisible();
-  }
+  // A first-run user always gets the onboarding overlay; dismiss it and wait for
+  // the server to remember, so it can never intercept a later Settings click.
+  await dismissOnboarding(page);
 
   return email;
 }
