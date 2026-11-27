@@ -309,7 +309,7 @@ Notes:
 - `app/styles/`: modular global stylesheet partials (see "Styles & Design Tokens" below).
 - `app/globals.css`: thin entry point that `@import`s the modular partials in cascade order.
 - `features/<name>/`: feature slices (`habits`, `stacks`, `reflection`, `settings`, `pet`) — `model/` pure domain logic, `server/` Prisma repositories, `ui/` components + CSS Modules, `store.ts` client cache slice, `actions.ts` server actions, `contracts.ts` Zod schemas. Other code imports a feature only through `@/features/<name>` and its `/actions`, `/server`, `/store`, `/contracts`, `/ui` entry points (enforced by `eslint.config.mjs`; see ADR-0001).
-- `components/`: app-shell client components (`StoreProvider`, `Toast`, `Modal`, `AuthForm`, onboarding). Each non-trivial component has a co-located `Component.module.css`. For example, `components/PasswordInput.tsx` is the shared password field with a built-in show/hide visibility toggle, used by the auth forms and the Settings change-password form.
+- `components/`: app-shell and shared cross-feature client components (`StoreProvider`, `Toast`, `Modal`, `AuthForm`, onboarding, `HelpTip`, `LineChart`, `ContractSheet`, `NotesManager`, ...). Each non-trivial component has a co-located `Component.module.css`. For example, `components/PasswordInput.tsx` is the shared password field with a built-in show/hide visibility toggle, used by the auth forms and the Settings change-password form.
 - `components/ui/`: design-system primitives (import from `@/components/ui`).
 - `components/nav/`: sidebar, mobile top/tab bars, hub section tabs, keyboard shortcuts.
 - `components/motion/`: Framer Motion primitives and the `LazyMotion` `MotionProvider`.

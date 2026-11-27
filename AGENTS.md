@@ -15,7 +15,7 @@ This project uses Next.js 16.2, React 19, TypeScript, Tailwind CSS 4, and the Ap
 - `app/`: Next.js App Router files — thin routes/layouts that compose feature UI.
 - `features/<name>/`: feature slices (`habits`, `stacks`, `reflection`, `settings`, `pet`) per ADR-0001 — `model/` (pure domain logic), `server/` (Prisma repositories), `ui/`, `store.ts` (client cache slice), `actions.ts` (server actions), `contracts.ts` (Zod).
 - `lib/`: shared kernel — types, helpers, date keys, logger, auth/db/security helpers, `lib/store/` (client store composition + `optimistic()` helper), `lib/server/store-snapshot.ts`, the auth-only `lib/actions/auth.ts` / `lib/contracts/auth.ts` / `lib/repositories/users.ts`, and tests.
-- `components/`: app-shell components (`StoreProvider`, `Toast`, `Modal`, `AuthForm`, onboarding); `components/ui/` design-system primitives; `components/nav/` navigation; `components/motion/` animation primitives.
+- `components/`: app-shell and shared cross-feature components (`StoreProvider`, `Toast`, `Modal`, `AuthForm`, onboarding, `HelpTip`, `LineChart`, `ContractSheet`, `NotesManager`, ...); `components/ui/` design-system primitives; `components/nav/` navigation; `components/motion/` animation primitives.
 - `docs/architecture/`: architecture notes and ADRs (`adr/0001`–`0003`); `design-system/atomicly/MASTER.md` is the design-system source of truth.
 - `reference_ui/`: source reference implementation used for the completed UI port.
 - `openspec/changes/`: active OpenSpec changes (archived ones under `openspec/changes/archive/`).
