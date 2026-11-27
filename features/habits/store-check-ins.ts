@@ -8,6 +8,7 @@
  */
 
 import { type Dispatch, type SetStateAction, useCallback, useRef } from "react";
+import { flushSync } from "react-dom";
 
 import { todayKey } from "@/lib/helpers";
 import { clientLogger } from "@/lib/logger-client";
@@ -43,7 +44,10 @@ function restoreEntry(
   });
 }
 
-export function useCheckInMutations(setHabits: Dispatch<SetStateAction<Habit[]>>, showToast: ShowToast) {
+export function useCheckInMutations(
+  setHabits: Dispatch<SetStateAction<Habit[]>>,
+  showToast: ShowToast,
+) {
   // Which request "owns" each habit/day. A toggle or check-in that finishes
   // after a newer one for the same habit/day must not roll back or overwrite
   // the newer state, so both mutations claim ownership and check it.
@@ -64,38 +68,63 @@ export function useCheckInMutations(setHabits: Dispatch<SetStateAction<Habit[]>>
   }, []);
 
   const toggleHabit = useCallback(
-    (id: string, dateKey = todayKey(), payload: Partial<CheckIn> | null = null) => {
+    (
+      id: string,
+      dateKey = todayKey(),
+      payload: Partial<CheckIn> | null = null,
+    ) => {
       let toastIdentity: string | null = null;
       let toastVotes = 0;
       let shouldComplete = true;
       let hadEntry = false;
       let previousEntry: Habit["history"][string] | undefined;
 
-      setHabits((currentHabits) =>
-        currentHabits.map((habit) => {
-          if (habit.id !== id) {
-            return habit;
-          }
-
-          const history = { ...habit.history };
-          const previous = history[dateKey];
-          hadEntry = Object.prototype.hasOwnProperty.call(habit.history, dateKey);
-          previousEntry = previous;
-
-          if (previous && !payload) {
-            delete history[dateKey];
-            shouldComplete = false;
-          } else {
-            const prevObject = isCheckIn(previous) ? previous : {};
-            history[dateKey] = { done: true, ...prevObject, ...(payload ?? {}) };
-            if (!previous) {
-              toastIdentity = habit.identity;
-              toastVotes = Object.keys(history).filter((key) => isDone(history[key])).length;
+      // flushSync runs the updater now, so `shouldComplete` and the toast are
+      // derived from the latest state before the server call below (React may
+      // otherwise defer it, e.g. on a rapid second click).
+      flushSync(() =>
+        setHabits((currentHabits) =>
+          currentHabits.map((habit) => {
+            if (habit.id !== id) {
+              return habit;
             }
-          }
 
-          return { ...habit, history };
-        }),
+            const history = { ...habit.history };
+            const previous = history[dateKey];
+            hadEntry = Object.prototype.hasOwnProperty.call(
+              habit.history,
+              dateKey,
+            );
+            previousEntry = previous;
+
+            // A stored `{ done: false }` entry (mood/journal kept after an undo)
+            // is not done: checking it completes the day and keeps its fields.
+            const wasDone = isDone(previous);
+            const prevObject = isCheckIn(previous) ? previous : {};
+            if (wasDone && !payload) {
+              shouldComplete = false;
+              const retained: Partial<CheckIn> = { ...prevObject };
+              delete retained.done;
+              if (Object.keys(retained).length)
+                history[dateKey] = { ...retained, done: false };
+              else delete history[dateKey];
+            } else {
+              history[dateKey] = {
+                ...prevObject,
+                done: true,
+                ...(payload ?? {}),
+              };
+              if (!wasDone) {
+                toastIdentity = habit.identity;
+                toastVotes = Object.keys(history).filter((key) =>
+                  isDone(history[key]),
+                ).length;
+              }
+            }
+
+            return { ...habit, history };
+          }),
+        ),
       );
 
       clientLogger.info("Habit toggled", {
@@ -113,14 +142,18 @@ export function useCheckInMutations(setHabits: Dispatch<SetStateAction<Habit[]>>
         // only while no newer toggle/check-in for that day has taken over.
         apply: () => () => {
           if (ownership.owns()) {
-            setHabits((currentHabits) => restoreEntry(currentHabits, id, dateKey, hadEntry, previousEntry));
+            setHabits((currentHabits) =>
+              restoreEntry(currentHabits, id, dateKey, hadEntry, previousEntry),
+            );
           }
           ownership.release();
         },
         action: () => toggleHabitAction(id, dateKey, shouldComplete),
         onSuccess: (saved) => {
           if (saved && ownership.owns()) {
-            setHabits((currentHabits) => currentHabits.map((habit) => (habit.id === id ? saved : habit)));
+            setHabits((currentHabits) =>
+              currentHabits.map((habit) => (habit.id === id ? saved : habit)),
+            );
           }
           ownership.release();
         },
@@ -153,14 +186,23 @@ export function useCheckInMutations(setHabits: Dispatch<SetStateAction<Habit[]>>
 
           const history = { ...habit.history };
           const previous = history[dateKey];
-          hadEntry = Object.prototype.hasOwnProperty.call(habit.history, dateKey);
+          hadEntry = Object.prototype.hasOwnProperty.call(
+            habit.history,
+            dateKey,
+          );
           previousEntry = previous;
           const prevObject = isCheckIn(previous) ? previous : {};
-          history[dateKey] = { done: true, ...prevObject, ...payload };
-          if (Object.prototype.hasOwnProperty.call(payload, "mood") && payload.mood === undefined) {
+          history[dateKey] = { ...prevObject, done: true, ...payload };
+          if (
+            Object.prototype.hasOwnProperty.call(payload, "mood") &&
+            payload.mood === undefined
+          ) {
             delete (history[dateKey] as CheckIn).mood;
           }
-          if (Object.prototype.hasOwnProperty.call(payload, "journal") && payload.journal === undefined) {
+          if (
+            Object.prototype.hasOwnProperty.call(payload, "journal") &&
+            payload.journal === undefined
+          ) {
             delete (history[dateKey] as CheckIn).journal;
           }
 
@@ -180,14 +222,18 @@ export function useCheckInMutations(setHabits: Dispatch<SetStateAction<Habit[]>>
       void optimistic({
         apply: () => () => {
           if (ownership.owns()) {
-            setHabits((currentHabits) => restoreEntry(currentHabits, id, dateKey, hadEntry, previousEntry));
+            setHabits((currentHabits) =>
+              restoreEntry(currentHabits, id, dateKey, hadEntry, previousEntry),
+            );
           }
           ownership.release();
         },
         action: () => logCheckInAction(id, dateKey, payload),
         onSuccess: (saved) => {
           if (saved && ownership.owns()) {
-            setHabits((currentHabits) => currentHabits.map((habit) => (habit.id === id ? saved : habit)));
+            setHabits((currentHabits) =>
+              currentHabits.map((habit) => (habit.id === id ? saved : habit)),
+            );
           }
           ownership.release();
         },
