@@ -9,24 +9,15 @@ import {
   updateJournalEntryAction,
 } from "@/features/reflection/actions";
 import { savePreferencesAction } from "@/features/settings/actions";
-import {
-  deleteHabitAction,
-  logCheckInAction,
-  toggleHabitAction,
-  updateHabitAction,
-} from "@/features/habits/actions";
+import { deleteHabitAction, logCheckInAction, toggleHabitAction, updateHabitAction } from "@/features/habits/actions";
 import { useStore } from "@/lib/store";
 import type { Habit } from "@/lib/types";
 
-import {
-  makeLocalStorageMock,
-  makeStoreTestHabit as makeHabit,
-} from "@/lib/store/__tests__/store-test-helpers";
+import { makeLocalStorageMock, makeStoreTestHabit as makeHabit } from "@/lib/store/__tests__/store-test-helpers";
 
 // Pin "today" to a Wednesday so schedule-aware streak tests are deterministic.
 vi.mock("@/lib/helpers", async () => {
-  const actual =
-    await vi.importActual<typeof import("@/lib/helpers")>("@/lib/helpers");
+  const actual = await vi.importActual<typeof import("@/lib/helpers")>("@/lib/helpers");
   return {
     ...actual,
     todayKey: (...args: unknown[]) => {
@@ -90,25 +81,19 @@ describe("store habit mutations", () => {
       mood: entry.mood ?? "good",
       tags: entry.tags ?? [],
     }));
-    vi.mocked(saveIdentityAction).mockImplementation(
-      async (identity) => identity,
-    );
-    vi.mocked(savePreferencesAction).mockImplementation(
-      async (preferences) => ({
-        theme: "light",
-        accentHue: 60,
-        remindersEnabled: true,
-        weeklyReviewNudge: true,
-        accountabilityNudge: false,
-        onboardingSeen: false,
-        lessonMode: "sequential",
-        timezone: "UTC",
-        ...preferences,
-      }),
-    );
-    vi.mocked(markLessonReadAction).mockImplementation(async (lessonId) => [
-      lessonId,
-    ]);
+    vi.mocked(saveIdentityAction).mockImplementation(async (identity) => identity);
+    vi.mocked(savePreferencesAction).mockImplementation(async (preferences) => ({
+      theme: "light",
+      accentHue: 60,
+      remindersEnabled: true,
+      weeklyReviewNudge: true,
+      accountabilityNudge: false,
+      onboardingSeen: false,
+      lessonMode: "sequential",
+      timezone: "UTC",
+      ...preferences,
+    }));
+    vi.mocked(markLessonReadAction).mockImplementation(async (lessonId) => [lessonId]);
     vi.mocked(updateHabitAction).mockImplementation(async () => null);
     vi.mocked(updateJournalEntryAction).mockImplementation(async () => null);
   });
@@ -173,27 +158,13 @@ describe("store habit mutations", () => {
     act(() => result.current.toggleHabit(id, key));
 
     // Then the day is done and the mood is kept
-    expect(result.current.habits[0].history[key]).toEqual({
-      done: true,
-      mood: 3,
-    });
-    expect(vi.mocked(toggleHabitAction)).toHaveBeenLastCalledWith(
-      id,
-      key,
-      true,
-    );
+    expect(result.current.habits[0].history[key]).toEqual({ done: true, mood: 3 });
+    expect(vi.mocked(toggleHabitAction)).toHaveBeenLastCalledWith(id, key, true);
 
     // And un-checking keeps the reflection on a not-done entry
     act(() => result.current.toggleHabit(id, key));
-    expect(result.current.habits[0].history[key]).toEqual({
-      done: false,
-      mood: 3,
-    });
-    expect(vi.mocked(toggleHabitAction)).toHaveBeenLastCalledWith(
-      id,
-      key,
-      false,
-    );
+    expect(result.current.habits[0].history[key]).toEqual({ done: false, mood: 3 });
+    expect(vi.mocked(toggleHabitAction)).toHaveBeenLastCalledWith(id, key, false);
   });
 
   it("keeps newer check-in details when an earlier toggle for the same day fails", async () => {
@@ -235,41 +206,26 @@ describe("store habit mutations", () => {
     act(() => result.current.toggleHabit(id, key));
 
     // When the user saves mood and journal details before the toggle fails
-    act(() =>
-      result.current.logCheckIn(id, { mood: 5, journal: "Felt good" }, key),
-    );
+    act(() => result.current.logCheckIn(id, { mood: 5, journal: "Felt good" }, key));
     await act(async () => {
       rejectToggle(new Error("network down"));
       await Promise.resolve();
     });
 
     // Then the newer details stay on screen instead of being rolled back
-    expect(result.current.habits[0].history[key]).toEqual({
-      done: true,
-      mood: 5,
-      journal: "Felt good",
-    });
+    expect(result.current.habits[0].history[key]).toEqual({ done: true, mood: 5, journal: "Felt good" });
 
     // And the newer request still reconciles with the server's answer
     await act(async () => {
-      resolveCheckIn({
-        ...result.current.habits[0],
-        history: { [key]: { done: true, mood: 5, journal: "Saved" } },
-      });
+      resolveCheckIn({ ...result.current.habits[0], history: { [key]: { done: true, mood: 5, journal: "Saved" } } });
       await Promise.resolve();
     });
-    expect(result.current.habits[0].history[key]).toEqual({
-      done: true,
-      mood: 5,
-      journal: "Saved",
-    });
+    expect(result.current.habits[0].history[key]).toEqual({ done: true, mood: 5, journal: "Saved" });
   });
 
   it("rolls back a failed check-in that is still the latest change for that day", async () => {
     // Given a habit with no entry for the day and a check-in that will fail
-    vi.mocked(logCheckInAction).mockRejectedValueOnce(
-      new Error("network down"),
-    );
+    vi.mocked(logCheckInAction).mockRejectedValueOnce(new Error("network down"));
     const { result } = renderHook(() =>
       useStore({
         habits: [makeHabit({})],
@@ -336,16 +292,8 @@ describe("store habit mutations", () => {
     let resolveFirst: (habit: Habit) => void = () => {};
     let resolveSecond: (habit: Habit) => void = () => {};
     vi.mocked(updateHabitAction)
-      .mockReturnValueOnce(
-        new Promise((resolve) => {
-          resolveFirst = resolve;
-        }),
-      )
-      .mockReturnValueOnce(
-        new Promise((resolve) => {
-          resolveSecond = resolve;
-        }),
-      );
+      .mockReturnValueOnce(new Promise((resolve) => { resolveFirst = resolve; }))
+      .mockReturnValueOnce(new Promise((resolve) => { resolveSecond = resolve; }));
 
     const { result } = renderHook(() =>
       useStore({
@@ -371,21 +319,13 @@ describe("store habit mutations", () => {
     act(() => result.current.updateHabit("1", { cue: "After coffee" }));
     act(() => result.current.updateHabit("1", { craving: "To feel clear" }));
     await act(async () => {
-      resolveFirst({
-        ...result.current.habits[0],
-        cue: "After coffee",
-        craving: "",
-      });
+      resolveFirst({ ...result.current.habits[0], cue: "After coffee", craving: "" });
       await Promise.resolve();
     });
     expect(result.current.habits[0].craving).toBe("To feel clear");
 
     await act(async () => {
-      resolveSecond({
-        ...result.current.habits[0],
-        cue: "After coffee",
-        craving: "To feel clear",
-      });
+      resolveSecond({ ...result.current.habits[0], cue: "After coffee", craving: "To feel clear" });
       await Promise.resolve();
     });
     expect(result.current.habits[0].cue).toBe("After coffee");
@@ -419,9 +359,7 @@ describe("store habit mutations", () => {
 
     expect(result.current.habits[0].cue).toBe("Law cue");
     expect(result.current.habits[0].loopCue).toBe("Loop cue");
-    expect(updateHabitAction).toHaveBeenLastCalledWith("1", {
-      loopCue: "Loop cue",
-    });
+    expect(updateHabitAction).toHaveBeenLastCalledWith("1", { loopCue: "Loop cue" });
   });
 
   it("removes a habit and archives it server-side", () => {
