@@ -50,9 +50,9 @@ Every commit must include `Co-authored-by: Copilot <223556219+Copilot@users.nore
 
 A change is not complete until tests pass.
 
-- New / modified **component** → write or update a test in `components/__tests__/`.
-- Modified **`lib/` helper or repository** → write or update a unit test next to it.
-- Changed **server action** → update or add a test in `lib/actions/__tests__/`.
+- New / modified **component** → write or update a test in the colocated `__tests__/` folder (`components/__tests__/`, `components/ui/__tests__/`, or `features/<name>/ui/__tests__/`).
+- Modified **`lib/` helper, feature `model/` function, or `features/<name>/server/` repository** → write or update a unit test in the `__tests__/` folder next to it.
+- Changed **server action** → update or add a test in `features/<name>/__tests__/` (auth actions: `lib/actions/__tests__/`).
 - If a test is hard to write, that is a signal the code has too many side effects — refactor first.
 
 Detail and tier guidance → `atomic-habit-test-engineer` and the test sub-skills.
@@ -68,7 +68,7 @@ Every function, component, and non-trivial block of code MUST have a comment exp
 | Bad | Good |
 | --- | --- |
 | `// increment counter` | `// When the user checks off a habit, we increment their daily streak so the UI can show fire icons and encourage consistency.` |
-| `// map over habits` | `// Group habits by time of day (Morning/Afternoon/Evening) so the Today page shows them in the order the user is most likely to complete them.` |
+| `// map over habits` | `// Keep only habits scheduled for today that are not done yet, so the Today page shows exactly what is still left to do.` |
 | `// reset state` | `// On Cancel, restore the draft from the saved value so unsaved edits don't leak back into the next edit session.` |
 
 Top-of-file JSDoc on a component should explain: what it is, when it's rendered, what its key interactions are, and any non-obvious styling decisions.

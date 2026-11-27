@@ -17,16 +17,16 @@ These are the non-negotiable design rules for any change spanning more than one 
 | **O — Open/closed** | Extend with new variants, not new conditionals branching on `kind`. Example: add a new mood by appending to `MOODS`, not by `if (mood === "anger") { ... }`. |
 | **L — Liskov substitution** | A new variant component must satisfy the same prop contract as its siblings. Don't sneak in extra required props at one call site. |
 | **I — Interface segregation** | Props interfaces should expose only what each call site needs. Don't add `onEverything` callbacks; split into focused props. |
-| **D — Dependency inversion** | Components import from `lib/` and `components/`. `lib/` modules never import from `components/`. Server actions live in `lib/actions/` and depend on repositories, not the other way around. |
+| **D — Dependency inversion** | Dependencies point one way: `app/` → `features/` → `lib/` (and `components/`). `lib/` never imports from a feature or from `components/`; `features/*/model/` is pure and imports no I/O. Server actions live in `features/<name>/actions.ts` and depend on that feature's `server/` repositories, never the other way around. Cross-feature access goes through public entry points only (see `atomic-habit-architecture` § Import rules). |
 
 ## 2. GRASP
 
 | Pattern | When to apply |
 | --- | --- |
-| **Information Expert** | The thing that owns the data owns the logic that operates on it. Streak math lives on the store, not in the JSX. |
+| **Information Expert** | The thing that owns the data owns the logic that operates on it. Streak math lives in `features/habits/model/metrics.ts`, not in the JSX. |
 | **Creator** | Components mount their own children; `useState` lives next to where it's read. Don't pass state up to a parent just to pass it back down. |
 | **Low Coupling** | Section components receive what they render via props; they should not reach into the global store unless they own a self-contained surface (sidebar, drawer). |
-| **High Cohesion** | Each module groups things that change together. Page-specific styles → `page.module.css`. Shared design tokens → `app/styles/tokens.css`. |
+| **High Cohesion** | Each module groups things that change together. A feature's model, repositories, actions, store slice and UI live together in `features/<name>/`; view styles → the view's colocated `*.module.css`. Shared design tokens → `app/styles/tokens.css`. |
 | **Controller** | One handler per user intent. Don't call `applyStackMutation` from three places — wrap it in a `handleReorder` (or similar) function that documents intent. |
 | **Polymorphism** | Replace `if/else` style logic with named variants (e.g. CSS module modifier classes `.chipDone` / `.chipPending` instead of branching `style={...}` inline). |
 | **Pure fabrication** | When something doesn't fit a domain concept (e.g. animation primitives, motion variants), put it in a clearly-named utility module (`lib/animations.ts`, `components/motion/`). |
@@ -42,8 +42,9 @@ Split a file or component when **any** of these is true:
 - The same data is being passed through more than two levels of props.
 
 Decompose into:
-- `components/Foo/` with `Foo.tsx` (composition), sub-component files, optional `Foo.module.css`, and a barrel `index.ts`.
-- Or `app/(root)/<route>/sections/` for page-specific sections, keeping `page.tsx` as a thin composition layer.
+- `features/<name>/ui/<area>/` with `FooView.tsx` (composition), sub-component files, colocated `*.module.css`, optional hooks (`useFooData.ts`) and pure view helpers (`foo-model.ts`), exported through `features/<name>/ui/index.ts` — e.g. `features/habits/ui/today/`.
+- Keep `app/(root)/<route>/page.tsx` a thin shell that renders the view. Pure domain logic that the UI computes belongs in `features/<name>/model/`.
+- A primitive reused across features goes to `components/ui/` (see `atomic-habit-design-system`). ESLint enforces a 300-line cap on `features/**` and `components/ui/**`.
 
 ## 4. Glossary
 

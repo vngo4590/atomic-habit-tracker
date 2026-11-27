@@ -24,11 +24,11 @@ Write unit tests for every piece of functionality. **No exceptions.**
 
 **Covers:**
 - Pure helper functions (`lib/helpers.ts`, `lib/date-keys.ts`, etc.)
-- Validation contracts (`lib/contracts/`)
+- Validation contracts (`features/<name>/contracts.ts`; auth + shared primitives in `lib/contracts/`)
 - Auth helpers (`lib/auth/credentials.ts`, `lib/auth/password.ts`, `lib/auth/routes.ts`, `lib/auth/session.ts`)
 - Store logic (`features/<name>/store.ts` slices + `lib/store/` composer/`optimistic()` helper — computed values, optimistic mutations, rollback)
 - Server actions (`features/*/actions.ts`) — mock repositories and session
-- Repository functions (`lib/repositories/`) — inject a mock Prisma client object
+- Repository functions (`features/<name>/server/`; users in `lib/repositories/users.ts`) — inject a mock Prisma client object
 - API response helpers (`lib/api/`)
 
 **Location:** `__tests__/` directory colocated with the source file.
@@ -80,7 +80,7 @@ Before writing any E2E test, ask the user:
 onboarding, and saves `storageState`. Tests therefore start authenticated.
 
 **Location:** `e2e/` directory at the repo root.
-**Existing specs:** `e2e/main-flow.spec.ts` (create-habit + summary sentence,
+**Existing specs:** `e2e/password-change.spec.ts`, `e2e/pet-adoption.spec.ts`, `e2e/help-tip-overflow.spec.ts`, `e2e/main-flow.spec.ts` (create-habit + summary sentence,
 multi-day check-in history diagram, markdown journal, weekly review, theme
 switching, identity ledger, analytics, stack chaining + drag-reorder) and
 `e2e/stack.spec.ts` (habit stacking in depth).

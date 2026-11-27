@@ -23,10 +23,12 @@ All core habit metrics in `features/habits/model/metrics.ts` are **schedule-awar
 | `longestStreak(habit)` | Compares consecutive done dates. If the gap between them contains **only** unscheduled days, the streak continues across the gap. Any scheduled missed day in the gap resets the count. |
 | `completionRate(habit, days)` | Denominator is the number of **scheduled days** in the window, not total calendar days. Bonus completions on unscheduled days can push the rate above `1.0`. Free-text schedules fall back to calendar-day counting. |
 
-## 3. Analytics page (`app/(root)/analytics/page.tsx`)
+## 3. Insights / analytics (`app/(root)/analytics/page.tsx` → `AnalyticsView`)
 
-- **Daily completion chart**: shows `% of scheduled habits completed` on each day. Habits not scheduled for that day are excluded from the denominator.
-- **Weekday breakdown**: only counts habits that were scheduled for that weekday in the 90-day lookback.
+The route is a thin shell; the chart math lives in `features/habits/ui/insights/analytics-data.ts` (`rangeKeys`, `dailyCompletion`, `weekdayRates`, `rangeTotals`) over the selected range (`RANGES` = 14 / 30 / 90 days).
+
+- **Daily completion chart** (`dailyCompletion`): shows `% of scheduled habits completed` on each day. Habits not scheduled for that day are excluded from the denominator.
+- **Weekday breakdown** (`weekdayRates`): only counts habits that were scheduled for that weekday within the selected range.
 
 ## 4. Consequences for UI / code changes
 
@@ -36,6 +38,6 @@ All core habit metrics in `features/habits/model/metrics.ts` are **schedule-awar
 
 ## See Also
 
-- `atomic-habit-architecture` — where `store.ts` and `schedule.ts` sit
+- `atomic-habit-architecture` — where `features/habits/model/` (metrics, schedule) and the `lib/store/` composer sit
 - `atomic-habit-test-edge-cases` — scheduled vs unscheduled date scenarios to cover
 - `atomic-habit-habit-stacking` — interacts with metrics on the Today page

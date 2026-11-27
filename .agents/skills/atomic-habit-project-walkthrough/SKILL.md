@@ -35,6 +35,7 @@ For **all** local dev commands (DB lifecycle, seed/demo data, validation, kube o
 | Habit stacking (linked-list, mutations, UI) | **`atomic-habit-habit-stacking`** |
 | Pet ecosystem (engine, food, decay, moods, UI) | **`atomic-habit-pet-ecosystem`** |
 | Styling (CSS Modules, partials, inline-style policy) | **`atomic-habit-css-conventions`** |
+| Design system (tokens, light/dark, `components/ui` primitives, nav, a11y) | **`atomic-habit-design-system`** |
 | SOLID + GRASP design rules | **`atomic-habit-design-principles`** |
 | Animation primitives and patterns | **`atomic-habit-ui-animation`** |
 | Logging conventions and redaction | **`atomic-habit-logging`** |
@@ -50,13 +51,15 @@ For **all** local dev commands (DB lifecycle, seed/demo data, validation, kube o
 
 ## Routes (one-line summary)
 
+Primary navigation (`components/nav/nav-items.ts`): **Today**, **Habits**, **Reflect** (journal/review/identity), **Insights** (analytics/hall of fame), **Pet**, plus **Settings** via the avatar menu. Each has an Alt+Shift shortcut (T/H/R/I/P/,). Route `page.tsx` files are thin shells that render views from `@/features/<name>/ui`.
+
 | Route | Screen |
 |---|---|
-| `/` | Today dashboard — undone habits scheduled today; stacks render as `StackCardGroup` |
-| `/habits` | Habit library — All / Done / Upcoming tabs; search + sort |
+| `/` | Today — undone habits scheduled today (`features/habits/ui/today/`); stacks render as `StackCardGroup` |
+| `/habits` | Habit library — All / Done today / Upcoming tabs; search + sort |
 | `/habits/new` | New habit builder (Mad-Libs sentence, schedule presets) |
 | `/habits/[id]` | Habit detail (Overview / journal / history / notes / contracts / Stack tabs) |
-| `/analytics` | Adherence stats and charts |
+| `/analytics` | Insights — adherence stats and charts (range 14/30/90 days) |
 | `/journal` | Journal entries |
 | `/review` | Weekly review (current + archive) |
 | `/hall-of-fame` | 66-day formation review |
@@ -76,22 +79,22 @@ The project uses OpenSpec to track planned changes. Before implementing any plan
 
 Current OpenSpec state:
 
-- Active in-progress changes:
-  - `openspec/changes/enhanced-habit-stacking/` — Habit-stack linked-list data model, Stack tab on habit detail, Apple Wallet-style stack cards on Today, and Playwright E2E setup. All `tasks.md` items checked; ready to archive.
-  - `openspec/changes/settings-account-email-notifications/` — Real account data, email verification, email-change confirmation flow, and transactional notification emails.
+- Active changes (`openspec/changes/`):
+  - `max-3-active-habits/` — Cap of 3 active (non-archived, non-inducted) habits, enforced server-side with a client mirror on `/habits/new`.
+  - `fix-helptip-mobile-overflow/` — Keep `HelpTip` popovers inside the viewport on small screens.
 - Archived changes (`openspec/changes/archive/`):
-  - `2026-04-29-port-reference-ui/` — Reference UI port.
-  - `2026-05-11-backend-auth-mobile-architecture/` — Backend, auth, and mobile-API architecture.
-  - `2026-05-12-add-unit-integration-tests/` — Unit and integration test coverage.
-- Canonical specs in `openspec/specs/`: `analytics-screen`, `app-shell`, `backend-data-model`, `create-habit`, `deployment-architecture`, `design-tokens`, `habit-api`, `habit-detail`, `habit-store`, `habits-list`, `hall-of-fame`, `identity-screen`, `journal-screen`, `mobile-bridge-readiness`, `onboarding`, `reflection-api`, `responsive-app-shell`, `settings-screen`, `test-coverage`, `today-screen`, `user-auth`, `weekly-review`.
-
+  - `2026-06-30-password-visibility-toggle/`
+  - `2026-07-01-fix-password-change-session-survival/`
+- Canonical specs in `openspec/specs/`: `change-password-form`, `password-change-session`, `password-input`.
+- Architecture decisions for the revamp live in `docs/architecture/adr/` (not OpenSpec).
 To propose / implement / archive a change use `openspec-propose`, `openspec-apply-change`, `openspec-archive-change`.
 
 ## Key conventions (one-liners — see linked sub-skill for detail)
 
 - **Next.js 16.2** has breaking changes from earlier versions. Before editing routing / layouts / metadata / fonts / CSS / Server or Client Components, read the relevant guide in `node_modules/next/dist/docs/`.
 - **Server vs Client**: `"use client"` only when browser APIs or React client-only hooks are needed. Page and layout files default to Server Components.
-- **Server actions** live in `lib/actions/`; auth actions in `lib/actions/auth.ts`. Domain mutations always flow `action → repository → Prisma`.
+- **Feature slices**: domain code lives in `features/<name>/` (`model/` pure logic, `server/` repositories, `actions.ts`, `contracts.ts`, `store.ts`, `ui/`). Import other features only via public entry points (`@/features/<x>`, `/actions`, `/server`, `/store`, `/contracts`, `/ui`) — ESLint enforces it. See **`atomic-habit-architecture`**.
+- **Server actions** live in `features/<name>/actions.ts`; auth actions in `lib/actions/auth.ts`. Domain mutations always flow `action → repository → Prisma`.
 - **Date keys**: use helpers in `lib/helpers.ts` (`todayKey()`) and `lib/date-keys.ts`. Never `new Date().toISOString()` as a user-local habit day.
 - **Path alias**: `@/` maps to repo root.
 - **Prisma 7**: generates client into `lib/generated/prisma`; app code imports from `@/lib/generated/prisma/client`. Singleton at `lib/db/client.ts`. Never edit migration SQL files by hand.

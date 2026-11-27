@@ -22,11 +22,12 @@ This skill is the **pre-flight checklist** for every push. It is referenced by `
 □ TypeScript clean:          npm run typecheck
 □ Lint clean:                npm run lint:app
 □ Build succeeds:            npm run build
+□ Bundle budget holds:       npm run bundle:check   (after build; 230 KB gz first load)
 □ Docs updated (if needed):  README.md, AGENTS.md
 □ Branch pushed:             git push -u origin <branch>
 ```
 
-For broad backend / deployment changes, additionally run `npm run backend:validate` (Prisma validate/generate, typecheck, scoped lint, tests, build).
+For broad backend / deployment changes, additionally run `npm run backend:validate` (Prisma validate/generate, typecheck, scoped lint, tests, build, bundle check).
 
 ## 2. Validation commands
 
@@ -36,6 +37,7 @@ npm exec vitest run path/to/file.test.ts
 
 # Run a directory:
 npm exec vitest run components/__tests__
+npm exec vitest run features/habits
 
 # Full unit suite (required before push):
 npm exec vitest run
@@ -44,6 +46,7 @@ npm exec vitest run
 npm run typecheck
 npm run lint:app
 npm run build
+npm run bundle:check
 ```
 
 > Do **not** use `npm test -- --run`; flags do not pass through reliably.

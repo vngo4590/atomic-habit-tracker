@@ -48,10 +48,11 @@ npm run test:run               # unit/integration tests (Vitest)
 npm exec vitest run            # equivalent — preferred for focused runs
 npm run test:e2e               # end-to-end tests (Playwright)
 npm run typecheck              # TypeScript
-npm run lint:app               # scoped lint for app/components/lib/scripts
+npm run lint:app               # scoped lint for app/components/features/lib/scripts
 npm run build                  # production build
+npm run bundle:check           # first-load JS budget (230 KB gz) — run after build
 npm run prisma:migrate:status  # local migration status check
-npm run backend:validate       # Prisma, TypeScript, lint, tests, and build
+npm run backend:validate       # Prisma, TypeScript, lint, tests, build, and bundle:check
 ```
 
 > `npm test -- --run` does not pass flags through reliably. Always use `npm exec vitest run`.
@@ -81,10 +82,15 @@ npx playwright test --list                        # parse/list without running
 - **Auth is automatic.** `e2e/auth.setup.ts` is a `setup` project that logs in as
   `dev@atomicly.local`, dismisses onboarding, and saves `e2e/.auth/user.json`;
   the browser projects depend on it via `storageState`. Tests start signed in.
-- **Specs:** `e2e/main-flow.spec.ts` (core journeys) and `e2e/stack.spec.ts`
-  (habit stacking). See the Tier-3 conventions in `atomic-habit-test-tier-policy`.
+- **Specs:** `e2e/main-flow.spec.ts` (core journeys), `e2e/stack.spec.ts`
+  (habit stacking), `e2e/pet-adoption.spec.ts` (+ `e2e/pet-helpers.ts`),
+  `e2e/password-change.spec.ts` and `e2e/help-tip-overflow.spec.ts`. See the Tier-3 conventions in `atomic-habit-test-tier-policy`.
 - A failed `scripts/__tests__/local-db.test.ts` under the full Vitest run is a
   known flake (it spawns `tsx`); it passes when run in isolation.
+- **Rate limiting.** `proxy.ts` rate-limits auth and API routes in memory. A long
+  local E2E run that signs in repeatedly can hit HTTP 429; start the server with
+  `RATE_LIMIT_DISABLED=true` (the same switch PR previews use) to turn the
+  limiter off. Never set it in production.
 
 ### Troubleshooting a "broken" E2E run
 
