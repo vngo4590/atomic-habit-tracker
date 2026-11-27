@@ -131,7 +131,7 @@ export function StackCardGroup({ habit, habits, onCheck, streak, today }: StackC
     >
       <AnimatePresence initial={false}>
         {visible.map((h, i) => (
-          <m.div
+          <m.div data-motion-fallback
             key={h.id}
             data-testid="stack-card"
             data-stack-card-position={i}

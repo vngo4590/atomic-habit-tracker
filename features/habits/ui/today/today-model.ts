@@ -71,7 +71,7 @@ export function recentDays(habits: Habit[], today: string, days = 14): DayTally[
 export function votesByIdentity(habits: Habit[], today: string): Array<[string, number]> {
   const tally = new Map<string, number>();
   for (const habit of habits) {
-    if (habit.history[today] && isScheduledForDate(today, habit.schedule)) {
+    if (isDayDone(habit.history[today]) && isScheduledForDate(today, habit.schedule)) {
       tally.set(habit.identity, (tally.get(habit.identity) ?? 0) + 1);
     }
   }

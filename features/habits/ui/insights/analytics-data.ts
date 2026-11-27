@@ -63,7 +63,7 @@ export function weekdayRates(habits: Habit[], keys: string[]): WeekdayRate[] {
     for (const habit of habits) {
       if (!isScheduledForDate(key, habit.schedule)) continue;
       bucket.total += 1;
-      if (habit.history[key]) bucket.done += 1;
+      if (isDayDone(habit.history[key])) bucket.done += 1;
     }
     totals.set(weekday, bucket);
   }
