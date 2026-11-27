@@ -6,6 +6,7 @@
  * touching React or the database.
  */
 
+import { isDone } from "@/features/habits";
 import type { Habit } from "@/lib/types";
 
 export type StackPatch = { id: string; patch: Partial<Habit> };
@@ -236,7 +237,7 @@ export function getVisibleStackHabit(habits: Habit[], dateKey: string): Habit[] 
   const visible: Habit[] = [];
   for (const root of roots.values()) {
     const chain = getStackChain(root, habits);
-    const firstUndone = chain.find((h) => !h.history[dateKey]);
+    const firstUndone = chain.find((h) => !isDone(h.history[dateKey]));
     if (firstUndone) {
       visible.push(firstUndone);
     }
