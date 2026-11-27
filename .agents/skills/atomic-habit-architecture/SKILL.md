@@ -9,95 +9,100 @@ description: Canonical map of the Atomicly codebase — project tree, request/da
 
 ## 1. Project Structure
 
+Atomicly is a **modular monolith** (ADR-0001, `docs/architecture/adr/0001-modular-monolith-feature-slices.md`): business capabilities live in feature slices under `features/`, `lib/` is a shared kernel with no business rules, and `app/` routes are thin.
+
 ```
 app/
   (auth)/          # Login/register pages
-  (root)/          # All authenticated app screens share sidebar layout
-    layout.tsx     # Root layout: loads backend snapshot, wraps StoreProvider
-    page.tsx       # Today dashboard
+  (root)/          # All authenticated screens; share the nav shell
+    layout.tsx     # Loads backend snapshot, wraps MotionProvider + StoreProvider + Nav
+    page.tsx       # Today — thin; renders TodayView from @/features/habits/ui
     habits/        # /habits, /habits/new, /habits/[id]
-    analytics/     # /analytics
-    journal/       # /journal
-    review/        # /review (weekly review)
-    hall-of-fame/  # /hall-of-fame
-    pet/           # /pet — Pet Ecosystem (procedural Tamagotchi) UI
-    identity/      # /identity
-    settings/      # /settings
-  api/v1/          # REST API for mobile/external clients (habits, reflection, session)
+    analytics/  hall-of-fame/   # Insights hub (layout.tsx renders SectionTabs)
+    journal/    review/         # Reflect hub (layout.tsx renders SectionTabs)
+    pet/  identity/  settings/
+  api/v1/          # REST API for mobile/external clients (habits, reflection, session, export)
   api/healthz/     # Public health endpoint for containers/Kubernetes probes
   api/auth/        # NextAuth handlers
+  styles/          # Global CSS partials (tokens, base, typography, layout, components, animations, responsive)
 
-components/        # Reusable client UI components
-  motion/          # Framer Motion primitives (FadeIn, SlideIn, HoverLift, etc.)
-  pet/             # MoodSprite + PixelSprite (procedural pet rendering)
-  StackCardGroup.tsx  # Apple-Wallet stacked habit card group (Today page)
-  StackDiagram.tsx    # Stack chain diagram (habit detail Stack tab)
-  Modal.tsx           # Accessible blocking dialog
-features/          # Feature slices (ADR-0001): index.ts (pure model only), actions.ts, contracts.ts (import via @/features/<x>/contracts — never re-export from index.ts, it bloats client JS), store.ts (client slice), server.ts, model/, server/
-  habits/          # Habits, check-ins, notes/contract, formation verdicts, stack-link validator
-  stacks/          # Habit stacks (linked list) model + repository
-  reflection/      # Journal, weekly review, identity, lessons (server/ split by aggregate)
-  settings/        # Preferences + backup envelope/builder (model/) and importer (server/)
-  pet/             # Pure pet engine (model/) + repositories — see atomic-habit-pet-ecosystem
-lib/
-  actions/         # Remaining shared server actions (auth.ts)
-  api/             # API response helpers
-  animations.ts    # Shared Framer Motion presets, easings, durations, variants
-  auth/            # credentials, register, password, session helpers
-  contracts/       # Zod validation contracts shared by server actions and API
-  db/              # Prisma client singleton (client.ts, config.ts)
+features/<name>/   # habits | stacks | reflection | settings | pet
+  index.ts         # Public pure-model barrel (client-safe; NEVER re-exports contracts)
+  model/           # Pure domain logic — no React, Prisma, server/ or actions (ESLint-enforced)
+  server/          # Prisma repositories (*.repository.ts) + mappers
+  server.ts        # Server-only barrel over server/
+  actions.ts       # "use server" actions: validate contracts, requireUserId, call repositories
+  contracts.ts     # Zod schemas (import via @/features/<name>/contracts)
+  store.ts         # Client store slice (useXSlice) composed by lib/store
+  ui/              # Feature UI + CSS Modules (index.ts barrel), e.g. habits/ui/{today,library,new,detail,insights,schedule}
+  __tests__/       # Action/store/model tests (plus server/__tests__, ui/__tests__)
+
+components/        # Shared app-shell + cross-feature UI (StoreProvider, Toast, Modal, AuthForm,
+                   # AppearanceSync, OnboardingGate/Overlay, HelpTip, LineChart, NotesManager, ...)
+  ui/              # Design-system primitives — import from @/components/ui (atomic-habit-design-system)
+  nav/             # nav-items.ts, Sidebar, MobileNav, SectionTabs, useNavShortcuts
+  motion/          # MotionProvider (LazyMotion) + m-based primitives (FadeIn, StaggerContainer, ...)
+lib/               # Shared kernel
+  actions/auth.ts  # Auth/account server actions (the only server actions left in lib/)
+  contracts/       # auth.ts (auth schemas) + primitives.ts (dateKeySchema, stringListSchema)
+  repositories/    # users.ts (auth user queries)
+  server/          # store-snapshot.ts -> getStoreSnapshot (server-only composition root)
+  store/           # index.ts (useStore composes feature slices), optimistic.ts, toast.ts, default-snapshot.ts
+  auth/  db/  security/  api/  hooks/   # session/credentials, Prisma client, proxy primitives, HTTP helpers, hooks
   generated/prisma/# Generated Prisma 7 client output
-  hooks/           # Shared React hooks (e.g., useMotionReduced)
-  repositories/    # Auth user queries (users.ts)
-  server/          # Server-only composition (store-snapshot.ts -> getStoreSnapshot)
-  date-keys.ts     # UTC/local date-key conversion helpers
-  types.ts         # All shared TypeScript types
-  store.ts         # In-memory optimistic cache (StoreState)
-  stack.ts         # Habit-stack linked-list helpers (cycle-safe)
-  stack-errors.ts  # StackError + codes shared across repo/action/API/UI
-  schedule.ts      # Schedule parsing and date-checking utilities
-  helpers.ts       # Date key utils, formatting
-  sample-data.ts   # Sample/demo data fixtures
+  animations.ts    # Shared Framer Motion presets, easings, durations, variants
+  themes.ts  appearance.ts  # Light/dark theme list + legacy mapping; apply theme/accent to <html>
+  date-keys.ts  helpers.ts  types.ts  logger*.ts  revalidate-app.ts  sample-data.ts
   test/            # Shared deterministic test fixtures and helpers
 
-prisma/
-  schema.prisma    # All models
-  migrations/      # Committed migration SQL files
-  seed.ts          # Dev account + initial data seed
-scripts/           # local-db.ps1, local-kube.ps1 + tests
-e2e/               # Playwright end-to-end specs and auth fixtures
-docs/architecture/backend-auth-mobile.md
+prisma/            # schema.prisma, migrations/, seed.ts
+scripts/           # local-db.ps1, local-kube.ps1, measure-bundle.mjs + tests
+e2e/               # Playwright end-to-end specs and auth setup
+docs/architecture/ # backend-auth-mobile.md, security.md, revamp-baseline.md, adr/0001-0003
+design-system/atomicly/MASTER.md  # Design-system source of truth
 infra/             # Azure Bicep templates and deployment scripts
 k8s/local/         # Docker Desktop Kubernetes manifests
 .agents/skills/    # Project-local skills (edit here)
 ```
 
+### Import rules (`eslint.config.mjs`)
+
+- Outside a feature, import it **only** through `@/features/<name>` (pure model), `/actions`, `/server`, `/store`, `/contracts` or `/ui`. Deep imports (`@/features/habits/model/metrics`) and relative paths that climb into another feature are lint errors.
+- `features/*/model/**` may not import `react`, `server-only`, `pg`, `@prisma/*`, db/repositories/generated, any `server`, or any `actions` — keep it pure and unit-testable. Across features it may only use another feature's pure `index` barrel and `/contracts` (never `/actions`, `/server`, `/store` or `/ui`).
+- Inside a feature, use relative imports (e.g. actions import repositories via `./server`).
+- Server-side dependencies between features stay one-way (e.g. stacks → habits; the stack-link validator lives in `features/habits/server/`).
+- Never re-export `contracts.ts` (Zod) from `index.ts`: it added ~64 KB gz to every route. `npm run bundle:check` enforces a 230 KB gz first-load budget.
+- Import `m` (not `motion`) from `framer-motion`.
+- `features/**` and `components/ui/**` files are capped at 300 lines (`max-lines`, blanks/comments excluded).
+- Tests (`__tests__/`, `*.test.*`, `e2e/`) are exempt from the import restrictions.
 ## 2. Data Flow
 
 1. **Auth gate**: `proxy.ts` uses Auth.js session state and `lib/auth/routes.ts` to redirect unauthenticated protected routes to `/login`. All `app/(root)/` screens then call `requireCurrentUser()` / `requireUserId()` (`lib/auth/session.ts`), which verifies the JWT maps to an existing DB user and redirects missing/expired/deleted users to `/login`. JWT sessions expire after 1 day via `SESSION_MAX_AGE_SECONDS`.
 2. **Reverse auth gate**: `/login` and `/register` are server components that call `auth()` from `@/auth`; if signed in, they redirect to `/` (or a validated `callbackUrl`).
 3. **Backend snapshot**: `app/(root)/layout.tsx` fetches the full user-scoped snapshot via `getStoreSnapshot(userId, todayKey())` (`lib/server/store-snapshot.ts`, a server-only composition root over each feature's `server` entry) and passes it to `StoreProvider`.
-4. **Optimistic cache**: `components/StoreProvider.tsx` + `lib/store/index.ts` maintain an in-memory optimistic store composed from per-feature slices (`features/<name>/store.ts`). Mutations go through `optimistic()` in `lib/store/optimistic.ts` (apply, call action, roll back + toast + log on failure). Mutations hit server actions immediately and the store updates before the server round-trip.
-5. **Domain writes**: Habit mutations go through `features/habits/actions.ts`, stack mutations through `features/stacks/actions.ts`, journal/identity/review/lesson mutations through `features/reflection/actions.ts`, preferences and backup import through `features/settings/actions.ts`, and pet mutations through `features/pet/actions.ts`. Each calls user-scoped repository functions in `features/<name>/server/*.repository.ts` (`lib/repositories/users.ts` remains for auth only). Feature slices follow ADR-0001 (`docs/architecture/adr/0001-modular-monolith-feature-slices.md`): import them only via `@/features/<name>` (client-safe), `@/features/<name>/actions`, or `@/features/<name>/server`.
+4. **Optimistic cache**: `components/StoreProvider.tsx` + `lib/store/index.ts` maintain an in-memory optimistic store composed from per-feature slices (`features/<name>/store.ts`). Mutations go through `optimistic()` in `lib/store/optimistic.ts` (apply, call action, reconcile, or roll back + toast + log on failure). Overlapping writes are guarded by per-item ownership: check-in claims (`features/habits/store-check-ins.ts`), stack links rebuilt from confirmed server links plus still-pending request patches newer than each habit's confirmed request (`features/stacks/store.ts`) and per-field preference versions (`features/settings/store.ts`), so a slow response never overwrites a newer change.
+5. **Domain writes**: Habit mutations go through `features/habits/actions.ts`, stack mutations through `features/stacks/actions.ts`, journal/identity/review/lesson mutations through `features/reflection/actions.ts`, preferences and backup import through `features/settings/actions.ts`, and pet mutations through `features/pet/actions.ts`. Each calls user-scoped repository functions in `features/<name>/server/*.repository.ts` (`lib/repositories/users.ts` remains for auth only). See the import rules in § 1.
 6. **Mobile/API clients**: Use authenticated `/api/v1/` route handlers with stable `{ ok, data }` / `{ ok, error }` envelopes (see `app/api/v1/README.md`).
 7. **Appearance sync**: `components/AppearanceSync.tsx` applies backend `preferences.theme` and `preferences.accentHue` via `lib/appearance.ts`.
 8. **localStorage**: Only used for `atomicly:theme` and `atomicly:accent` (the retired `atomicly:theme-variant` key is read once and mapped to light/dark) — UI mirrors only, **never** source of truth for domain data.
 
 ## 3. Routes
 
+Navigation (`components/nav/nav-items.ts`): Today, Habits, Reflect (`/journal` + `/review` tabs), Insights (`/analytics` + `/hall-of-fame` tabs), Pet, and Settings via the avatar; Alt+Shift+key shortcuts. `/reflect` → `/journal` and `/insights` → `/analytics` redirect in `next.config.ts`. Page UI lives in the owning feature's `ui/` folder.
+
 | Route | Screen |
 |---|---|
-| `/` | Today dashboard — only undone habits scheduled for today; stacked habits render as `StackCardGroup`; solo cards show check circle, name+identity, streak, 30-day progress; habit search across all habits |
-| `/habits` | Habit library — All / Done / Upcoming tabs; check/undo circles; search and sort by streak, rate, newest, or name |
-| `/habits/new` | New habit builder — inline Mad-Libs sentence with schedule presets and time-block selection |
-| `/habits/[id]` | Habit detail with Overview reveal panels for the 4 laws and habit loop, plus journal/history/notes/contracts/**Stack** tabs |
-| `/analytics` | Adherence stats and charts |
-| `/journal` | Journal entries |
-| `/review` | Weekly review with current review display/edit, top-five past summaries, paged archive |
-| `/hall-of-fame` | 66-day formation review |
-| `/pet` | Pet Ecosystem — adopt, feed, and evolve procedural pixel pets; see `atomic-habit-pet-ecosystem` |
-| `/identity` | Click-to-edit identity statement, core values, and vote ledger |
-| `/settings` | Account, appearance, and data controls |
+| `/` | Today (`features/habits/ui/today/`) — focus list of undone habits scheduled for today, collapsible "Completed (n)" with undo, identity votes, quiet insights; first-run / rest-day / all-done empty states; stacked habits render as `StackCardGroup`; habit search across all habits |
+| `/habits` | Habit library (`features/habits/ui/library/`) — All / Done today / Upcoming tabs; check/undo circles; search and sort by streak, rate, newest, or name |
+| `/habits/new` | `NewHabitWizard` (`features/habits/ui/new/`) — 5-step guided wizard: habit → identity → cue & schedule → make it stick (optional four laws) → review; respects the active-habit cap |
+| `/habits/[id]` | Habit detail (`features/habits/ui/detail/`) with Overview reveal panels for the 4 laws and habit loop, plus Journal/History/Notes/**Stack** tabs; the habit contract opens as a `ContractSheet` from Overview |
+| `/analytics` | Adherence stats and charts (`features/habits/ui/insights/`) |
+| `/journal` | Journal entries (`features/reflection/ui/journal/`) |
+| `/review` | Weekly review (`features/reflection/ui/review/`) with current review display/edit, top-five past summaries, paged archive |
+| `/hall-of-fame` | 66-day formation review (`features/habits/ui/insights/`) |
+| `/pet` | Pet Ecosystem (`features/pet/ui/`) — see `atomic-habit-pet-ecosystem` |
+| `/identity` | Click-to-edit identity statement, core values, and vote ledger (`features/reflection/ui/identity/`) |
+| `/settings` | Account, appearance (light/dark + accent), preferences, and data controls (`features/settings/ui/`) |
 
 ## 4. Key Files
 
@@ -124,6 +129,9 @@ k8s/local/         # Docker Desktop Kubernetes manifests
 | `features/stacks/model/stack.ts` / `stack-errors.ts` | Habit stack helpers — see `atomic-habit-habit-stacking` |
 | `features/pet/model/` / `features/pet/server/` | Procedural pet engine + persistence — see `atomic-habit-pet-ecosystem` |
 | `lib/animations.ts` | Shared Framer Motion presets — see `atomic-habit-ui-animation` |
+| `components/ui/` / `components/nav/` / `app/styles/tokens.css` | Design system primitives, navigation, tokens — see `atomic-habit-design-system` |
+| `eslint.config.mjs` | Feature-boundary, pure-model, `m`-only and `max-lines` rules |
+| `scripts/measure-bundle.mjs` | `npm run bundle:check` first-load JS budget |
 | `features/*/server/` | Prisma data access |
 | `lib/logger.ts` / `lib/logger-client.ts` | Structured logging — see `atomic-habit-logging` |
 | `docs/architecture/backend-auth-mobile.md` | Provider choices, Vercel notes, migration safety |
@@ -134,6 +142,7 @@ k8s/local/         # Docker Desktop Kubernetes manifests
 
 - **Local dev commands** → `atomic-habit-local-dev`
 - **Styling / CSS modules** → `atomic-habit-css-conventions`
+- **Design system (tokens, themes, primitives, nav, a11y)** → `atomic-habit-design-system`
 - **SOLID + GRASP** → `atomic-habit-design-principles`
 - **Tests** → `atomic-habit-test-engineer` and its sub-skills
 - **Logging** → `atomic-habit-logging`

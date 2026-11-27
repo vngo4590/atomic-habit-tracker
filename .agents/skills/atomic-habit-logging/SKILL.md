@@ -234,6 +234,6 @@ npm exec vitest run  # Tests still pass (logger output in tests is expected)
 Check for raw console usage:
 ```powershell
 # Should return NO results in app code (scripts/tests are exempt)
-grep -r "console\.(log|warn|error|info)" app/ components/ lib/ --include="*.ts" --include="*.tsx" | grep -v "__tests__" | grep -v "logger"
+grep -rE "console\.(log|warn|error|info)" app/ components/ features/ lib/ --include="*.ts" --include="*.tsx" | grep -v "__tests__" | grep -v "logger"
 ```
 ```

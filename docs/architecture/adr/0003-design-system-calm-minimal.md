@@ -36,3 +36,10 @@ Fame) / Pet / Settings.
 - Users on a removed theme see a visual change; this is accepted product scope.
 - Redirects keep old routes (`/journal`, `/review`, `/analytics`,
   `/hall-of-fame`) working as deep links.
+
+## Implementation note
+
+The primitive kit shipped as `components/ui/` (imported from
+`@/components/ui`) rather than `shared/ui`, and no `Sheet` primitive was
+needed; `Modal` and `Toast` are re-exported from it. The working summary of the
+system lives in the `atomic-habit-design-system` skill.

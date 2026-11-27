@@ -41,24 +41,24 @@ description: Data model, helpers, mutation API, and UI behaviour for Atomicly ha
   2. Validates per-kind: insert (source is solo, target exists, no self-reference, no cycle), remove (habit exists), reorder (`habitIds` set equals the current chain set rooted at any one of them — no merging chains, no add/drop members via reorder; duplicates rejected).
   3. Applies ordered patches via `tx.habit.update`.
   4. Returns the post-mutation affected habits.
-- The store exposes `store.applyStackMutation(input)` which optimistically applies the patches, awaits the server response, overlays the returned habits, and rolls back the optimistic state on rejection. UI callers (`StackDiagram`) surface the rejected error message in a `Modal`.
+- The store exposes `store.applyStackMutation(input)` which optimistically applies the patches, awaits the server response, overlays the returned habits, and rolls back the optimistic state on rejection (`features/stacks/store.ts`, via the shared `optimistic()` helper). Each request takes a sequence number and records its `stackNextId` patches in a `pending` map. When a request settles, the store adopts the server's links into `confirmed` (only if no newer request has confirmed that habit) and rebuilds every link as confirmed links overlaid with pending patches from requests newer than that habit's confirmed request. A slower older request therefore never overwrites a newer stack mutation, and a failed request simply drops its pending patch. This differs from check-in claims (per habit-day ownership) and preference versions (per field counters). UI callers (`StackDiagram`) surface the rejected error message in a `Modal`.
 - `updateHabit` in the repository (and therefore the action and `/api/v1/habits/[id]` PATCH) inherits stack-link validation when `stackNextId` is part of the patch. PATCH maps `StackError` to a 422 with `{ error: { code, message } }` via `handleHabitMutationError`.
 
 ## 4. UI surfaces
 
-### Today (`/`) — `StackCardGroup`
+### Today (`/`) — `StackCardGroup` (`features/habits/ui/today/StackCardGroup.tsx`)
 
 - **Collapsed**: always shows the **top card** plus up to **2 peek slivers** behind it so the user immediately sees a stack exists.
 - **Expanded**: top card + up to **2 upcoming** undone cards, plus a `+N more` indicator where N **excludes the already-displayed cards**.
 - `getChainFrom(habit, habits)` walks forward from the passed habit (the first-undone in the chain), so a partially-checked chain shows from the correct sub-chain.
 - Already-done upcoming habits are filtered out so the wallet only surfaces habits still to be fulfilled today.
 
-### Habit detail (`/habits/[id]`) — `StackDiagram` (Stack tab)
+### Habit detail (`/habits/[id]`) — `StackDiagram` (Stack tab, `features/stacks/ui/StackDiagram.tsx`)
 
 - **Clickable chips**: each chain chip is a navigation button — clicking a non-current chip calls `useRouter().push("/habits/<id>")`. Because we don't replace history, the back button (`router.back()`) walks back through visited chain habits in reverse order. The current habit's own chip is a no-op.
 - **Per-chip × button**: an X next to each chip calls `store.applyStackMutation({ kind: "remove", habitId: <chipId> })` to unlink only that node. Server-side `stackRemovePatches` heals the chain by re-linking the predecessor to the former successor. The X stops click + pointerdown propagation so it never starts a drag or triggers navigation.
 - **Drag-to-reorder**: chips are rendered inside a Framer Motion `Reorder.Group axis="x"` with a `Reorder.Item` per chip. On `onDragEnd` the local chain order is committed via `store.applyStackMutation({ kind: "reorder", habitIds: [...] })`. A `wasDraggedRef` suppresses chip-click navigation that would otherwise fire right after a drag.
-- **Symmetric picker** (see § 1 above for semantics). The picker is capped at the first **10** results by default; for larger pools the user either refines via the search input (name / identity / cue) or clicks **"Show all N habits"** to expand. Searching always resets back to the focused capped view. The cap lives in `STACK_PICKER_DEFAULT_LIMIT` exported from `components/StackDiagram.tsx`.
+- **Symmetric picker** (see § 1 above for semantics). The picker is capped at the first **10** results by default; for larger pools the user either refines via the search input (name / identity / cue) or clicks **"Show all N habits"** to expand. Searching always resets back to the focused capped view. The cap lives in `STACK_PICKER_DEFAULT_LIMIT` in `features/stacks/ui/stack-picker.ts` (re-exported from `@/features/stacks/ui`).
 - **Search input** filters the selector by name / identity / cue.
 - Errors from the server (cycle, exclusivity, invalid reorder, etc.) open a **`Modal`** with the server message and an OK button; the operation is cancelled and the optimistic patch is rolled back.
 

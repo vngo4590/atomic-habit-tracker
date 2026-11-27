@@ -28,6 +28,23 @@ Keep the app shell (layout, nav, `Toast`, `PageTransition`) Framer-free: use CSS
 keyframes in `app/styles/animations.css` there. Only `Reorder` (StackDiagram)
 uses the full build. `npm run bundle:check` enforces a 230 KB first-load budget.
 
+**Fallback.** `MotionProvider` retries the feature chunk once; if it still
+fails it adds `motion-unavailable` to `<html>` (and logs
+`motion.features_failed`), and `app/styles/animations.css` resets
+`opacity`/`transform` on elements marked `data-motion-fallback` so content
+never stays hidden at its `initial` state. Add `data-motion-fallback` to any
+new `m.*` element whose `initial` hides it; leave it off drag/reorder items
+and decorative loops whose transforms must not be overridden.
+
+**Reduced motion.** CSS durations collapse via `tokens.css` under
+`prefers-reduced-motion`. Framer components must opt in themselves: feature
+components use `useReducedMotion()` from `framer-motion` to skip or shorten
+motion; the `StaggerContainer` primitive uses `lib/hooks/useMotionReduced.ts`
+(reduced motion **or** narrow viewport). Never let essential state changes
+depend on an animation finishing.
+
+For tokens, theming and the a11y bar see `atomic-habit-design-system`.
+
 ## Core Primitives (`components/motion/`)
 
 | Component | Purpose |
@@ -51,15 +68,14 @@ import { spring, ease, duration, fadeUpVariants, staggerContainerVariants, overl
 - **Springs**: `gentle`, `snappy`, `bouncy`, `stiff`
 - **Easing**: `smooth` `[0.4,0,0.2,1]`, `enter`, `exit`, `bounce`
 - **Durations**: `fast` 0.15s, `base` 0.25s, `slow` 0.4s, `slower` 0.6s
-- **Variants**: `fadeUpVariants`, `scaleInVariants`, `slideUpVariants`, `staggerItemVariants`, `overlayVariants`
+- **Variants**: `fadeUpVariants`, `fadeInVariants`, `scaleInVariants`, `slideUpVariants`, `staggerContainerVariants`, `staggerItemVariants`, `overlayVariants`, `overlayCardVariants`
 
-## Design Tokens (`globals.css`)
+## Design Tokens (`app/styles/tokens.css`, `app/styles/animations.css`)
 
-- `--shadow-sm/md/lg/xl` — refined depth system
-- `--transition-fast/base/slow` — consistent easing
-- `.glass` — backdrop-blur glassmorphism utility
-- `.skeleton` — shimmer loading placeholder
-- `.focus-ring` — modern focus outline with accent ring
+- `--duration-fast` 150ms / `--duration-base` 220ms / `--duration-slow` 320ms + `--ease-standard` — CSS transition timings (collapse to 0.01ms under reduced motion)
+- `--shadow-sm` / `--shadow-lg` — the only two elevations (`--shadow-md/xl` and `--transition-*` are legacy aliases; don't use them in new code)
+- `.fade-up`, `.skeleton` (shimmer placeholder), `page-enter` — CSS animation utilities
+- Focus styling is the global `:focus-visible` rule in `base.css` + the `--focus-ring` token (there is no `.focus-ring` or `.glass` class)
 
 ## Patterns
 
@@ -90,7 +106,7 @@ import { spring, ease, duration, fadeUpVariants, staggerContainerVariants, overl
 
 ### Card Hover Lift
 ```tsx
-<m.div whileHover={{ y: -2, boxShadow: "var(--shadow-md)" }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
+<m.div whileHover={{ y: -2, boxShadow: "var(--shadow-lg)" }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
   <div className="card card-pad">...</div>
 </m.div>
 ```
@@ -123,8 +139,7 @@ import { spring, ease, duration, fadeUpVariants, staggerContainerVariants, overl
 |---------|-------------------|
 | Simple hover background/color changes | Entrance/exit animations |
 | Static keyframe loops (e.g., float) | Gesture interactions (tap, drag, pan) |
-| Focus ring transitions | Page/route transitions |
-| Border/shadow hover on single elements | Staggered list reveals |
-| | Scroll-triggered animations |
-| | Animated numbers/count-ups |
+| Focus ring transitions | Staggered list reveals |
+| Border/shadow hover on single elements | Scroll-triggered animations |
+| App shell + route fade (`page-enter`) | Animated numbers/count-ups |
 | | Layout animations (tabs, active indicators) |
