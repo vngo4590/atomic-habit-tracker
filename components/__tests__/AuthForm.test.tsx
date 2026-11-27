@@ -69,12 +69,16 @@ describe("AuthForm", () => {
 
   it("keeps the user on the form when the request is rejected before reaching the server", async () => {
     // Given the proxy rate limiter answers 429, so the action call throws
+    // (React logs the caught error; keep the test output quiet).
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     renderForm(vi.fn().mockRejectedValue(new Error("An unexpected response was received from the server.")), true);
 
     // When the user submits
     await submit();
 
-    // Then a readable alert replaces the crash page
+    // Then a readable alert replaces the crash page, and the form is still usable
     expect(screen.getByRole("alert").textContent).toContain("couldn't reach the server");
+    expect(screen.getByRole("button", { name: "Create account" })).toBeTruthy();
+    consoleError.mockRestore();
   });
 });
