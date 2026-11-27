@@ -306,10 +306,10 @@ test.describe("Tracking identity votes", () => {
     await page.goto("/identity");
 
     // Then: the ledger lists that identity with three votes of progress.
-    const row = page.locator(".eyebrow", { hasText: "Vote ledger" }).locator("xpath=ancestor::section");
+    const row = page.getByRole("region", { name: "Vote ledger" });
     await expect(row).toContainText(`I am ${identity}`);
-    await expect(row).toContainText("3");
-    await expect(row).toContainText("3 TOTAL");
+    await expect(row).toContainText("3 votes");
+    await expect(row).toContainText("3 votes total");
   });
 });
 
